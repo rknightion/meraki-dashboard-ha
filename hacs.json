@@ -1,9 +1,5 @@
 {
   "name": "Meraki Dashboard",
   "content_in_root": false,
-  "render_readme": true,
-  "domains": ["sensor", "binary_sensor"],
-  "homeassistant": "2024.1",
-  "iot_class": "Cloud Polling",
-  "country": ["US"]
+  "render_readme": true
 } 

@@ -1,1 +1,1 @@
-"""Tests for the Meraki Dashboard integration.""" 
+"""Tests for the Meraki Dashboard integration."""

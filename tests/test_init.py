@@ -34,16 +34,16 @@ async def test_setup_entry(hass: HomeAssistant, mock_setup_entry) -> None:
     ) as mock_api_class:
         mock_api = AsyncMock()
         mock_api_class.return_value = mock_api
-        
+
         # Mock successful API calls
         mock_api.organizations.getOrganization.return_value = {
             "id": TEST_ORG_ID,
-            "name": TEST_ORG_NAME
+            "name": TEST_ORG_NAME,
         }
         mock_api.organizations.getOrganizationNetworks.return_value = [
             {"id": "N_123", "name": "Test Network"}
         ]
-        
+
         assert await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
@@ -70,12 +70,12 @@ async def test_setup_entry_auth_failed(hass: HomeAssistant) -> None:
     ) as mock_api_class:
         mock_api = AsyncMock()
         mock_api_class.return_value = mock_api
-        
+
         # Mock auth failure
         mock_api.organizations.getOrganization.side_effect = APIError(
             status=401, message={"errors": ["Invalid API key"]}
         )
-        
+
         assert not await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
@@ -100,13 +100,13 @@ async def test_unload_entry(hass: HomeAssistant, mock_setup_entry) -> None:
     ) as mock_api_class:
         mock_api = AsyncMock()
         mock_api_class.return_value = mock_api
-        
+
         mock_api.organizations.getOrganization.return_value = {
             "id": TEST_ORG_ID,
-            "name": TEST_ORG_NAME
+            "name": TEST_ORG_NAME,
         }
         mock_api.organizations.getOrganizationNetworks.return_value = []
-        
+
         assert await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
 
@@ -134,7 +134,7 @@ class MockConfigEntry:
     def add_to_hass(self, hass):
         """Add to hass."""
         hass.config_entries._entries[self.entry_id] = self
-        
+
     def add_update_listener(self, listener):
         """Add update listener."""
         self._update_listeners.append(listener)
@@ -142,4 +142,4 @@ class MockConfigEntry:
 
     def async_on_unload(self, func):
         """Set on unload."""
-        pass 
+        pass

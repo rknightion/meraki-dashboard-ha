@@ -1,11 +1,9 @@
 # Meraki Dashboard Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/release/YOUR_GITHUB_USERNAME/meraki-dashboard-ha.svg?style=flat-square)](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/releases)
-[![License](https://img.shields.io/github/license/YOUR_GITHUB_USERNAME/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
-[![Tests](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/actions/workflows/tests.yml)
-[![HACS Validation](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/workflows/HACS%20Validation/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/actions/workflows/hacs.yml)
-[![Hassfest](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/workflows/Validate%20with%20hassfest/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/actions/workflows/hassfest.yml)
+[![GitHub Release](https://img.shields.io/github/release/rknightion/meraki-dashboard-ha.svg?style=flat-square)](https://github.com/rknightion/meraki-dashboard-ha/releases)
+[![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
+[![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
 
 This custom integration allows you to monitor your Cisco Meraki devices through Home Assistant. Currently supports MT series environmental sensors with plans to expand to other device types.
 
@@ -60,7 +58,7 @@ This integration follows Home Assistant best practices:
 1. Open HACS in your Home Assistant instance
 2. Click on "Integrations"
 3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add `https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha` as a custom repository
+4. Add `https://github.com/rknightion/meraki-dashboard-ha` as a custom repository
 5. Select "Integration" as the category
 6. Click "Add"
 7. Search for "Meraki Dashboard" and install it
@@ -68,7 +66,7 @@ This integration follows Home Assistant best practices:
 
 ### Manual Installation
 
-1. Download the latest release from the [releases page](https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/releases)
+1. Download the latest release from the [releases page](https://github.com/rknightion/meraki-dashboard-ha/releases)
 2. Extract the `custom_components/meraki_dashboard` folder to your Home Assistant's `custom_components` directory
 3. Restart Home Assistant
 
