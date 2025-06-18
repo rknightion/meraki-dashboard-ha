@@ -1,0 +1,13 @@
+{
+  "domain": "meraki_dashboard",
+  "name": "Meraki Dashboard",
+  "codeowners": ["@YOUR_GITHUB_USERNAME"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/issues",
+  "requirements": ["meraki>=2.0.3,<3.0.0"],
+  "version": "0.1.0"
+} 

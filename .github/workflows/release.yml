@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Zip the integration
+        run: |
+          cd custom_components/meraki_dashboard
+          zip -r ../../meraki_dashboard.zip .
+      
+      - name: Upload zip to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: meraki_dashboard.zip
+          asset_name: meraki_dashboard.zip
+          tag: ${{ github.ref }}
+          overwrite: true 

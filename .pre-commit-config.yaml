@@ -1,0 +1,182 @@
+# Pre-commit hooks for code quality and consistency
+# Following Home Assistant development standards
+
+repos:
+  # Security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-ast
+      - id: check-builtin-literals
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-json
+        exclude: (.vscode|.devcontainer)
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-xml
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: debug-statements
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: fix-byte-order-marker
+      - id: fix-encoding-pragma
+        args: ['--remove']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+
+  # Python code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        args:
+          - --line-length=88
+          - --target-version=py311
+        language_version: python3.11
+
+  # Python import sorting
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args:
+          - --profile=black
+          - --force-grid-wrap=0
+          - --use-parentheses
+          - --line-length=88
+
+  # Python linting with Flake8
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        additional_dependencies:
+          - flake8-docstrings
+          - flake8-comprehensions
+          - flake8-noqa
+          - pydocstyle
+        args:
+          - --max-line-length=88
+          - --extend-ignore=E203,W503,E501,D202
+          - --docstring-convention=google
+
+  # Python static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        args:
+          - --ignore-missing-imports
+          - --install-types
+          - --non-interactive
+        additional_dependencies:
+          - types-requests
+          - types-PyYAML
+
+  # Python security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args:
+          - -r
+          - custom_components/
+        exclude: tests/
+
+  # Pylint for additional Python checks
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.0.3
+    hooks:
+      - id: pylint
+        args:
+          - --max-line-length=88
+          - --disable=C0103,C0114,C0115,C0116,R0903,R0913,W0613
+          - --good-names=i,j,k,ex,Run,_,id
+        additional_dependencies:
+          - homeassistant
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [yaml]
+        exclude: (.vscode|.devcontainer)
+
+  # Markdown formatting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        args:
+          - --fix
+          - --disable=MD013,MD024,MD033,MD041
+
+  # Check for common misspellings
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=hass,homeassistant,coordinator
+          - --skip="*.json,*.csv,.git,*.lock"
+          - --quiet-level=2
+
+  # Validate GitHub Actions workflow files
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.27.3
+    hooks:
+      - id: check-github-workflows
+
+  # Home Assistant specific checks
+  - repo: local
+    hooks:
+      - id: hassfest
+        name: hassfest
+        entry: python -m script.hassfest
+        language: system
+        pass_filenames: false
+        files: ^(custom_components/|requirements\.txt|manifest\.json)
+
+      - id: check-translations
+        name: Check translations
+        entry: python -m script.translations check
+        language: system
+        pass_filenames: false
+        files: ^(custom_components/.+/strings\.json|custom_components/.+/translations/.+\.json)$
+
+# Global excludes
+exclude: |
+  (?x)^(
+    \.git/|
+    \.venv/|
+    venv/|
+    \.vscode/|
+    \.devcontainer/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.mypy_cache/|
+    \.tox/|
+    build/|
+    dist/|
+    .*\.egg-info/
+  )
+
+# Configuration for specific tools
+files: ^(custom_components|tests|script)/
+minimum_pre_commit_version: 2.7.0 

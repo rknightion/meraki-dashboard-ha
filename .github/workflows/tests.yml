@@ -1,0 +1,270 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # Run pre-commit hooks on all files
+  pre-commit:
+    runs-on: ubuntu-latest
+    name: Pre-commit
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.0
+
+  # Run tests with pytest
+  pytest:
+    runs-on: ubuntu-latest
+    name: Run tests
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements_test.txt
+
+      - name: Run pytest
+        run: |
+          pytest \
+            --cov=custom_components.meraki_dashboard \
+            --cov-report=xml \
+            --cov-report=term-missing:skip-covered
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Check with Home Assistant's hassfest
+  hassfest:
+    runs-on: ubuntu-latest
+    name: Hassfest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run hassfest
+        uses: home-assistant/actions/hassfest@master
+
+  # Validate HACS compliance
+  hacs:
+    runs-on: ubuntu-latest
+    name: HACS
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  # Run Black formatter check
+  black:
+    runs-on: ubuntu-latest
+    name: Black
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Black
+        run: pip install black
+
+      - name: Run Black
+        run: black --check --diff custom_components tests
+
+  # Run isort import sorter check
+  isort:
+    runs-on: ubuntu-latest
+    name: isort
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install isort
+        run: pip install isort
+
+      - name: Run isort
+        run: isort --check-only --diff custom_components tests
+
+  # Run Flake8 linter
+  flake8:
+    runs-on: ubuntu-latest
+    name: Flake8
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Flake8
+        run: |
+          pip install flake8 flake8-docstrings flake8-comprehensions
+
+      - name: Run Flake8
+        run: |
+          flake8 custom_components tests \
+            --max-line-length=88 \
+            --extend-ignore=E203,W503,E501,D202 \
+            --docstring-convention=google
+
+  # Run mypy type checker
+  mypy:
+    runs-on: ubuntu-latest
+    name: mypy
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mypy types-requests types-PyYAML
+
+      - name: Run mypy
+        run: |
+          mypy custom_components \
+            --ignore-missing-imports \
+            --install-types \
+            --non-interactive
+
+  # Run Pylint
+  pylint:
+    runs-on: ubuntu-latest
+    name: Pylint
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pylint
+
+      - name: Run Pylint
+        run: |
+          pylint custom_components \
+            --max-line-length=88 \
+            --disable=C0103,C0114,C0115,C0116,R0903,R0913,W0613
+
+  # Run Bandit security linter
+  bandit:
+    runs-on: ubuntu-latest
+    name: Bandit
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -r custom_components -f json -o bandit-report.json
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  # Check for security vulnerabilities
+  safety:
+    runs-on: ubuntu-latest
+    name: Safety
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Safety
+        run: pip install safety
+
+      - name: Run Safety check
+        run: safety check --json
+
+  # All tests must pass
+  all-tests-pass:
+    runs-on: ubuntu-latest
+    needs:
+      - pre-commit
+      - pytest
+      - hassfest
+      - hacs
+      - black
+      - isort
+      - flake8
+      - mypy
+      - pylint
+      - bandit
+      - safety
+    steps:
+      - name: All tests passed
+        run: echo "All tests passed!" 

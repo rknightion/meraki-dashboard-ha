@@ -1,0 +1,73 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Meraki Dashboard",
+        "description": "Enter your Meraki Dashboard API key to connect.",
+        "data": {
+          "api_key": "API Key"
+        },
+        "data_description": {
+          "api_key": "Your Meraki Dashboard API key. You can generate one from the Meraki Dashboard under My Profile > API access."
+        }
+      },
+      "organization": {
+        "title": "Select Organization",
+        "description": "Select the Meraki organization to monitor.",
+        "data": {
+          "organization_id": "Organization",
+          "name": "Integration Name"
+        },
+        "data_description": {
+          "organization_id": "The Meraki organization containing your networks and devices.",
+          "name": "Name for this integration instance (optional)."
+        }
+      },
+      "device_selection": {
+        "title": "Configure Devices and Options",
+        "description": "Found {device_count} MT sensor device(s). Select which devices to monitor or leave empty to monitor all devices.",
+        "data": {
+          "name": "Integration Name",
+          "selected_devices": "Select Devices to Monitor",
+          "scan_interval": "Update Interval (seconds)",
+          "auto_discovery": "Enable Auto-Discovery",
+          "discovery_interval": "Device Discovery Interval (seconds)"
+        },
+        "data_description": {
+          "name": "Name for this integration instance.",
+          "selected_devices": "Choose specific devices to monitor. Leave empty to monitor all devices and automatically discover new ones.",
+          "scan_interval": "How often to fetch sensor data. Meraki MT sensors update every 20 minutes by default.",
+          "auto_discovery": "Automatically discover and add new MT devices.",
+          "discovery_interval": "How often to scan for new devices when auto-discovery is enabled."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Meraki Dashboard API",
+      "invalid_auth": "Invalid API key",
+      "no_organizations": "No organizations found for this API key",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Organization is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Meraki Dashboard Options",
+        "description": "Configure how the integration operates.",
+        "data": {
+          "scan_interval": "Update Interval (seconds)",
+          "auto_discovery": "Enable Auto-Discovery",
+          "discovery_interval": "Device Discovery Interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to fetch sensor data. Meraki MT sensors update every 20 minutes by default.",
+          "auto_discovery": "Automatically discover and add new MT devices.",
+          "discovery_interval": "How often to scan for new devices when auto-discovery is enabled."
+        }
+      }
+    }
+  }
+} 

@@ -1,0 +1,77 @@
+{
+  "entity": {
+    "sensor": {
+      "apparent_power": {
+        "default": "mdi:flash"
+      },
+      "battery": {
+        "default": "mdi:battery"
+      },
+      "button": {
+        "default": "mdi:gesture-tap-button"
+      },
+      "co2": {
+        "default": "mdi:molecule-co2"
+      },
+      "current": {
+        "default": "mdi:current-ac"
+      },
+      "frequency": {
+        "default": "mdi:sine-wave"
+      },
+      "humidity": {
+        "default": "mdi:water-percent"
+      },
+      "indoor_air_quality": {
+        "default": "mdi:air-filter"
+      },
+      "noise": {
+        "default": "mdi:ear-hearing"
+      },
+      "pm25": {
+        "default": "mdi:blur"
+      },
+      "power_factor": {
+        "default": "mdi:angle-acute"
+      },
+      "real_power": {
+        "default": "mdi:flash"
+      },
+      "temperature": {
+        "default": "mdi:thermometer"
+      },
+      "tvoc": {
+        "default": "mdi:chemical-weapon"
+      },
+      "voltage": {
+        "default": "mdi:flash-triangle"
+      }
+    },
+    "binary_sensor": {
+      "door": {
+        "default": "mdi:door-closed",
+        "state": {
+          "on": "mdi:door-open"
+        }
+      },
+      "downstream_power": {
+        "default": "mdi:power-plug-off",
+        "state": {
+          "on": "mdi:power-plug"
+        }
+      },
+      "remote_lockout_switch": {
+        "default": "mdi:lock-open",
+        "state": {
+          "on": "mdi:lock"
+        }
+      },
+      "water_detection": {
+        "default": "mdi:water-off",
+        "state": {
+          "on": "mdi:water-alert"
+        }
+      }
+    }
+  }
+} 

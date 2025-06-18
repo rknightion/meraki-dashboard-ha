@@ -1,0 +1,216 @@
+[tool.poetry]
+name = "meraki-dashboard-ha"
+version = "0.1.0"
+description = "Meraki Dashboard integration for Home Assistant"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
+documentation = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
+keywords = ["homeassistant", "meraki", "cisco", "iot", "sensors"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Home Automation",
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+meraki = ">=2.0.3,<3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+homeassistant = ">=2024.1.0"
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+pytest-homeassistant-custom-component = "^0.13.0"
+black = "^23.12.1"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+flake8-docstrings = "^1.7.0"
+flake8-comprehensions = "^3.14.0"
+mypy = "^1.8.0"
+pylint = "^3.0.3"
+pre-commit = "^3.6.0"
+bandit = "^1.7.6"
+types-requests = "^2.31.0"
+types-PyYAML = "^6.0.12"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | venv
+)/
+'''
+
+[tool.isort]
+profile = "black"
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+skip_gitignore = true
+known_first_party = ["custom_components.meraki_dashboard", "tests"]
+known_third_party = ["meraki", "homeassistant", "pytest"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.mypy]
+python_version = "3.11"
+show_error_codes = true
+strict = true
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_equality = true
+strict_concatenate = true
+
+[[tool.mypy.overrides]]
+module = [
+    "homeassistant.*",
+    "meraki.*",
+    "pytest.*",
+]
+ignore_missing_imports = true
+
+[tool.pylint.main]
+py-version = "3.11"
+ignore = ["tests"]
+jobs = 0
+persistent = true
+fail-under = 8.0
+
+[tool.pylint.messages_control]
+max-line-length = 88
+disable = [
+    "C0103",  # Invalid name
+    "C0114",  # Missing module docstring
+    "C0115",  # Missing class docstring
+    "C0116",  # Missing function docstring
+    "R0903",  # Too few public methods
+    "R0913",  # Too many arguments
+    "W0613",  # Unused argument
+    "W0707",  # Consider explicitly re-raising
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "too-many-arguments",
+    "too-few-public-methods",
+    "duplicate-code",
+]
+good-names = ["i", "j", "k", "ex", "Run", "_", "id", "T"]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.pylint.similarities]
+min-similarity-lines = 7
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv"]
+asyncio_mode = "auto"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=custom_components.meraki_dashboard",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+    "-vv",
+    "-s",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+]
+
+[tool.coverage.run]
+source = ["custom_components.meraki_dashboard"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.bandit]
+targets = ["custom_components"]
+exclude_dirs = ["tests", "scripts"]
+skips = ["B101", "B601"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "D",   # pydocstyle
+]
+ignore = [
+    "E501",  # line too long
+    "D202",  # no blank lines after function docstring
+    "D203",  # one blank line before class
+    "D213",  # multi-line docstring summary should start at the second line
+]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["D100", "D101", "D102", "D103", "D104"]
+
+[tool.ruff.pydocstyle]
+convention = "google" 

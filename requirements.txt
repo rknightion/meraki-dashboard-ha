@@ -1,0 +1,5 @@
+# Runtime requirements for Meraki Dashboard Home Assistant Integration
+# These dependencies are also specified in manifest.json
+
+# Meraki SDK for API communication
+meraki>=2.0.3,<3.0.0 
