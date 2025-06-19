@@ -198,7 +198,7 @@ jobs:
     name: All Checks Pass
     if: success() # Only run this job if all dependencies succeed
     needs:
-      - lint-and-format
+      - lint-and-scan
       # - pytest # Re-enable when you re-enable the pytest job
       - hassfest
       - hacs
