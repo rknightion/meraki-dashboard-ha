@@ -128,12 +128,12 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_request_refresh_delayed(self, delay_seconds: int = 5) -> None:
         """Request a delayed refresh of the coordinator data.
-        
+
         Args:
             delay_seconds: Number of seconds to wait before refreshing
         """
         # Use Home Assistant's built-in scheduler
         self.hass.loop.call_later(
             delay_seconds,
-            lambda: self.hass.async_create_task(self.async_request_refresh())
-        ) 
+            lambda: self.hass.async_create_task(self.async_request_refresh()),
+        )

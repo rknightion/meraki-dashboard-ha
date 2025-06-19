@@ -32,7 +32,7 @@ async def async_setup_entry(
     # Get the shared coordinator
     coordinator = hass.data[DOMAIN].get(f"{config_entry.entry_id}_coordinator")
     hub = hass.data[DOMAIN][config_entry.entry_id]
-    
+
     if not coordinator:
         _LOGGER.info("No coordinator found, manual update button not available")
         return
@@ -64,10 +64,10 @@ class MerakiUpdateButton(ButtonEntity):
         self.coordinator = coordinator
         self.hub = hub
         self._config_entry = config_entry
-        
+
         # Set unique ID for this entity
         self._attr_unique_id = f"{config_entry.data['organization_id']}_update_button"
-        
+
         # Set device info to associate with the organization device
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, config_entry.data["organization_id"])},
@@ -78,7 +78,7 @@ class MerakiUpdateButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Handle the button press.
-        
+
         Triggers an immediate refresh of all sensor data.
         """
         _LOGGER.info("Manual sensor update requested")
@@ -88,4 +88,4 @@ class MerakiUpdateButton(ButtonEntity):
     def available(self) -> bool:
         """Return if entity is available."""
         # Always available as long as the hub exists
-        return self.hub is not None 
+        return self.hub is not None
