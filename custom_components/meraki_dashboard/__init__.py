@@ -225,20 +225,101 @@ class MerakiDashboardHub:
         return devices
 
     async def _async_discover_devices(self, _now: datetime | None = None) -> None:
-        """Periodically discover new devices.
+        """Periodically discover new devices and update existing ones.
 
         This method is called periodically when auto-discovery is enabled.
-        It triggers platform setup which will discover any new devices.
+        It discovers new devices, updates existing device information,
+        and coordinates with the sensor coordinator for graceful handling.
         """
         _LOGGER.debug("Running device discovery")
 
-        # Re-run device discovery for all platforms
-        for platform in PLATFORMS:
-            self.hass.async_create_task(
-                self.hass.config_entries.async_forward_entry_setup(
-                    self.config_entry, platform
+        try:
+            # Get current MT devices from the API
+            discovered_devices = await self.async_get_devices_by_type(SENSOR_TYPE_MT)
+
+            # Track which devices we found
+            discovered_serials = {device["serial"] for device in discovered_devices}
+            existing_serials = {device["serial"] for device in self.devices.values()}
+
+            # Find new devices
+            new_serials = discovered_serials - existing_serials
+            if new_serials:
+                _LOGGER.info(
+                    "Found %d new devices: %s", len(new_serials), list(new_serials)
                 )
+
+                # Trigger platform setup for new devices
+                for platform in PLATFORMS:
+                    self.hass.async_create_task(
+                        self.hass.config_entries.async_forward_entry_setup(
+                            self.config_entry, platform
+                        )
+                    )
+
+            # Find removed devices
+            removed_serials = existing_serials - discovered_serials
+            if removed_serials:
+                _LOGGER.info(
+                    "Detected %d removed devices: %s",
+                    len(removed_serials),
+                    list(removed_serials),
+                )
+                # Remove from our device cache
+                for serial in removed_serials:
+                    if serial in self.devices:
+                        del self.devices[serial]
+
+            # Update device information for existing devices (names, etc.)
+            updated_devices = []
+            for device in discovered_devices:
+                serial = device["serial"]
+                if serial in existing_serials:
+                    # Check if device info has changed
+                    existing_device = self.devices.get(serial, {})
+                    if (
+                        existing_device.get("name") != device.get("name")
+                        or existing_device.get("notes") != device.get("notes")
+                        or existing_device.get("tags") != device.get("tags")
+                    ):
+                        _LOGGER.debug("Device info updated for %s", serial)
+                        updated_devices.append(device)
+
+                # Update our device cache with latest info
+                self.devices[serial] = device
+
+            # Notify coordinator if there are changes
+            coordinator = self.hass.data[DOMAIN].get(
+                f"{self.config_entry.entry_id}_coordinator"
             )
+            if coordinator and (new_serials or removed_serials or updated_devices):
+                # Update coordinator's device list
+                coordinator.devices = list(self.devices.values())
+
+                # Trigger a coordinator refresh to handle new/removed/updated devices
+                await coordinator.async_request_refresh()
+
+                _LOGGER.info(
+                    "Device discovery complete: %d new, %d removed, %d updated",
+                    len(new_serials),
+                    len(removed_serials),
+                    len(updated_devices),
+                )
+            else:
+                _LOGGER.debug("No device changes detected during discovery")
+
+        except Exception as err:
+            _LOGGER.error("Error during device discovery: %s", err)
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+
+    async def async_manual_device_discovery(self) -> None:
+        """Manually trigger device discovery.
+
+        This method can be called by a button or other manual trigger
+        to immediately run device discovery without waiting for the scheduled interval.
+        """
+        _LOGGER.info("Manual device discovery triggered")
+        await self._async_discover_devices()
 
     async def async_get_sensor_data(self, serial: str) -> dict[str, Any] | None:
         """Get sensor data for a specific device.
@@ -364,32 +445,13 @@ class MerakiDashboardHub:
         Returns:
             Updated device information or None if not found
         """
-        # If we have cached device info, use its network ID
+        # Return the cached device info since we already have it
+        # and getting individual device info isn't critical for sensor functionality
         if serial in self.devices:
-            network_id = self.devices[serial].get("network_id")
-            if network_id and self.dashboard is not None:
-                try:
-                    device = await self.hass.async_add_executor_job(
-                        self.dashboard.networks.getNetworkDevice, network_id, serial
-                    )
-                    self.total_api_calls += 1
-                    self.last_api_call_error = None
+            _LOGGER.debug("Returning cached device info for %s", serial)
+            return self.devices[serial]
 
-                    # Add network information
-                    device["network_id"] = network_id
-                    device["network_name"] = self.devices[serial].get("network_name")
-
-                    # Sanitize and store updated device info
-                    device = sanitize_device_attributes(device)
-                    self.devices[serial] = device
-
-                    return device
-
-                except APIError as err:
-                    self.failed_api_calls += 1
-                    self.last_api_call_error = str(err)
-                    _LOGGER.error("Error updating device info for %s: %s", serial, err)
-
+        _LOGGER.debug("No cached device info found for %s", serial)
         return None
 
     async def async_unload(self) -> None:
