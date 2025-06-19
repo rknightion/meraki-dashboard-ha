@@ -73,7 +73,6 @@ class MerakiDashboardHub:
         self._device_discovery_unsub = None
 
         # Hub diagnostic metrics
-        self.last_api_call_success: datetime | None = None
         self.last_api_call_error: str | None = None
         self.total_api_calls = 0
         self.failed_api_calls = 0
@@ -115,8 +114,6 @@ class MerakiDashboardHub:
             self.total_api_calls += 1
             _LOGGER.info("Found %d networks in organization", len(self.networks))
 
-            # Update success timestamp
-            self.last_api_call_success = datetime.now()
             self.last_api_call_error = None
 
             # Set up periodic device discovery if auto-discovery is enabled
@@ -204,7 +201,6 @@ class MerakiDashboardHub:
                         devices.append(device)
 
                         # Update success timestamp for successful device discovery
-                        self.last_api_call_success = datetime.now()
                         self.last_api_call_error = None
 
                         # Log device details for debugging
@@ -279,7 +275,6 @@ class MerakiDashboardHub:
                 [serial],
             )
             self.total_api_calls += 1
-            self.last_api_call_success = datetime.now()
             self.last_api_call_error = None
 
             # Find readings for this specific device
@@ -337,7 +332,6 @@ class MerakiDashboardHub:
                 serials,
             )
             self.total_api_calls += 1
-            self.last_api_call_success = datetime.now()
             self.last_api_call_error = None
 
             _LOGGER.debug(
@@ -379,7 +373,6 @@ class MerakiDashboardHub:
                         self.dashboard.networks.getNetworkDevice, network_id, serial
                     )
                     self.total_api_calls += 1
-                    self.last_api_call_success = datetime.now()
                     self.last_api_call_error = None
 
                     # Add network information

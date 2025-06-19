@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -26,6 +25,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -197,7 +197,6 @@ async def async_setup_entry(
         [
             MerakiHubDeviceCountSensor(hub, config_entry),
             MerakiHubNetworkCountSensor(hub, config_entry),
-            MerakiHubLastUpdateSensor(hub, config_entry),
             MerakiHubApiCallsSensor(hub, config_entry),
             MerakiHubFailedApiCallsSensor(hub, config_entry),
         ]
@@ -478,7 +477,7 @@ class MerakiHubDeviceCountSensor(SensorEntity):
     _attr_name = "Device Count"
     _attr_icon = "mdi:counter"
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_entity_category = "diagnostic"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -515,7 +514,7 @@ class MerakiHubNetworkCountSensor(SensorEntity):
     _attr_name = "Network Count"
     _attr_icon = "mdi:network"
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_entity_category = "diagnostic"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -549,50 +548,6 @@ class MerakiHubNetworkCountSensor(SensorEntity):
         }
 
 
-class MerakiHubLastUpdateSensor(SensorEntity):
-    """Sensor showing the last successful API call timestamp."""
-
-    _attr_has_entity_name = True
-    _attr_name = "Last API Success"
-    _attr_icon = "mdi:clock-check"
-    _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _attr_entity_category = "diagnostic"
-
-    def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
-        """Initialize the sensor."""
-        self.hub = hub
-        self._config_entry = config_entry
-        self._attr_unique_id = (
-            f"{config_entry.data['organization_id']}_last_api_success"
-        )
-
-        # Set device info to associate with the organization device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, config_entry.data["organization_id"])},
-            manufacturer="Cisco Meraki",
-            name=config_entry.title,
-            model="Organization",
-        )
-
-    @property
-    def native_value(self) -> datetime | None:
-        """Return the last successful API call timestamp."""
-        return self.hub.last_api_call_success
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes."""
-        attrs = {
-            "organization_id": self.hub.organization_id,
-            "organization_name": self.hub.organization_name,
-        }
-
-        if self.hub.last_api_call_error:
-            attrs["last_error"] = self.hub.last_api_call_error
-
-        return attrs
-
-
 class MerakiHubApiCallsSensor(SensorEntity):
     """Sensor showing the total number of API calls made."""
 
@@ -600,7 +555,7 @@ class MerakiHubApiCallsSensor(SensorEntity):
     _attr_name = "Total API Calls"
     _attr_icon = "mdi:api"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_entity_category = "diagnostic"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
         """Initialize the sensor."""
@@ -649,7 +604,7 @@ class MerakiHubFailedApiCallsSensor(SensorEntity):
     _attr_name = "Failed API Calls"
     _attr_icon = "mdi:api-off"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_entity_category = "diagnostic"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
         """Initialize the sensor."""
