@@ -223,14 +223,21 @@ class MerakiDashboardHub:
         Returns:
             Dictionary containing sensor readings or None if not found
         """
+        if self.dashboard is None:
+            _LOGGER.error("Dashboard API not initialized")
+            return None
+
         try:
+            # Capture dashboard reference to avoid potential None access in inner function
+            dashboard = self.dashboard
+
             # Create a wrapper function that accepts positional arguments only
             # This is required because async_add_executor_job doesn't support keyword arguments
             def get_sensor_readings_with_serials(
                 org_id: str, device_serials: list[str]
             ):
                 """Wrapper function to call the Meraki SDK with serials parameter."""
-                return self.dashboard.sensor.getOrganizationSensorReadingsLatest(
+                return dashboard.sensor.getOrganizationSensorReadingsLatest(
                     org_id, serials=device_serials
                 )
 
@@ -267,8 +274,15 @@ class MerakiDashboardHub:
         Returns:
             Dictionary mapping serial numbers to their sensor data
         """
+        if self.dashboard is None:
+            _LOGGER.error("Dashboard API not initialized")
+            return {}
+
         try:
             _LOGGER.debug("Fetching sensor data for %d devices", len(serials))
+
+            # Capture dashboard reference to avoid potential None access in inner function
+            dashboard = self.dashboard
 
             # Create a wrapper function that accepts positional arguments only
             # This is required because async_add_executor_job doesn't support keyword arguments
@@ -276,7 +290,7 @@ class MerakiDashboardHub:
                 org_id: str, device_serials: list[str]
             ):
                 """Wrapper function to call the Meraki SDK with serials parameter."""
-                return self.dashboard.sensor.getOrganizationSensorReadingsLatest(
+                return dashboard.sensor.getOrganizationSensorReadingsLatest(
                     org_id, serials=device_serials
                 )
 
