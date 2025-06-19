@@ -1902,6 +1902,21 @@ yarl = "1.20.1"
 zeroconf = "0.147.0"
 
 [[package]]
+name = "homeassistant-stubs"
+version = "2025.6.1"
+description = "PEP 484 typing stubs for Home Assistant Core"
+optional = false
+python-versions = ">=3.13.2"
+groups = ["dev"]
+files = [
+    {file = "homeassistant_stubs-2025.6.1-py3-none-any.whl", hash = "sha256:5709864a84fdd930700716687b98e6cc8fae2f63b5611d49e9fb975157d92c23"},
+    {file = "homeassistant_stubs-2025.6.1.tar.gz", hash = "sha256:e69f3ac0ee22cf402ebcf24e6b53d93b40c3add3c182d69c8e8a86e2b0d38b94"},
+]
+
+[package.dependencies]
+homeassistant = "2025.6.1"
+
+[[package]]
 name = "httpcore"
 version = "1.0.9"
 description = "A minimal low-level HTTP client."
@@ -5238,5 +5253,5 @@ ifaddr = ">=0.1.7"
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.13.5,<3.14"
-content-hash = "068967db1efc2720e0bcca3820636b97b987224f4e6748c0201777a3ab1d80cf"
+python-versions = ">=3.13.2,<3.14"
+content-hash = "0f9642c61256035ddd7dd9010b5493aa668b05b5fa703eeb7032607ec0de4624"
