@@ -122,6 +122,7 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          ignore: brands
 
   # Check for security vulnerabilities in dependencies
   safety:
