@@ -1,7 +1,7 @@
 """The Meraki Dashboard integration."""
+
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import timedelta
 from typing import Any
@@ -146,6 +146,10 @@ class MerakiDashboardHub:
 
         for network in self.networks:
             try:
+                if self.dashboard is None:
+                    _LOGGER.error("Dashboard API not initialized")
+                    continue
+
                 network_devices = await self.hass.async_add_executor_job(
                     self.dashboard.networks.getNetworkDevices, network["id"]
                 )
@@ -194,7 +198,7 @@ class MerakiDashboardHub:
         _LOGGER.info("Found %d %s devices total", len(devices), device_type)
         return devices
 
-    async def _async_discover_devices(self, _now=None) -> None:
+    async def _async_discover_devices(self, _now: Any = None) -> None:
         """Periodically discover new devices.
 
         This method is called periodically when auto-discovery is enabled.
@@ -220,6 +224,10 @@ class MerakiDashboardHub:
             Dictionary containing sensor readings or None if not found
         """
         try:
+            if self.dashboard is None:
+                _LOGGER.error("Dashboard API not initialized")
+                return None
+
             # Get the latest sensor readings for the organization
             # Filter by specific serial number
             all_readings = await self.hass.async_add_executor_job(
@@ -255,6 +263,10 @@ class MerakiDashboardHub:
         """
         try:
             _LOGGER.debug("Fetching sensor data for %d devices", len(serials))
+
+            if self.dashboard is None:
+                _LOGGER.error("Dashboard API not initialized")
+                return {}
 
             # Get the latest sensor readings for multiple devices
             # Don't specify metrics to get all available data
@@ -295,7 +307,7 @@ class MerakiDashboardHub:
         # If we have cached device info, use its network ID
         if serial in self.devices:
             network_id = self.devices[serial].get("network_id")
-            if network_id:
+            if network_id and self.dashboard is not None:
                 try:
                     device = await self.hass.async_add_executor_job(
                         self.dashboard.devices.getNetworkDevice, network_id, serial
@@ -389,7 +401,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     Returns:
         bool: True if unload successful
     """
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
         hub = hass.data[DOMAIN].pop(entry.entry_id)
         await hub.async_unload()
 

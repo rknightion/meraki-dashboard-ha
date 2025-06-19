@@ -1,4 +1,5 @@
 """Support for Meraki Dashboard binary sensors."""
+
 from __future__ import annotations
 
 import logging
@@ -11,7 +12,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -153,7 +154,9 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class MerakiMTBinarySensor(CoordinatorEntity, BinarySensorEntity):
+class MerakiMTBinarySensor(
+    CoordinatorEntity[MerakiSensorCoordinator], BinarySensorEntity
+):
     """Representation of a Meraki MT binary sensor.
 
     Each instance represents a single binary metric from a Meraki MT device,
@@ -252,7 +255,7 @@ class MerakiMTBinarySensor(CoordinatorEntity, BinarySensorEntity):
         Extracts the appropriate boolean value from the sensor readings
         based on the metric type.
         """
-        if self._serial not in self.coordinator.data:
+        if not self.coordinator.data or self._serial not in self.coordinator.data:
             return None
 
         device_data = self.coordinator.data[self._serial]
@@ -314,7 +317,7 @@ class MerakiMTBinarySensor(CoordinatorEntity, BinarySensorEntity):
             attrs["notes"] = notes
 
         # Add last reported timestamp if available
-        if self._serial in self.coordinator.data:
+        if self.coordinator.data and self._serial in self.coordinator.data:
             device_data = self.coordinator.data[self._serial]
             readings = device_data.get("readings", [])
 

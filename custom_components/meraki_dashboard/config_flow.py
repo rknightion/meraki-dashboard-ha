@@ -1,4 +1,5 @@
 """Config flow for Meraki Dashboard integration."""
+
 from __future__ import annotations
 
 import logging
@@ -23,9 +24,6 @@ from .const import (
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
-    DOMAIN,
-    MIN_DISCOVERY_INTERVAL,
-    MIN_SCAN_INTERVAL,
     SENSOR_TYPE_MT,
 )
 from .utils import sanitize_device_name
@@ -33,7 +31,7 @@ from .utils import sanitize_device_name
 _LOGGER = logging.getLogger(__name__)
 
 
-class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for Meraki Dashboard.
 
     This class manages the configuration flow for setting up the integration,
@@ -41,6 +39,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
+    MINOR_VERSION = 1
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -227,84 +226,56 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 },
             )
 
-        # Create device selector with all available devices
-        # Display device name (or model + serial if no name), model, and network
+        # Create device selector
         device_options = []
         for device in self._available_devices:
-            # Use device name if available, otherwise use model and last 4 of serial
-            device_name = device.get("name")
-            if not device_name:
-                device_name = (
-                    f"{device.get('model', 'Unknown')} ({device['serial'][-4:]})"
-                )
-            else:
-                # Sanitize the device name for display
-                device_name = sanitize_device_name(device_name)
-
-            # Create descriptive label including network
-            label = f"{device_name} - {device.get('model', 'Unknown')} - {device['network_name']}"
-
+            device_name = sanitize_device_name(
+                device.get("name")
+                or f"{device.get('model', 'MT')} {device['serial'][-4:]}"
+            )
             device_options.append(
                 selector.SelectOptionDict(
                     value=device["serial"],
-                    label=label,
+                    label=f"{device_name} ({device.get('network_name', 'Unknown Network')})",
                 )
             )
+
+        device_selector = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=device_options,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+                multiple=True,
+            )
+        )
 
         return self.async_show_form(
             step_id="device_selection",
             data_schema=vol.Schema(
                 {
+                    vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+                    vol.Optional(CONF_SELECTED_DEVICES): device_selector,
                     vol.Optional(
-                        CONF_NAME, default=user_input.get(CONF_NAME, DEFAULT_NAME)
-                    ): str,
-                    vol.Optional(
-                        CONF_SELECTED_DEVICES,
-                        description={"suggested_value": []},
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=device_options,
-                            mode=selector.SelectSelectorMode.DROPDOWN,
-                            multiple=True,
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_SCAN_INTERVAL,
-                        default=DEFAULT_SCAN_INTERVAL,
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_SCAN_INTERVAL),
-                    ),
+                        CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+                    ): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
                     vol.Optional(CONF_AUTO_DISCOVERY, default=True): bool,
                     vol.Optional(
-                        CONF_DISCOVERY_INTERVAL,
-                        default=DEFAULT_DISCOVERY_INTERVAL,
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_DISCOVERY_INTERVAL),
-                    ),
+                        CONF_DISCOVERY_INTERVAL, default=DEFAULT_DISCOVERY_INTERVAL
+                    ): vol.All(vol.Coerce(int), vol.Range(min=300, max=86400)),
                 }
             ),
-            description_placeholders={
-                "device_count": str(len(self._available_devices)),
-            },
         )
 
     @staticmethod
     @callback
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
-    ) -> config_entries.OptionsFlow:
-        """Get the options flow for this handler."""
+    ) -> MerakiDashboardOptionsFlow:
+        """Create the options flow."""
         return MerakiDashboardOptionsFlow(config_entry)
 
 
 class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
-    """Handle options flow for Meraki Dashboard.
-
-    This allows users to modify configuration options after initial setup,
-    such as update intervals and auto-discovery settings.
-    """
+    """Handle options flow for Meraki Dashboard integration."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
@@ -313,15 +284,11 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Manage the options.
-
-        Users can modify scan interval, auto-discovery, and discovery interval.
-        """
+        """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        # Get current options
-        options = self.config_entry.options
+        current_options = self.config_entry.options or {}
 
         return self.async_show_form(
             step_id="init",
@@ -329,24 +296,20 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
-                        default=options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_SCAN_INTERVAL),
-                    ),
+                        default=current_options.get(
+                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
                     vol.Optional(
                         CONF_AUTO_DISCOVERY,
-                        default=options.get(CONF_AUTO_DISCOVERY, True),
+                        default=current_options.get(CONF_AUTO_DISCOVERY, True),
                     ): bool,
                     vol.Optional(
                         CONF_DISCOVERY_INTERVAL,
-                        default=options.get(
+                        default=current_options.get(
                             CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL
                         ),
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_DISCOVERY_INTERVAL),
-                    ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=300, max=86400)),
                 }
             ),
         )

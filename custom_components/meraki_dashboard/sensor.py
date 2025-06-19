@@ -1,9 +1,10 @@
 """Support for Meraki Dashboard sensors."""
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -25,21 +26,18 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
     UpdateFailed,
 )
-from homeassistant.util import dt as dt_util
+
+if TYPE_CHECKING:
+    from . import MerakiDashboardHub
 
 from .const import (
-    ATTR_LAST_REPORTED_AT,
-    ATTR_MODEL,
-    ATTR_NETWORK_ID,
-    ATTR_NETWORK_NAME,
-    ATTR_SERIAL,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -261,7 +259,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class MerakiSensorCoordinator(DataUpdateCoordinator):
+class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to manage fetching Meraki sensor data.
 
     This coordinator handles periodic updates of sensor data for all devices,
@@ -271,7 +269,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator):
     def __init__(
         self,
         hass: HomeAssistant,
-        hub,
+        hub: MerakiDashboardHub,
         devices: list[dict[str, Any]],
         scan_interval: int,
     ) -> None:
@@ -372,7 +370,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator):
                         )
 
 
-class MerakiMTSensor(CoordinatorEntity, SensorEntity):
+class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     """Representation of a Meraki MT sensor.
 
     Each instance represents a single metric from a Meraki MT device,
@@ -459,112 +457,98 @@ class MerakiMTSensor(CoordinatorEntity, SensorEntity):
                 # Add MAC address if available
                 if mac := device.get("mac"):
                     self._attr_device_info["connections"] = {("mac", mac)}
-
                 break
 
         return self._attr_device_info
 
     @property
     def native_value(self) -> Any:
-        """Return the state of the sensor.
-
-        Extracts the appropriate value from the sensor readings based on
-        the metric type.
-        """
-        if self._serial not in self.coordinator.data:
+        """Return the native value of the sensor."""
+        if not self.coordinator.data:
             return None
 
-        device_data = self.coordinator.data[self._serial]
-        readings = device_data.get("readings", [])
+        device_data = self.coordinator.data.get(self._serial)
+        if not device_data:
+            return None
 
-        # Find the latest reading for this sensor type
+        readings = device_data.get("readings", [])
+        if not readings:
+            return None
+
+        # Find the reading for this sensor type
         for reading in readings:
             if reading.get("metric") == self.entity_description.key:
-                # The value is nested within a metric-specific object
-                metric_data = reading.get(self.entity_description.key, {})
-
-                # Extract the appropriate value based on the metric type
-                if self.entity_description.key == MT_SENSOR_APPARENT_POWER:
-                    return metric_data.get("draw")
-                elif self.entity_description.key == MT_SENSOR_BATTERY:
-                    return metric_data.get("percentage")
-                elif self.entity_description.key == MT_SENSOR_BUTTON:
-                    return metric_data.get("pressType")
-                elif self.entity_description.key == MT_SENSOR_CO2:
-                    return metric_data.get("concentration")
-                elif self.entity_description.key == MT_SENSOR_CURRENT:
-                    return metric_data.get("draw")
-                elif self.entity_description.key == MT_SENSOR_FREQUENCY:
-                    return metric_data.get("level")
-                elif self.entity_description.key == MT_SENSOR_HUMIDITY:
-                    return metric_data.get("relativePercentage")
-                elif self.entity_description.key == MT_SENSOR_INDOOR_AIR_QUALITY:
-                    return metric_data.get("score")
-                elif self.entity_description.key == MT_SENSOR_NOISE:
-                    ambient = metric_data.get("ambient", {})
-                    return ambient.get("level")
-                elif self.entity_description.key == MT_SENSOR_PM25:
-                    return metric_data.get("concentration")
-                elif self.entity_description.key == MT_SENSOR_POWER_FACTOR:
-                    return metric_data.get("percentage")
-                elif self.entity_description.key == MT_SENSOR_REAL_POWER:
-                    return metric_data.get("draw")
-                elif self.entity_description.key == MT_SENSOR_TEMPERATURE:
-                    return metric_data.get("celsius")
-                elif self.entity_description.key == MT_SENSOR_TVOC:
-                    return metric_data.get("concentration")
-                elif self.entity_description.key == MT_SENSOR_VOLTAGE:
-                    return metric_data.get("level")
+                # Extract the value based on sensor type
+                if self.entity_description.key == "temperature":
+                    temp_data = reading.get("temperature", {})
+                    return temp_data.get("celsius")
+                elif self.entity_description.key == "humidity":
+                    humidity_data = reading.get("humidity", {})
+                    return humidity_data.get("relativePercentage")
+                elif self.entity_description.key == "tvoc":
+                    tvoc_data = reading.get("tvoc", {})
+                    return tvoc_data.get("concentration")
+                elif self.entity_description.key == "pm25":
+                    pm25_data = reading.get("pm25", {})
+                    return pm25_data.get("concentration")
+                elif self.entity_description.key == "noise":
+                    noise_data = reading.get("noise", {})
+                    return noise_data.get("ambient", {}).get("level")
+                elif self.entity_description.key == "battery":
+                    battery_data = reading.get("battery", {})
+                    return battery_data.get("percentage")
+                elif self.entity_description.key == "button":
+                    button_data = reading.get("button", {})
+                    return button_data.get("pressType")
 
         return None
 
     @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return (
+            self.coordinator.last_update_success
+            and self.coordinator.data is not None
+            and self._serial in self.coordinator.data
+        )
+
+    @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return additional state attributes.
+        """Return extra state attributes."""
+        if not self.coordinator.data:
+            return {}
 
-        Includes device information and metadata that might be useful
-        for automations or debugging.
-        """
-        # Get the latest device info from coordinator
-        device = self._device
-        for d in self.coordinator.devices:
-            if d["serial"] == self._serial:
-                device = d
-                break
+        device_data = self.coordinator.data.get(self._serial)
+        if not device_data:
+            return {}
 
-        attrs = {
-            ATTR_SERIAL: self._serial,
-            ATTR_MODEL: device.get("model"),
-            ATTR_NETWORK_ID: device.get("network_id"),
-            ATTR_NETWORK_NAME: device.get("network_name"),
+        # Find the reading for this sensor type
+        readings = device_data.get("readings", [])
+        for reading in readings:
+            if reading.get("metric") == self.entity_description.key:
+                attrs = {
+                    "last_updated": reading.get("ts"),
+                    "serial_number": self._serial,
+                }
+
+                # Add sensor-specific attributes
+                if self.entity_description.key == "temperature":
+                    temp_data = reading.get("temperature", {})
+                    if "fahrenheit" in temp_data:
+                        attrs["temperature_fahrenheit"] = temp_data["fahrenheit"]
+                elif self.entity_description.key == "noise":
+                    noise_data = reading.get("noise", {})
+                    if "ambient" in noise_data:
+                        ambient = noise_data["ambient"]
+                        attrs.update(
+                            {
+                                "noise_level": ambient.get("level"),
+                                "noise_a_weighted": ambient.get("a_weighted"),
+                            }
+                        )
+
+                return attrs
+
+        return {
+            "serial_number": self._serial,
         }
-
-        # Add MAC address if available
-        if mac := device.get("mac"):
-            attrs["mac_address"] = mac
-
-        # Add firmware version if available
-        if firmware := device.get("firmware"):
-            attrs["firmware_version"] = firmware
-
-        # Add device tags if available
-        if tags := device.get("tags"):
-            attrs["tags"] = tags
-
-        # Add device notes if available
-        if notes := device.get("notes"):
-            attrs["notes"] = notes
-
-        # Add last reported timestamp if available
-        if self._serial in self.coordinator.data:
-            device_data = self.coordinator.data[self._serial]
-            readings = device_data.get("readings", [])
-
-            for reading in readings:
-                if reading.get("metric") == self.entity_description.key:
-                    timestamp = reading.get("ts")
-                    if timestamp:
-                        attrs[ATTR_LAST_REPORTED_AT] = timestamp
-                    break
-
-        return attrs

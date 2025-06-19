@@ -1,4 +1,5 @@
 """Constants for the Meraki Dashboard integration."""
+
 from typing import Final
 
 DOMAIN: Final = "meraki_dashboard"
