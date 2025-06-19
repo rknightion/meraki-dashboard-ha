@@ -84,7 +84,7 @@
       "water_detection": {
         "default": "mdi:water-off",
         "state": {
-          "on": "mdi:water-alert"
+          "on": "mdi:leak"
         }
       }
     }
