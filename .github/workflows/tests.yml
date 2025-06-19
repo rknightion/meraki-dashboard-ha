@@ -110,6 +110,10 @@ jobs:
   safety:
     runs-on: ubuntu-latest
     name: Dependency Security
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     steps:
       - name: Check out code
         uses: actions/checkout@v4
