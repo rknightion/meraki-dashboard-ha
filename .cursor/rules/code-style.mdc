@@ -1,0 +1,28 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Code Style Guidelines
+
+## Python Standards
+- Follow PEP 8 with 88-char line length (Black formatter)
+- Use type hints for all function parameters and return values
+- Use Google-style docstrings with type information
+- Use async/await for all I/O operations
+- Early returns to reduce nesting
+- Descriptive variable names (no single letters except in comprehensions)
+- Use f-strings for string formatting
+
+## Home Assistant Conventions
+- Follow Home Assistant integration patterns and conventions
+- Use Home Assistant's built-in helpers and utilities
+- Implement proper error handling with ConfigEntryAuthFailed and ConfigEntryNotReady
+- Use update coordinators for efficient data fetching
+- Create devices for physical hardware, entities for individual metrics
+
+## File Organization
+- Keep related functionality together
+- Use clear, descriptive file and function names
+- Group imports logically (standard library, third-party, local)
+- Maintain consistent indentation and spacing

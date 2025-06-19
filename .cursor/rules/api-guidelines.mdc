@@ -1,0 +1,33 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# API Guidelines
+
+## Meraki SDK Usage
+- Always use Meraki Python SDK for all API interactions
+- Never make direct HTTP calls to the Meraki API
+- Implement proper rate limiting and error handling
+- Use batch operations where possible
+- Cache device information appropriately
+
+## Error Handling
+- Implement ConfigEntryAuthFailed and ConfigEntryNotReady appropriately
+- Log errors at appropriate levels with helpful messages
+- Implement retry logic for transient failures
+- Handle API authentication errors gracefully
+- Use Home Assistant's built-in helpers and utilities
+
+## Performance Optimization
+- Minimize API calls using batch operations
+- Respect Meraki's rate limits
+- Use appropriate update intervals
+- Implement efficient data structures
+- Cache device information appropriately
+
+## Data Management
+- Include all available attributes from API
+- Support dynamic device discovery
+- Make update intervals configurable
+- Use proper device classes and units

@@ -18,15 +18,12 @@ help:
 
 # Install dependencies
 install:
-	pip install --upgrade pip
-	pip install -r requirements.txt
-	pip install -r requirements_test.txt
-	pip install -e .
-	pre-commit install
+	poetry install
+	poetry run pre-commit install
 
 # Run tests
 test:
-	pytest \
+	poetry run pytest \
 		--cov=custom_components.meraki_dashboard \
 		--cov-report=term-missing:skip-covered \
 		--cov-report=html \
@@ -36,42 +33,42 @@ test:
 
 # Run specific test file or test
 test-file:
-	pytest $(FILE) -vv
+	poetry run pytest $(FILE) -vv
 
 # Run all linters
 lint: lint-black lint-isort lint-flake8 lint-pylint lint-mypy lint-bandit
 
 # Individual linters
 lint-black:
-	black --check --diff custom_components tests
+	poetry run black --check --diff custom_components tests
 
 lint-isort:
-	isort --check-only --diff custom_components tests
+	poetry run isort --check-only --diff custom_components tests
 
 lint-flake8:
-	flake8 custom_components tests \
+	poetry run flake8 custom_components tests \
 		--max-line-length=88 \
 		--extend-ignore=E203,W503,E501,D202 \
 		--docstring-convention=google
 
 lint-pylint:
-	pylint custom_components \
+	poetry run pylint custom_components \
 		--max-line-length=88 \
 		--disable=C0103,C0114,C0115,C0116,R0903,R0913,W0613
 
 lint-mypy:
-	mypy custom_components \
+	poetry run mypy custom_components \
 		--ignore-missing-imports \
 		--install-types \
 		--non-interactive
 
 lint-bandit:
-	bandit -r custom_components -f json -o bandit-report.json
+	poetry run bandit -r custom_components -f json -o bandit-report.json
 
 # Format code
 format:
-	black custom_components tests
-	isort custom_components tests
+	poetry run black custom_components tests
+	poetry run isort custom_components tests
 
 # Clean build artifacts
 clean:
@@ -90,21 +87,21 @@ clean:
 
 # Generate coverage report
 coverage:
-	pytest --cov=custom_components.meraki_dashboard --cov-report=html
+	poetry run pytest --cov=custom_components.meraki_dashboard --cov-report=html
 	@echo "Coverage report generated in htmlcov/index.html"
 	@python -m webbrowser htmlcov/index.html
 
 # Run pre-commit hooks
 pre-commit:
-	pre-commit run --all-files
+	poetry run pre-commit run --all-files
 
 # Update pre-commit hooks
 pre-commit-update:
-	pre-commit autoupdate
+	poetry run pre-commit autoupdate
 
 # Run hassfest
 hassfest:
-	python -m script.hassfest
+	poetry run python -m script.hassfest
 
 # Build documentation
 docs:
@@ -131,22 +128,20 @@ release:
 
 # Update dependencies
 update-deps:
-	pip install --upgrade pip
-	pip install --upgrade -r requirements.txt
-	pip install --upgrade -r requirements_test.txt
+	poetry update
 
 # Security check
 security:
-	bandit -r custom_components
-	safety check
+	poetry run bandit -r custom_components
+	poetry run safety check
 
 # Type stubs
 stubs:
-	stubgen custom_components -o stubs/
+	poetry run stubgen custom_components -o stubs/
 
 # Watch for changes and run tests
 watch:
-	watchmedo shell-command \
+	poetry run watchmedo shell-command \
 		--patterns="*.py" \
 		--recursive \
 		--command='clear && make test' \

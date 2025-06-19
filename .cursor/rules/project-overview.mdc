@@ -1,0 +1,32 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Meraki Dashboard Home Assistant Integration
+
+## Project Context
+Home Assistant custom integration for Cisco Meraki Dashboard API, focusing on MT series environmental sensors with plans to expand to other device types.
+
+## Core Principles
+- Always use Meraki Python SDK for all API interactions (never direct HTTP calls)
+- Follow Home Assistant integration patterns and conventions
+- Implement proper async/await patterns for all I/O operations
+- Maintain comprehensive test coverage (>80%)
+- Use type hints throughout the codebase
+
+## Key Files
+- `__init__.py` - Main integration setup and hub class
+- `config_flow.py` - UI configuration flow
+- `sensor.py` - Sensor platform implementation
+- `binary_sensor.py` - Binary sensor platform implementation
+- `const.py` - Constants and configuration keys
+- `manifest.json` - Integration metadata
+- `strings.json` - UI strings and translations
+
+## Git & Documentation
+- Use conventional commits format
+- Keep commits atomic and focused
+- Reference issues in commit messages
+- Update documentation for all changes
+- Test integration in actual Home Assistant instance

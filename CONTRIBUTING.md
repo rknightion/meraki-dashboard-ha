@@ -5,16 +5,14 @@ Thank you for your interest in contributing to the Meraki Dashboard integration 
 ## Development Setup
 
 1. Fork and clone the repository
-2. Create a virtual environment:
+2. Install Poetry (if not already installed):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   curl -sSL https://install.python-poetry.org | python3 -
    ```
-3. Install development dependencies:
+3. Install dependencies:
    ```bash
-   make install
-   # or manually:
-   pip install -r requirements.txt
+   poetry install
+   poetry shell
    pre-commit install
    ```
 
@@ -24,22 +22,25 @@ Thank you for your interest in contributing to the Meraki Dashboard integration 
 
 1. **Format your code:**
    ```bash
-   make format
+   poetry run black custom_components tests
+   poetry run isort custom_components tests
    ```
 
 2. **Run linters:**
    ```bash
-   make lint
+   poetry run flake8 custom_components tests
+   poetry run mypy custom_components
+   poetry run pylint custom_components
    ```
 
 3. **Run tests:**
    ```bash
-   make test
+   poetry run pytest
    ```
 
 4. **Run pre-commit checks:**
    ```bash
-   make pre-commit
+   pre-commit run --all-files
    ```
 
 ### Adding New Features

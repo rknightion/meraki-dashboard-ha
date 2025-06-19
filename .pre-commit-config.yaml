@@ -1,7 +1,20 @@
 # Pre-commit hooks for code quality and consistency
-# Following Home Assistant development standards
+# Following Home Assistant development standards with Poetry support
 
 repos:
+
+  - repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
+    rev: v0.5.1post1
+    hooks:
+    - id: pre-commit-update
+
+  - repo: https://github.com/python-poetry/poetry
+    rev: '1.8.3'  # add version here
+    hooks:
+    -   id: poetry-check
+    -   id: poetry-lock
+    -   id: poetry-install
+
   # Security checks
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
@@ -36,7 +49,6 @@ repos:
         args: ['--remove']
       - id: mixed-line-ending
         args: ['--fix=lf']
-      - id: requirements-txt-fixer
       - id: trailing-whitespace
 
   # Python code formatting with Black
@@ -142,6 +154,7 @@ repos:
     rev: 0.27.3
     hooks:
       - id: check-github-workflows
+
 
   # Home Assistant specific checks
   - repo: local

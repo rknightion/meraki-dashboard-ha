@@ -210,21 +210,28 @@ For development and testing:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha.git
+   git clone https://github.com/rknightion/meraki-dashboard-ha.git
    cd meraki-dashboard-ha
    ```
 
 2. **Set up development environment**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements_test.txt
+   # Install Poetry if you haven't already
+   curl -sSL https://install.python-poetry.org | python3 -
+   
+   # Install dependencies
+   poetry install
+   
+   # Activate the virtual environment
+   poetry shell
+   
+   # Install pre-commit hooks
    pre-commit install
    ```
 
 3. **Run tests**
    ```bash
-   make test
+   poetry run pytest
    ```
 
 4. **Test in Home Assistant**
@@ -235,7 +242,7 @@ For development and testing:
 
 5. **Validate with hassfest**
    ```bash
-   make hassfest
+   poetry run python -m script.hassfest
    ```
 
 ## Development
@@ -249,17 +256,21 @@ For development setup and guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 git clone https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha.git
 cd meraki-dashboard-ha
 
+# Install Poetry if you haven't already
+curl -sSL https://install.python-poetry.org | python3 -
+
 # Set up development environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements_test.txt
+poetry install
+poetry shell
 pre-commit install
 
 # Run tests
-make test
+poetry run pytest
 
 # Run linters
-make lint
+poetry run black custom_components tests
+poetry run isort custom_components tests
+poetry run flake8 custom_components tests
 ```
 
 ## Contributing

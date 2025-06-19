@@ -1,0 +1,32 @@
+---
+description: project patterns
+globs: 
+alwaysApply: false
+---
+# Common Patterns
+
+## Adding New Sensor Types
+1. Add metric constant to `const.py`
+2. Add sensor description to `sensor.py` or `binary_sensor.py`
+3. Update `icons.json` for new sensor types
+4. Test with actual device data
+
+## Entity & Device Management
+- Create devices for physical hardware
+- Create entities for individual metrics
+- Use proper device classes and units
+- Include all available attributes from API
+- Support dynamic device discovery
+
+## Configuration
+- Support both config entries and options flow
+- Allow users to select specific devices
+- Make update intervals configurable
+- Support runtime configuration changes
+
+## Development Workflow
+1. Use update coordinators for efficient data fetching
+2. Write tests for all new functionality (pytest + HA test helpers)
+3. Mock external API calls in tests
+4. Test both success and failure scenarios
+5. Run tests and linting before committing

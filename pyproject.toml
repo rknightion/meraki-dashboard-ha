@@ -1,44 +1,51 @@
-[tool.poetry]
+[project]
 name = "meraki-dashboard-ha"
 version = "0.1.0"
 description = "Meraki Dashboard integration for Home Assistant"
-authors = ["Your Name <your.email@example.com>"]
-license = "MIT"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+license = {text = "MIT"}
 readme = "README.md"
-repository = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
-documentation = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
+requires-python = ">=3.13.2,<3.14"
 keywords = ["homeassistant", "meraki", "cisco", "iot", "sensors"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Home Automation",
 ]
+dependencies = [
+    "meraki>=2.0.3,<3.0.0",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-meraki = ">=2.0.3,<3.0.0"
+[project.urls]
+Homepage = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
+Documentation = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
+Repository = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
+"Bug Tracker" = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha/issues"
+
+[tool.poetry]
+package-mode = false
 
 [tool.poetry.group.dev.dependencies]
 homeassistant = ">=2024.1.0"
-pytest = "^8.0.0"
-pytest-asyncio = "^0.23.0"
-pytest-cov = "^4.1.0"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
 pytest-homeassistant-custom-component = "^0.13.0"
-black = "^23.12.1"
-isort = "^5.13.2"
-flake8 = "^7.0.0"
-flake8-docstrings = "^1.7.0"
-flake8-comprehensions = "^3.14.0"
-mypy = "^1.8.0"
-pylint = "^3.0.3"
-pre-commit = "^3.6.0"
-bandit = "^1.7.6"
-types-requests = "^2.31.0"
-types-PyYAML = "^6.0.12"
+black = "*"
+isort = "*"
+flake8 = "*"
+flake8-docstrings = "*"
+flake8-comprehensions = "*"
+mypy = "*"
+pylint = "*"
+pre-commit = "^4.2.0"
+bandit = "*"
+types-requests = "*"
+types-PyYAML = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -79,7 +86,7 @@ known_third_party = ["meraki", "homeassistant", "pytest"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13.2"
 show_error_codes = true
 strict = true
 ignore_missing_imports = true
