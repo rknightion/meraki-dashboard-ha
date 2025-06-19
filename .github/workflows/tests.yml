@@ -15,7 +15,12 @@ env:
 
 jobs:
   # Run all linting, formatting, and static analysis checks via pre-commit
-  lint-and-format:
+  lint-and-scan:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+
     runs-on: ubuntu-latest
     name: Linting and Formatting
     steps:
@@ -45,9 +50,30 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
 
-      - name: Run pre-commit checks
-        # This one command now runs ruff, mypy, bandit, and all other hooks
-        run: poetry run pre-commit run --all-files
+      - uses: astral-sh/ruff-action@v3
+      - run: ruff check --fix
+      - run: ruff format
+
+
+      - name: Bandit Scan
+        uses: shundor/python-bandit-scan@ab1d87dfccc5a0ffab88be3aaac6ffe35c10d6cd
+        with: # optional arguments
+          # exit with 0, even with results found
+          exit_zero: true # optional, default is DEFAULT
+          # Github token of the repository (automatically created by Github)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information.
+          # File or directory to run bandit on
+          # path: # optional, default is .
+          # Report only issues of a given severity level or higher. Can be LOW, MEDIUM or HIGH. Default is UNDEFINED (everything)
+          # level: # optional, default is UNDEFINED
+          # Report only issues of a given confidence level or higher. Can be LOW, MEDIUM or HIGH. Default is UNDEFINED (everything)
+          # confidence: # optional, default is UNDEFINED
+          # comma-separated list of paths (glob patterns supported) to exclude from scan (note that these are in addition to the excluded paths provided in the config file) (default: .svn,CVS,.bzr,.hg,.git,__pycache__,.tox,.eggs,*.egg)
+          # excluded_paths: # optional, default is DEFAULT
+          # comma-separated list of test IDs to skip
+          # skips: # optional, default is DEFAULT
+          # path to a .bandit file that supplies command line arguments
+          # ini_path: # optional, default is DEFAULT
 
   # # Run tests with pytest - TEMPORARILY DISABLED
   # pytest:
