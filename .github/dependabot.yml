@@ -7,8 +7,8 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"  # GitHub Actions workflows are in .github/workflows/
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
+      interval: "daily"
+    open-pull-requests-limit: 100
     reviewers:
       - "rknightion"  # Add your GitHub username here
     assignees:
@@ -21,8 +21,8 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"  # pyproject.toml is in the root directory
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 10
+      interval: "daily"
+    open-pull-requests-limit: 100
     reviewers:
       - "rknightion"  # Add your GitHub username here
     assignees:
@@ -30,7 +30,4 @@ updates:
     commit-message:
       prefix: "deps"
       include: "scope"
-    # Uncomment and modify the ignore section if you need to ignore specific dependencies
-    # ignore:
-    #   - dependency-name: "some-critical-package"
-    #     update-types: ["version-update:semver-major"]
+
