@@ -224,16 +224,22 @@ class MerakiDashboardHub:
             Dictionary containing sensor readings or None if not found
         """
         try:
-            if self.dashboard is None:
-                _LOGGER.error("Dashboard API not initialized")
-                return None
+            # Create a wrapper function that accepts positional arguments only
+            # This is required because async_add_executor_job doesn't support keyword arguments
+            def get_sensor_readings_with_serials(
+                org_id: str, device_serials: list[str]
+            ):
+                """Wrapper function to call the Meraki SDK with serials parameter."""
+                return self.dashboard.sensor.getOrganizationSensorReadingsLatest(
+                    org_id, serials=device_serials
+                )
 
             # Get the latest sensor readings for the organization
             # Filter by specific serial number
             all_readings = await self.hass.async_add_executor_job(
-                self.dashboard.sensor.getOrganizationSensorReadingsLatest,
+                get_sensor_readings_with_serials,
                 self.organization_id,
-                serials=[serial],
+                [serial],
             )
 
             # Find readings for this specific device
@@ -264,16 +270,22 @@ class MerakiDashboardHub:
         try:
             _LOGGER.debug("Fetching sensor data for %d devices", len(serials))
 
-            if self.dashboard is None:
-                _LOGGER.error("Dashboard API not initialized")
-                return {}
+            # Create a wrapper function that accepts positional arguments only
+            # This is required because async_add_executor_job doesn't support keyword arguments
+            def get_sensor_readings_with_serials(
+                org_id: str, device_serials: list[str]
+            ):
+                """Wrapper function to call the Meraki SDK with serials parameter."""
+                return self.dashboard.sensor.getOrganizationSensorReadingsLatest(
+                    org_id, serials=device_serials
+                )
 
             # Get the latest sensor readings for multiple devices
             # Don't specify metrics to get all available data
             all_readings = await self.hass.async_add_executor_job(
-                self.dashboard.sensor.getOrganizationSensorReadingsLatest,
+                get_sensor_readings_with_serials,
                 self.organization_id,
-                serials=serials,
+                serials,
             )
 
             _LOGGER.debug(
