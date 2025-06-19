@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from datetime import datetime
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -25,21 +25,16 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
-
-if TYPE_CHECKING:
-    from . import MerakiDashboardHub
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    CONF_SCAN_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
+    ATTR_LAST_REPORTED_AT,
+    ATTR_MODEL,
+    ATTR_NETWORK_ID,
+    ATTR_NETWORK_NAME,
+    ATTR_SERIAL,
     DOMAIN,
     MT_BINARY_SENSOR_METRICS,
     MT_SENSOR_APPARENT_POWER,
@@ -57,8 +52,8 @@ from .const import (
     MT_SENSOR_TEMPERATURE,
     MT_SENSOR_TVOC,
     MT_SENSOR_VOLTAGE,
-    SENSOR_TYPE_MT,
 )
+from .coordinator import MerakiSensorCoordinator
 from .utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
@@ -186,31 +181,36 @@ async def async_setup_entry(
         config_entry: Configuration entry for this integration
         async_add_entities: Callback to add entities to Home Assistant
     """
-    hub = hass.data[DOMAIN][config_entry.entry_id]
+    # Get the hub and coordinator
+    hub = hass.data[DOMAIN].get(config_entry.entry_id)
+    coordinator = hass.data[DOMAIN].get(f"{config_entry.entry_id}_coordinator")
 
-    # Get all MT devices
-    mt_devices = await hub.async_get_devices_by_type(SENSOR_TYPE_MT)
-
-    if not mt_devices:
-        _LOGGER.info("No MT sensor devices found")
+    if not hub:
+        _LOGGER.error("Hub not found for config entry %s", config_entry.entry_id)
         return
-
-    # Get scan interval from options
-    scan_interval = config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-
-    # Create coordinator for updating sensor data
-    coordinator = MerakiSensorCoordinator(
-        hass,
-        hub,
-        mt_devices,
-        scan_interval,
-    )
-
-    # Initial data fetch
-    await coordinator.async_config_entry_first_refresh()
 
     # Create sensor entities based on available metrics
     entities = []
+
+    # Add hub diagnostic sensors
+    entities.extend(
+        [
+            MerakiHubDeviceCountSensor(hub, config_entry),
+            MerakiHubNetworkCountSensor(hub, config_entry),
+            MerakiHubLastUpdateSensor(hub, config_entry),
+            MerakiHubApiCallsSensor(hub, config_entry),
+            MerakiHubFailedApiCallsSensor(hub, config_entry),
+        ]
+    )
+
+    if not coordinator:
+        _LOGGER.info("No coordinator found, creating hub sensors only")
+        async_add_entities(entities)
+        return
+
+    mt_devices = coordinator.devices
+
+    # Create MT device sensor entities
     for device in mt_devices:
         serial = device["serial"]
         device_data = coordinator.data.get(serial, {})
@@ -257,117 +257,6 @@ async def async_setup_entry(
 
     _LOGGER.info("Creating %d sensor entities", len(entities))
     async_add_entities(entities)
-
-
-class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Coordinator to manage fetching Meraki sensor data.
-
-    This coordinator handles periodic updates of sensor data for all devices,
-    making efficient batch API calls to minimize API usage.
-    """
-
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        hub: MerakiDashboardHub,
-        devices: list[dict[str, Any]],
-        scan_interval: int,
-    ) -> None:
-        """Initialize the coordinator.
-
-        Args:
-            hass: Home Assistant instance
-            hub: MerakiDashboardHub instance
-            devices: List of device dictionaries
-            scan_interval: Update interval in seconds
-        """
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=f"{DOMAIN}_sensors",
-            update_interval=timedelta(seconds=scan_interval),
-        )
-        self.hub = hub
-        self.devices = devices
-        self._device_update_count = 0
-        _LOGGER.info(
-            "Sensor coordinator initialized with %d second update interval",
-            scan_interval,
-        )
-
-    async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API endpoint.
-
-        This method is called periodically by the coordinator to update
-        sensor data for all devices.
-
-        Returns:
-            Dictionary mapping serial numbers to their sensor data
-
-        Raises:
-            UpdateFailed: If API communication fails
-        """
-        try:
-            # Get all serial numbers
-            serials = [device["serial"] for device in self.devices]
-
-            # Get sensor readings for all devices at once using SDK
-            data = await self.hub.async_get_sensor_data_batch(serials)
-
-            # Every 10 updates, also update device information
-            # This ensures device names and attributes stay in sync
-            self._device_update_count += 1
-            if self._device_update_count >= 10:
-                self._device_update_count = 0
-                await self._update_device_info()
-
-            return data
-
-        except Exception as err:
-            _LOGGER.error("Error fetching sensor data: %s", err)
-            raise UpdateFailed(f"Error communicating with API: {err}") from err
-
-    async def _update_device_info(self) -> None:
-        """Update device information from the API and device registry."""
-        _LOGGER.debug("Updating device information for all devices")
-        device_registry = dr.async_get(self.hass)
-
-        for device in self.devices:
-            serial = device["serial"]
-
-            # Get updated device info from API
-            updated_device = await self.hub.async_update_device_info(serial)
-
-            if updated_device:
-                # Update our local device list
-                for i, d in enumerate(self.devices):
-                    if d["serial"] == serial:
-                        self.devices[i] = updated_device
-                        break
-
-                # Update device registry if device exists
-                device_entry = device_registry.async_get_device(
-                    identifiers={(DOMAIN, serial)}
-                )
-
-                if device_entry:
-                    # Extract sanitized device name
-                    device_name = sanitize_device_name(
-                        updated_device.get("name")
-                        or f"{updated_device.get('model', 'MT')} {serial[-4:]}"
-                    )
-
-                    # Update device registry if name has changed
-                    if device_entry.name != device_name:
-                        _LOGGER.info(
-                            "Updating device name from '%s' to '%s'",
-                            device_entry.name,
-                            device_name,
-                        )
-                        device_registry.async_update_device(
-                            device_entry.id,
-                            name=device_name,
-                        )
 
 
 class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
@@ -478,28 +367,40 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         # Find the reading for this sensor type
         for reading in readings:
             if reading.get("metric") == self.entity_description.key:
+                # Get the metric-specific data
+                metric_data = reading.get(self.entity_description.key, {})
+
                 # Extract the value based on sensor type
-                if self.entity_description.key == "temperature":
-                    temp_data = reading.get("temperature", {})
-                    return temp_data.get("celsius")
-                elif self.entity_description.key == "humidity":
-                    humidity_data = reading.get("humidity", {})
-                    return humidity_data.get("relativePercentage")
-                elif self.entity_description.key == "tvoc":
-                    tvoc_data = reading.get("tvoc", {})
-                    return tvoc_data.get("concentration")
-                elif self.entity_description.key == "pm25":
-                    pm25_data = reading.get("pm25", {})
-                    return pm25_data.get("concentration")
-                elif self.entity_description.key == "noise":
-                    noise_data = reading.get("noise", {})
-                    return noise_data.get("ambient", {}).get("level")
-                elif self.entity_description.key == "battery":
-                    battery_data = reading.get("battery", {})
-                    return battery_data.get("percentage")
-                elif self.entity_description.key == "button":
-                    button_data = reading.get("button", {})
-                    return button_data.get("pressType")
+                if self.entity_description.key == MT_SENSOR_APPARENT_POWER:
+                    return metric_data.get("draw")
+                elif self.entity_description.key == MT_SENSOR_BATTERY:
+                    return metric_data.get("percentage")
+                elif self.entity_description.key == MT_SENSOR_BUTTON:
+                    return metric_data.get("pressType")
+                elif self.entity_description.key == MT_SENSOR_CO2:
+                    return metric_data.get("concentration")
+                elif self.entity_description.key == MT_SENSOR_CURRENT:
+                    return metric_data.get("draw")
+                elif self.entity_description.key == MT_SENSOR_FREQUENCY:
+                    return metric_data.get("level")
+                elif self.entity_description.key == MT_SENSOR_HUMIDITY:
+                    return metric_data.get("relativePercentage")
+                elif self.entity_description.key == MT_SENSOR_INDOOR_AIR_QUALITY:
+                    return metric_data.get("score")
+                elif self.entity_description.key == MT_SENSOR_NOISE:
+                    return metric_data.get("ambient", {}).get("level")
+                elif self.entity_description.key == MT_SENSOR_PM25:
+                    return metric_data.get("concentration")
+                elif self.entity_description.key == MT_SENSOR_POWER_FACTOR:
+                    return metric_data.get("percentage")
+                elif self.entity_description.key == MT_SENSOR_REAL_POWER:
+                    return metric_data.get("draw")
+                elif self.entity_description.key == MT_SENSOR_TEMPERATURE:
+                    return metric_data.get("celsius")
+                elif self.entity_description.key == MT_SENSOR_TVOC:
+                    return metric_data.get("concentration")
+                elif self.entity_description.key == MT_SENSOR_VOLTAGE:
+                    return metric_data.get("level")
 
         return None
 
@@ -522,33 +423,264 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         if not device_data:
             return {}
 
-        # Find the reading for this sensor type
+        # Get the latest device info from coordinator
+        device = self._device
+        for d in self.coordinator.devices:
+            if d["serial"] == self._serial:
+                device = d
+                break
+
+        attrs = {
+            ATTR_SERIAL: self._serial,
+            ATTR_MODEL: device.get("model"),
+            ATTR_NETWORK_ID: device.get("network_id"),
+            ATTR_NETWORK_NAME: device.get("network_name"),
+        }
+
+        # Add MAC address if available
+        if mac := device.get("mac"):
+            attrs["mac_address"] = mac
+
+        # Add firmware version if available
+        if firmware := device.get("firmware"):
+            attrs["firmware_version"] = firmware
+
+        # Add device tags if available
+        if tags := device.get("tags"):
+            attrs["tags"] = tags
+
+        # Add device notes if available
+        if notes := device.get("notes"):
+            attrs["notes"] = notes
+
+        # Add last reported timestamp if available
         readings = device_data.get("readings", [])
         for reading in readings:
             if reading.get("metric") == self.entity_description.key:
-                attrs = {
-                    "last_updated": reading.get("ts"),
-                    "serial_number": self._serial,
-                }
+                timestamp = reading.get("ts")
+                if timestamp:
+                    attrs[ATTR_LAST_REPORTED_AT] = timestamp
 
                 # Add sensor-specific attributes
-                if self.entity_description.key == "temperature":
-                    temp_data = reading.get("temperature", {})
+                if self.entity_description.key == MT_SENSOR_TEMPERATURE:
+                    temp_data = reading.get(MT_SENSOR_TEMPERATURE, {})
                     if "fahrenheit" in temp_data:
                         attrs["temperature_fahrenheit"] = temp_data["fahrenheit"]
-                elif self.entity_description.key == "noise":
-                    noise_data = reading.get("noise", {})
-                    if "ambient" in noise_data:
-                        ambient = noise_data["ambient"]
-                        attrs.update(
-                            {
-                                "noise_level": ambient.get("level"),
-                                "noise_a_weighted": ambient.get("a_weighted"),
-                            }
-                        )
+                break
 
-                return attrs
+        return attrs
+
+
+class MerakiHubDeviceCountSensor(SensorEntity):
+    """Sensor showing the number of discovered MT devices."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Device Count"
+    _attr_icon = "mdi:counter"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        self.hub = hub
+        self._config_entry = config_entry
+        self._attr_unique_id = f"{config_entry.data['organization_id']}_device_count"
+
+        # Set device info to associate with the organization device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.data["organization_id"])},
+            manufacturer="Cisco Meraki",
+            name=config_entry.title,
+            model="Organization",
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of discovered devices."""
+        return len(self.hub.devices)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        return {
+            "organization_id": self.hub.organization_id,
+            "organization_name": self.hub.organization_name,
+        }
+
+
+class MerakiHubNetworkCountSensor(SensorEntity):
+    """Sensor showing the number of networks in the organization."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Network Count"
+    _attr_icon = "mdi:network"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        self.hub = hub
+        self._config_entry = config_entry
+        self._attr_unique_id = f"{config_entry.data['organization_id']}_network_count"
+
+        # Set device info to associate with the organization device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.data["organization_id"])},
+            manufacturer="Cisco Meraki",
+            name=config_entry.title,
+            model="Organization",
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of networks."""
+        return len(self.hub.networks)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        network_names = [
+            network.get("name", "Unknown") for network in self.hub.networks
+        ]
+        return {
+            "organization_id": self.hub.organization_id,
+            "organization_name": self.hub.organization_name,
+            "network_names": network_names,
+        }
+
+
+class MerakiHubLastUpdateSensor(SensorEntity):
+    """Sensor showing the last successful API call timestamp."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Last API Success"
+    _attr_icon = "mdi:clock-check"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        self.hub = hub
+        self._config_entry = config_entry
+        self._attr_unique_id = (
+            f"{config_entry.data['organization_id']}_last_api_success"
+        )
+
+        # Set device info to associate with the organization device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.data["organization_id"])},
+            manufacturer="Cisco Meraki",
+            name=config_entry.title,
+            model="Organization",
+        )
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return the last successful API call timestamp."""
+        return self.hub.last_api_call_success
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        attrs = {
+            "organization_id": self.hub.organization_id,
+            "organization_name": self.hub.organization_name,
+        }
+
+        if self.hub.last_api_call_error:
+            attrs["last_error"] = self.hub.last_api_call_error
+
+        return attrs
+
+
+class MerakiHubApiCallsSensor(SensorEntity):
+    """Sensor showing the total number of API calls made."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Total API Calls"
+    _attr_icon = "mdi:api"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        self.hub = hub
+        self._config_entry = config_entry
+        self._attr_unique_id = f"{config_entry.data['organization_id']}_total_api_calls"
+
+        # Set device info to associate with the organization device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.data["organization_id"])},
+            manufacturer="Cisco Meraki",
+            name=config_entry.title,
+            model="Organization",
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the total number of API calls."""
+        return self.hub.total_api_calls
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        success_rate = 0
+        if self.hub.total_api_calls > 0:
+            success_rate = round(
+                (
+                    (self.hub.total_api_calls - self.hub.failed_api_calls)
+                    / self.hub.total_api_calls
+                )
+                * 100,
+                2,
+            )
 
         return {
-            "serial_number": self._serial,
+            "organization_id": self.hub.organization_id,
+            "organization_name": self.hub.organization_name,
+            "success_rate_percent": success_rate,
         }
+
+
+class MerakiHubFailedApiCallsSensor(SensorEntity):
+    """Sensor showing the number of failed API calls."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Failed API Calls"
+    _attr_icon = "mdi:api-off"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_entity_category = "diagnostic"
+
+    def __init__(self, hub: Any, config_entry: ConfigEntry) -> None:
+        """Initialize the sensor."""
+        self.hub = hub
+        self._config_entry = config_entry
+        self._attr_unique_id = (
+            f"{config_entry.data['organization_id']}_failed_api_calls"
+        )
+
+        # Set device info to associate with the organization device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, config_entry.data["organization_id"])},
+            manufacturer="Cisco Meraki",
+            name=config_entry.title,
+            model="Organization",
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of failed API calls."""
+        return self.hub.failed_api_calls
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        attrs = {
+            "organization_id": self.hub.organization_id,
+            "organization_name": self.hub.organization_name,
+        }
+
+        if self.hub.last_api_call_error:
+            attrs["last_error"] = self.hub.last_api_call_error
+
+        return attrs

@@ -22,17 +22,14 @@ from .const import (
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
     ATTR_SERIAL,
-    CONF_SCAN_INTERVAL,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MT_BINARY_SENSOR_METRICS,
     MT_SENSOR_DOOR,
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
     MT_SENSOR_WATER,
-    SENSOR_TYPE_MT,
 )
-from .sensor import MerakiSensorCoordinator
+from .coordinator import MerakiSensorCoordinator
 from .utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
@@ -80,29 +77,14 @@ async def async_setup_entry(
         config_entry: Configuration entry for this integration
         async_add_entities: Callback to add entities to Home Assistant
     """
-    hub = hass.data[DOMAIN][config_entry.entry_id]
+    # Get the shared coordinator
+    coordinator = hass.data[DOMAIN].get(f"{config_entry.entry_id}_coordinator")
 
-    # Get all MT devices
-    mt_devices = await hub.async_get_devices_by_type(SENSOR_TYPE_MT)
-
-    if not mt_devices:
-        _LOGGER.info("No MT sensor devices found for binary sensors")
+    if not coordinator:
+        _LOGGER.info("No coordinator found, no MT devices available")
         return
 
-    # Get scan interval from options
-    scan_interval = config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-
-    # Create coordinator for updating sensor data
-    # We reuse the same coordinator type as regular sensors
-    coordinator = MerakiSensorCoordinator(
-        hass,
-        hub,
-        mt_devices,
-        scan_interval,
-    )
-
-    # Initial data fetch
-    await coordinator.async_config_entry_first_refresh()
+    mt_devices = coordinator.devices
 
     # Create binary sensor entities based on available metrics
     entities = []

@@ -24,6 +24,7 @@ from .const import (
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
     SENSOR_TYPE_MT,
 )
 from .utils import sanitize_device_name
@@ -40,6 +41,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     VERSION = 1
     MINOR_VERSION = 1
+
+    # Set the domain as a class attribute
+    domain = DOMAIN
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -279,7 +283,8 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        # Note: config_entry is available as self.config_entry automatically
+        # Setting it explicitly is deprecated as of HA 2025.12
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

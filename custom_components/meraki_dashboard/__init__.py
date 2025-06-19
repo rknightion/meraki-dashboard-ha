@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import meraki
@@ -20,16 +20,20 @@ from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_DISCOVERY_INTERVAL,
     CONF_ORGANIZATION_ID,
+    CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
     DEFAULT_DISCOVERY_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    SENSOR_TYPE_MT,
 )
+from .coordinator import MerakiSensorCoordinator
 from .utils import sanitize_device_attributes
 
 _LOGGER = logging.getLogger(__name__)
 
 # Platforms to be set up for this integration
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 
 class MerakiDashboardHub:
@@ -68,6 +72,13 @@ class MerakiDashboardHub:
         self._discovery_task = None
         self._device_discovery_unsub = None
 
+        # Hub diagnostic metrics
+        self.last_api_call_success: datetime | None = None
+        self.last_api_call_error: str | None = None
+        self.total_api_calls = 0
+        self.failed_api_calls = 0
+        self.organization_name: str | None = None
+
     async def async_setup(self) -> bool:
         """Set up the Meraki Dashboard API connection.
 
@@ -86,19 +97,27 @@ class MerakiDashboardHub:
             self.dashboard = await self.hass.async_add_executor_job(
                 meraki.DashboardAPI, self._api_key
             )
+            self.total_api_calls += 1
 
             # Verify connection and get organization info
             org_info = await self.hass.async_add_executor_job(
                 self.dashboard.organizations.getOrganization, self.organization_id
             )
-            _LOGGER.info("Connected to Meraki organization: %s", org_info.get("name"))
+            self.total_api_calls += 1
+            self.organization_name = org_info.get("name")
+            _LOGGER.info("Connected to Meraki organization: %s", self.organization_name)
 
             # Get all networks for the organization
             self.networks = await self.hass.async_add_executor_job(
                 self.dashboard.organizations.getOrganizationNetworks,
                 self.organization_id,
             )
+            self.total_api_calls += 1
             _LOGGER.info("Found %d networks in organization", len(self.networks))
+
+            # Update success timestamp
+            self.last_api_call_success = datetime.now()
+            self.last_api_call_error = None
 
             # Set up periodic device discovery if auto-discovery is enabled
             options = self.config_entry.options
@@ -119,11 +138,15 @@ class MerakiDashboardHub:
             return True
 
         except APIError as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             if err.status == 401:
                 raise ConfigEntryAuthFailed("Invalid API key") from err
             _LOGGER.error("Error connecting to Meraki Dashboard API: %s", err)
             raise ConfigEntryNotReady from err
         except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             _LOGGER.error(
                 "Unexpected error connecting to Meraki Dashboard API: %s", err
             )
@@ -153,6 +176,7 @@ class MerakiDashboardHub:
                 network_devices = await self.hass.async_add_executor_job(
                     self.dashboard.networks.getNetworkDevices, network["id"]
                 )
+                self.total_api_calls += 1
 
                 # Filter devices by type (e.g., 'MT' for sensors)
                 for device in network_devices:
@@ -179,6 +203,10 @@ class MerakiDashboardHub:
                         self.devices[device["serial"]] = device
                         devices.append(device)
 
+                        # Update success timestamp for successful device discovery
+                        self.last_api_call_success = datetime.now()
+                        self.last_api_call_error = None
+
                         # Log device details for debugging
                         _LOGGER.info(
                             "Found %s device: %s (%s) - Serial: %s, MAC: %s in network %s",
@@ -191,6 +219,8 @@ class MerakiDashboardHub:
                         )
 
             except APIError as err:
+                self.failed_api_calls += 1
+                self.last_api_call_error = str(err)
                 _LOGGER.error(
                     "Error getting devices for network %s: %s", network["name"], err
                 )
@@ -198,7 +228,7 @@ class MerakiDashboardHub:
         _LOGGER.info("Found %d %s devices total", len(devices), device_type)
         return devices
 
-    async def _async_discover_devices(self, _now: Any = None) -> None:
+    async def _async_discover_devices(self, _now: datetime | None = None) -> None:
         """Periodically discover new devices.
 
         This method is called periodically when auto-discovery is enabled.
@@ -248,6 +278,9 @@ class MerakiDashboardHub:
                 self.organization_id,
                 [serial],
             )
+            self.total_api_calls += 1
+            self.last_api_call_success = datetime.now()
+            self.last_api_call_error = None
 
             # Find readings for this specific device
             for reading in all_readings:
@@ -257,6 +290,8 @@ class MerakiDashboardHub:
             return None
 
         except APIError as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             _LOGGER.error("Error getting sensor data for %s: %s", serial, err)
             return None
 
@@ -301,6 +336,9 @@ class MerakiDashboardHub:
                 self.organization_id,
                 serials,
             )
+            self.total_api_calls += 1
+            self.last_api_call_success = datetime.now()
+            self.last_api_call_error = None
 
             _LOGGER.debug(
                 "Received %d readings from API",
@@ -318,6 +356,8 @@ class MerakiDashboardHub:
             return result
 
         except APIError as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             _LOGGER.error("Error getting sensor data for devices %s: %s", serials, err)
             return {}
 
@@ -336,8 +376,11 @@ class MerakiDashboardHub:
             if network_id and self.dashboard is not None:
                 try:
                     device = await self.hass.async_add_executor_job(
-                        self.dashboard.devices.getNetworkDevice, network_id, serial
+                        self.dashboard.networks.getNetworkDevice, network_id, serial
                     )
+                    self.total_api_calls += 1
+                    self.last_api_call_success = datetime.now()
+                    self.last_api_call_error = None
 
                     # Add network information
                     device["network_id"] = network_id
@@ -350,6 +393,8 @@ class MerakiDashboardHub:
                     return device
 
                 except APIError as err:
+                    self.failed_api_calls += 1
+                    self.last_api_call_error = str(err)
                     _LOGGER.error("Error updating device info for %s: %s", serial, err)
 
         return None
@@ -396,6 +441,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name=entry.title,
         model="Organization",
     )
+
+    # Get all MT devices and create a shared coordinator
+    mt_devices = await hub.async_get_devices_by_type(SENSOR_TYPE_MT)
+
+    if mt_devices:
+        # Get scan interval from options
+        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+
+        # Create shared coordinator for all platforms
+        coordinator = MerakiSensorCoordinator(
+            hass,
+            hub,
+            mt_devices,
+            scan_interval,
+        )
+
+        # Store coordinator in hass.data for platforms to access
+        hass.data[DOMAIN][f"{entry.entry_id}_coordinator"] = coordinator
+
+        # Initial data fetch
+        await coordinator.async_config_entry_first_refresh()
+
+        # Schedule a refresh after 5 seconds to ensure initial data is available
+        hass.loop.call_later(
+            5, lambda: hass.async_create_task(coordinator.async_request_refresh())
+        )
+    else:
+        _LOGGER.info("No MT devices found during setup")
 
     # Listen for option updates
     entry.async_on_unload(entry.add_update_listener(async_update_options))

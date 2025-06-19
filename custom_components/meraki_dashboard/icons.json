@@ -45,6 +45,21 @@
       },
       "voltage": {
         "default": "mdi:flash-triangle"
+      },
+      "device_count": {
+        "default": "mdi:counter"
+      },
+      "network_count": {
+        "default": "mdi:network"
+      },
+      "last_api_success": {
+        "default": "mdi:clock-check"
+      },
+      "total_api_calls": {
+        "default": "mdi:api"
+      },
+      "failed_api_calls": {
+        "default": "mdi:api-off"
       }
     },
     "binary_sensor": {
