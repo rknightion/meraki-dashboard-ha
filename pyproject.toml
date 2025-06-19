@@ -34,12 +34,14 @@ homeassistant = ">=2024.1.0"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
-pytest-homeassistant-custom-component = "^0.13.0"
+pytest-homeassistant-custom-component = "*"
 mypy = "*"
 pre-commit = "^4.2.0"
 bandit = "*"
 types-requests = "*"
 types-PyYAML = "*"
+safety = "*"
+marshmallow = "<4.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

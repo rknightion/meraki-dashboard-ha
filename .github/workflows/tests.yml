@@ -155,9 +155,9 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
 
-      - name: Run Safety check
-        # It's good to keep this as a separate check for dependency vulnerabilities
-        run: poetry run safety check --json --output=safety-report.json
+      - uses: pyupio/safety-action@v1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}
 
       - name: Upload Safety report
         uses: actions/upload-artifact@v4
