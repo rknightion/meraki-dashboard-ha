@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.13.5,<3.14"
+requires-python = ">=3.13.2"
 keywords = ["homeassistant", "meraki", "cisco", "iot", "sensors"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -29,12 +29,12 @@ Repository = "https://github.com/YOUR_GITHUB_USERNAME/meraki-dashboard-ha"
 [tool.poetry]
 package-mode = false
 
+[tool.poetry.dependencies]
+python = ">=3.13.2,<3.14"
+
 [tool.poetry.group.dev.dependencies]
-homeassistant = ">=2024.1.0"
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-pytest-homeassistant-custom-component = "*"
+homeassistant-stubs = "2025.6.1"
+pytest-homeassistant-custom-component = "0.13.252"
 mypy = "*"
 pre-commit = "^4.2.0"
 bandit = "*"

@@ -11,7 +11,7 @@ on:
       - dev
 
 env:
-  PYTHON_VERSION: "3.13.5"
+  PYTHON_VERSION: "3.13"
 
 jobs:
   # Run all linting, formatting, and static analysis checks via pre-commit
