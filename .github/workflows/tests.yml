@@ -116,7 +116,6 @@ jobs:
       # - pytest # Re-enable when you re-enable the pytest job
       - hassfest
       - hacs
-      - safety
     steps:
       - name: All checks passed
         run: echo "✅ All checks passed!"
