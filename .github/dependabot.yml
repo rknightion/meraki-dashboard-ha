@@ -1,15 +1,36 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Dependabot configuration for automatic dependency updates
+# See: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
 version: 2
 updates:
-  - package-ecosystem: "github-actions" # See documentation for possible values
-    directory: "./github" # Location of package manifests
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"  # GitHub Actions workflows are in .github/workflows/
     schedule:
-      interval: "daily"
-  - package-ecosystem: "pip" # See documentation for possible values
-    directory: "/" # Location of package manifests
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "rknightion"  # Add your GitHub username here
+    assignees:
+      - "rknightion"  # Add your GitHub username here
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # Python dependencies (Poetry)
+  - package-ecosystem: "pip"
+    directory: "/"  # pyproject.toml is in the root directory
     schedule:
-      interval: "daily"
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "rknightion"  # Add your GitHub username here
+    assignees:
+      - "rknightion"  # Add your GitHub username here
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Uncomment and modify the ignore section if you need to ignore specific dependencies
+    # ignore:
+    #   - dependency-name: "some-critical-package"
+    #     update-types: ["version-update:semver-major"]
