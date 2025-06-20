@@ -5,10 +5,12 @@
         "title": "Connect to Meraki Dashboard",
         "description": "Enter your Meraki Dashboard API key to connect.",
         "data": {
-          "api_key": "API Key"
+          "api_key": "API Key",
+          "base_url": "API Region"
         },
         "data_description": {
-          "api_key": "Your Meraki Dashboard API key. You can generate one from the Meraki Dashboard under My Profile > API access."
+          "api_key": "Your Meraki Dashboard API key. You can generate one from the Meraki Dashboard under My Profile > API access.",
+          "base_url": "Select the API endpoint for your region. Choose the region where your Meraki organization is hosted."
         }
       },
       "organization": {

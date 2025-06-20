@@ -17,12 +17,14 @@ from meraki.exceptions import APIError
 from .const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
+    CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
+    DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL_MINUTES,
     DEFAULT_NAME,
@@ -32,11 +34,19 @@ from .const import (
     DOMAIN,
     MIN_DISCOVERY_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
+    REGIONAL_BASE_URLS,
     SENSOR_TYPE_MT,
+    USER_AGENT,
 )
 from .utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
+
+# Configure third-party logging for config flow (temporary, less verbose)
+# Only show warnings and errors during setup to prevent spam
+logging.getLogger("meraki").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
@@ -52,6 +62,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
     def __init__(self) -> None:
         """Initialize the config flow."""
         self._api_key: str | None = None
+        self._base_url: str = DEFAULT_BASE_URL
         self._organizations: list[dict[str, Any]] = []
         self._organization_id: str | None = None
         self._available_devices: list[dict[str, Any]] = []
@@ -68,9 +79,18 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
 
         if user_input is not None:
             try:
+                # Store the base URL selection
+                self._base_url = user_input.get(CONF_BASE_URL, DEFAULT_BASE_URL)
+
                 # Test the API key by getting organizations
                 dashboard = await self.hass.async_add_executor_job(
-                    meraki.DashboardAPI, user_input[CONF_API_KEY]
+                    lambda: meraki.DashboardAPI(
+                        user_input[CONF_API_KEY],
+                        base_url=self._base_url,
+                        caller=USER_AGENT,
+                        log_file_prefix=None,  # Disable file logging
+                        print_console=False,  # Disable console logging from SDK
+                    )
                 )
 
                 self._organizations = await self.hass.async_add_executor_job(
@@ -98,6 +118,17 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): str,
+                    vol.Optional(
+                        CONF_BASE_URL, default=DEFAULT_BASE_URL
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                {"value": url, "label": region}
+                                for region, url in REGIONAL_BASE_URLS.items()
+                            ],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                 }
             ),
             errors=errors,
@@ -124,7 +155,13 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                 # Try to get available devices
                 try:
                     dashboard = await self.hass.async_add_executor_job(
-                        meraki.DashboardAPI, self._api_key
+                        lambda: meraki.DashboardAPI(
+                            self._api_key,
+                            base_url=self._base_url,
+                            caller=USER_AGENT,
+                            log_file_prefix=None,  # Disable file logging
+                            print_console=False,  # Disable console logging from SDK
+                        )
                     )
 
                     # Get all networks for the organization
@@ -168,6 +205,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                     title=user_input.get(CONF_NAME, organization["name"]),
                     data={
                         CONF_API_KEY: self._api_key,
+                        CONF_BASE_URL: self._base_url,
                         CONF_ORGANIZATION_ID: org_id,
                     },
                     options={
@@ -223,6 +261,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                 title=user_input.get(CONF_NAME, DEFAULT_NAME),
                 data={
                     CONF_API_KEY: self._api_key,
+                    CONF_BASE_URL: self._base_url,
                     CONF_ORGANIZATION_ID: self._organization_id,
                 },
                 options={

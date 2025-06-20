@@ -18,12 +18,14 @@ from meraki.exceptions import APIError
 from .const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
+    CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
+    DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DEVICE_TYPE_MAPPINGS,
@@ -32,6 +34,7 @@ from .const import (
     ORG_HUB_SUFFIX,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MT,
+    USER_AGENT,
 )
 from .coordinator import MerakiSensorCoordinator
 from .events import MerakiEventHandler
@@ -39,26 +42,36 @@ from .utils import sanitize_device_attributes
 
 _LOGGER = logging.getLogger(__name__)
 
-# Suppress verbose logging from third-party libraries
-# The Meraki SDK and requests libraries log every API call at INFO level by default
-# This ensures only ERROR and above messages reach the main Home Assistant logs
-_THIRD_PARTY_LOGGERS = [
-    "meraki",
-    "meraki.api",
-    "meraki.config",
-    "meraki.common",
-    "urllib3",
-    "urllib3.connectionpool",
-    "requests",
-    "requests.packages.urllib3",
-]
 
-for logger_name in _THIRD_PARTY_LOGGERS:
-    third_party_logger = logging.getLogger(logger_name)
-    # Only allow ERROR and above to reach the main HA logs
-    # This prevents INFO level API call logs from cluttering the main logs
-    third_party_logger.setLevel(logging.ERROR)
-    _LOGGER.debug("Set logging level for %s to ERROR", logger_name)
+# Configure third-party library logging based on our component's logging level
+def _configure_third_party_logging() -> None:
+    """Configure third-party library logging levels based on component logging level.
+
+    This ensures that:
+    - Errors from third-party libraries always surface
+    - Info/debug logs only appear when debug logging is enabled for our component
+    - Prevents API call spam in main HA logs unless explicitly requested
+    """
+    component_logger = logging.getLogger(__name__)
+
+    # If our component is set to DEBUG level, allow INFO from third-party libraries
+    # Otherwise, only show WARNING and above to prevent spam
+    if component_logger.isEnabledFor(logging.DEBUG):
+        third_party_level = logging.INFO
+        _LOGGER.debug(
+            "Debug logging enabled - allowing INFO level from third-party libraries"
+        )
+    else:
+        third_party_level = logging.WARNING
+
+    # Configure third-party library loggers
+    logging.getLogger("meraki").setLevel(third_party_level)
+    logging.getLogger("urllib3").setLevel(third_party_level)
+    logging.getLogger("requests").setLevel(third_party_level)
+
+
+# Initialize third-party logging configuration
+_configure_third_party_logging()
 
 # Platforms to be set up for this integration
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
@@ -88,6 +101,7 @@ class MerakiOrganizationHub:
         """
         self.hass = hass
         self._api_key = api_key
+        self._base_url = config_entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL)
         self.organization_id = organization_id
         self.config_entry = config_entry
         self.dashboard: meraki.DashboardAPI | None = None
@@ -115,17 +129,18 @@ class MerakiOrganizationHub:
             ConfigEntryNotReady: If connection fails for other reasons
         """
         try:
-            # Initialize the Meraki Dashboard API client with minimal logging
-            def create_dashboard_api():
-                return meraki.DashboardAPI(
-                    self._api_key,
-                    suppress_logging=True,
-                    print_console=False,
-                    output_log=False,
-                )
+            # Configure third-party logging based on current component logging level
+            _configure_third_party_logging()
 
+            # Initialize the Meraki Dashboard API client with proper user agent and logging configuration
             self.dashboard = await self.hass.async_add_executor_job(
-                create_dashboard_api
+                lambda: meraki.DashboardAPI(
+                    self._api_key,
+                    base_url=self._base_url,
+                    caller=USER_AGENT,
+                    log_file_prefix=None,  # Disable file logging
+                    print_console=False,  # Disable console logging from SDK
+                )
             )
             self.total_api_calls += 1
 

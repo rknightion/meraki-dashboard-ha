@@ -4,8 +4,13 @@ from typing import Final
 
 DOMAIN: Final = "meraki_dashboard"
 
+# User agent string for API identification (required by Cisco)
+# Format: ApplicationName/Version VendorName
+USER_AGENT: Final = "MerakiDashboardHomeAssistant/0.1.0 rknightion"
+
 # Configuration and options
 CONF_API_KEY: Final = "api_key"
+CONF_BASE_URL: Final = "base_url"
 CONF_ORGANIZATION_ID: Final = "organization_id"
 CONF_NETWORKS: Final = "networks"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
@@ -19,10 +24,20 @@ CONF_HUB_DISCOVERY_INTERVALS: Final = "hub_discovery_intervals"
 
 # Defaults
 DEFAULT_NAME: Final = "Meraki Dashboard"
+DEFAULT_BASE_URL: Final = "https://api.meraki.com/api/v1"
 DEFAULT_SCAN_INTERVAL: Final = 1200  # 20 minutes (Meraki MT default)
 MIN_SCAN_INTERVAL: Final = 60  # 1 minute minimum
 DEFAULT_DISCOVERY_INTERVAL: Final = 3600  # 1 hour for device discovery
 MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes minimum
+
+# Regional API endpoints
+REGIONAL_BASE_URLS: Final = {
+    "Global": "https://api.meraki.com/api/v1",
+    "Canada": "https://api.meraki.ca/api/v1",
+    "China": "https://api.meraki.cn/api/v1",
+    "India": "https://api.meraki.in/api/v1",
+    "US Government": "https://api.gov-meraki.com/api/v1",
+}
 
 # Sensor types that will be supported
 SENSOR_TYPE_MT: Final = "MT"  # Environmental sensors
