@@ -83,6 +83,8 @@ jobs:
 
   # Check with Home Assistant's hassfest
   hassfest:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     name: Hassfest
     steps:
