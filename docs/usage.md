@@ -190,6 +190,111 @@ automation:
           filename: "/config/snapshots/door_{% raw %}{{ now().strftime('%Y%m%d_%H%M%S') }}{% endraw %}.jpg"
 ```
 
+## Using Events for Advanced Automation
+
+The integration fires Home Assistant events for certain sensor state changes, enabling more sophisticated automations.
+
+### Event Types
+
+The integration fires `meraki_dashboard_event` events for:
+
+- **Button presses** (`button_pressed`, `button_released`)
+- **Door state changes** (`door_opened`, `door_closed`) 
+- **Water detection** (`water_detected`, `water_cleared`)
+
+### Event Data Structure
+
+Each event includes:
+- `device_id`: Home Assistant device ID
+- `device_serial`: Meraki device serial number
+- `sensor_type`: Type of sensor (button, door, water)
+- `event_type`: Specific event (button_pressed, door_opened, etc.)
+- `value`: Current sensor value
+- `previous_value`: Previous sensor value
+- `timestamp`: When the event occurred
+
+### Event-Based Automations
+
+#### Button Press Response
+
+```yaml
+automation:
+  - alias: "Emergency Button Pressed"
+    trigger:
+      - platform: event
+        event_type: meraki_dashboard_event
+        event_data:
+          event_type: button_pressed
+          device_serial: "Q2XX-XXXX-XXXX"  # Your device serial
+    action:
+      - service: notify.mobile_app_admin
+        data:
+          title: "🚨 Emergency Button Activated"
+          message: "Emergency button pressed at {{ trigger.event.data.timestamp }}"
+          data:
+            priority: critical
+      - service: script.emergency_protocol
+```
+
+#### Instant Door Notifications
+
+```yaml
+automation:
+  - alias: "Secure Door Monitor"
+    trigger:
+      - platform: event
+        event_type: meraki_dashboard_event
+        event_data:
+          event_type: door_opened
+          device_serial: "Q2XX-XXXX-XXXX"
+    action:
+      - service: logbook.log
+        data:
+          name: "Door Security"
+          message: "Secure door {{ trigger.event.data.device_serial }} opened"
+          entity_id: "binary_sensor.secure_door_door"
+```
+
+#### Water Leak Emergency
+
+```yaml
+automation:
+  - alias: "Water Leak Emergency Response"
+    trigger:
+      - platform: event
+        event_type: meraki_dashboard_event
+        event_data:
+          event_type: water_detected
+    action:
+      - service: homeassistant.turn_off
+        target:
+          entity_id: 
+            - switch.water_main_valve
+            - switch.basement_electrical
+      - service: notify.family
+        data:
+          title: "💧 WATER LEAK EMERGENCY"
+          message: >
+            Water detected by {{ trigger.event.data.device_serial }}!
+            Main water valve and basement electrical have been shut off.
+          data:
+            priority: critical
+```
+
+### Event vs State-Based Triggers
+
+| Scenario | Use Event Trigger When | Use State Trigger When |
+|----------|----------------------|----------------------|
+| Button presses | Need instant response to press/release | Monitoring button state over time |
+| Door monitoring | Instant security alerts | Tracking door open duration |
+| Water detection | Emergency shutoffs | Tracking water presence over time |
+
+**Advantages of Event Triggers:**
+- Instant response (no polling delay)
+- Can distinguish between press/release or open/close actions
+- Include additional context like previous values
+- Better for critical/emergency responses
+
 ## Building Dashboards
 
 ### Environmental Overview Card

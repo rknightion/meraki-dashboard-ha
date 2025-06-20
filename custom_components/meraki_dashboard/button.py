@@ -87,7 +87,7 @@ class MerakiUpdateButton(ButtonEntity):
 
         Triggers an immediate refresh of all sensor data.
         """
-        _LOGGER.info("Manual sensor update requested")
+        _LOGGER.debug("Manual sensor update requested")
         await self.coordinator.async_request_refresh()
 
     @property
@@ -139,7 +139,7 @@ class MerakiDiscoveryButton(ButtonEntity):
 
         Triggers an immediate device discovery scan.
         """
-        _LOGGER.info("Manual device discovery requested")
+        _LOGGER.debug("Manual device discovery requested")
         await self.hub.async_manual_device_discovery()
 
     @property

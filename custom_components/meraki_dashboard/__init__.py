@@ -28,9 +28,31 @@ from .const import (
     SENSOR_TYPE_MT,
 )
 from .coordinator import MerakiSensorCoordinator
+from .events import MerakiEventHandler
 from .utils import sanitize_device_attributes
 
 _LOGGER = logging.getLogger(__name__)
+
+# Suppress verbose logging from third-party libraries
+# The Meraki SDK and requests libraries log every API call at INFO level by default
+# This ensures only ERROR and above messages reach the main Home Assistant logs
+_THIRD_PARTY_LOGGERS = [
+    "meraki",
+    "meraki.api",
+    "meraki.config",
+    "meraki.common",
+    "urllib3",
+    "urllib3.connectionpool",
+    "requests",
+    "requests.packages.urllib3",
+]
+
+for logger_name in _THIRD_PARTY_LOGGERS:
+    third_party_logger = logging.getLogger(logger_name)
+    # Only allow ERROR and above to reach the main HA logs
+    # This prevents INFO level API call logs from cluttering the main logs
+    third_party_logger.setLevel(logging.ERROR)
+    _LOGGER.debug("Set logging level for %s to ERROR", logger_name)
 
 # Platforms to be set up for this integration
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
@@ -78,6 +100,9 @@ class MerakiDashboardHub:
         self.failed_api_calls = 0
         self.organization_name: str | None = None
 
+        # Event handler for sensor state changes
+        self.event_handler = MerakiEventHandler(hass)
+
     async def async_setup(self) -> bool:
         """Set up the Meraki Dashboard API connection.
 
@@ -92,9 +117,18 @@ class MerakiDashboardHub:
             ConfigEntryNotReady: If connection fails for other reasons
         """
         try:
-            # Initialize the Meraki Dashboard API client
+            # Initialize the Meraki Dashboard API client with minimal logging
+            # We configure the SDK to suppress verbose output that would otherwise
+            # appear in Home Assistant's main log at INFO level
             self.dashboard = await self.hass.async_add_executor_job(
-                meraki.DashboardAPI, self._api_key
+                meraki.DashboardAPI,
+                self._api_key,
+                # Suppress the SDK's built-in logging to prevent API call spam
+                suppress_logging=True,
+                # Disable printing to stdout/stderr
+                print_console=False,
+                # Use our logger for any critical SDK messages
+                output_log=False,
             )
             self.total_api_calls += 1
 
@@ -104,7 +138,9 @@ class MerakiDashboardHub:
             )
             self.total_api_calls += 1
             self.organization_name = org_info.get("name")
-            _LOGGER.info("Connected to Meraki organization: %s", self.organization_name)
+            _LOGGER.debug(
+                "Connected to Meraki organization: %s", self.organization_name
+            )
 
             # Get all networks for the organization
             self.networks = await self.hass.async_add_executor_job(
@@ -112,7 +148,7 @@ class MerakiDashboardHub:
                 self.organization_id,
             )
             self.total_api_calls += 1
-            _LOGGER.info("Found %d networks in organization", len(self.networks))
+            _LOGGER.debug("Found %d networks in organization", len(self.networks))
 
             self.last_api_call_error = None
 
@@ -127,7 +163,7 @@ class MerakiDashboardHub:
                     self._async_discover_devices,
                     timedelta(seconds=discovery_interval),
                 )
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Auto-discovery enabled, will scan for new devices every %d seconds",
                     discovery_interval,
                 )
@@ -221,7 +257,7 @@ class MerakiDashboardHub:
                     "Error getting devices for network %s: %s", network["name"], err
                 )
 
-        _LOGGER.info("Found %d %s devices total", len(devices), device_type)
+        _LOGGER.debug("Found %d %s devices total", len(devices), device_type)
         return devices
 
     async def _async_discover_devices(self, _now: datetime | None = None) -> None:
@@ -390,7 +426,10 @@ class MerakiDashboardHub:
             return {}
 
         try:
-            _LOGGER.debug("Fetching sensor data for %d devices", len(serials))
+            _LOGGER.debug(
+                "Fetching sensor data for %d devices: %s", len(serials), serials
+            )
+            start_time = self.hass.loop.time()
 
             # Capture dashboard reference to avoid potential None access in inner function
             dashboard = self.dashboard
@@ -415,19 +454,53 @@ class MerakiDashboardHub:
             self.total_api_calls += 1
             self.last_api_call_error = None
 
+            api_duration = round((self.hass.loop.time() - start_time) * 1000, 2)
             _LOGGER.debug(
-                "Received %d readings from API",
+                "API call completed in %sms, received %d readings from %d requested devices",
+                api_duration,
                 len(all_readings) if all_readings else 0,
+                len(serials),
             )
 
-            # Organize readings by serial number
+            # Organize readings by serial number and log details
             result = {}
             for reading in all_readings:
                 serial = reading.get("serial")
                 if serial in serials:
                     result[serial] = reading
+                    # Log available metrics for debugging
+                    metrics = [r.get("metric") for r in reading.get("readings", [])]
+                    _LOGGER.debug("Device %s has metrics: %s", serial, metrics)
 
-            _LOGGER.debug("Processed data for %d devices", len(result))
+                    # Process events for state changes
+                    try:
+                        device_info = self.devices.get(serial, {})
+                        if device_info:
+                            # Add domain for device registry lookup
+                            device_info_with_domain = {**device_info, "domain": DOMAIN}
+                            self.event_handler.track_sensor_data(
+                                serial,
+                                reading.get("readings", []),
+                                device_info_with_domain,
+                            )
+                    except Exception as event_err:
+                        _LOGGER.debug(
+                            "Error processing events for device %s: %s",
+                            serial,
+                            event_err,
+                        )
+
+            _LOGGER.debug(
+                "Successfully processed data for %d of %d requested devices",
+                len(result),
+                len(serials),
+            )
+
+            # Log any missing devices
+            missing_devices = set(serials) - set(result.keys())
+            if missing_devices:
+                _LOGGER.debug("No data received for devices: %s", list(missing_devices))
+
             return result
 
         except APIError as err:
@@ -523,7 +596,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             5, lambda: hass.async_create_task(coordinator.async_request_refresh())
         )
     else:
-        _LOGGER.info("No MT devices found during setup")
+        _LOGGER.info("No MT sensor devices found in organization")
 
     # Listen for option updates
     entry.async_on_unload(entry.add_update_listener(async_update_options))

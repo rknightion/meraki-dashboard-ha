@@ -254,7 +254,7 @@ async def async_setup_entry(
                     serial,
                 )
 
-    _LOGGER.info("Creating %d sensor entities", len(entities))
+    _LOGGER.debug("Creating %d sensor entities", len(entities))
     async_add_entities(entities)
 
 
@@ -353,14 +353,23 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     def native_value(self) -> Any:
         """Return the native value of the sensor."""
         if not self.coordinator.data:
+            _LOGGER.debug("Entity %s: No coordinator data available", self.entity_id)
             return None
 
         device_data = self.coordinator.data.get(self._serial)
         if not device_data:
+            _LOGGER.debug(
+                "Entity %s: No device data for serial %s", self.entity_id, self._serial
+            )
             return None
 
         readings = device_data.get("readings", [])
         if not readings:
+            _LOGGER.debug(
+                "Entity %s: No readings available for device %s",
+                self.entity_id,
+                self._serial,
+            )
             return None
 
         # Find the reading for this sensor type
@@ -400,7 +409,24 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                     return metric_data.get("concentration")
                 elif self.entity_description.key == MT_SENSOR_VOLTAGE:
                     return metric_data.get("level")
+                else:
+                    # Fallback for unknown sensors - return the 'value' field if available
+                    value = reading.get("value")
+                    _LOGGER.debug(
+                        "Entity %s: Using fallback value extraction for metric %s: %s",
+                        self.entity_id,
+                        self.entity_description.key,
+                        value,
+                    )
+                    return value
 
+        # No matching reading found
+        _LOGGER.debug(
+            "Entity %s: No reading found for metric %s among %d readings",
+            self.entity_id,
+            self.entity_description.key,
+            len(readings),
+        )
         return None
 
     @property

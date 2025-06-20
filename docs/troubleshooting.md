@@ -22,6 +22,8 @@ Before troubleshooting, enable detailed logging to see what's happening:
 2. Restart Home Assistant
 3. Check **Settings → System → Logs** for detailed information
 
+For more details on logging configuration, see our [Logging Configuration Guide](logging-configuration.md).
+
 ## Installation Issues
 
 ### Integration Not Found

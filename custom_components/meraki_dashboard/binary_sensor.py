@@ -132,7 +132,7 @@ async def async_setup_entry(
                     serial,
                 )
 
-    _LOGGER.info("Creating %d binary sensor entities", len(entities))
+    _LOGGER.debug("Creating %d binary sensor entities", len(entities))
     async_add_entities(entities)
 
 
@@ -238,10 +238,23 @@ class MerakiMTBinarySensor(
         based on the metric type.
         """
         if not self.coordinator.data or self._serial not in self.coordinator.data:
+            _LOGGER.debug(
+                "Binary sensor %s: No coordinator data for device %s",
+                self.entity_id,
+                self._serial,
+            )
             return None
 
         device_data = self.coordinator.data[self._serial]
         readings = device_data.get("readings", [])
+
+        if not readings:
+            _LOGGER.debug(
+                "Binary sensor %s: No readings available for device %s",
+                self.entity_id,
+                self._serial,
+            )
+            return None
 
         # Find the latest reading for this sensor type
         for reading in readings:
@@ -258,7 +271,24 @@ class MerakiMTBinarySensor(
                     return metric_data.get("locked") is True
                 elif self.entity_description.key == MT_SENSOR_WATER:
                     return metric_data.get("present") is True
+                else:
+                    # Fallback for unknown binary sensors
+                    value = metric_data.get("value", False)
+                    _LOGGER.debug(
+                        "Binary sensor %s: Using fallback value extraction for metric %s: %s",
+                        self.entity_id,
+                        self.entity_description.key,
+                        value,
+                    )
+                    return bool(value)
 
+        # No matching reading found
+        _LOGGER.debug(
+            "Binary sensor %s: No reading found for metric %s among %d readings",
+            self.entity_id,
+            self.entity_description.key,
+            len(readings),
+        )
         return None
 
     @property

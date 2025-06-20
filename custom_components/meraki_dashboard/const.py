@@ -55,6 +55,25 @@ MT_BINARY_SENSOR_METRICS: Final = [
     MT_SENSOR_WATER,
 ]
 
+# Event-emitting sensor metrics - these will fire Home Assistant events
+# when their state changes occur
+MT_EVENT_SENSOR_METRICS: Final = [
+    MT_SENSOR_BUTTON,  # Button press events
+    MT_SENSOR_DOOR,  # Door open/close events
+    MT_SENSOR_WATER,  # Water detected/cleared events
+]
+
+# Event types
+EVENT_TYPE: Final = f"{DOMAIN}_event"
+
+# Event data keys
+EVENT_DEVICE_ID: Final = "device_id"
+EVENT_DEVICE_SERIAL: Final = "device_serial"
+EVENT_SENSOR_TYPE: Final = "sensor_type"
+EVENT_VALUE: Final = "value"
+EVENT_PREVIOUS_VALUE: Final = "previous_value"
+EVENT_TIMESTAMP: Final = "timestamp"
+
 # Attributes
 ATTR_NETWORK_ID: Final = "network_id"
 ATTR_NETWORK_NAME: Final = "network_name"

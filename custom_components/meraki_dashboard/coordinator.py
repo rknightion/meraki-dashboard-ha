@@ -44,7 +44,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.hub = hub
         self.devices = devices
-        _LOGGER.info(
+        _LOGGER.debug(
             "Sensor coordinator initialized with %d second update interval",
             scan_interval,
         )
@@ -64,6 +64,9 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             # Get all serial numbers
             serials = [device["serial"] for device in self.devices]
+            _LOGGER.debug("Coordinator update starting for %d devices", len(serials))
+
+            update_start = self.hass.loop.time()
 
             # Get sensor readings for all devices at once using SDK
             data = await self.hub.async_get_sensor_data_batch(serials)
@@ -71,10 +74,27 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Note: Device info updates have been removed to avoid API compatibility issues
             # Device information is already cached during initial discovery
 
+            update_duration = round((self.hass.loop.time() - update_start) * 1000, 2)
+            successful_devices = len([d for d in data.values() if d])
+
+            _LOGGER.debug(
+                "Coordinator update completed in %sms: %d/%d devices returned data",
+                update_duration,
+                successful_devices,
+                len(serials),
+            )
+
+            # Log any devices with issues
+            failed_devices = [
+                serial for serial in serials if serial not in data or not data[serial]
+            ]
+            if failed_devices:
+                _LOGGER.debug("Devices with no data in this update: %s", failed_devices)
+
             return data
 
         except Exception as err:
-            _LOGGER.error("Error fetching sensor data: %s", err)
+            _LOGGER.error("Error fetching sensor data: %s", err, exc_info=True)
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     async def async_request_refresh_delayed(self, delay_seconds: int = 5) -> None:
