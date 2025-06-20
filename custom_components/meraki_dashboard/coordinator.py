@@ -222,7 +222,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
 
                     try:
-                        await async_add_external_statistics(
+                        async_add_external_statistics(
                             self.hass,
                             self._statistics_metadata[statistic_id],
                             sorted_data,
