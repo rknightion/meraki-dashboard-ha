@@ -2,7 +2,7 @@
 
 .PHONY: help install lint format clean pre-commit hassfest docs check-all
 # Removed test-related targets: test coverage
-
+ 
 # Default target
 help:
 	@echo "Available commands:"
