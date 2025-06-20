@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.7.0...v0.8.0) (2025-06-20)
+
+
+### Features
+
+* add fixable attribute to error messages ([7b1cebf](https://github.com/rknightion/meraki-dashboard-ha/commit/7b1cebf4d3ab0ff4e9989adacf1794b41db34685))
+* enhance error logging and improve statistic handling ([04827fd](https://github.com/rknightion/meraki-dashboard-ha/commit/04827fd134a2d3a463bfccf349cd11451e239329))
+
 ## [0.7.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.6.0...v0.7.0) (2025-06-20)
 
 
