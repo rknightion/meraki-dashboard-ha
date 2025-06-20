@@ -10,8 +10,6 @@ title: Home
 [![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
 
-![Meraki Logo](docs/images/icon.png)
-
 This custom integration connects your Meraki Dashboard with Home Assistant, providing real-time insights into your network devices and environmental sensors.
 
 
