@@ -24,32 +24,32 @@ MIN_SCAN_INTERVAL: Final = 60  # 1 minute minimum
 DEFAULT_DISCOVERY_INTERVAL: Final = 3600  # 1 hour for device discovery
 MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes minimum
 
+# Sensor types that will be supported
+SENSOR_TYPE_MT: Final = "MT"  # Environmental sensors
+SENSOR_TYPE_MR: Final = "MR"  # Wireless access points (future)
+SENSOR_TYPE_MS: Final = "MS"  # Switches (future)
+SENSOR_TYPE_MV: Final = "MV"  # Cameras (future)
+
 # Per-device-type scan interval defaults (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS: Final = {
-    SENSOR_TYPE_MT: 600,   # 10 minutes for MT sensors
-    SENSOR_TYPE_MR: 300,   # 5 minutes for wireless
-    SENSOR_TYPE_MS: 300,   # 5 minutes for switches
-    SENSOR_TYPE_MV: 300,   # 5 minutes for cameras
+    SENSOR_TYPE_MT: 600,  # 10 minutes for MT sensors
+    SENSOR_TYPE_MR: 300,  # 5 minutes for wireless
+    SENSOR_TYPE_MS: 300,  # 5 minutes for switches
+    SENSOR_TYPE_MV: 300,  # 5 minutes for cameras
 }
 
 # Default scan intervals for UI (in minutes)
 DEFAULT_SCAN_INTERVAL_MINUTES: Final = {
-    SENSOR_TYPE_MT: 10,   # 10 minutes for MT sensors
-    SENSOR_TYPE_MR: 5,    # 5 minutes for wireless
-    SENSOR_TYPE_MS: 5,    # 5 minutes for switches
-    SENSOR_TYPE_MV: 5,    # 5 minutes for cameras
+    SENSOR_TYPE_MT: 10,  # 10 minutes for MT sensors
+    SENSOR_TYPE_MR: 5,  # 5 minutes for wireless
+    SENSOR_TYPE_MS: 5,  # 5 minutes for switches
+    SENSOR_TYPE_MV: 5,  # 5 minutes for cameras
 }
 
 # Discovery interval defaults
 DEFAULT_DISCOVERY_INTERVAL_MINUTES: Final = 60  # 1 hour for all device types
 MIN_SCAN_INTERVAL_MINUTES: Final = 1  # 1 minute minimum
 MIN_DISCOVERY_INTERVAL_MINUTES: Final = 5  # 5 minutes minimum
-
-# Sensor types that will be supported
-SENSOR_TYPE_MT: Final = "MT"  # Environmental sensors
-SENSOR_TYPE_MR: Final = "MR"  # Wireless access points (future)
-SENSOR_TYPE_MS: Final = "MS"  # Switches (future)
-SENSOR_TYPE_MV: Final = "MV"  # Cameras (future)
 
 # Device type mappings for hub creation
 DEVICE_TYPE_MAPPINGS: Final = {
@@ -59,13 +59,13 @@ DEVICE_TYPE_MAPPINGS: Final = {
         "model_prefixes": ["MT"],
     },
     SENSOR_TYPE_MR: {
-        "name_suffix": "MR", 
+        "name_suffix": "MR",
         "description": "Wireless Access Points",
         "model_prefixes": ["MR"],
     },
     SENSOR_TYPE_MS: {
         "name_suffix": "MS",
-        "description": "Switches", 
+        "description": "Switches",
         "model_prefixes": ["MS"],
     },
     SENSOR_TYPE_MV: {

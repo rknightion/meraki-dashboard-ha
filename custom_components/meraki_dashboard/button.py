@@ -32,7 +32,9 @@ async def async_setup_entry(
     # Get the integration data
     integration_data = hass.data[DOMAIN].get(config_entry.entry_id)
     if not integration_data:
-        _LOGGER.error("Integration data not found for config entry %s", config_entry.entry_id)
+        _LOGGER.error(
+            "Integration data not found for config entry %s", config_entry.entry_id
+        )
         return
 
     org_hub = integration_data["organization_hub"]
@@ -40,7 +42,9 @@ async def async_setup_entry(
     coordinators = integration_data["coordinators"]
 
     if not org_hub:
-        _LOGGER.error("Organization hub not found for config entry %s", config_entry.entry_id)
+        _LOGGER.error(
+            "Organization hub not found for config entry %s", config_entry.entry_id
+        )
         return
 
     # Create button entities
@@ -48,7 +52,7 @@ async def async_setup_entry(
 
     # Create organization-level buttons
     buttons.append(MerakiOrgUpdateButton(org_hub, config_entry, coordinators))
-    
+
     # Add discovery button if auto-discovery is enabled
     if config_entry.options.get(CONF_AUTO_DISCOVERY, True):
         buttons.append(MerakiOrgDiscoveryButton(org_hub, config_entry))
@@ -56,11 +60,13 @@ async def async_setup_entry(
     # Create network hub-specific buttons
     for hub_id, network_hub in network_hubs.items():
         coordinator = coordinators.get(hub_id)
-        
+
         # Only create update buttons for hubs with coordinators (MT devices)
         if coordinator:
-            buttons.append(MerakiNetworkUpdateButton(network_hub, coordinator, config_entry))
-            
+            buttons.append(
+                MerakiNetworkUpdateButton(network_hub, coordinator, config_entry)
+            )
+
         # Create discovery button for each network hub if auto-discovery is enabled
         if config_entry.options.get(CONF_AUTO_DISCOVERY, True):
             buttons.append(MerakiNetworkDiscoveryButton(network_hub, config_entry))
@@ -99,7 +105,9 @@ class MerakiOrgUpdateButton(ButtonEntity):
         self._config_entry = config_entry
 
         # Set unique ID for this entity
-        self._attr_unique_id = f"{config_entry.data['organization_id']}_org_update_button"
+        self._attr_unique_id = (
+            f"{config_entry.data['organization_id']}_org_update_button"
+        )
 
         # Set device info to associate with the organization device
         self._attr_device_info = DeviceInfo(
@@ -146,7 +154,9 @@ class MerakiOrgDiscoveryButton(ButtonEntity):
         self._config_entry = config_entry
 
         # Set unique ID for this entity
-        self._attr_unique_id = f"{config_entry.data['organization_id']}_org_discovery_button"
+        self._attr_unique_id = (
+            f"{config_entry.data['organization_id']}_org_discovery_button"
+        )
 
         # Set device info to associate with the organization device
         self._attr_device_info = DeviceInfo(
@@ -169,7 +179,7 @@ class MerakiOrgDiscoveryButton(ButtonEntity):
     def available(self) -> bool:
         """Return if entity is available."""
         return (
-            self.org_hub is not None 
+            self.org_hub is not None
             and self._config_entry.options.get(CONF_AUTO_DISCOVERY, True)
             and len(self.org_hub.network_hubs) > 0
         )
@@ -200,11 +210,15 @@ class MerakiNetworkUpdateButton(ButtonEntity):
         self._config_entry = config_entry
 
         # Set unique ID for this entity
-        self._attr_unique_id = f"{network_hub.network_id}_{network_hub.device_type}_update_button"
+        self._attr_unique_id = (
+            f"{network_hub.network_id}_{network_hub.device_type}_update_button"
+        )
 
         # Set device info to associate with the network hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")},
+            identifiers={
+                (DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")
+            },
             manufacturer="Cisco Meraki",
             name=network_hub.hub_name,
             model=f"Network - {network_hub.device_type}",
@@ -215,7 +229,9 @@ class MerakiNetworkUpdateButton(ButtonEntity):
 
         Triggers an immediate refresh of sensor data for this network hub.
         """
-        _LOGGER.debug("Manual sensor update requested for %s", self.network_hub.hub_name)
+        _LOGGER.debug(
+            "Manual sensor update requested for %s", self.network_hub.hub_name
+        )
         await self.coordinator.async_request_refresh()
 
     @property
@@ -246,11 +262,15 @@ class MerakiNetworkDiscoveryButton(ButtonEntity):
         self._config_entry = config_entry
 
         # Set unique ID for this entity
-        self._attr_unique_id = f"{network_hub.network_id}_{network_hub.device_type}_discovery_button"
+        self._attr_unique_id = (
+            f"{network_hub.network_id}_{network_hub.device_type}_discovery_button"
+        )
 
         # Set device info to associate with the network hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")},
+            identifiers={
+                (DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")
+            },
             manufacturer="Cisco Meraki",
             name=network_hub.hub_name,
             model=f"Network - {network_hub.device_type}",
@@ -261,13 +281,14 @@ class MerakiNetworkDiscoveryButton(ButtonEntity):
 
         Triggers an immediate device discovery scan for this network hub.
         """
-        _LOGGER.debug("Manual device discovery requested for %s", self.network_hub.hub_name)
+        _LOGGER.debug(
+            "Manual device discovery requested for %s", self.network_hub.hub_name
+        )
         await self.network_hub._async_discover_devices()
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return (
-            self.network_hub is not None 
-            and self._config_entry.options.get(CONF_AUTO_DISCOVERY, True)
+        return self.network_hub is not None and self._config_entry.options.get(
+            CONF_AUTO_DISCOVERY, True
         )

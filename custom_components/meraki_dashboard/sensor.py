@@ -209,7 +209,9 @@ async def async_setup_entry(
     # Get the integration data
     integration_data = hass.data[DOMAIN].get(config_entry.entry_id)
     if not integration_data:
-        _LOGGER.error("Integration data not found for config entry %s", config_entry.entry_id)
+        _LOGGER.error(
+            "Integration data not found for config entry %s", config_entry.entry_id
+        )
         return
 
     org_hub = integration_data["organization_hub"]
@@ -217,41 +219,47 @@ async def async_setup_entry(
     coordinators = integration_data["coordinators"]
 
     if not org_hub:
-        _LOGGER.error("Organization hub not found for config entry %s", config_entry.entry_id)
+        _LOGGER.error(
+            "Organization hub not found for config entry %s", config_entry.entry_id
+        )
         return
 
     # Create sensor entities
     entities = []
 
     # Add organization hub diagnostic sensors
-    entities.extend([
-        MerakiHubDeviceCountSensor(org_hub, config_entry),
-        MerakiHubNetworkCountSensor(org_hub, config_entry),
-        MerakiHubApiCallsSensor(org_hub, config_entry),
-        MerakiHubFailedApiCallsSensor(org_hub, config_entry),
-    ])
+    entities.extend(
+        [
+            MerakiHubDeviceCountSensor(org_hub, config_entry),
+            MerakiHubNetworkCountSensor(org_hub, config_entry),
+            MerakiHubApiCallsSensor(org_hub, config_entry),
+            MerakiHubFailedApiCallsSensor(org_hub, config_entry),
+        ]
+    )
 
     # Process each network hub and its coordinator
     for hub_id, network_hub in network_hubs.items():
         coordinator = coordinators.get(hub_id)
-        
+
         # Only create MT sensor entities if we have a coordinator (MT devices only)
         if coordinator and network_hub.device_type == "MT":
             # Create sensor entities for each device and metric
             for device in network_hub.devices:
                 device_serial = device["serial"]
-                
+
                 # Get the latest sensor data for this device
                 device_data = coordinator.data.get(device_serial, {})
-                
+
                 if not device_data:
-                    _LOGGER.debug("No sensor data available for device %s yet", device_serial)
+                    _LOGGER.debug(
+                        "No sensor data available for device %s yet", device_serial
+                    )
                     continue
-                
+
                 # Get all available sensor readings for this device
                 readings = device_data.get("readings", [])
                 available_metrics = {reading["metric"] for reading in readings}
-                
+
                 # Log discovered metrics for debugging
                 _LOGGER.debug(
                     "Device %s (%s) in %s has metrics: %s",
@@ -260,13 +268,13 @@ async def async_setup_entry(
                     network_hub.hub_name,
                     sorted(available_metrics),
                 )
-                
+
                 # Create sensor entities for each available metric
                 for metric in available_metrics:
                     # Skip metrics that should be binary sensors instead
                     if metric in MT_BINARY_SENSOR_METRICS:
                         continue
-                        
+
                     # Get the sensor description for this metric
                     sensor_description = MT_SENSOR_DESCRIPTIONS.get(metric)
                     if sensor_description:
@@ -371,7 +379,10 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
             serial_number=self._serial,
             sw_version=device.get("firmware", None),
             hw_version=device.get("hardware_version", None),
-            via_device=(DOMAIN, f"{self._network_hub.network_id}_{self._network_hub.device_type}"),
+            via_device=(
+                DOMAIN,
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
+            ),
             configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
         )
 
@@ -382,24 +393,27 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information about the MT sensor device.
-        
+
         This method provides device registry information for Home Assistant
         to properly organize and display the device in the UI.
-        
+
         Returns:
             DeviceInfo: Device information for the registry
         """
         device = self._device
-        
+
         # Create device registry entry for the physical MT device
         return DeviceInfo(
             identifiers={(DOMAIN, device["serial"])},
-            name=sanitize_device_name(device),
+            name=sanitize_device_name(device.get("name")),
             manufacturer="Cisco Meraki",
             model=device.get("model"),
             sw_version=device.get("firmware", None),
             hw_version=device.get("hardware_version", None),
-            via_device=(DOMAIN, f"{self._network_hub.network_id}_{self._network_hub.device_type}"),
+            via_device=(
+                DOMAIN,
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
+            ),
             configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
         )
 
@@ -762,7 +776,7 @@ class MerakiNetworkHubDeviceCountSensor(SensorEntity):
 
 class MerakiMRSensor(SensorEntity):
     """Representation of a Meraki MR (wireless) sensor.
-    
+
     Each instance represents a metric calculated from wireless SSID data,
     such as SSID count, enabled SSIDs, open SSIDs, etc.
     """
@@ -791,7 +805,9 @@ class MerakiMRSensor(SensorEntity):
 
         # Set device info to associate with the network hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")},
+            identifiers={
+                (DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")
+            },
             manufacturer="Cisco Meraki",
             name=network_hub.hub_name,
             model=f"Network - {network_hub.device_type}",
@@ -804,19 +820,22 @@ class MerakiMRSensor(SensorEntity):
             return None
 
         ssids = self._network_hub.wireless_data.get("ssids", [])
-        
+
         if self.entity_description.key == MR_SENSOR_SSID_COUNT:
             return len(ssids)
         elif self.entity_description.key == MR_SENSOR_ENABLED_SSIDS:
             return len([ssid for ssid in ssids if ssid.get("enabled", False)])
         elif self.entity_description.key == MR_SENSOR_OPEN_SSIDS:
             # Count SSIDs without WPA/WEP encryption
-            return len([
-                ssid for ssid in ssids 
-                if ssid.get("authMode") in ["open", "8021x-radius"] 
-                and not ssid.get("encryptionMode", "").startswith("wpa")
-            ])
-        
+            return len(
+                [
+                    ssid
+                    for ssid in ssids
+                    if ssid.get("authMode") in ["open", "8021x-radius"]
+                    and not ssid.get("encryptionMode", "").startswith("wpa")
+                ]
+            )
+
         return None
 
     @property
@@ -829,13 +848,15 @@ class MerakiMRSensor(SensorEntity):
         """Return additional state attributes."""
         if not self._network_hub.wireless_data:
             return {}
-            
+
         ssids = self._network_hub.wireless_data.get("ssids", [])
-        
+
         return {
             "network_id": self._network_hub.network_id,
             "network_name": self._network_hub.network_name,
             "hub_name": self._network_hub.hub_name,
             "total_ssids": len(ssids),
-            "ssid_names": [ssid.get("name", "Unknown") for ssid in ssids[:10]],  # Limit to first 10
+            "ssid_names": [
+                ssid.get("name", "Unknown") for ssid in ssids[:10]
+            ],  # Limit to first 10
         }

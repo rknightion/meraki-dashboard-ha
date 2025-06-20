@@ -28,7 +28,6 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
-    DEVICE_TYPE_MAPPINGS,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
     MIN_DISCOVERY_INTERVAL_MINUTES,
@@ -228,12 +227,15 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                 },
                 options={
                     CONF_SCAN_INTERVAL: user_input.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT]
-                    ) * 60,  # Convert minutes to seconds
+                        CONF_SCAN_INTERVAL,
+                        DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT],
+                    )
+                    * 60,  # Convert minutes to seconds
                     CONF_AUTO_DISCOVERY: user_input.get(CONF_AUTO_DISCOVERY, True),
                     CONF_DISCOVERY_INTERVAL: user_input.get(
                         CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL_MINUTES
-                    ) * 60,  # Convert minutes to seconds
+                    )
+                    * 60,  # Convert minutes to seconds
                     CONF_SELECTED_DEVICES: selected_devices,
                     # Initialize empty hub-specific intervals (will be populated when hubs are created)
                     CONF_HUB_SCAN_INTERVALS: {},
@@ -270,14 +272,20 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                     vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
                     vol.Optional(CONF_SELECTED_DEVICES): device_selector,
                     vol.Optional(
-                        CONF_SCAN_INTERVAL, 
-                        default=DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT]
-                    ): vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60)),
+                        CONF_SCAN_INTERVAL,
+                        default=DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT],
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60),
+                    ),
                     vol.Optional(CONF_AUTO_DISCOVERY, default=True): bool,
                     vol.Optional(
-                        CONF_DISCOVERY_INTERVAL, 
-                        default=DEFAULT_DISCOVERY_INTERVAL_MINUTES
-                    ): vol.All(vol.Coerce(int), vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440)),
+                        CONF_DISCOVERY_INTERVAL,
+                        default=DEFAULT_DISCOVERY_INTERVAL_MINUTES,
+                    ): vol.All(
+                        vol.Coerce(int),
+                        vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440),
+                    ),
                 }
             ),
         )
@@ -305,11 +313,11 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             # Convert minutes back to seconds for storage
             options = dict(user_input)
-            
+
             # Process hub-specific intervals
             hub_scan_intervals = {}
             hub_discovery_intervals = {}
-            
+
             # Extract hub-specific settings from form data
             for key, value in list(options.items()):
                 if key.startswith("scan_interval_"):
@@ -320,19 +328,19 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     hub_key = key.replace("discovery_interval_", "")
                     hub_discovery_intervals[hub_key] = value * 60  # Convert to seconds
                     del options[key]
-            
+
             # Store hub-specific intervals
             if hub_scan_intervals:
                 options[CONF_HUB_SCAN_INTERVALS] = hub_scan_intervals
             if hub_discovery_intervals:
                 options[CONF_HUB_DISCOVERY_INTERVALS] = hub_discovery_intervals
-            
+
             # Convert legacy scan/discovery intervals from minutes to seconds
             if CONF_SCAN_INTERVAL in options:
                 options[CONF_SCAN_INTERVAL] = options[CONF_SCAN_INTERVAL] * 60
             if CONF_DISCOVERY_INTERVAL in options:
                 options[CONF_DISCOVERY_INTERVAL] = options[CONF_DISCOVERY_INTERVAL] * 60
-                
+
             return self.async_create_entry(title="", data=options)
 
         # Get current hub information from hass.data if available
@@ -340,50 +348,80 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         current_options = self.config_entry.options or {}
 
         schema_dict = {}
-        
+
         # Legacy options for backward compatibility
-        schema_dict[vol.Optional(
-            CONF_SCAN_INTERVAL,
-            default=current_options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL) // 60,
-        )] = vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60))
-        
-        schema_dict[vol.Optional(
-            CONF_AUTO_DISCOVERY,
-            default=current_options.get(CONF_AUTO_DISCOVERY, True),
-        )] = bool
-        
-        schema_dict[vol.Optional(
-            CONF_DISCOVERY_INTERVAL,
-            default=current_options.get(CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL) // 60,
-        )] = vol.All(vol.Coerce(int), vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440))
+        schema_dict[
+            vol.Optional(
+                CONF_SCAN_INTERVAL,
+                default=current_options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+                // 60,
+            )
+        ] = vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60))
+
+        schema_dict[
+            vol.Optional(
+                CONF_AUTO_DISCOVERY,
+                default=current_options.get(CONF_AUTO_DISCOVERY, True),
+            )
+        ] = bool
+
+        schema_dict[
+            vol.Optional(
+                CONF_DISCOVERY_INTERVAL,
+                default=current_options.get(
+                    CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL
+                )
+                // 60,
+            )
+        ] = vol.All(
+            vol.Coerce(int), vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440)
+        )
 
         # Per-hub scan intervals (in minutes)
         if hubs_info:
-            current_hub_scan_intervals = current_options.get(CONF_HUB_SCAN_INTERVALS, {})
-            current_hub_discovery_intervals = current_options.get(CONF_HUB_DISCOVERY_INTERVALS, {})
-            
+            current_hub_scan_intervals = current_options.get(
+                CONF_HUB_SCAN_INTERVALS, {}
+            )
+            current_hub_discovery_intervals = current_options.get(
+                CONF_HUB_DISCOVERY_INTERVALS, {}
+            )
+
             for hub_key, hub_info in hubs_info.items():
                 # Scan interval for this hub
-                current_scan_minutes = current_hub_scan_intervals.get(
-                    hub_key, 
-                    DEVICE_TYPE_SCAN_INTERVALS.get(hub_info["device_type"], 300)
-                ) // 60
-                
-                schema_dict[vol.Optional(
-                    f"scan_interval_{hub_key}",
-                    default=current_scan_minutes,
-                )] = vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60))
-                
+                current_scan_minutes = (
+                    current_hub_scan_intervals.get(
+                        hub_key,
+                        DEVICE_TYPE_SCAN_INTERVALS.get(hub_info["device_type"], 300),
+                    )
+                    // 60
+                )
+
+                schema_dict[
+                    vol.Optional(
+                        f"scan_interval_{hub_key}",
+                        default=current_scan_minutes,
+                    )
+                ] = vol.All(
+                    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60)
+                )
+
                 # Discovery interval for this hub
-                current_discovery_minutes = current_hub_discovery_intervals.get(
-                    hub_key, 
-                    DEFAULT_DISCOVERY_INTERVAL
-                ) // 60
-                
-                schema_dict[vol.Optional(
-                    f"discovery_interval_{hub_key}",
-                    default=current_discovery_minutes,
-                )] = vol.All(vol.Coerce(int), vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440))
+                current_discovery_minutes = (
+                    current_hub_discovery_intervals.get(
+                        hub_key, DEFAULT_DISCOVERY_INTERVAL
+                    )
+                    // 60
+                )
+
+                schema_dict[
+                    vol.Optional(
+                        f"discovery_interval_{hub_key}",
+                        default=current_discovery_minutes,
+                    )
+                ] = vol.All(
+                    vol.Coerce(int),
+                    vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440),
+                )
 
         return self.async_show_form(
             step_id="init",
@@ -397,13 +435,15 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     async def _get_available_hubs(self) -> dict[str, dict[str, Any]]:
         """Get information about available hubs from the integration data."""
         try:
-            integration_data = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+            integration_data = self.hass.data.get(DOMAIN, {}).get(
+                self.config_entry.entry_id
+            )
             if not integration_data:
                 return {}
-                
+
             network_hubs = integration_data.get("network_hubs", {})
             hubs_info = {}
-            
+
             for hub_id, hub in network_hubs.items():
                 hubs_info[hub_id] = {
                     "name": hub.hub_name,
@@ -411,7 +451,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     "network_name": hub.network_name,
                     "device_count": len(hub.devices),
                 }
-                
+
             return hubs_info
         except Exception:
             _LOGGER.debug("Could not get hub information, using legacy configuration")
