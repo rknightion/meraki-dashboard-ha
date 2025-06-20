@@ -1,0 +1,65 @@
+# Jekyll configuration for GitHub Pages
+title: "Meraki Dashboard Home Assistant Integration"
+description: "Monitor your Cisco Meraki devices through Home Assistant"
+baseurl: "/meraki-dashboard-ha"
+url: "https://rknightion.github.io"
+
+# Repository info
+repository: rknightion/meraki-dashboard-ha
+
+# Theme
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Navigation
+header_pages:
+  - installation.md
+  - configuration.md
+  - usage.md
+  - troubleshooting.md
+  - development.md
+  - api-reference.md
+  - faq.md
+  - changelog.md
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+
+# Collections
+collections:
+  devices:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  - scope:
+      path: ""
+      type: "devices"
+    values:
+      layout: "device"
+
+# SEO
+author: "rknightion"
+twitter:
+  username: rknightion
+social:
+  name: Meraki Dashboard HA
+  links:
+    - https://github.com/rknightion/meraki-dashboard-ha
+
+# Google Analytics (optional)
+# google_analytics: G-XXXXXXXXXX 

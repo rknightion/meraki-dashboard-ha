@@ -5,6 +5,8 @@
 [![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
 
+
+
 This custom integration allows you to monitor your Cisco Meraki devices through Home Assistant. Currently supports MT series environmental sensors with plans to expand to other device types.
 
 ## Features
