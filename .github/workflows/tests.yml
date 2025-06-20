@@ -10,6 +10,9 @@ on:
       - main
       - dev
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.13"
 
