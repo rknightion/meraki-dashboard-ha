@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     UnitOfElectricCurrent,
@@ -96,6 +97,7 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        suggested_display_precision=2,
     ),
     MT_SENSOR_FREQUENCY: SensorEntityDescription(
         key=MT_SENSOR_FREQUENCY,
@@ -103,6 +105,7 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         device_class=SensorDeviceClass.FREQUENCY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfFrequency.HERTZ,
+        suggested_display_precision=2,
     ),
     MT_SENSOR_HUMIDITY: SensorEntityDescription(
         key=MT_SENSOR_HUMIDITY,
@@ -110,6 +113,7 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         device_class=SensorDeviceClass.HUMIDITY,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
     ),
     MT_SENSOR_INDOOR_AIR_QUALITY: SensorEntityDescription(
         key=MT_SENSOR_INDOOR_AIR_QUALITY,
@@ -136,7 +140,7 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         name="Power Factor",
         device_class=SensorDeviceClass.POWER_FACTOR,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=3,
     ),
     MT_SENSOR_REAL_POWER: SensorEntityDescription(
         key=MT_SENSOR_REAL_POWER,
@@ -151,13 +155,15 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=1,
     ),
     MT_SENSOR_TVOC: SensorEntityDescription(
         key=MT_SENSOR_TVOC,
         name="TVOC",
         device_class=SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=CONCENTRATION_PARTS_PER_BILLION,
+        suggested_display_precision=0,
     ),
     MT_SENSOR_VOLTAGE: SensorEntityDescription(
         key=MT_SENSOR_VOLTAGE,
@@ -165,6 +171,7 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        suggested_display_precision=1,
     ),
 }
 

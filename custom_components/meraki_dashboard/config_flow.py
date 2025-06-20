@@ -388,18 +388,33 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             hub_discovery_intervals = {}
             hub_auto_discovery = {}
 
+            # Rebuild the hub display to key mapping for processing
+            hubs_info_for_processing = await self._get_available_hubs()
+            hub_display_to_key = {}
+            for hub_key, hub_info in hubs_info_for_processing.items():
+                hub_display_name = (
+                    f"{hub_info['network_name']} ({hub_info['device_type']})"
+                )
+                hub_display_to_key[hub_display_name] = hub_key
+
             # Extract hub-specific settings from form data
             for key, value in list(options.items()):
                 if key.startswith("scan_interval_"):
-                    hub_key = key.replace("scan_interval_", "")
+                    hub_display_name = key.replace("scan_interval_", "")
+                    # Convert display name back to hub_key
+                    hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
                     hub_scan_intervals[hub_key] = value * 60  # Convert to seconds
                     del options[key]
                 elif key.startswith("discovery_interval_"):
-                    hub_key = key.replace("discovery_interval_", "")
+                    hub_display_name = key.replace("discovery_interval_", "")
+                    # Convert display name back to hub_key
+                    hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
                     hub_discovery_intervals[hub_key] = value * 60  # Convert to seconds
                     del options[key]
                 elif key.startswith("auto_discovery_"):
-                    hub_key = key.replace("auto_discovery_", "")
+                    hub_display_name = key.replace("auto_discovery_", "")
+                    # Convert display name back to hub_key
+                    hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
                     hub_auto_discovery[hub_key] = value
                     del options[key]
 
@@ -460,6 +475,9 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             ] = bool
 
         # Per-hub scan intervals (in minutes)
+        # Store mapping from display names to hub keys for form processing
+        hub_display_to_key = {}
+
         if hubs_info:
             current_hub_scan_intervals = current_options.get(
                 CONF_HUB_SCAN_INTERVALS, {}
@@ -477,15 +495,16 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     f"{hub_info['network_name']} ({hub_info['device_type']})"
                 )
 
+                # Store mapping for later processing
+                hub_display_to_key[hub_display_name] = hub_key
+
                 # Auto-discovery toggle for this hub
-                auto_discovery_key = vol.Optional(
-                    f"auto_discovery_{hub_key}",
-                    default=current_hub_auto_discovery.get(hub_key, True),
-                )
-                auto_discovery_key.description = (
-                    f"Auto-discovery for {hub_display_name}"
-                )
-                schema_dict[auto_discovery_key] = selector.BooleanSelector()
+                schema_dict[
+                    vol.Optional(
+                        f"auto_discovery_{hub_display_name}",
+                        default=current_hub_auto_discovery.get(hub_key, True),
+                    )
+                ] = selector.BooleanSelector()
 
                 # Scan interval for this hub
                 current_scan_minutes = (
@@ -496,14 +515,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     // 60
                 )
 
-                scan_interval_key = vol.Optional(
-                    f"scan_interval_{hub_key}",
-                    default=current_scan_minutes,
-                )
-                scan_interval_key.description = (
-                    f"Scan interval (minutes) for {hub_display_name}"
-                )
-                schema_dict[scan_interval_key] = selector.NumberSelector(
+                schema_dict[
+                    vol.Optional(
+                        f"scan_interval_{hub_display_name}",
+                        default=current_scan_minutes,
+                    )
+                ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=MIN_SCAN_INTERVAL_MINUTES,
                         max=60,
@@ -520,14 +537,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     // 60
                 )
 
-                discovery_interval_key = vol.Optional(
-                    f"discovery_interval_{hub_key}",
-                    default=current_discovery_minutes,
-                )
-                discovery_interval_key.description = (
-                    f"Discovery interval (minutes) for {hub_display_name}"
-                )
-                schema_dict[discovery_interval_key] = selector.NumberSelector(
+                schema_dict[
+                    vol.Optional(
+                        f"discovery_interval_{hub_display_name}",
+                        default=current_discovery_minutes,
+                    )
+                ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=MIN_DISCOVERY_INTERVAL_MINUTES,
                         max=1440,

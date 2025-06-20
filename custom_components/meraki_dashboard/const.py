@@ -124,6 +124,7 @@ MR_SENSOR_SSID_COUNT: Final = "ssidCount"
 MR_SENSOR_ENABLED_SSIDS: Final = "enabledSsids"
 MR_SENSOR_OPEN_SSIDS: Final = "openSsids"
 
+
 # Binary sensor metrics
 MT_BINARY_SENSOR_METRICS: Final = [
     MT_SENSOR_DOOR,
