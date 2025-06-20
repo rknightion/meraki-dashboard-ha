@@ -58,16 +58,12 @@
     "step": {
       "init": {
         "title": "Meraki Dashboard Options",
-        "description": "Configure how the integration operates.",
+        "description": "Configure scan intervals, discovery intervals, and auto-discovery settings for each network and device type.\n\n{hub_info}\n\n{scan_info}\n{discovery_info}",
         "data": {
-          "scan_interval": "Update Interval (seconds)",
-          "auto_discovery": "Enable Auto-Discovery",
-          "discovery_interval": "Device Discovery Interval (seconds)"
+          "auto_discovery": "Enable Auto-Discovery (Global)"
         },
         "data_description": {
-          "scan_interval": "How often to fetch sensor data. Meraki MT sensors update every 20 minutes by default.",
-          "auto_discovery": "Automatically discover and add new MT devices.",
-          "discovery_interval": "How often to scan for new devices when auto-discovery is enabled."
+          "auto_discovery": "Global auto-discovery setting (used when no per-hub settings are configured)."
         }
       }
     }

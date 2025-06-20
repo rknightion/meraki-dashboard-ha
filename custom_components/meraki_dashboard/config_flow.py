@@ -19,6 +19,7 @@ from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
+    CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
@@ -43,10 +44,22 @@ from .utils import sanitize_device_name
 _LOGGER = logging.getLogger(__name__)
 
 # Configure third-party logging for config flow (temporary, less verbose)
-# Only show warnings and errors during setup to prevent spam
-logging.getLogger("meraki").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
+# Only show errors during setup to prevent spam
+loggers_to_configure = [
+    "meraki",
+    "urllib3",
+    "urllib3.connectionpool",
+    "requests",
+    "requests.packages.urllib3",
+    "requests.packages.urllib3.connectionpool",
+    "httpcore",
+    "httpx",
+]
+
+for logger_name in loggers_to_configure:
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.ERROR)
+    logger.propagate = False
 
 
 class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
@@ -90,6 +103,8 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                         caller=USER_AGENT,
                         log_file_prefix=None,  # Disable file logging
                         print_console=False,  # Disable console logging from SDK
+                        output_log=False,  # Disable SDK output logging
+                        suppress_logging=True,  # Suppress verbose SDK logging
                     )
                 )
 
@@ -161,6 +176,8 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                             caller=USER_AGENT,
                             log_file_prefix=None,  # Disable file logging
                             print_console=False,  # Disable console logging from SDK
+                            output_log=False,  # Disable SDK output logging
+                            suppress_logging=True,  # Suppress verbose SDK logging
                         )
                     )
 
@@ -216,6 +233,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                         # Initialize empty hub-specific intervals (will be populated when hubs are created)
                         CONF_HUB_SCAN_INTERVALS: {},
                         CONF_HUB_DISCOVERY_INTERVALS: {},
+                        CONF_HUB_AUTO_DISCOVERY: {},
                     },
                 )
 
@@ -279,6 +297,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                     # Initialize empty hub-specific intervals (will be populated when hubs are created)
                     CONF_HUB_SCAN_INTERVALS: {},
                     CONF_HUB_DISCOVERY_INTERVALS: {},
+                    CONF_HUB_AUTO_DISCOVERY: {},
                 },
             )
 
@@ -358,12 +377,16 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
+            # Get current options first
+            current_options = self.config_entry.options or {}
+
             # Convert minutes back to seconds for storage
             options = dict(user_input)
 
-            # Process hub-specific intervals
+            # Process hub-specific intervals and settings
             hub_scan_intervals = {}
             hub_discovery_intervals = {}
+            hub_auto_discovery = {}
 
             # Extract hub-specific settings from form data
             for key, value in list(options.items()):
@@ -375,12 +398,43 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     hub_key = key.replace("discovery_interval_", "")
                     hub_discovery_intervals[hub_key] = value * 60  # Convert to seconds
                     del options[key]
+                elif key.startswith("auto_discovery_"):
+                    hub_key = key.replace("auto_discovery_", "")
+                    hub_auto_discovery[hub_key] = value
+                    del options[key]
 
-            # Store hub-specific intervals
+            # Store hub-specific settings (preserve existing values if no changes)
             if hub_scan_intervals:
                 options[CONF_HUB_SCAN_INTERVALS] = hub_scan_intervals
+            else:
+                # Preserve existing hub scan intervals
+                existing_hub_scan_intervals = current_options.get(
+                    CONF_HUB_SCAN_INTERVALS, {}
+                )
+                if existing_hub_scan_intervals:
+                    options[CONF_HUB_SCAN_INTERVALS] = existing_hub_scan_intervals
+
             if hub_discovery_intervals:
                 options[CONF_HUB_DISCOVERY_INTERVALS] = hub_discovery_intervals
+            else:
+                # Preserve existing hub discovery intervals
+                existing_hub_discovery_intervals = current_options.get(
+                    CONF_HUB_DISCOVERY_INTERVALS, {}
+                )
+                if existing_hub_discovery_intervals:
+                    options[CONF_HUB_DISCOVERY_INTERVALS] = (
+                        existing_hub_discovery_intervals
+                    )
+
+            if hub_auto_discovery:
+                options[CONF_HUB_AUTO_DISCOVERY] = hub_auto_discovery
+            else:
+                # Preserve existing hub auto discovery settings
+                existing_hub_auto_discovery = current_options.get(
+                    CONF_HUB_AUTO_DISCOVERY, {}
+                )
+                if existing_hub_auto_discovery:
+                    options[CONF_HUB_AUTO_DISCOVERY] = existing_hub_auto_discovery
 
             # Convert legacy scan/discovery intervals from minutes to seconds
             if CONF_SCAN_INTERVAL in options:
@@ -396,45 +450,14 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
 
         schema_dict = {}
 
-        # Legacy options for backward compatibility
-        schema_dict[
-            vol.Optional(
-                CONF_SCAN_INTERVAL,
-                default=current_options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-                // 60,
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=MIN_SCAN_INTERVAL_MINUTES,
-                max=60,
-                step=1,
-                mode=selector.NumberSelectorMode.BOX,
-            )
-        )
-
-        schema_dict[
-            vol.Optional(
-                CONF_AUTO_DISCOVERY,
-                default=current_options.get(CONF_AUTO_DISCOVERY, True),
-            )
-        ] = bool
-
-        schema_dict[
-            vol.Optional(
-                CONF_DISCOVERY_INTERVAL,
-                default=current_options.get(
-                    CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL
+        # Global auto-discovery setting (only if no hubs are available)
+        if not hubs_info:
+            schema_dict[
+                vol.Optional(
+                    CONF_AUTO_DISCOVERY,
+                    default=current_options.get(CONF_AUTO_DISCOVERY, True),
                 )
-                // 60,
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=MIN_DISCOVERY_INTERVAL_MINUTES,
-                max=1440,
-                step=1,
-                mode=selector.NumberSelectorMode.BOX,
-            )
-        )
+            ] = bool
 
         # Per-hub scan intervals (in minutes)
         if hubs_info:
@@ -444,8 +467,26 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             current_hub_discovery_intervals = current_options.get(
                 CONF_HUB_DISCOVERY_INTERVALS, {}
             )
+            current_hub_auto_discovery = current_options.get(
+                CONF_HUB_AUTO_DISCOVERY, {}
+            )
 
             for hub_key, hub_info in hubs_info.items():
+                # Create a readable name for the hub
+                hub_display_name = (
+                    f"{hub_info['network_name']} ({hub_info['device_type']})"
+                )
+
+                # Auto-discovery toggle for this hub
+                auto_discovery_key = vol.Optional(
+                    f"auto_discovery_{hub_key}",
+                    default=current_hub_auto_discovery.get(hub_key, True),
+                )
+                auto_discovery_key.description = (
+                    f"Auto-discovery for {hub_display_name}"
+                )
+                schema_dict[auto_discovery_key] = selector.BooleanSelector()
+
                 # Scan interval for this hub
                 current_scan_minutes = (
                     current_hub_scan_intervals.get(
@@ -455,12 +496,14 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     // 60
                 )
 
-                schema_dict[
-                    vol.Optional(
-                        f"scan_interval_{hub_key}",
-                        default=current_scan_minutes,
-                    )
-                ] = selector.NumberSelector(
+                scan_interval_key = vol.Optional(
+                    f"scan_interval_{hub_key}",
+                    default=current_scan_minutes,
+                )
+                scan_interval_key.description = (
+                    f"Scan interval (minutes) for {hub_display_name}"
+                )
+                schema_dict[scan_interval_key] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=MIN_SCAN_INTERVAL_MINUTES,
                         max=60,
@@ -477,12 +520,14 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     // 60
                 )
 
-                schema_dict[
-                    vol.Optional(
-                        f"discovery_interval_{hub_key}",
-                        default=current_discovery_minutes,
-                    )
-                ] = selector.NumberSelector(
+                discovery_interval_key = vol.Optional(
+                    f"discovery_interval_{hub_key}",
+                    default=current_discovery_minutes,
+                )
+                discovery_interval_key.description = (
+                    f"Discovery interval (minutes) for {hub_display_name}"
+                )
+                schema_dict[discovery_interval_key] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=MIN_DISCOVERY_INTERVAL_MINUTES,
                         max=1440,
@@ -491,13 +536,26 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     )
                 )
 
+        # Build description placeholders with hub names
+        description_placeholders = {
+            "scan_info": "Scan intervals control how often sensor data is updated (in minutes)",
+            "discovery_info": "Discovery intervals control how often new devices are detected (in minutes)",
+        }
+
+        # Add hub-specific descriptions
+        if hubs_info:
+            hub_descriptions = []
+            for _hub_key, hub_info in hubs_info.items():
+                hub_name = f"{hub_info['network_name']} ({hub_info['device_type']})"
+                hub_descriptions.append(
+                    f"• {hub_name}: {hub_info['device_count']} devices"
+                )
+            description_placeholders["hub_info"] = "\n".join(hub_descriptions)
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema_dict),
-            description_placeholders={
-                "scan_info": "Scan intervals control how often sensor data is updated (in minutes)",
-                "discovery_info": "Discovery intervals control how often new devices are detected (in minutes)",
-            },
+            description_placeholders=description_placeholders,
         )
 
     async def _get_available_hubs(self) -> dict[str, dict[str, Any]]:

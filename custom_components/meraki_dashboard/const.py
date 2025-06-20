@@ -21,6 +21,7 @@ CONF_DISCOVERY_INTERVAL: Final = "discovery_interval"
 # Per-hub configuration keys
 CONF_HUB_SCAN_INTERVALS: Final = "hub_scan_intervals"
 CONF_HUB_DISCOVERY_INTERVALS: Final = "hub_discovery_intervals"
+CONF_HUB_AUTO_DISCOVERY: Final = "hub_auto_discovery"
 
 # Defaults
 DEFAULT_NAME: Final = "Meraki Dashboard"

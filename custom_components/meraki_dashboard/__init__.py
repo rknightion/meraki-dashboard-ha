@@ -20,6 +20,7 @@ from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
+    CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
@@ -62,12 +63,28 @@ def _configure_third_party_logging() -> None:
             "Debug logging enabled - allowing INFO level from third-party libraries"
         )
     else:
-        third_party_level = logging.WARNING
+        third_party_level = (
+            logging.ERROR
+        )  # Use ERROR instead of WARNING for even less noise
 
-    # Configure third-party library loggers
-    logging.getLogger("meraki").setLevel(third_party_level)
-    logging.getLogger("urllib3").setLevel(third_party_level)
-    logging.getLogger("requests").setLevel(third_party_level)
+    # Configure third-party library loggers with more comprehensive coverage
+    loggers_to_configure = [
+        "meraki",
+        "urllib3",
+        "urllib3.connectionpool",
+        "requests",
+        "requests.packages.urllib3",
+        "requests.packages.urllib3.connectionpool",
+        "httpcore",
+        "httpx",
+    ]
+
+    for logger_name in loggers_to_configure:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(third_party_level)
+        # Also disable propagation to prevent duplicate messages
+        if not component_logger.isEnabledFor(logging.DEBUG):
+            logger.propagate = False
 
 
 # Initialize third-party logging configuration
@@ -140,6 +157,8 @@ class MerakiOrganizationHub:
                     caller=USER_AGENT,
                     log_file_prefix=None,  # Disable file logging
                     print_console=False,  # Disable console logging from SDK
+                    output_log=False,  # Disable SDK output logging
+                    suppress_logging=True,  # Suppress verbose SDK logging
                 )
             )
             self.total_api_calls += 1
@@ -336,10 +355,17 @@ class MerakiNetworkHub:
 
             # Set up periodic device discovery if auto-discovery is enabled
             options = self.config_entry.options
-            if options.get(CONF_AUTO_DISCOVERY, True):
+            hub_id = f"{self.network_id}_{self.device_type}"
+
+            # Check per-hub auto-discovery setting first, then fall back to global setting
+            hub_auto_discovery = options.get(CONF_HUB_AUTO_DISCOVERY, {})
+            auto_discovery_enabled = hub_auto_discovery.get(
+                hub_id, options.get(CONF_AUTO_DISCOVERY, True)
+            )
+
+            if auto_discovery_enabled:
                 # Get hub-specific discovery interval or use default
                 hub_discovery_intervals = options.get(CONF_HUB_DISCOVERY_INTERVALS, {})
-                hub_id = f"{self.network_id}_{self.device_type}"
                 discovery_interval = hub_discovery_intervals.get(
                     hub_id,
                     options.get(CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL),
@@ -354,6 +380,11 @@ class MerakiNetworkHub:
                     "Auto-discovery enabled for %s hub, scanning every %d seconds",
                     self.hub_name,
                     discovery_interval,
+                )
+            else:
+                _LOGGER.debug(
+                    "Auto-discovery disabled for %s hub",
+                    self.hub_name,
                 )
 
             return len(self.devices) > 0 or self.device_type == SENSOR_TYPE_MR
