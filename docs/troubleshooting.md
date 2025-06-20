@@ -1,7 +1,6 @@
 ---
-layout: page
+layout: default
 title: Troubleshooting
-nav_order: 5
 ---
 
 # Troubleshooting Guide

@@ -1,7 +1,6 @@
 ---
-layout: home
+layout: default
 title: Home
-nav_order: 1
 ---
 
 # Meraki Dashboard Integration for Home Assistant
@@ -12,6 +11,17 @@ nav_order: 1
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
 
 Transform your Cisco Meraki infrastructure into a comprehensive Home Assistant monitoring solution. This custom integration seamlessly connects your Meraki Dashboard with Home Assistant, providing real-time insights into your network devices and environmental sensors.
+
+## 📚 Documentation
+
+- **[Installation Guide](installation.md)** - Get started with the integration
+- **[Configuration](configuration.md)** - Set up your Meraki API key  
+- **[Usage Guide](usage.md)** - Automations and dashboards
+- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+- **[Development](development.md)** - Contributing to the project
+- **[API Reference](api-reference.md)** - Technical documentation
+- **[FAQ](faq.md)** - Frequently asked questions
+- **[Changelog](changelog.md)** - Version history
 
 ## ✨ Key Features
 

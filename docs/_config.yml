@@ -7,23 +7,11 @@ url: "https://rknightion.github.io"
 # Repository info
 repository: rknightion/meraki-dashboard-ha
 
-# Theme
-theme: minima
+# GitHub Pages theme and plugins
 plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-seo-tag
-
-# Navigation
-header_pages:
-  - installation.md
-  - configuration.md
-  - usage.md
-  - troubleshooting.md
-  - development.md
-  - api-reference.md
-  - faq.md
-  - changelog.md
 
 # Markdown settings
 markdown: kramdown
@@ -45,7 +33,7 @@ defaults:
       path: ""
       type: "pages"
     values:
-      layout: "page"
+      layout: "default"
   - scope:
       path: ""
       type: "devices"

@@ -1,7 +1,6 @@
 ---
-layout: page
+layout: default
 title: Changelog
-nav_order: 9
 ---
 
 # Changelog

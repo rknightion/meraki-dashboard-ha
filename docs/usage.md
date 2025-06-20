@@ -1,7 +1,6 @@
 ---
-layout: page
+layout: default
 title: Usage Guide
-nav_order: 4
 ---
 
 # Usage Guide
@@ -69,7 +68,7 @@ automation:
       - service: notify.mobile_app_your_phone
         data:
           title: "🌡️ High Temperature Alert"
-          message: "Server room temperature is {{ states('sensor.server_room_mt20_temperature') }}°C"
+          message: "Server room temperature is {% raw %}{{ states('sensor.server_room_mt20_temperature') }}{% endraw %}°C"
           data:
             priority: high
             color: red
@@ -122,7 +121,7 @@ automation:
           speed: "high"
       - service: notify.home_assistant
         data:
-          message: "CO2 high ({{ states('sensor.office_mt30_co2') }} ppm), turning on ventilation"
+          message: "CO2 high ({% raw %}{{ states('sensor.office_mt30_co2') }}{% endraw %} ppm), turning on ventilation"
   
   - alias: "Auto Ventilation Off"
     trigger:
@@ -183,12 +182,12 @@ automation:
       - service: notify.security_team
         data:
           title: "🚪 After Hours Door Access"
-          message: "Office door opened at {{ now().strftime('%H:%M') }}"
+          message: "Office door opened at {% raw %}{{ now().strftime('%H:%M') }}{% endraw %}"
       - service: camera.snapshot
         target:
           entity_id: camera.office_entrance
         data:
-          filename: "/config/snapshots/door_{{ now().strftime('%Y%m%d_%H%M%S') }}.jpg"
+          filename: "/config/snapshots/door_{% raw %}{{ now().strftime('%Y%m%d_%H%M%S') }}{% endraw %}.jpg"
 ```
 
 ## Building Dashboards
@@ -357,23 +356,23 @@ template:
       - name: "Average Office Temperature"
         unit_of_measurement: "°C"
         state: >
-          {% set temps = [
+          {% raw %}{% set temps = [
             states('sensor.office_mt20_temperature') | float(0),
             states('sensor.office_mt21_temperature') | float(0),
             states('sensor.office_mt22_temperature') | float(0)
           ] %}
-          {{ (temps | sum / temps | length) | round(1) }}
+          {{ (temps | sum / temps | length) | round(1) }}{% endraw %}
       
       - name: "Heat Index"
         unit_of_measurement: "°C"
         state: >
-          {% set temp = states('sensor.office_mt20_temperature') | float %}
+          {% raw %}{% set temp = states('sensor.office_mt20_temperature') | float %}
           {% set humidity = states('sensor.office_mt20_humidity') | float %}
           {% if temp > 26 and humidity > 40 %}
             {{ (temp + 0.5555 * (6.11 * (2.718281828 ** (5417.7530 * ((1/273.16) - (1/(273.16 + temp))))) - 10)) | round(1) }}
           {% else %}
             {{ temp }}
-          {% endif %}
+          {% endif %}{% endraw %}
 ```
 
 ### Statistics and Trends

@@ -1,7 +1,6 @@
 ---
-layout: page
+layout: default
 title: FAQ
-nav_order: 8
 ---
 
 # Frequently Asked Questions
@@ -181,8 +180,8 @@ template:
   - sensor:
       - name: "Average Office Temperature"
         state: >
-          {{ (states('sensor.office_mt20_temperature') | float + 
-              states('sensor.office_mt21_temperature') | float) / 2 }}
+          {% raw %}{{ (states('sensor.office_mt20_temperature') | float + 
+              states('sensor.office_mt21_temperature') | float) / 2 }}{% endraw %}
 ```
 
 ### Can I set up alerts?
