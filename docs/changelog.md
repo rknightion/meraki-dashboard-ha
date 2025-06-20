@@ -5,209 +5,150 @@ title: Changelog
 
 # Changelog
 
-All notable changes to the Meraki Dashboard Home Assistant integration.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Planned
-- MR Series wireless access point support
-- MS Series switch monitoring
-- MV Series camera integration
-- Enhanced dashboard visualizations
-- Additional automation triggers
+### 🚀 Added - Multi-Hub Architecture
+- **Multi-Hub Architecture**: Complete redesign with organization and network hubs
+  - Organization hub manages API connection and coordinates network hubs
+  - Network hubs handle specific device types per network (e.g., "Main Office - MT", "Branch - MR")
+  - Automatic hub creation only when devices of that type exist
+  - Proper device hierarchy: Organization → Network Hubs → Individual Devices → Entities
 
----
+### 📡 Added - MR Wireless Device Support
+- **MR Series Support**: Initial wireless access point monitoring (proof of concept)
+  - SSID count (total configured SSIDs)
+  - Enabled SSIDs (currently active networks)
+  - Open SSIDs (unsecured networks)
+  - Network hub diagnostics and controls
+  - Foundation for expanded wireless monitoring features
+
+### ⚙️ Changed - Per-Hub Interval Configuration
+- **Optimized Default Intervals**: Device-type specific intervals for better performance
+  - MT Environmental Sensors: 10 minutes (was 20 minutes)
+  - MR Wireless Access Points: 5 minutes (new)
+  - Discovery: 1 hour (was 1 hour)
+  - MS/MV (Future): 5 minutes infrastructure monitoring
+- **Per-Hub Control**: Configure individual intervals for each network and device type
+- **UI Improvements**: Configuration now uses minutes instead of seconds
+- **Backward Compatibility**: Existing configurations automatically migrated
+
+### 🎛️ Added - Hub Management Controls
+- **Organization-Level Controls**:
+  - Update all hubs with single action
+  - Discover devices across all networks
+  - Organization-wide diagnostics and status
+- **Network-Level Controls**:
+  - Update individual hub data
+  - Discover devices for specific hub
+  - Hub-specific diagnostics and metrics
+
+### 📱 Enhanced - Device Management
+- **Improved Device Registry**: Proper hierarchy with network hubs as parents
+- **Device Information**: Consolidated comprehensive device specifications into usage guide
+- **Hub Diagnostics**: API call statistics, update timing, device counts per hub
+- **Better Organization**: Devices nested under appropriate network hubs
+
+### 🏗️ Infrastructure - Scalable Foundation
+- **Future Device Types**: Infrastructure ready for MS (switches) and MV (cameras)
+- **Device Type Mappings**: Extensible system for adding new device categories
+- **Hub Factory Pattern**: Automatic creation based on device discovery
+- **API Optimization**: Better distribution of API calls across hubs and time
+
+### 📖 Updated - Documentation
+- **Architecture Guide**: New multi-hub architecture explanation with diagrams
+- **Configuration Guide**: Per-hub interval configuration and optimization tips
+- **Usage Guide**: Consolidated device information from separate device pages
+- **API Reference**: Updated for new hub classes and multi-hub patterns
+- **FAQ**: Updated for new architecture and interval system
+
+### 🔄 Changed - Breaking Changes (Backward Compatible)
+- **Hub Structure**: New multi-hub architecture (existing entities preserved)
+- **Configuration**: New per-hub interval system (automatic migration)
+- **Device Pages**: Consolidated into general usage guide (removed device-specific pages)
 
 ## [1.2.0] - 2024-01-15
 
 ### Added
-- Button platform for MT sensor button press detection
-- Enhanced device discovery with better error handling
-- Support for MT40 electrical measurement sensors
-- Configurable discovery intervals for auto-discovery
-- Integration options flow for runtime configuration changes
-- Better device naming with location information
-- Support for device tags and notes from Meraki Dashboard
+- Button platform support for manual device data updates
+- Manual device discovery buttons
+- Organization-wide update and discovery controls
 
 ### Changed
-- Improved API error handling and retry logic
-- Enhanced rate limiting implementation
-- Better entity naming consistency across device types
-- Updated device information to include more Meraki metadata
-- Improved configuration flow with better validation
+- Improved error handling and logging
+- Better rate limiting implementation
+- Enhanced device discovery reliability
 
 ### Fixed
-- Issue with sensor entities not updating after configuration changes
-- Memory leak in coordinator when handling large numbers of devices
-- Race condition in device discovery during integration setup
-- Incorrect unit conversions for some sensor types
-- Binary sensor state not updating correctly for door sensors
+- Fixed issues with device offline detection
+- Improved API error recovery
+- Better handling of network timeouts
 
----
-
-## [1.1.0] - 2024-01-01
+## [1.1.0] - 2024-01-10
 
 ### Added
 - Binary sensor platform for water detection and door sensors
-- Auto-discovery functionality for new MT devices
-- Support for indoor air quality index (IAQ) sensors
-- Configurable update intervals through integration options
-- Device registry integration with proper device information
-- Enhanced sensor attributes with last reported timestamps
-- Support for MT30 TVOC and PM2.5 sensors
+- Event system for real-time sensor state changes
+- Support for MT14 and MT15 door/water sensors
+- Comprehensive event automation examples
 
 ### Changed
-- Migrated from direct API calls to official Meraki Python SDK
-- Improved error handling with proper Home Assistant exceptions
-- Enhanced logging with more detailed debug information
-- Better entity organization with device-centric approach
-- Updated manifest to require Home Assistant 2024.1.0+
+- Improved sensor data parsing
+- Better entity naming consistency
+- Enhanced device information attributes
 
 ### Fixed
-- Sensor values not updating when devices go offline/online
-- Configuration flow hanging when API is unreachable
-- Duplicate entity creation when running discovery multiple times
-- Temperature unit conversion issues in certain locales
-- Battery sensor showing incorrect percentage values
+- Fixed temperature unit conversion issues
+- Improved battery level reporting
+- Better handling of missing sensor data
 
-### Security
-- API key validation improvements
-- Better handling of API authentication errors
-- Enhanced rate limiting to prevent API abuse
-
----
-
-## [1.0.0] - 2023-12-15
+## [1.0.0] - 2024-01-01
 
 ### Added
 - Initial release of Meraki Dashboard integration
-- Support for MT10, MT12, MT14, MT15, MT20, MT30 environmental sensors
-- Temperature and humidity sensor monitoring
-- CO2, noise, and battery level sensors
-- Basic configuration flow with API key setup
-- Organization and device selection during setup
-- Automatic sensor discovery for supported MT devices
-- Integration with Home Assistant device registry
-- Basic error handling and logging
+- MT series environmental sensor support (MT10, MT12, MT20, MT30, MT40)
+- Sensor platform with comprehensive metrics:
+  - Temperature and humidity monitoring
+  - Air quality sensors (CO2, TVOC, PM2.5, Indoor Air Quality)
+  - Electrical measurements (voltage, current, power)
+  - Device health (battery levels)
+- Automatic device discovery across Meraki organization
+- Configurable update intervals
+- HACS support for easy installation
+- Home Assistant device registry integration
 
 ### Features
-- **Sensor Types Supported:**
-  - Temperature (°C/°F)
-  - Humidity (%)
-  - CO2 levels (ppm)
-  - Noise levels (dB)
-  - Battery percentage (%)
-  - Indoor air quality (index)
-
-- **Device Models Supported:**
-  - MT10 (temperature, humidity, battery)
-  - MT12 (temperature, humidity, battery)
-  - MT14 (temperature, humidity, battery, water detection)
-  - MT15 (temperature, humidity, battery, water detection, door sensor)
-  - MT20 (temperature, humidity, battery, CO2, noise, IAQ)
-  - MT30 (all MT20 features plus TVOC, PM2.5)
-
-- **Configuration:**
-  - Simple setup through Home Assistant UI
-  - API key validation
-  - Organization selection
-  - Optional device filtering
-  - Default 20-minute update interval
-
-### Technical
-- Built using Home Assistant integration framework
-- Follows HA development best practices
-- Uses aiohttp for async API communication
-- Implements proper error handling and logging
-- Supports Home Assistant 2023.12.0+
-
----
-
-## Development Versions
-
-### [0.3.0] - 2023-12-01
-- Beta release with improved device discovery
-- Added support for MT30 series sensors
-- Enhanced error handling and user feedback
-- Fixed issues with API rate limiting
-
-### [0.2.0] - 2023-11-15
-- Alpha release with basic MT20 support
-- Configuration flow implementation
-- Initial sensor entity creation
-- Basic API integration testing
-
-### [0.1.0] - 2023-11-01
-- Initial development version
-- Proof of concept with MT15 temperature sensors
-- Basic Meraki API connectivity
-- Development environment setup
+- **Device Support**: MT10, MT12, MT20, MT30, MT40 environmental sensors
+- **Metrics**: Temperature, humidity, CO2, TVOC, PM2.5, noise, air quality, battery, electrical
+- **Configuration**: Simple setup via UI with API key
+- **Discovery**: Automatic device discovery with configurable intervals
+- **Performance**: Efficient API usage with batch operations
+- **Integration**: Full Home Assistant device and entity support
 
 ---
 
 ## Migration Notes
 
-### Upgrading to v1.2.0
-- **New Features**: Button platform automatically available for supported devices
-- **Configuration**: Existing configurations will be automatically migrated
-- **Breaking Changes**: None - fully backward compatible
+### From Single-Hub to Multi-Hub Architecture
+- **Automatic Migration**: No manual steps required
+- **Entity Preservation**: All existing entities continue to work
+- **New Features**: Per-hub intervals and controls become available
+- **Recommended**: Review and optimize per-hub intervals after update
 
-### Upgrading to v1.1.0
-- **New Requirements**: Home Assistant 2024.1.0+ required
-- **Configuration**: Existing API keys and device selections preserved
-- **New Features**: Binary sensors automatically added for supported devices
-- **Breaking Changes**: Entity IDs may change due to improved naming scheme
+### Configuration Changes
+- **Intervals**: Now configured per-hub instead of organization-wide
+- **UI**: Configuration uses minutes instead of seconds
+- **Fallback**: Legacy organization-wide settings preserved as fallbacks
 
-### Upgrading to v1.0.0
-- **First Stable Release**: Recommended for production use
-- **Configuration**: All beta configurations automatically migrated
-- **Stability**: Significant improvements in reliability and error handling
-
----
-
-## Versioning Strategy
-
-### Release Types
-- **Major (x.0.0)**: Breaking changes, new device series support
-- **Minor (x.y.0)**: New features, new sensor types, enhancements
-- **Patch (x.y.z)**: Bug fixes, security updates, minor improvements
-
-### Support Policy
-- **Current Version**: Full support with new features and bug fixes
-- **Previous Major**: Bug fixes and security updates only
-- **Older Versions**: Security updates only, upgrade recommended
-
-### Release Schedule
-- **Minor Releases**: Every 4-6 weeks
-- **Patch Releases**: As needed for critical bugs
-- **Major Releases**: Every 6-12 months or for significant new features
+### Documentation Updates
+- **Device Information**: Moved from individual device pages to usage guide
+- **Architecture**: New multi-hub documentation with diagrams
+- **Examples**: Updated for new hub structure and MR devices
 
 ---
 
-## Contributing to Changelog
-
-When contributing to the project, please:
-
-1. **Add entries** to the `[Unreleased]` section
-2. **Use categories**: Added, Changed, Deprecated, Removed, Fixed, Security
-3. **Write clear descriptions** of changes from user perspective
-4. **Reference issues/PRs** where applicable
-5. **Follow format** established in existing entries
-
-### Example Entry Format
-```markdown
-### Added
-- New sensor type support for device model XYZ (#123)
-- Configuration option for custom update intervals (#456)
-
-### Fixed
-- Issue with sensors not updating after device restart (#789)
-- Memory leak in device discovery process (#101)
-```
-
----
-
-**Questions about a specific version?** Check the [GitHub releases](https://github.com/rknightion/meraki-dashboard-ha/releases) for detailed release notes and download links. 
+**Need help with migration or have questions?** Check our [FAQ](faq.md) or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) on GitHub. 

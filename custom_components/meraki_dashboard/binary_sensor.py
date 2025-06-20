@@ -77,62 +77,76 @@ async def async_setup_entry(
         config_entry: Configuration entry for this integration
         async_add_entities: Callback to add entities to Home Assistant
     """
-    # Get the shared coordinator
-    coordinator = hass.data[DOMAIN].get(f"{config_entry.entry_id}_coordinator")
-
-    if not coordinator:
-        _LOGGER.info("No coordinator found, no MT devices available")
+    # Get the integration data
+    integration_data = hass.data[DOMAIN].get(config_entry.entry_id)
+    if not integration_data:
+        _LOGGER.error("Integration data not found for config entry %s", config_entry.entry_id)
         return
 
-    mt_devices = coordinator.devices
+    network_hubs = integration_data["network_hubs"]
+    coordinators = integration_data["coordinators"]
 
-    # Create binary sensor entities based on available metrics
+    # Create binary sensor entities
     entities = []
-    for device in mt_devices:
-        serial = device["serial"]
-        device_data = coordinator.data.get(serial, {})
 
-        # Get all readings for this device
-        readings = device_data.get("readings", [])
+    # Process each network hub and its coordinator
+    for hub_id, network_hub in network_hubs.items():
+        coordinator = coordinators.get(hub_id)
+        
+        # Only create MT binary sensor entities if we have a coordinator (MT devices only)
+        if coordinator and network_hub.device_type == "MT":
+            # Create binary sensor entities for each device and metric
+            for device in network_hub.devices:
+                device_serial = device["serial"]
+                
+                # Get the latest sensor data for this device
+                device_data = coordinator.data.get(device_serial, {})
+                
+                if not device_data:
+                    _LOGGER.debug("No sensor data available for device %s yet", device_serial)
+                    continue
+                
+                # Get all available sensor readings for this device
+                readings = device_data.get("readings", [])
+                available_metrics = {reading["metric"] for reading in readings}
+                
+                # Create binary sensor entities for each available binary metric
+                for metric in available_metrics:
+                    # Only process binary sensor metrics
+                    if metric not in MT_BINARY_SENSOR_METRICS:
+                        continue
+                        
+                    # Get the binary sensor description for this metric
+                    binary_sensor_description = MT_BINARY_SENSOR_DESCRIPTIONS.get(metric)
+                    if binary_sensor_description:
+                        entities.append(
+                            MerakiMTBinarySensor(
+                                coordinator,
+                                device,
+                                binary_sensor_description,
+                                config_entry.entry_id,
+                                network_hub,
+                            )
+                        )
+                        _LOGGER.debug(
+                            "Created %s binary sensor for device %s in %s",
+                            metric,
+                            device_serial,
+                            network_hub.hub_name,
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "No binary sensor description found for metric %s on device %s",
+                            metric,
+                            device_serial,
+                        )
 
-        # Track which metrics we've seen for this device
-        seen_metrics = set()
+    _LOGGER.info(
+        "Setting up %d binary sensor entities for integration %s",
+        len(entities),
+        config_entry.title,
+    )
 
-        for reading in readings:
-            metric = reading.get("metric")
-
-            # Skip if we've already created an entity for this metric
-            if metric in seen_metrics:
-                continue
-
-            # Only process binary sensor metrics
-            if metric not in MT_BINARY_SENSOR_METRICS:
-                continue
-
-            # Check if we have a binary sensor description for this metric
-            if metric in MT_BINARY_SENSOR_DESCRIPTIONS:
-                entities.append(
-                    MerakiMTBinarySensor(
-                        coordinator,
-                        device,
-                        MT_BINARY_SENSOR_DESCRIPTIONS[metric],
-                        config_entry.entry_id,
-                    )
-                )
-                seen_metrics.add(metric)
-                _LOGGER.debug(
-                    "Creating %s binary sensor for device %s",
-                    metric,
-                    device.get("name") or device["serial"],
-                )
-            else:
-                _LOGGER.warning(
-                    "Unknown binary metric '%s' for device %s. Please report this.",
-                    metric,
-                    serial,
-                )
-
-    _LOGGER.debug("Creating %d binary sensor entities", len(entities))
     async_add_entities(entities)
 
 
@@ -153,6 +167,7 @@ class MerakiMTBinarySensor(
         device: dict[str, Any],
         description: BinarySensorEntityDescription,
         config_entry_id: str,
+        network_hub: Any,
     ) -> None:
         """Initialize the binary sensor.
 
@@ -161,12 +176,14 @@ class MerakiMTBinarySensor(
             device: Device information dictionary from API
             description: Binary sensor entity description
             config_entry_id: Configuration entry ID
+            network_hub: Network hub information
         """
         super().__init__(coordinator)
         self.entity_description = description
         self._device = device
         self._serial = device["serial"]
         self._config_entry_id = config_entry_id
+        self._network_hub = network_hub
 
         # Set unique ID for this entity
         self._attr_unique_id = f"{self._serial}_{description.key}"
@@ -185,7 +202,7 @@ class MerakiMTBinarySensor(
             serial_number=self._serial,
             sw_version=device.get("firmware", None),
             hw_version=device.get("hardware_version", None),
-            via_device=(DOMAIN, coordinator.hub.organization_id),
+            via_device=(DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}"),
             configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
         )
 
@@ -195,40 +212,27 @@ class MerakiMTBinarySensor(
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return device information.
-
-        This property method allows us to update device info dynamically
-        as the coordinator updates device information.
+        """Return device information about the MT binary sensor device.
+        
+        This method provides device registry information for Home Assistant
+        to properly organize and display the device in the UI.
+        
+        Returns:
+            DeviceInfo: Device information for the registry
         """
-        # Find the latest device info from coordinator
-        for device in self.coordinator.devices:
-            if device["serial"] == self._serial:
-                # Update device name if it has changed
-                device_name = sanitize_device_name(
-                    device.get("name")
-                    or f"{device.get('model', 'MT')} {self._serial[-4:]}"
-                )
-
-                # Update device info with latest data
-                self._attr_device_info = DeviceInfo(
-                    identifiers={(DOMAIN, self._serial)},
-                    name=device_name,
-                    manufacturer="Cisco Meraki",
-                    model=device.get("model", "Unknown"),
-                    serial_number=self._serial,
-                    sw_version=device.get("firmware", None),
-                    hw_version=device.get("hardware_version", None),
-                    via_device=(DOMAIN, self.coordinator.hub.organization_id),
-                    configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
-                )
-
-                # Add MAC address if available
-                if mac := device.get("mac"):
-                    self._attr_device_info["connections"] = {("mac", mac)}
-
-                break
-
-        return self._attr_device_info
+        device = self._device
+        
+        # Create device registry entry for the physical MT device
+        return DeviceInfo(
+            identifiers={(DOMAIN, device["serial"])},
+            name=sanitize_device_name(device),
+            manufacturer="Cisco Meraki",
+            model=device.get("model"),
+            sw_version=device.get("firmware", None),
+            hw_version=device.get("hardware_version", None),
+            via_device=(DOMAIN, f"{self._network_hub.network_id}_{self._network_hub.device_type}"),
+            configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
+        )
 
     @property
     def is_on(self) -> bool | None:

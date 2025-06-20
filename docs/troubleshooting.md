@@ -5,7 +5,7 @@ title: Troubleshooting
 
 # Troubleshooting Guide
 
-Common issues and solutions for the Meraki Dashboard integration.
+Common issues and solutions for the Meraki Dashboard integration's **multi-hub architecture**.
 
 ## Enable Debug Logging
 
@@ -23,6 +23,58 @@ Before troubleshooting, enable detailed logging to see what's happening:
 3. Check **Settings → System → Logs** for detailed information
 
 For more details on logging configuration, see our [Logging Configuration Guide](logging-configuration.md).
+
+## Multi-Hub Architecture Issues
+
+### No Hubs Created During Setup
+
+**Problem**: Integration sets up but no network hubs are created.
+
+**Solutions**:
+1. **Check Device Requirements**:
+   - Ensure you have supported devices (MT or MR series)
+   - Verify devices are online in Meraki Dashboard
+   - Check that devices are properly claimed and configured
+
+2. **Debug Steps**:
+   - Enable debug logging to see hub creation process
+   - Check logs for device discovery results
+   - Verify network connectivity from Home Assistant to Meraki API
+
+3. **Device Type Issues**:
+   - Only creates hubs when devices of that type exist
+   - Check device model prefixes (MT*, MR*)
+   - Verify devices are in networks accessible by your API key
+
+### Hub Shows "Unavailable"
+
+**Problem**: Network hub devices show as unavailable in Home Assistant.
+
+**Solutions**:
+1. **API Connectivity**:
+   - Check organization hub status first
+   - Verify API key permissions for specific networks
+   - Look for API errors in logs for that hub
+
+2. **Hub-Specific Issues**:
+   - Check if devices in that hub are online
+   - Verify hub-specific interval configuration
+   - Use hub update button to force refresh
+
+### Some Hubs Update, Others Don't
+
+**Problem**: Only certain network hubs are updating data.
+
+**Solutions**:
+1. **Check Individual Hub Configuration**:
+   - Verify each hub has appropriate intervals configured
+   - Check that devices in non-updating hubs are online
+   - Review API rate limits and ensure you're not hitting them
+
+2. **Hub-Specific Debugging**:
+   - Enable debug logging to see per-hub API calls
+   - Use hub-specific update buttons to test individual hubs
+   - Check for network-specific API permission issues
 
 ## Installation Issues
 
@@ -84,25 +136,61 @@ For more details on logging configuration, see our [Logging Configuration Guide]
 3. Try using a different API key with broader permissions
 4. Contact your Meraki administrator for access
 
-### No Devices Discovered
+### Hub Interval Configuration Issues
 
-**Problem**: No MT devices found during setup.
+**Problem**: Per-hub intervals not applying correctly.
+
+**Solutions**:
+1. **Check Configuration Format**:
+   - Verify hub IDs are correct (format: `{network_id}_{device_type}`)
+   - Ensure intervals are in minutes (not seconds) in UI
+   - Check for typos in hub names or IDs
+
+2. **Debug Configuration**:
+   - Enable debug logging to see interval calculations
+   - Check logs for hub interval fallback hierarchy
+   - Verify integration has been reloaded after changes
+
+3. **Fallback Intervals**:
+   - Integration uses hierarchy: hub-specific → device-type default → organization default → system default
+   - Check each level if custom intervals aren't working
+
+## Device Discovery Issues
+
+### No Devices Discovered in Specific Hub
+
+**Problem**: Hub created but no devices found.
 
 **Solutions**:
 1. **Check Device Requirements**:
-   - Ensure you have MT series devices (MT10, MT12, MT14, MT15, MT20, MT30, MT40)
-   - Verify devices are online in Meraki Dashboard
-   - Check that devices are properly configured and claiming
+   - Verify device models match hub type (MT* for MT hubs, MR* for MR hubs)
+   - Ensure devices are online in Meraki Dashboard
+   - Check that devices are properly configured and claimed
 
-2. **Network Configuration**:
-   - Verify devices are in networks accessible by your API key
-   - Check that networks are active
+2. **Network-Specific Issues**:
+   - Verify devices are in the correct network
+   - Check API key has access to that specific network
    - Ensure devices have reported data recently
 
-3. **Debug Steps**:
-   - Enable debug logging to see API responses
-   - Check Meraki Dashboard for device status
-   - Verify network connectivity from Home Assistant to Meraki API
+3. **Use Hub Discovery Controls**:
+   - Try manual discovery using hub-specific discovery button
+   - Check logs during manual discovery for errors
+   - Verify auto-discovery intervals are reasonable
+
+### MR Devices Not Showing Expected Data
+
+**Problem**: MR hub created but showing limited or no wireless data.
+
+**Solutions**:
+1. **Check MR Support Level**:
+   - MR support is currently proof of concept
+   - Only basic SSID metrics are available (count, enabled, open)
+   - Verify SSIDs are configured in the network
+
+2. **Wireless Configuration**:
+   - Ensure wireless is enabled in the network
+   - Check that SSIDs are properly configured
+   - Verify access points are online and broadcasting
 
 ## Runtime Issues
 
@@ -111,20 +199,20 @@ For more details on logging configuration, see our [Logging Configuration Guide]
 **Problem**: Sensor entities show old data or "Unavailable".
 
 **Solutions**:
-1. **Check Update Settings**:
-   - Verify update interval is appropriate (minimum 60 seconds)
+1. **Check Hub-Specific Settings**:
+   - Verify hub update intervals (MT: 10 min default, MR: 5 min default)
    - Consider that MT sensors only update every 20 minutes by default
-   - Check if rate limiting is affecting updates
+   - Check if rate limiting is affecting that specific hub
 
 2. **Device Status**:
    - Verify devices are online in Meraki Dashboard
-   - Check that devices are reporting fresh data
+   - Check that devices are reporting fresh data to their specific network
    - Look for device connectivity issues
 
-3. **API Issues**:
-   - Check logs for API errors or rate limiting
+3. **Hub-Specific API Issues**:
+   - Check logs for API errors specific to that hub
+   - Use hub update buttons to test individual hubs
    - Verify internet connectivity from Home Assistant
-   - Test API key permissions
 
 ### "Unknown" or "Unavailable" Sensors
 
@@ -141,20 +229,25 @@ For more details on logging configuration, see our [Logging Configuration Guide]
    - Check Meraki Dashboard device settings
    - Verify sensor calibration is complete
 
+3. **Hub-Specific Issues**:
+   - Check if issue affects all devices in a hub or just specific ones
+   - Try hub-specific update to isolate the problem
+   - Verify the hub type matches device capabilities
+
 ### High CPU or Memory Usage
 
 **Problem**: Integration using excessive resources.
 
 **Solutions**:
-1. **Optimize Settings**:
-   - Increase update intervals (recommended: 1200 seconds)
-   - Disable auto-discovery if not needed
-   - Monitor only necessary devices
+1. **Optimize Hub Settings**:
+   - Increase intervals for less critical hubs
+   - Use hub-specific intervals instead of aggressive organization-wide settings
+   - Disable auto-discovery for hubs that don't need it
 
-2. **Check for Issues**:
-   - Look for error loops in logs
-   - Verify API responses are normal
-   - Consider restarting Home Assistant
+2. **Hub Load Balancing**:
+   - Stagger hub update times to spread API load
+   - Use longer intervals for non-critical networks
+   - Monitor API usage per hub in logs
 
 ## API Issues
 
@@ -163,15 +256,20 @@ For more details on logging configuration, see our [Logging Configuration Guide]
 **Problem**: "Rate limit exceeded" errors in logs.
 
 **Solutions**:
-1. **Adjust Intervals**:
-   - Increase update interval (minimum 60 seconds, recommended 1200)
-   - Increase discovery interval if auto-discovery is enabled
-   - Reduce number of monitored devices
+1. **Adjust Hub Intervals**:
+   - Increase intervals for all hubs or specific problematic ones
+   - Use hub-specific configuration to optimize load
+   - Consider disabling auto-discovery for some hubs
 
-2. **Check API Usage**:
-   - Monitor API usage in Meraki Dashboard
+2. **Check API Usage Distribution**:
+   - Monitor which hubs are making the most API calls
    - Verify no other applications are using the same API key
-   - Consider organization-level rate limits
+   - Use debug logging to see API call timing across hubs
+
+3. **Hub-Specific Rate Limiting**:
+   - Some networks may have different rate limits
+   - Check if specific hubs are hitting limits
+   - Consider longer intervals for high-device-count hubs
 
 ### Network Connectivity Issues
 
@@ -198,151 +296,140 @@ For more details on logging configuration, see our [Logging Configuration Guide]
 
 ### Missing Expected Entities
 
-**Problem**: Some sensor types aren't showing up as entities.
+**Problem**: Some expected entities are not created.
 
 **Solutions**:
-1. **Device Model Limitations**:
-   - Check MT model specifications for supported sensors
-   - Not all models support all metric types
-   - Verify device is configured correctly
+1. **Device Type Limitations**:
+   - Check if device model supports the expected sensor type
+   - Verify device is properly configured in Meraki Dashboard
+   - Ensure device firmware supports the metric
 
-2. **Entity Refresh**:
-   - Restart Home Assistant to refresh entities
-   - Check if entities are disabled in HA
-   - Look for entity naming conflicts
+2. **Hub Organization**:
+   - Check that device is under the correct hub
+   - Verify entity naming follows new convention
+   - Look for entities under network hub device instead of organization
 
-### Incorrect Entity Values
+3. **Configuration Changes**:
+   - Restart Home Assistant if entities don't appear
+   - Check if device selection settings exclude the device
+   - Try removing and re-adding the device
 
-**Problem**: Sensor values seem wrong or inconsistent.
+### Duplicate Entities
 
-**Solutions**:
-1. **Compare with Dashboard**:
-   - Check values in Meraki Dashboard
-   - Verify units are correct (°C vs °F, etc.)
-   - Look for sensor calibration issues
-
-2. **Data Issues**:
-   - Check for device clock synchronization
-   - Verify sensor placement and environment
-   - Look for interference or physical obstructions
-
-## Home Assistant Integration Issues
-
-### Configuration Entry Error
-
-**Problem**: Integration shows as "Failed to load" or similar.
+**Problem**: Same entities appearing multiple times.
 
 **Solutions**:
-1. **Restart Integration**:
-   - Go to Settings → Devices & Services
-   - Find Meraki Dashboard integration
-   - Click three dots → Reload
-
-2. **Check Dependencies**:
-   - Verify all required Python packages are installed
-   - Check Home Assistant version compatibility
-   - Look for conflicting integrations
-
-### Device Registry Issues
-
-**Problem**: Devices showing incorrectly or duplicated.
-
-**Solutions**:
-1. **Clean Device Registry**:
-   - Go to Settings → Devices & Services → Devices
-   - Remove duplicate or orphaned devices
+1. **Clean Migration**:
+   - Remove integration completely
    - Restart Home Assistant
+   - Re-add integration to ensure clean hub structure
 
-2. **Integration Reset**:
-   - Remove and re-add the integration
-   - This will recreate all devices and entities
-   - Backup automations first if using entity IDs
+2. **Check Entity Registry**:
+   - Go to Settings → Devices & Services → Entities
+   - Remove any duplicate or orphaned entities
+   - Verify entities are properly associated with correct devices
 
-## Advanced Troubleshooting
+## Hub Management Issues
 
-### Log Analysis
+### Hub Control Buttons Not Working
 
-Key log messages to look for:
+**Problem**: Hub update/discovery buttons don't trigger actions.
 
-**Normal Operation**:
-```
-[custom_components.meraki_dashboard] Device discovery completed
-[custom_components.meraki_dashboard] Updated sensor data for X devices
-```
+**Solutions**:
+1. **Check Hub Status**:
+   - Verify hub is online and available
+   - Check organization hub connectivity first
+   - Look for errors in logs when pressing buttons
 
-**Authentication Issues**:
-```
-[custom_components.meraki_dashboard] API authentication failed
-[custom_components.meraki_dashboard] Invalid API key or insufficient permissions
-```
+2. **API Permissions**:
+   - Verify API key has write permissions if needed
+   - Check that discovery permissions are available
+   - Try organization-wide buttons first to test connectivity
 
-**Rate Limiting**:
-```
-[custom_components.meraki_dashboard] Rate limit exceeded, backing off
-[custom_components.meraki_dashboard] API request failed: 429 Too Many Requests
-```
+### Hub Diagnostic Information Incorrect
 
-### API Testing
+**Problem**: Hub showing wrong device counts, update times, etc.
 
-Test API connectivity manually:
+**Solutions**:
+1. **Force Hub Refresh**:
+   - Use hub-specific update button
+   - Check logs for refresh operation
+   - Verify devices are actually online in Meraki Dashboard
 
-```bash
-# List organizations
-curl -H "X-Cisco-Meraki-API-Key: YOUR_API_KEY" \
-     "https://api.meraki.com/api/v1/organizations"
+2. **Hub State Issues**:
+   - Restart Home Assistant to reset hub states
+   - Check for stuck coordinators or discovery processes
+   - Enable debug logging to see hub state updates
 
-# List networks
-curl -H "X-Cisco-Meraki-API-Key: YOUR_API_KEY" \
-     "https://api.meraki.com/api/v1/organizations/ORG_ID/networks"
+## Performance Optimization
 
-# List devices
-curl -H "X-Cisco-Meraki-API-Key: YOUR_API_KEY" \
-     "https://api.meraki.com/api/v1/organizations/ORG_ID/devices"
+### Slow Updates Across Multiple Hubs
 
-# Get sensor data
-curl -H "X-Cisco-Meraki-API-Key: YOUR_API_KEY" \
-     "https://api.meraki.com/api/v1/devices/DEVICE_SERIAL/sensor/readings/latest"
-```
+**Problem**: All hubs updating slowly or timing out.
 
-### Performance Monitoring
+**Solutions**:
+1. **Stagger Hub Intervals**:
+   - Use different intervals for different hubs
+   - Avoid having all hubs update simultaneously
+   - Consider priority-based intervals (critical hubs shorter, others longer)
 
-Monitor integration performance:
+2. **Monitor API Usage**:
+   - Check total API calls across all hubs
+   - Use Meraki Dashboard API usage monitoring
+   - Consider organization-level API limits
 
-1. **Entity Update Times**:
-   - Check when entities were last updated
-   - Look for patterns in update failures
-   - Monitor coordinator update intervals
+### Memory Usage Growing Over Time
 
-2. **Resource Usage**:
-   - Check Home Assistant system resources
-   - Monitor network usage during updates
-   - Look for memory leaks over time
+**Problem**: Integration memory usage increases continuously.
+
+**Solutions**:
+1. **Check for Hub Leaks**:
+   - Monitor which hubs are consuming memory
+   - Look for stuck discovery processes
+   - Check coordinator cleanup in logs
+
+2. **Restart Integration**:
+   - Reload integration through HA UI
+   - Monitor memory usage after reload
+   - Consider periodic restarts if issue persists
 
 ## Getting Help
 
-### Before Asking for Help
+### Collecting Debug Information
 
-1. **Enable debug logging** and gather relevant log messages
-2. **Check device status** in Meraki Dashboard
-3. **Verify API key** permissions and functionality
-4. **Test basic connectivity** to Meraki API
-5. **Document the issue** with specific error messages
+When reporting issues, please include:
 
-### What to Include in Bug Reports
+1. **Hub Information**:
+   - List of hubs created and their types
+   - Hub-specific intervals configured
+   - Which hubs are working vs. problematic
 
-1. **Home Assistant version** and integration version
-2. **Device models** and firmware versions
-3. **Configuration details** (without API keys!)
-4. **Log messages** with debug enabled
-5. **Steps to reproduce** the issue
-6. **Expected vs actual behavior**
+2. **Log Information**:
+   - Enable debug logging before reproducing issue
+   - Include logs showing hub creation and operation
+   - Note any hub-specific error patterns
 
-### Community Resources
+3. **Configuration Details**:
+   - Hub interval configuration
+   - Device selection settings
+   - Organization and network structure
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/rknightion/meraki-dashboard-ha/issues)
-- **Home Assistant Community**: [Get community support](https://community.home-assistant.io/)
-- **Documentation**: Check our [FAQ](faq.md) for common questions
+### Common Log Patterns
+
+**Successful Hub Operation**:
+```
+DEBUG: Created MT hub for network Main Office with 3 devices
+DEBUG: Hub Main Office - MT updating with interval 600 seconds
+DEBUG: API call completed for hub Main Office - MT in 245ms
+```
+
+**Hub Problems**:
+```
+ERROR: Failed to create hub for network Main Office - no devices found
+WARNING: Hub Main Office - MT not updating - API errors
+ERROR: Rate limit exceeded for hub Main Office - MT
+```
 
 ---
 
-**Still having issues?** [Open a GitHub issue](https://github.com/rknightion/meraki-dashboard-ha/issues) with detailed information about your problem. 
+**Still having issues?** Check our [FAQ](faq.md) or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) with detailed log information and hub configuration. 

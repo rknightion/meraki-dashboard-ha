@@ -5,22 +5,34 @@ title: FAQ
 
 # Frequently Asked Questions
 
-Common questions and answers about the Meraki Dashboard integration.
+Common questions and answers about the Meraki Dashboard integration's **multi-hub architecture**.
 
 ## General Questions
 
 ### What devices are supported?
 
-Currently, the integration supports **MT series environmental sensors**:
-- MT10, MT12, MT14, MT15, MT20, MT30, MT40
+The integration now supports multiple device types with automatic hub creation:
 
-**Coming soon**: MR (wireless), MS (switches), and MV (cameras) series devices.
+**Currently Supported:**
+- **MT Series Environmental Sensors**: MT10, MT12, MT14, MT15, MT20, MT30, MT40
+- **MR Series Wireless Access Points**: All MR models (proof of concept)
+
+**Coming Soon**: MS (switches) and MV (cameras) series devices - infrastructure is ready.
+
+### How does the multi-hub architecture work?
+
+The integration creates **multiple hubs automatically**:
+- **Organization Hub**: `{Organization Name} - Organisation` manages the overall connection
+- **Network Hubs**: `{Network Name} - {Device Type}` (e.g., "Main Office - MT", "Branch - MR")
+- **Individual Devices**: Nested under their respective network hubs
+
+Only hubs for existing device types are created - if you have no MR devices, no MR hubs are created.
 
 ### Do I need a special Meraki license?
 
 No special license is required. You just need:
 - A Meraki organization with API access enabled
-- At least one MT sensor in your network
+- At least one supported device (MT or MR series)
 - A valid Meraki Dashboard API key
 
 ### How much does this cost?
@@ -50,11 +62,11 @@ Check these common issues:
 - **Permissions**: Verify the key has organization read access
 - **Expiration**: Check if the key has expired
 
-### No devices are discovered
+### No hubs are created during setup
 
 This usually means:
-- **No MT devices**: Only MT series sensors are currently supported
-- **Device offline**: Check device status in Meraki Dashboard
+- **No supported devices**: Only MT and MR series devices are currently supported
+- **Devices offline**: Check device status in Meraki Dashboard
 - **Network access**: Verify devices are in networks accessible by your API key
 - **Recent data**: Ensure devices have reported data recently
 
@@ -66,73 +78,152 @@ Try these steps:
 3. Look for errors in Home Assistant logs
 4. Try removing and re-adding the integration
 
-## Usage & Configuration
+## Configuration & Intervals
 
-### How often do sensors update?
+### What are the new default intervals?
 
-- **MT sensors update every 20 minutes by default** (Meraki's schedule)
-- **Integration default**: Polls every 20 minutes to match sensor updates
-- **Minimum interval**: 60 seconds (though more frequent won't get newer data)
-- **Configurable**: You can adjust the update interval in integration options
+The integration now uses **optimized per-hub intervals**:
+- **MT Environmental Sensors**: 10 minutes (matches typical sensor reporting)
+- **MR Wireless Access Points**: 5 minutes (network changes are more frequent)
+- **Discovery**: 1 hour (how often to scan for new devices)
+- **MS/MV (Future)**: 5 minutes (infrastructure monitoring)
 
-### Can I change the update frequency?
+### Why did the intervals change from 20 minutes?
+
+The new system provides better optimization:
+- **MT sensors**: 10 minutes provides more responsive monitoring while still being efficient
+- **MR devices**: 5 minutes captures network changes more effectively
+- **Per-hub control**: Different device types have different optimal intervals
+- **Better defaults**: Balanced performance and API usage
+
+### Can I configure different intervals for each hub?
+
+Yes! You can set **individual hub intervals**:
+1. Go to Settings → Devices & Services → Meraki Dashboard → Configure
+2. Set **per-hub scan intervals** (in minutes)
+3. Set **per-hub discovery intervals** (in minutes)
+
+Example configuration:
+```
+Main Office - MT: 10 minutes
+Main Office - MR: 5 minutes
+Data Center - MT: 5 minutes (critical monitoring)
+Branch Office - MT: 15 minutes (less critical)
+```
+
+### How often do sensors actually update?
+
+**MT Sensors:**
+- Default reporting: Every 20 minutes (configurable in Meraki Dashboard)
+- Integration default: 10 minutes (polls more frequently for responsiveness)
+- You can adjust both the sensor reporting interval and integration polling
+
+**MR Devices:**
+- Network changes can happen anytime
+- Integration default: 5 minutes provides good network monitoring
+- Adjust based on how quickly you need to detect network changes
+
+### Can I change update intervals after setup?
 
 Yes! Go to Settings → Devices & Services → Meraki Dashboard → Configure to adjust:
-- **Update interval**: How often to poll for data
-- **Discovery interval**: How often to scan for new devices
+- **Per-hub scan intervals**: How often each hub fetches data
+- **Per-hub discovery intervals**: How often each hub scans for new devices
+- **Organization-wide settings**: Fallback intervals for new hubs
 
-Note: Polling more frequently than 20 minutes won't get newer data since that's how often MT sensors report.
+## Hub Management
 
-### Why are some sensors missing?
+### How do I see my hubs in Home Assistant?
+
+After setup, you'll see your hubs in **Settings → Devices & Services**:
+- **Organization Device**: Shows overall connection status
+- **Network Hub Devices**: One per network per device type
+- **Individual Devices**: Your actual MT sensors, etc., nested under hubs
+
+### Can I control individual hubs?
+
+Yes! Each hub provides:
+- **Update Hub Data**: Force immediate refresh for that hub
+- **Discover Devices**: Scan for new devices in that hub
+- **Organization Controls**: Update all hubs or discover across all networks
+
+### What if I add new devices or networks?
+
+**Auto-Discovery (Enabled by Default):**
+- Automatically discovers new devices at the configured interval
+- Creates new hubs when devices of new types are added
+- Adds devices to appropriate existing hubs
+
+**Manual Discovery:**
+- Use the "Discover Devices" buttons on individual hubs
+- Use organization-wide discovery for comprehensive scans
+
+### Can I disable specific hubs?
+
+Currently, you can't disable individual hubs, but you can:
+- Use device selection to monitor only specific devices
+- Increase intervals for less important hubs
+- Disable auto-discovery for specific hubs (planned feature)
+
+## Device Types & Features
+
+### Why are some sensors missing from my MT device?
 
 Not all MT models support all sensor types:
-- **MT10/MT12**: Basic temperature/humidity
-- **MT14**: Adds water detection
-- **MT20**: Adds CO2, noise, indoor air quality
-- **MT30**: Adds TVOC, PM2.5
-- **MT40**: Adds electrical measurements
+- **MT10/MT12**: Basic temperature/humidity + battery
+- **MT14/MT15**: Adds water detection and door sensors
+- **MT20**: Adds CO2, noise, and indoor air quality
+- **MT30**: Adds TVOC and PM2.5
+- **MT40**: Adds electrical measurements (voltage, current, power)
 
 Check your device model specifications in the Meraki Dashboard.
 
+### What MR features are currently supported?
+
+**Current MR Support (Proof of Concept):**
+- SSID count (total configured SSIDs)
+- Enabled SSIDs (currently active)
+- Open SSIDs (unsecured networks)
+- Basic network hub diagnostics
+
+**Future MR Features:**
+- Client count and bandwidth usage
+- Signal strength and channel utilization
+- Security status and rogue AP detection
+- Performance metrics and historical data
+
 ### Can I monitor specific devices only?
 
-Yes! During setup or in integration options, you can:
-- **Monitor all devices**: Leave device selection empty (recommended)
+Yes! You can choose to:
+- **Monitor all devices**: Leave device selection empty (recommended for multi-hub)
 - **Select specific devices**: Choose only the ones you want to monitor
 
-### How do I add new devices?
-
-If you have auto-discovery enabled (default), new devices are automatically added when discovered.
-
-To manually add devices:
-1. Go to Settings → Devices & Services → Meraki Dashboard → Configure
-2. Modify your device selection
-3. Click Submit
+The hub architecture works well with both approaches.
 
 ## Troubleshooting
 
-### Sensors show "Unavailable"
+### Hubs show "Unavailable"
 
 Common causes:
+- **API connectivity**: Check internet connection and API key
 - **Device offline**: Check device status in Meraki Dashboard
-- **API issues**: Look for errors in Home Assistant logs
-- **Network connectivity**: Ensure HA can reach Meraki API
 - **Rate limiting**: Check if you're exceeding API limits
+- **Network issues**: Ensure HA can reach Meraki API endpoints
 
-### Sensors show old data
+### Some hubs update but others don't
 
-This usually means:
-- **Device not reporting**: Check device status in Dashboard
-- **Update interval too long**: Consider shortening the interval
-- **API errors**: Enable debug logging to see what's happening
+Check individual hub configurations:
+- **Hub intervals**: Verify each hub has appropriate intervals
+- **Device status**: Check that devices in non-updating hubs are online
+- **API limits**: Ensure you're not hitting rate limits
+- **Enable debug logging**: See specific errors for each hub
 
 ### "Rate limit exceeded" errors
 
 You're making too many API calls. Solutions:
-- **Increase update interval** (recommended: 1200 seconds)
-- **Reduce monitored devices** if you have many
-- **Disable auto-discovery** if not needed
-- **Check other API usage** in your organization
+- **Increase hub intervals**: Longer intervals reduce API usage
+- **Reduce monitored devices**: Select only necessary devices
+- **Disable auto-discovery**: If not needed, disable per-hub or organization-wide
+- **Check other API usage**: Other applications may be using your API quota
 
 ### Integration shows "Failed to load"
 
@@ -144,148 +235,91 @@ Try these steps:
 
 ## Performance & Optimization
 
-### How many API calls does this make?
+### How many API calls does the multi-hub architecture make?
 
-The integration is designed to minimize API usage:
-- **Initial setup**: ~3-5 calls to discover devices
-- **Regular updates**: 1 call per update cycle for all devices
-- **Auto-discovery**: 1 additional call per discovery interval (if enabled)
+The architecture is designed for efficiency:
+- **Initial setup**: ~3-5 calls to discover devices and create hubs
+- **Regular updates**: 1 call per hub per update cycle
+- **Auto-discovery**: 1 additional call per hub per discovery interval (if enabled)
+- **Hub coordination**: Minimal overhead for managing multiple hubs
+
+### How do I optimize for a large organization?
+
+**Best Practices:**
+- **Use longer intervals** for less critical locations
+- **Hub-specific intervals**: 5 minutes for critical, 15+ for others
+- **Selective monitoring**: Don't monitor every device if not needed
+- **Stagger discovery**: Different discovery intervals for different hubs
+- **Monitor API usage**: Track usage in Meraki Dashboard
 
 ### Can I use multiple API keys?
 
 Each integration instance uses one API key. For multiple organizations:
 - Set up separate integration instances
 - Use different API keys if needed
-- Configure different update intervals per organization
+- Configure different hub intervals per organization
 
 ### Will this affect my Meraki Dashboard performance?
 
-No, the integration uses read-only API calls that don't affect Dashboard performance or device operation.
+No, the integration uses read-only API calls that don't affect Dashboard performance or device operation. The multi-hub architecture may actually improve performance by distributing API calls across time.
 
 ## Advanced Usage
 
-### Can I export sensor data?
+### Can I export data from multiple hubs?
 
 Yes! You can:
-- **InfluxDB**: Export to InfluxDB for long-term storage
-- **History**: Use Home Assistant's built-in history
-- **Automation**: Create automations to log data elsewhere
-- **API**: Access data through Home Assistant's REST API
+- **InfluxDB**: Export data from all hubs for long-term storage
+- **History**: Use Home Assistant's built-in history for all entities
+- **Automation**: Create automations that span multiple hubs
+- **API**: Access data from all hubs through Home Assistant's REST API
 
-### Can I create custom sensors?
+### Can I create automations across hubs?
 
-Yes! Use Home Assistant's template sensors to create calculated values:
-```yaml
-template:
-  - sensor:
-      - name: "Average Office Temperature"
-        state: >
-          {% raw %}{{ (states('sensor.office_mt20_temperature') | float + 
-              states('sensor.office_mt21_temperature') | float) / 2 }}{% endraw %}
-```
+Absolutely! Create automations that:
+- Monitor conditions across multiple locations/hubs
+- Coordinate responses between different device types
+- Provide organization-wide alerting and reporting
 
-### Can I set up alerts?
+Example: Temperature monitoring across all MT hubs with MR network status context.
 
-Absolutely! Create automations for:
-- Temperature/humidity thresholds
-- Water leak detection
-- Air quality alerts
-- Device offline notifications
+### Can I set up alerts for hub issues?
 
-See our [Usage Guide](usage.md) for examples.
+Yes! Create automations for:
+- Hub connectivity issues
+- Device count changes (devices going offline)
+- API error rates
+- Discovery failures
 
 ### Can I use this with Node-RED?
 
-Yes! Node-RED can subscribe to Home Assistant entities and create complex automation flows.
+Yes! Node-RED can subscribe to entities from all hubs and create complex automation flows that span multiple networks and device types.
 
-## Data & Privacy
+## Migration & Updates
 
-### What data is collected?
+### I'm upgrading from the old single-hub version - what changes?
 
-The integration only collects sensor data from your Meraki devices:
-- Temperature, humidity, air quality readings
-- Device status and battery levels
-- Device location and network information
+**Automatic Migration:**
+- Existing configurations are preserved
+- New hub structure is created automatically
+- Entity names remain the same
+- Automations and dashboards continue to work
 
-No personal data or network traffic is collected.
+**New Features Available:**
+- Per-hub interval configuration
+- MR device support
+- Better organization and control
+- Improved performance and reliability
 
-### Where is data stored?
+### Do I need to reconfigure after updating?
 
-- **Home Assistant database**: Recent sensor readings
-- **Meraki Dashboard**: Historical data (not accessed by integration)
-- **No external services**: Data stays within your Home Assistant instance
+**Required:**
+- Nothing - migration is automatic
 
-### Can I limit data collection?
-
-Yes! You can:
-- **Select specific devices** to monitor
-- **Disable specific sensors** in Home Assistant
-- **Configure update intervals** to control how often data is fetched
-
-## Compatibility
-
-### What Home Assistant versions are supported?
-
-- **Minimum**: Home Assistant 2024.1.0
-- **Recommended**: Latest stable version
-- **Architecture**: All supported HA architectures (x86, ARM, etc.)
-
-### Can I use this with Home Assistant OS?
-
-Yes! The integration works with all Home Assistant installation methods:
-- Home Assistant OS (Supervised)
-- Home Assistant Container
-- Home Assistant Core
-- Home Assistant Supervised
-
-### Does this work with HAOS on Raspberry Pi?
-
-Yes! The integration is tested and works on Raspberry Pi installations.
-
-## Getting Help
-
-### How do I report bugs?
-
-1. **Enable debug logging** first to gather information
-2. **Check existing issues** on GitHub
-3. **Create a new issue** with:
-   - Home Assistant version
-   - Integration version
-   - Device models
-   - Log messages
-   - Steps to reproduce
-
-### Where can I get community support?
-
-- **GitHub Issues**: Bug reports and feature requests
-- **Home Assistant Community**: General support and discussions
-- **Documentation**: Check our guides for common solutions
-
-### How can I contribute?
-
-We welcome contributions! You can:
-- **Report bugs** or suggest features
-- **Improve documentation**
-- **Add device support** for new Meraki models
-- **Submit code improvements**
-
-See our [Development Guide](development.md) for details.
-
-### Is there a roadmap for new features?
-
-Yes! Planned features include:
-- **MR Series**: Wireless access point monitoring
-- **MS Series**: Switch port and power monitoring  
-- **MV Series**: Camera motion and analytics
-- **Dashboard**: Better visualization options
-- **Alerts**: More sophisticated alert options
-
-Check our [GitHub Issues](https://github.com/rknightion/meraki-dashboard-ha/issues) for current priorities.
+**Recommended:**
+- Review and optimize per-hub intervals
+- Explore new MR device features if you have MR devices
+- Consider using hub-specific controls for better management
 
 ---
 
-**Have a question not answered here?** 
-
-- Check our [Troubleshooting Guide](troubleshooting.md)
-- Search [existing issues](https://github.com/rknightion/meraki-dashboard-ha/issues)
-- [Ask on GitHub Discussions](https://github.com/rknightion/meraki-dashboard-ha/discussions) 
+**Still need help?** Check our [Troubleshooting Guide](troubleshooting.md) or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) on GitHub. 
