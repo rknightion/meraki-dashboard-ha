@@ -4,6 +4,8 @@ import logging
 from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.statistics import async_delete_statistics
 from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
@@ -26,6 +28,8 @@ async def async_create_fix_flow(
         return NetworkAccessLostRepairFlow(hass, issue_id, data)
     elif issue_id.startswith("device_discovery_failed"):
         return DeviceDiscoveryFailedRepairFlow(hass, issue_id, data)
+    elif issue_id.startswith("duplicate_statistics"):
+        return DuplicateStatisticsRepairFlow(hass, issue_id, data)
 
     return ConfirmRepairFlow(hass, issue_id, data)
 
@@ -182,5 +186,79 @@ class DeviceDiscoveryFailedRepairFlow(RepairsFlow):
                 "hub_name": self.data.get("hub_name", "Unknown")
                 if self.data
                 else "Unknown",
+            },
+        )
+
+
+class DuplicateStatisticsRepairFlow(RepairsFlow):
+    """Handler for duplicate statistics cleanup repair flow."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        issue_id: str,
+        data: dict[str, str | int | float | None] | None,
+    ) -> None:
+        """Initialize the repair flow."""
+        super().__init__(hass, issue_id, data)
+        # Extract duplicates data and ensure it's a list of strings
+        duplicates_data: str | int | float | list[Any] | None = (
+            data.get("duplicates", []) if data else []
+        )
+        self._duplicate_statistics: list[str] = []
+
+        if isinstance(duplicates_data, list):
+            # Handle the case where duplicates is a list of duplicate info dicts
+            for item in duplicates_data:
+                if isinstance(item, dict) and "recorder_stat" in item:
+                    # Extract statistic_id from recorder_stat dict
+                    recorder_stat = item["recorder_stat"]
+                    if (
+                        isinstance(recorder_stat, dict)
+                        and "statistic_id" in recorder_stat
+                    ):
+                        self._duplicate_statistics.append(recorder_stat["statistic_id"])
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the initial step."""
+        if user_input is not None:
+            # Clean up duplicate statistics
+            recorder_instance = get_instance(self.hass)
+            if recorder_instance and self._duplicate_statistics:
+                try:
+                    for statistic_id in self._duplicate_statistics:
+                        await async_delete_statistics(self.hass, [statistic_id])
+                        _LOGGER.info(
+                            "Deleted duplicate recorder statistic: %s", statistic_id
+                        )
+
+                    _LOGGER.info(
+                        "Successfully cleaned up %d duplicate statistics",
+                        len(self._duplicate_statistics),
+                    )
+                except Exception as err:
+                    _LOGGER.error(
+                        "Failed to clean up duplicate statistics: %s",
+                        err,
+                        exc_info=True,
+                    )
+
+            # Remove the repair issue
+            ir.async_delete_issue(self.hass, DOMAIN, self.issue_id)
+
+            return self.async_create_entry(
+                title="Duplicate Statistics Cleanup",
+                data={},
+            )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "count": str(len(self._duplicate_statistics)),
+                "example_statistics": ", ".join(self._duplicate_statistics[:3])
+                + ("..." if len(self._duplicate_statistics) > 3 else ""),
             },
         )

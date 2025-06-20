@@ -26,21 +26,11 @@ CONF_HUB_AUTO_DISCOVERY: Final = "hub_auto_discovery"
 # Defaults
 DEFAULT_NAME: Final = "Meraki Dashboard"
 DEFAULT_BASE_URL: Final = "https://api.meraki.com/api/v1"
-DEFAULT_SCAN_INTERVAL: Final = 1200  # 20 minutes (Meraki MT default)
+DEFAULT_SCAN_INTERVAL: Final = 60  # 1 minute (updated default)
 MIN_SCAN_INTERVAL: Final = 60  # 1 minute minimum
 DEFAULT_DISCOVERY_INTERVAL: Final = 3600  # 1 hour for device discovery
 MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes minimum
 
-# Historical data configuration
-MAX_MT_POLL_INTERVAL: Final = (
-    1200  # 20 minutes max for MT sensors to ensure complete data capture
-)
-HISTORICAL_DATA_LOOKBACK: Final = 1200  # 20 minutes lookback for historical data
-HISTORICAL_DATA_OVERLAP: Final = 300  # 5 minutes overlap to prevent gaps
-
-# Configuration keys for historical data tracking
-CONF_LAST_HISTORICAL_FETCH: Final = "last_historical_fetch"
-CONF_HISTORICAL_DATA_ENABLED: Final = "historical_data_enabled"
 
 # Regional API endpoints
 REGIONAL_BASE_URLS: Final = {
@@ -59,7 +49,7 @@ SENSOR_TYPE_MV: Final = "MV"  # Cameras (future)
 
 # Per-device-type scan interval defaults (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS: Final = {
-    SENSOR_TYPE_MT: 600,  # 10 minutes for MT sensors
+    SENSOR_TYPE_MT: 60,  # 1 minute for MT sensors
     SENSOR_TYPE_MR: 300,  # 5 minutes for wireless
     SENSOR_TYPE_MS: 300,  # 5 minutes for switches
     SENSOR_TYPE_MV: 300,  # 5 minutes for cameras
@@ -67,7 +57,7 @@ DEVICE_TYPE_SCAN_INTERVALS: Final = {
 
 # Default scan intervals for UI (in minutes)
 DEFAULT_SCAN_INTERVAL_MINUTES: Final = {
-    SENSOR_TYPE_MT: 10,  # 10 minutes for MT sensors
+    SENSOR_TYPE_MT: 1,  # 1 minute for MT sensors
     SENSOR_TYPE_MR: 5,  # 5 minutes for wireless
     SENSOR_TYPE_MS: 5,  # 5 minutes for switches
     SENSOR_TYPE_MV: 5,  # 5 minutes for cameras

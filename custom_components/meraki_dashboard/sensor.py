@@ -524,7 +524,9 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                 elif self.entity_description.key == MT_SENSOR_PM25:
                     return metric_data.get("concentration")
                 elif self.entity_description.key == MT_SENSOR_POWER_FACTOR:
-                    return metric_data.get("percentage")
+                    # Power factor is returned as percentage from API but should be decimal (0-1)
+                    percentage = metric_data.get("percentage")
+                    return percentage / 100.0 if percentage is not None else None
                 elif self.entity_description.key == MT_SENSOR_REAL_POWER:
                     return metric_data.get("draw")
                 elif self.entity_description.key == MT_SENSOR_TEMPERATURE:

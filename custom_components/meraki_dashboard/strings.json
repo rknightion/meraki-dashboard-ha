@@ -94,6 +94,18 @@
     "device_discovery_failed": {
       "title": "Device Discovery Failed",
       "description": "Failed to discover devices in hub \"{hub_name}\" for \"{config_entry_title}\". This may be due to API rate limits or temporary network issues. Device discovery will be retried automatically."
+    },
+    "duplicate_statistics": {
+      "title": "Duplicate Statistics Detected",
+      "description": "Found {count} duplicate statistics created by Home Assistant's recorder that conflict with the integration's custom statistics. These duplicates should be removed to prevent confusion and ensure proper historical data display. Examples: {example_statistics}",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Clean Up Duplicate Statistics",
+            "description": "This will remove {count} duplicate statistics created by Home Assistant's recorder. The integration's custom statistics (with source 'meraki_dashboard') will remain and provide the same data with better historical coverage.\n\nExamples of statistics to be removed: {example_statistics}\n\nThis action cannot be undone, but the integration's statistics will continue to work normally."
+          }
+        }
+      }
     }
   },
   "services": {

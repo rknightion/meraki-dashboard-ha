@@ -33,9 +33,6 @@ from .const import (
     DEVICE_TYPE_MAPPINGS,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
-    HISTORICAL_DATA_LOOKBACK,
-    HISTORICAL_DATA_OVERLAP,
-    MAX_MT_POLL_INTERVAL,
     ORG_HUB_SUFFIX,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MT,
@@ -532,13 +529,8 @@ class MerakiNetworkHub:
             _LOGGER.error("Error getting wireless data for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
 
-    async def async_get_sensor_data_batch(
-        self, serials: list[str]
-    ) -> dict[str, dict[str, Any]]:
-        """Get sensor data for multiple devices (MT devices only).
-
-        Args:
-            serials: List of device serial numbers
+    async def async_get_sensor_data(self) -> dict[str, dict[str, Any]]:
+        """Get sensor data for all devices in this hub (MT devices only).
 
         Returns:
             Dictionary mapping serial numbers to their sensor data
@@ -549,6 +541,12 @@ class MerakiNetworkHub:
         if self.dashboard is None:
             _LOGGER.error("Dashboard API not initialized")
             return {}
+
+        if not self.devices:
+            _LOGGER.debug("No devices to fetch sensor data for in %s", self.hub_name)
+            return {}
+
+        serials = [device["serial"] for device in self.devices]
 
         try:
             _LOGGER.debug(
@@ -623,212 +621,6 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
             self.organization_hub.last_api_call_error = str(err)
             _LOGGER.error("Error getting sensor data for %s: %s", self.hub_name, err)
-            return {}
-
-    async def async_get_sensor_data_historical_batch(
-        self,
-        serials: list[str],
-        scan_interval: int,
-        last_fetch_times: dict[str, datetime],
-    ) -> dict[str, dict[str, Any]]:
-        """Get historical sensor data for multiple devices ensuring complete data capture.
-
-        This method uses the historical API endpoint to fetch data from a time range
-        that ensures we capture all sensor readings, even if they occurred between
-        our polling intervals. It dynamically adjusts the lookback period based on
-        the scan interval and tracks the last successful fetch to avoid data gaps.
-
-        Args:
-            serials: List of device serial numbers
-            scan_interval: Current scan interval in seconds
-            last_fetch_times: Dictionary tracking last successful fetch per device
-
-        Returns:
-            Dictionary mapping serial numbers to their sensor data with historical readings
-        """
-        if self.device_type != SENSOR_TYPE_MT:
-            return {}
-
-        if self.dashboard is None:
-            _LOGGER.error("Dashboard API not initialized")
-            return {}
-
-        try:
-            _LOGGER.debug(
-                "Fetching historical sensor data for %d devices in %s: %s",
-                len(serials),
-                self.hub_name,
-                serials,
-            )
-            start_time = self.hass.loop.time()
-            current_time = datetime.now(UTC)
-
-            # Calculate time range for historical data
-            # Use the larger of: scan_interval + overlap, or minimum lookback
-            # But cap at MAX_MT_POLL_INTERVAL to ensure we always get complete data
-            lookback_seconds = min(
-                max(scan_interval + HISTORICAL_DATA_OVERLAP, HISTORICAL_DATA_LOOKBACK),
-                MAX_MT_POLL_INTERVAL + HISTORICAL_DATA_OVERLAP,
-            )
-
-            # For each device, determine the optimal start time
-            # Use the last successful fetch time if available, otherwise use lookback
-            device_time_ranges = {}
-            for serial in serials:
-                if serial in last_fetch_times:
-                    # Start from last successful fetch minus overlap to prevent gaps
-                    start_time_for_device = last_fetch_times[serial] - timedelta(
-                        seconds=HISTORICAL_DATA_OVERLAP
-                    )
-                else:
-                    # First time fetching, use lookback period
-                    start_time_for_device = current_time - timedelta(
-                        seconds=lookback_seconds
-                    )
-
-                device_time_ranges[serial] = start_time_for_device
-
-            # Use the earliest start time for the API call to minimize API calls
-            earliest_start = min(device_time_ranges.values())
-
-            # Convert to the format expected by Meraki API (ISO string)
-            t0 = earliest_start.isoformat()
-            t1 = current_time.isoformat()
-
-            _LOGGER.debug(
-                "Historical data fetch range: %s to %s (%.1f minutes)",
-                t0,
-                t1,
-                (current_time - earliest_start).total_seconds() / 60,
-            )
-
-            # Create wrapper function for historical API call
-            def get_historical_sensor_readings(
-                org_id: str, device_serials: list[str], start_time: str, end_time: str
-            ):
-                if self.dashboard is None:
-                    raise RuntimeError("Dashboard API not initialized")
-                return self.dashboard.sensor.getOrganizationSensorReadingsHistory(
-                    org_id,
-                    serials=device_serials,
-                    t0=start_time,
-                    t1=end_time,
-                )
-
-            # Get historical sensor readings
-            all_readings = await self.hass.async_add_executor_job(
-                get_historical_sensor_readings,
-                self.organization_id,
-                serials,
-                t0,
-                t1,
-            )
-            self.organization_hub.total_api_calls += 1
-            self.organization_hub.last_api_call_error = None
-
-            api_duration = round((self.hass.loop.time() - start_time) * 1000, 2)
-            _LOGGER.debug(
-                "Historical API call completed in %sms for %s, received %d readings",
-                api_duration,
-                self.hub_name,
-                len(all_readings) if all_readings else 0,
-            )
-
-            # Organize readings by serial number and filter by device-specific time ranges
-            result: dict[str, dict[str, Any]] = {}
-            readings_count = 0
-            filtered_count = 0
-
-            for reading in all_readings:
-                serial = reading.get("serial")
-                if serial not in serials:
-                    continue
-
-                readings_count += 1
-
-                # Parse the reading timestamp to filter by device-specific time range
-                reading_timestamp_str = reading.get("ts")
-                if reading_timestamp_str:
-                    try:
-                        if isinstance(reading_timestamp_str, str):
-                            reading_timestamp = datetime.fromisoformat(
-                                reading_timestamp_str.replace("Z", "+00:00")
-                            )
-                        else:
-                            reading_timestamp = datetime.fromtimestamp(
-                                reading_timestamp_str, tz=UTC
-                            )
-
-                        # Only include readings newer than the device-specific start time
-                        if reading_timestamp < device_time_ranges[serial]:
-                            filtered_count += 1
-                            continue
-
-                    except (ValueError, TypeError) as err:
-                        _LOGGER.debug(
-                            "Failed to parse reading timestamp %s: %s",
-                            reading_timestamp_str,
-                            err,
-                        )
-
-                # Group readings by serial
-                if serial not in result:
-                    result[serial] = {"readings": []}
-
-                # Add individual readings to the device's reading list
-                if "readings" in reading:
-                    result[serial]["readings"].extend(reading["readings"])
-                else:
-                    # Handle case where reading structure is different
-                    result[serial]["readings"].append(reading)
-
-                # Process events for state changes (only for latest readings)
-                if self.event_handler and "readings" in reading:
-                    try:
-                        device_info = next(
-                            (d for d in self.devices if d["serial"] == serial),
-                            {},
-                        )
-                        if device_info:
-                            device_info_with_domain = {
-                                **device_info,
-                                "domain": DOMAIN,
-                            }
-                            # Only process events for the most recent readings
-                            # to avoid duplicate events for historical data
-                            recent_readings = [
-                                r
-                                for r in reading["readings"]
-                                if self._is_recent_reading(r, minutes=5)
-                            ]
-                            if recent_readings:
-                                self.event_handler.track_sensor_data(
-                                    serial,
-                                    recent_readings,
-                                    device_info_with_domain,
-                                )
-                    except Exception as event_err:
-                        _LOGGER.debug(
-                            "Error processing events for device %s: %s",
-                            serial,
-                            event_err,
-                        )
-
-            _LOGGER.debug(
-                "Processed %d readings, filtered %d old readings, returning data for %d devices",
-                readings_count,
-                filtered_count,
-                len(result),
-            )
-
-            return result
-
-        except Exception as err:
-            self.organization_hub.failed_api_calls += 1
-            self.organization_hub.last_api_call_error = str(err)
-            _LOGGER.error(
-                "Error getting historical sensor data for %s: %s", self.hub_name, err
-            )
             return {}
 
     def _is_recent_reading(self, reading: dict[str, Any], minutes: int = 5) -> bool:
@@ -932,24 +724,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 hub_id, DEVICE_TYPE_SCAN_INTERVALS.get(hub.device_type, scan_interval)
             )
 
-            # Enforce maximum polling interval for MT sensors to ensure complete data capture
-            # MT sensors report every 20 minutes, so polling more frequently ensures we get all data
-            if hub_scan_interval > MAX_MT_POLL_INTERVAL:
-                _LOGGER.warning(
-                    "MT sensor polling interval %d seconds exceeds maximum %d seconds for complete data capture. "
-                    "Adjusting to %d seconds for hub %s",
-                    hub_scan_interval,
-                    MAX_MT_POLL_INTERVAL,
-                    MAX_MT_POLL_INTERVAL,
-                    hub.hub_name,
-                )
-                hub_scan_interval = MAX_MT_POLL_INTERVAL
-
             coordinator = MerakiSensorCoordinator(
                 hass,
                 hub,
                 hub.devices,
                 hub_scan_interval,
+                entry,
             )
 
             hass.data[DOMAIN][entry.entry_id]["coordinators"][hub_id] = coordinator
@@ -966,7 +746,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
             _LOGGER.info(
-                "Created coordinator for %s with %d devices, scan interval: %d seconds (historical data enabled)",
+                "Created coordinator for %s with %d devices, scan interval: %d seconds",
                 hub.hub_name,
                 len(hub.devices),
                 hub_scan_interval,

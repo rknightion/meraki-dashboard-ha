@@ -393,6 +393,41 @@ For more details on logging configuration, see our [Logging Configuration Guide]
    - Monitor memory usage after reload
    - Consider periodic restarts if issue persists
 
+## Statistics Issues
+
+### Duplicate Statistics in Developer Tools
+
+**Problem**: You see duplicate statistics for the same sensor - one with source "recorder" and one with source "meraki_dashboard".
+
+**Cause**: This occurred in earlier versions where both the integration's custom statistics and Home Assistant's automatic recorder statistics were created for the same sensors.
+
+**Solution**: 
+1. The integration will automatically detect duplicate statistics and create a repair issue
+2. Go to **Settings** → **System** → **Repairs** 
+3. Look for "Duplicate Statistics Detected" repair issue
+4. Click "Fix" to remove the duplicate recorder statistics
+5. Only the "meraki_dashboard" statistics will remain (these have better historical data)
+
+**Prevention**: Updated versions of the integration prevent this issue by not setting `state_class` on sensors that have custom statistics.
+
+### Historical Data Not Showing
+
+**Problem**: Long-term statistics graphs show gaps or no historical data.
+
+**Solutions**:
+1. Check **Developer Tools** → **Statistics** for entries with source "meraki_dashboard"
+2. Ensure your devices have been active and reporting data
+3. Historical data import happens during initial setup - reload the integration if needed
+4. Check logs for any errors during historical data processing
+
+### Statistics Not Clickable
+
+**Problem**: Statistics entries in Developer Tools are not clickable or don't show data.
+
+**Cause**: This usually happens with recorder-generated statistics that conflict with custom statistics.
+
+**Solution**: Use the repair flow to clean up duplicate statistics as described above.
+
 ## Getting Help
 
 ### Collecting Debug Information

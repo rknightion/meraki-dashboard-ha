@@ -1,14 +1,14 @@
-"""Shared coordinator for Meraki Dashboard integration."""
+"""Data update coordinator for Meraki Dashboard integration."""
 
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
-from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.statistics import async_add_external_statistics
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
@@ -20,9 +20,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator to manage fetching Meraki sensor data.
 
     This coordinator handles periodic updates of sensor data for all devices,
-    making efficient batch API calls to minimize API usage. It now uses
-    historical data endpoints to ensure complete data capture and integrates
-    with Home Assistant's statistics system for historical data import.
+    making efficient batch API calls to minimize API usage.
     """
 
     def __init__(
@@ -31,451 +29,52 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         hub: Any,  # MerakiDashboardHub
         devices: list[dict[str, Any]],
         scan_interval: int,
+        config_entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator.
 
         Args:
             hass: Home Assistant instance
-            hub: MerakiDashboardHub instance
-            devices: List of device dictionaries
+            hub: Hub instance that provides data
+            devices: List of devices to monitor
             scan_interval: Update interval in seconds
+            config_entry: Configuration entry for this integration
         """
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN}_sensors",
+            name=f"{DOMAIN}_{hub.hub_name}",
             update_interval=timedelta(seconds=scan_interval),
         )
         self.hub = hub
         self.devices = devices
         self.scan_interval = scan_interval
-
-        # Track last successful fetch for historical data continuity
-        self._last_historical_fetch: dict[str, datetime] = {}
-
-        # Track statistics metadata for each device/metric combination
-        self._statistics_metadata: dict[str, dict[str, Any]] = {}
+        self.config_entry = config_entry
 
         _LOGGER.debug(
-            "Sensor coordinator initialized with %d second update interval, historical data enabled",
+            "Sensor coordinator initialized with %d second update interval",
             scan_interval,
         )
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API endpoint.
+        """Fetch data from Meraki Dashboard API.
 
-        This method gets both current sensor data for live sensor states and
-        historical data for statistics import. This ensures sensors appear
-        "alive" while also providing complete historical data capture.
-
-        Returns:
-            Dictionary mapping serial numbers to their sensor data
-
-        Raises:
-            UpdateFailed: If API communication fails
+        Returns a dictionary with device serial numbers as keys and their sensor data as values.
         """
         try:
-            # Get all serial numbers
-            serials = [device["serial"] for device in self.devices]
-            _LOGGER.debug("Coordinator update starting for %d devices", len(serials))
+            # Get data from the hub
+            data = await self.hub.async_get_sensor_data()
 
-            update_start = self.hass.loop.time()
+            # Check for duplicate statistics on first successful update
+            if data and not hasattr(self, "_duplicate_check_done"):
+                self._duplicate_check_done = True
+                await self._check_for_duplicate_statistics()
 
-            # Get CURRENT sensor data for live sensor states (sensors need this to appear "alive")
-            current_data = await self.hub.async_get_sensor_data_batch(serials)
-
-            # Get HISTORICAL sensor data for complete statistics capture (background process)
-            # This runs in parallel and doesn't affect the current sensor states
-            try:
-                historical_data = await self.hub.async_get_sensor_data_historical_batch(
-                    serials, self.scan_interval, self._last_historical_fetch
-                )
-                # Process historical data for statistics (non-blocking)
-                await self._process_historical_statistics(historical_data)
-            except Exception as hist_err:
-                _LOGGER.debug(
-                    "Historical data processing failed (current sensors unaffected): %s",
-                    hist_err,
-                )
-
-            update_duration = round((self.hass.loop.time() - update_start) * 1000, 2)
-            successful_devices = len([d for d in current_data.values() if d])
-
-            _LOGGER.debug(
-                "Coordinator update completed in %sms: %d/%d devices returned current data",
-                update_duration,
-                successful_devices,
-                len(serials),
-            )
-
-            # Log any devices with issues
-            failed_devices = [
-                serial
-                for serial in serials
-                if serial not in current_data or not current_data[serial]
-            ]
-            if failed_devices:
-                _LOGGER.debug(
-                    "Devices with no current data in this update: %s",
-                    failed_devices,
-                )
-
-            # Return CURRENT data for sensor entities (this is what makes sensors appear "alive")
-            return current_data
+            return data
 
         except Exception as err:
             _LOGGER.error("Error fetching sensor data: %s", err, exc_info=True)
             raise UpdateFailed(f"Error communicating with API: {err}") from err
-
-    async def _process_historical_statistics(
-        self, data: dict[str, dict[str, Any]]
-    ) -> None:
-        """Process historical data and import statistics.
-
-        Args:
-            data: Device data from API with historical readings
-        """
-        try:
-            # Only process if recorder is available
-            recorder_instance = get_instance(self.hass)
-            if not recorder_instance:
-                _LOGGER.debug("Recorder not available, skipping statistics processing")
-                return
-
-            statistics_data: dict[str, list[dict[str, Any]]] = {}
-            current_time = datetime.now(UTC)
-
-            for serial, device_data in data.items():
-                if not device_data or "readings" not in device_data:
-                    continue
-
-                device_info = next(
-                    (d for d in self.devices if d["serial"] == serial), {}
-                )
-                if not device_info:
-                    continue
-
-                # Process each reading for statistics
-                for reading in device_data["readings"]:
-                    metric = reading.get("metric")
-                    timestamp_str = reading.get("ts")
-
-                    if not metric or not timestamp_str:
-                        continue
-
-                    # Parse timestamp
-                    try:
-                        if isinstance(timestamp_str, str):
-                            # Handle ISO timestamp with Z suffix
-                            timestamp = datetime.fromisoformat(
-                                timestamp_str.replace("Z", "+00:00")
-                            )
-                        else:
-                            timestamp = datetime.fromtimestamp(timestamp_str, tz=UTC)
-                    except (ValueError, TypeError) as err:
-                        _LOGGER.debug(
-                            "Failed to parse timestamp %s: %s", timestamp_str, err
-                        )
-                        continue
-
-                    # Only process metrics that should have statistics (measurement sensors)
-                    if self._should_create_statistics(metric):
-                        # Create a valid statistic_id - must be lowercase alphanumeric with underscores
-                        safe_serial = serial.lower().replace("-", "_")
-                        safe_metric = metric.lower().replace("-", "_")
-                        statistic_id = f"{DOMAIN}:{safe_serial}_{safe_metric}"
-
-                        # Ensure metadata exists
-                        if statistic_id not in self._statistics_metadata:
-                            _LOGGER.debug(
-                                "Creating statistics metadata for %s (device: %s, metric: %s)",
-                                statistic_id,
-                                serial,
-                                metric,
-                            )
-                            await self._create_statistics_metadata(
-                                statistic_id, serial, metric, device_info
-                            )
-
-                        # Extract numeric value
-                        value = self._extract_numeric_value(reading, metric)
-                        if value is not None:
-                            if statistic_id not in statistics_data:
-                                statistics_data[statistic_id] = []
-
-                            # Create statistic data point
-                            # Round to hour boundary for long-term statistics
-                            hour_start = timestamp.replace(
-                                minute=0, second=0, microsecond=0
-                            )
-
-                            statistics_data[statistic_id].append(
-                                {
-                                    "start": hour_start,
-                                    "state": value,
-                                    "mean": value,  # For single readings, mean equals state
-                                }
-                            )
-
-            # Import statistics data
-            for statistic_id, stat_data in statistics_data.items():
-                if stat_data:
-                    # Sort by timestamp and remove duplicates
-                    unique_data = {}
-                    for data_point in stat_data:
-                        unique_data[data_point["start"]] = data_point
-
-                    sorted_data = sorted(unique_data.values(), key=lambda x: x["start"])
-
-                    _LOGGER.debug(
-                        "Importing %d statistics data points for %s",
-                        len(sorted_data),
-                        statistic_id,
-                    )
-
-                    try:
-                        async_add_external_statistics(
-                            self.hass,
-                            self._statistics_metadata[statistic_id],
-                            sorted_data,
-                        )
-                        _LOGGER.debug(
-                            "Successfully imported statistics for %s", statistic_id
-                        )
-                    except Exception as stats_err:
-                        _LOGGER.error(
-                            "Failed to import statistics for %s: %s (metadata: %s)",
-                            statistic_id,
-                            stats_err,
-                            self._statistics_metadata.get(statistic_id),
-                            exc_info=True,
-                        )
-
-            # Update last fetch timestamps
-            for serial in data.keys():
-                self._last_historical_fetch[serial] = current_time
-
-        except Exception as err:
-            _LOGGER.error(
-                "Error processing historical statistics: %s", err, exc_info=True
-            )
-
-    def _should_create_statistics(self, metric: str) -> bool:
-        """Determine if a metric should have statistics created.
-
-        Args:
-            metric: The sensor metric name
-
-        Returns:
-            True if statistics should be created
-        """
-        # Import metric constants
-        from .const import (
-            MT_SENSOR_APPARENT_POWER,
-            MT_SENSOR_BATTERY,
-            MT_SENSOR_CO2,
-            MT_SENSOR_CURRENT,
-            MT_SENSOR_FREQUENCY,
-            MT_SENSOR_HUMIDITY,
-            MT_SENSOR_INDOOR_AIR_QUALITY,
-            MT_SENSOR_NOISE,
-            MT_SENSOR_PM25,
-            MT_SENSOR_POWER_FACTOR,
-            MT_SENSOR_REAL_POWER,
-            MT_SENSOR_TEMPERATURE,
-            MT_SENSOR_TVOC,
-            MT_SENSOR_VOLTAGE,
-        )
-
-        # Only create statistics for measurement sensors (not binary or event sensors)
-        measurement_metrics = {
-            MT_SENSOR_TEMPERATURE,
-            MT_SENSOR_HUMIDITY,
-            MT_SENSOR_CO2,
-            MT_SENSOR_TVOC,
-            MT_SENSOR_PM25,
-            MT_SENSOR_NOISE,
-            MT_SENSOR_BATTERY,
-            MT_SENSOR_VOLTAGE,
-            MT_SENSOR_CURRENT,
-            MT_SENSOR_REAL_POWER,
-            MT_SENSOR_APPARENT_POWER,
-            MT_SENSOR_FREQUENCY,
-            MT_SENSOR_POWER_FACTOR,
-            MT_SENSOR_INDOOR_AIR_QUALITY,
-        }
-
-        return metric in measurement_metrics
-
-    async def _create_statistics_metadata(
-        self,
-        statistic_id: str,
-        serial: str,
-        metric: str,
-        device_info: dict[str, Any],
-    ) -> None:
-        """Create statistics metadata for a sensor.
-
-        Args:
-            statistic_id: Unique identifier for the statistic
-            serial: Device serial number
-            metric: Sensor metric name
-            device_info: Device information dictionary
-        """
-        # Import metric constants and descriptions
-        from .const import (
-            MT_SENSOR_APPARENT_POWER,
-            MT_SENSOR_BATTERY,
-            MT_SENSOR_CO2,
-            MT_SENSOR_CURRENT,
-            MT_SENSOR_FREQUENCY,
-            MT_SENSOR_HUMIDITY,
-            MT_SENSOR_INDOOR_AIR_QUALITY,
-            MT_SENSOR_NOISE,
-            MT_SENSOR_PM25,
-            MT_SENSOR_POWER_FACTOR,
-            MT_SENSOR_REAL_POWER,
-            MT_SENSOR_TEMPERATURE,
-            MT_SENSOR_TVOC,
-            MT_SENSOR_VOLTAGE,
-        )
-
-        # Define units for each metric
-        metric_units = {
-            MT_SENSOR_TEMPERATURE: "°C",
-            MT_SENSOR_HUMIDITY: "%",
-            MT_SENSOR_CO2: "ppm",
-            MT_SENSOR_TVOC: "ppb",
-            MT_SENSOR_PM25: "µg/m³",
-            MT_SENSOR_NOISE: "dB",
-            MT_SENSOR_BATTERY: "%",
-            MT_SENSOR_VOLTAGE: "V",
-            MT_SENSOR_CURRENT: "A",
-            MT_SENSOR_REAL_POWER: "W",
-            MT_SENSOR_APPARENT_POWER: "VA",
-            MT_SENSOR_FREQUENCY: "Hz",
-            MT_SENSOR_POWER_FACTOR: "",
-            MT_SENSOR_INDOOR_AIR_QUALITY: "",
-        }
-
-        # Define human-readable names
-        metric_names = {
-            MT_SENSOR_TEMPERATURE: "Temperature",
-            MT_SENSOR_HUMIDITY: "Humidity",
-            MT_SENSOR_CO2: "CO2",
-            MT_SENSOR_TVOC: "TVOC",
-            MT_SENSOR_PM25: "PM2.5",
-            MT_SENSOR_NOISE: "Noise",
-            MT_SENSOR_BATTERY: "Battery",
-            MT_SENSOR_VOLTAGE: "Voltage",
-            MT_SENSOR_CURRENT: "Current",
-            MT_SENSOR_REAL_POWER: "Real Power",
-            MT_SENSOR_APPARENT_POWER: "Apparent Power",
-            MT_SENSOR_FREQUENCY: "Frequency",
-            MT_SENSOR_POWER_FACTOR: "Power Factor",
-            MT_SENSOR_INDOOR_AIR_QUALITY: "Indoor Air Quality",
-        }
-
-        device_name = device_info.get("name", f"MT {serial[-4:]}")
-        metric_name = metric_names.get(metric, metric.title())
-        unit = metric_units.get(metric, "")
-
-        # Power sensors should have sum for energy calculations
-        has_sum = metric in {MT_SENSOR_REAL_POWER, MT_SENSOR_APPARENT_POWER}
-
-        metadata = {
-            "source": DOMAIN,
-            "statistic_id": statistic_id,
-            "name": f"{device_name} {metric_name}",
-            "unit_of_measurement": unit,
-            "has_mean": True,
-            "has_sum": has_sum,
-        }
-
-        self._statistics_metadata[statistic_id] = metadata
-
-        _LOGGER.debug(
-            "Created statistics metadata for %s: %s (%s)",
-            statistic_id,
-            metadata["name"],
-            metadata["unit_of_measurement"],
-        )
-
-    def _extract_numeric_value(
-        self, reading: dict[str, Any], metric: str
-    ) -> float | None:
-        """Extract numeric value from a sensor reading.
-
-        Args:
-            reading: The sensor reading dictionary
-            metric: The metric name
-
-        Returns:
-            The numeric value or None if not found/invalid
-        """
-        # Import metric constants
-        from .const import (
-            MT_SENSOR_APPARENT_POWER,
-            MT_SENSOR_BATTERY,
-            MT_SENSOR_CO2,
-            MT_SENSOR_CURRENT,
-            MT_SENSOR_FREQUENCY,
-            MT_SENSOR_HUMIDITY,
-            MT_SENSOR_INDOOR_AIR_QUALITY,
-            MT_SENSOR_NOISE,
-            MT_SENSOR_PM25,
-            MT_SENSOR_POWER_FACTOR,
-            MT_SENSOR_REAL_POWER,
-            MT_SENSOR_TEMPERATURE,
-            MT_SENSOR_TVOC,
-            MT_SENSOR_VOLTAGE,
-        )
-
-        if metric not in reading:
-            return None
-
-        metric_data = reading[metric]
-
-        # Extract value based on metric type (same logic as sensor.py)
-        try:
-            if metric == MT_SENSOR_APPARENT_POWER:
-                return float(metric_data.get("draw", 0))
-            elif metric == MT_SENSOR_BATTERY:
-                return float(metric_data.get("percentage", 0))
-            elif metric == MT_SENSOR_CO2:
-                return float(metric_data.get("concentration", 0))
-            elif metric == MT_SENSOR_CURRENT:
-                return float(metric_data.get("draw", 0))
-            elif metric == MT_SENSOR_FREQUENCY:
-                return float(metric_data.get("level", 0))
-            elif metric == MT_SENSOR_HUMIDITY:
-                return float(metric_data.get("relativePercentage", 0))
-            elif metric == MT_SENSOR_INDOOR_AIR_QUALITY:
-                return float(metric_data.get("score", 0))
-            elif metric == MT_SENSOR_NOISE:
-                ambient = metric_data.get("ambient", {})
-                return float(ambient.get("level", 0))
-            elif metric == MT_SENSOR_PM25:
-                return float(metric_data.get("concentration", 0))
-            elif metric == MT_SENSOR_POWER_FACTOR:
-                return float(metric_data.get("percentage", 0))
-            elif metric == MT_SENSOR_REAL_POWER:
-                return float(metric_data.get("draw", 0))
-            elif metric == MT_SENSOR_TEMPERATURE:
-                return float(metric_data.get("celsius", 0))
-            elif metric == MT_SENSOR_TVOC:
-                return float(metric_data.get("concentration", 0))
-            elif metric == MT_SENSOR_VOLTAGE:
-                return float(metric_data.get("level", 0))
-            else:
-                # Fallback for unknown metrics
-                if isinstance(metric_data, int | float):
-                    return float(metric_data)
-                elif isinstance(metric_data, dict) and "value" in metric_data:
-                    return float(metric_data["value"])
-                return None
-        except (ValueError, TypeError, KeyError):
-            return None
 
     async def async_request_refresh_delayed(self, delay_seconds: int = 5) -> None:
         """Request a delayed refresh of the coordinator data.
@@ -488,3 +87,68 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             delay_seconds,
             lambda: self.hass.async_create_task(self.async_request_refresh()),
         )
+
+    async def _check_for_duplicate_statistics(self) -> None:
+        """Check for duplicate statistics and create repair issue if found."""
+        try:
+            # Only check if recorder is available
+            from homeassistant.components.recorder import get_instance
+
+            recorder_instance = get_instance(self.hass)
+            if not recorder_instance:
+                return
+
+            from homeassistant.components.recorder.statistics import (
+                list_statistic_ids,
+            )
+
+            # Get all existing statistic IDs
+            statistic_ids = await recorder_instance.async_add_executor_job(
+                list_statistic_ids, self.hass
+            )
+
+            # Look for duplicate statistics (both recorder and meraki_dashboard sources)
+            duplicates_found = []
+            for stat_id in statistic_ids:
+                if stat_id["domain"] == DOMAIN:
+                    # Check if there's a corresponding recorder statistic
+                    entity_id = stat_id["statistic_id"].replace(f"{DOMAIN}:", "sensor.")
+                    recorder_stat = next(
+                        (
+                            s
+                            for s in statistic_ids
+                            if s["statistic_id"] == entity_id
+                            and s.get("source") == "recorder"
+                        ),
+                        None,
+                    )
+                    if recorder_stat:
+                        duplicates_found.append(
+                            {
+                                "integration_stat": stat_id,
+                                "recorder_stat": recorder_stat,
+                            }
+                        )
+
+            if duplicates_found:
+                # Create repair issue
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    f"duplicate_statistics_{self.config_entry.entry_id}",
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="duplicate_statistics",
+                    translation_placeholders={
+                        "config_entry_title": self.config_entry.title,
+                        "duplicate_count": str(len(duplicates_found)),
+                    },
+                    data={"duplicates": duplicates_found},
+                )
+                _LOGGER.info(
+                    "Found %d duplicate statistics, created repair issue",
+                    len(duplicates_found),
+                )
+
+        except Exception as err:
+            _LOGGER.debug("Failed to check for duplicate statistics: %s", err)

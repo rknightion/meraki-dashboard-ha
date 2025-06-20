@@ -7,13 +7,159 @@ title: Usage Guide
 
 This guide covers how to use the Meraki Dashboard Home Assistant integration effectively.
 
-## Quick Start
+## Basic Usage
 
-1. **Install the integration** via HACS or manually
-2. **Add the integration** in Home Assistant (Settings → Devices & Services → Add Integration)
-3. **Enter your API key** and organization ID
-4. **Configure scan intervals** for optimal performance
-5. **Select devices** to monitor (optional)
+Once configured, the integration will automatically discover your Meraki MT devices and create sensors for each available metric.
+
+## Available Sensors
+
+### Environmental Sensors (MT Series)
+- **Temperature**: Ambient temperature in Celsius
+- **Humidity**: Relative humidity percentage
+- **CO2**: Carbon dioxide concentration in ppm
+- **TVOC**: Total volatile organic compounds in ppb
+- **PM2.5**: Particulate matter concentration in µg/m³
+- **Noise**: Ambient noise level in dB
+- **Indoor Air Quality**: Overall air quality score
+
+### Power Monitoring (MT30 Series)
+- **Voltage**: AC voltage in volts
+- **Current**: AC current in amperes
+- **Real Power**: Active power consumption in watts
+- **Apparent Power**: Total power draw in volt-amperes
+- **Power Factor**: Power factor (0-1 range)
+- **Frequency**: AC frequency in hertz
+
+### Binary Sensors
+- **Water Detection**: Detects presence of water
+- **Door Status**: Open/closed status
+- **Downstream Power**: Power availability status
+- **Remote Lockout Switch**: Switch position
+
+### Button Sensors
+- **Button Press**: Tracks button press events
+
+## Energy Dashboard Integration
+
+Power sensors (Real Power) automatically create companion energy sensors that integrate power consumption over time. These energy sensors:
+
+- Track cumulative energy consumption in watt-hours (Wh)
+- Are compatible with Home Assistant's Energy Dashboard
+- Persist energy totals across Home Assistant restarts
+- Update in real-time as power consumption changes
+
+To use in the Energy Dashboard:
+1. Go to **Settings** → **Dashboards** → **Energy**
+2. Add your MT device energy sensors to track consumption
+3. Configure electricity costs if desired
+
+## Statistics and History
+
+All measurement sensors automatically provide:
+- **Long-term statistics**: Recorded by Home Assistant's built-in recorder
+- **Historical graphs**: Available in sensor history and statistics graphs
+- **Data export**: Can be exported via Home Assistant's data export features
+
+## Update Intervals
+
+The integration uses efficient update intervals optimized for each device type:
+
+- **MT Sensors**: 1 minute updates (configurable)
+- **Device Discovery**: 1 hour (configurable)
+
+You can adjust these intervals during setup or via **Settings** → **Devices & Services** → **Meraki Dashboard** → **Configure**.
+
+## Events
+
+Certain sensors also fire Home Assistant events when their state changes:
+
+### Button Events
+```yaml
+event_type: meraki_dashboard_event
+data:
+  device_id: "MT_XXXXXXXXXX"
+  device_serial: "QXXX-XXXX-XXXX"
+  sensor_type: "button"
+  value: "pressed"
+  timestamp: "2024-01-15T10:30:00Z"
+```
+
+### Water Detection Events
+```yaml
+event_type: meraki_dashboard_event
+data:
+  device_id: "MT_XXXXXXXXXX" 
+  device_serial: "QXXX-XXXX-XXXX"
+  sensor_type: "water"
+  value: true
+  previous_value: false
+  timestamp: "2024-01-15T10:30:00Z"
+```
+
+### Door Events
+```yaml
+event_type: meraki_dashboard_event
+data:
+  device_id: "MT_XXXXXXXXXX"
+  device_serial: "QXXX-XXXX-XXXX" 
+  sensor_type: "door"
+  value: "open"
+  previous_value: "closed"
+  timestamp: "2024-01-15T10:30:00Z"
+```
+
+## Using Events in Automations
+
+You can trigger automations based on these events:
+
+```yaml
+automation:
+  - alias: "Water Detected Alert"
+    trigger:
+      platform: event
+      event_type: meraki_dashboard_event
+      event_data:
+        sensor_type: "water"
+        value: true
+    action:
+      service: notify.mobile_app_your_phone
+      data:
+        message: "Water detected by {{ trigger.event.data.device_id }}!"
+        
+  - alias: "Button Pressed Action"
+    trigger:
+      platform: event  
+      event_type: meraki_dashboard_event
+      event_data:
+        sensor_type: "button"
+        value: "pressed"
+    action:
+      service: light.toggle
+      target:
+        entity_id: light.office_lights
+```
+
+## Device Information
+
+Each MT device provides comprehensive device information:
+
+- **Model and Serial Number**: Device identification
+- **Firmware Version**: Current firmware version
+- **Network Information**: Associated network name and ID
+- **MAC Address**: Device MAC address
+- **Last Reported**: Timestamp of last sensor reading
+- **Tags and Notes**: Custom tags and notes from Meraki Dashboard
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **Check API Key**: Ensure your API key has proper permissions
+2. **Verify Network Access**: Confirm devices are online in Meraki Dashboard
+3. **Review Logs**: Check Home Assistant logs for error messages
+4. **Update Intervals**: Consider adjusting update intervals if you have many devices
+
+For detailed troubleshooting, see our [Troubleshooting Guide](troubleshooting.md).
 
 ## Understanding Hubs
 
