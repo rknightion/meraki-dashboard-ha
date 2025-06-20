@@ -24,7 +24,7 @@ All code must pass these formatters:
 - **isort** - Import sorting
 - **Flake8** - Style guide enforcement
 - **mypy** - Static type checking
-- **Pylint** - Additional code analysis
+- **Pylint** - Additional code analysis 
 
 ### Imports
 
