@@ -7,11 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.components.recorder import get_instance
-from homeassistant.components.recorder.statistics import (
-    StatisticData,
-    StatisticMetaData,
-    async_add_external_statistics,
-)
+from homeassistant.components.recorder.statistics import async_add_external_statistics
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -58,7 +54,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_historical_fetch: dict[str, datetime] = {}
 
         # Track statistics metadata for each device/metric combination
-        self._statistics_metadata: dict[str, StatisticMetaData] = {}
+        self._statistics_metadata: dict[str, dict[str, Any]] = {}
 
         _LOGGER.debug(
             "Sensor coordinator initialized with %d second update interval, historical data enabled",
@@ -134,7 +130,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("Recorder not available, skipping statistics processing")
                 return
 
-            statistics_data: dict[str, list[StatisticData]] = {}
+            statistics_data: dict[str, list[dict[str, Any]]] = {}
             current_time = datetime.now(UTC)
 
             for serial, device_data in data.items():
@@ -202,11 +198,11 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             )
 
                             statistics_data[statistic_id].append(
-                                StatisticData(
-                                    start=hour_start,
-                                    state=value,
-                                    mean=value,  # For single readings, mean equals state
-                                )
+                                {
+                                    "start": hour_start,
+                                    "state": value,
+                                    "mean": value,  # For single readings, mean equals state
+                                }
                             )
 
             # Import statistics data
@@ -372,25 +368,17 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         metric_name = metric_names.get(metric, metric.title())
         unit = metric_units.get(metric, "")
 
-        metadata = StatisticMetaData(
-            source=DOMAIN,
-            statistic_id=statistic_id,
-            name=f"{device_name} {metric_name}",
-            unit_of_measurement=unit,
-            has_mean=True,
-            has_sum=False,  # Most environmental sensors don't need sum
-        )
-
         # Power sensors should have sum for energy calculations
-        if metric in {MT_SENSOR_REAL_POWER, MT_SENSOR_APPARENT_POWER}:
-            metadata = StatisticMetaData(
-                source=DOMAIN,
-                statistic_id=statistic_id,
-                name=f"{device_name} {metric_name}",
-                unit_of_measurement=unit,
-                has_mean=True,
-                has_sum=True,  # Enable sum for power sensors
-            )
+        has_sum = metric in {MT_SENSOR_REAL_POWER, MT_SENSOR_APPARENT_POWER}
+
+        metadata = {
+            "source": DOMAIN,
+            "statistic_id": statistic_id,
+            "name": f"{device_name} {metric_name}",
+            "unit_of_measurement": unit,
+            "has_mean": True,
+            "has_sum": has_sum,
+        }
 
         self._statistics_metadata[statistic_id] = metadata
 
