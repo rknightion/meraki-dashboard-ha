@@ -170,6 +170,25 @@ class MerakiSensor(MerakiDevice, SensorEntity):
 | `voltage` | `VOLTAGE` | V | Electrical voltage |
 | `current` | `CURRENT` | A | Electrical current |
 | `power` | `POWER` | W | Power consumption |
+| `apparent_power` | `APPARENT_POWER` | VA | Apparent power consumption |
+| `power_factor` | `POWER_FACTOR` | - | Power factor (0-1) |
+
+#### Energy Sensors (Auto-generated)
+
+Energy sensors are automatically created for real power-measuring sensors to enable energy dashboard integration:
+
+| Type | Device Class | Unit | Description | Source Sensor |
+|------|--------------|------|-------------|---------------|
+| `energy` | `ENERGY` | Wh | Cumulative energy from real power | `realPower` |
+
+**Key Features:**
+- **State Class:** `total_increasing` for energy dashboard compatibility
+- **Persistence:** State maintained across Home Assistant restarts using RestoreSensor
+- **Integration Method:** Riemann sum (trapezoidal rule) for accurate energy calculation
+- **Automatic Creation:** Generated for any device with `realPower` readings
+- **Cost Tracking:** Compatible with energy cost tracking integrations
+
+**Note:** Only real power is integrated to energy. Apparent power sensors do not generate energy sensors since apparent power includes reactive power that doesn't contribute to actual energy consumption or utility billing.
 
 #### MerakiMRSensor
 

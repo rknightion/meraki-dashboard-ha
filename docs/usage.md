@@ -576,6 +576,32 @@ Use Node-RED for complex automation flows that span multiple systems.
 **API Access:**
 Access sensor data through Home Assistant's REST API for external applications.
 
+### Energy Sensors
+
+For MT devices that measure **real power** (watts), the integration automatically creates companion **energy sensors** that track cumulative energy consumption over time. These sensors are designed for use with Home Assistant's [Energy Dashboard](https://www.home-assistant.io/docs/energy/) and cost tracking integrations like [Octopus Energy](https://bottlecapdave.github.io/HomeAssistant-OctopusEnergy/).
+
+#### How Energy Sensors Work
+
+**Power vs Energy:**
+- **Power sensors** (W) measure instantaneous power consumption at a point in time
+- **Energy sensors** (Wh) measure cumulative energy consumption over time by integrating power readings
+
+**Automatic Creation:**
+- Energy sensors are automatically created for any device that provides `realPower` readings
+- No manual configuration required - they appear alongside the power sensors
+- Energy sensors use the device name + "Energy" (e.g., "Office Sensor Energy")
+
+**Technical Details:**
+- Uses Riemann sum integration (trapezoidal rule) to calculate energy from power readings
+- State persists across Home Assistant restarts
+- Accuracy depends on update frequency (typically every 5-10 minutes for MT sensors)
+- Designed for Home Assistant's energy dashboard requirements:
+  - `device_class: energy`
+  - `state_class: total_increasing` 
+  - Units in watt-hours (Wh)
+
+**Note:** Energy sensors are only created for **real power** measurements, not apparent power. Real power represents actual energy consumption that you get billed for, while apparent power includes reactive power that doesn't contribute to energy costs.
+
 ---
 
 **Next Steps:**

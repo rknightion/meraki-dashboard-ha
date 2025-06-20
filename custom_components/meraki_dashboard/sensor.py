@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -19,6 +20,7 @@ from homeassistant.const import (
     PERCENTAGE,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
+    UnitOfEnergy,
     UnitOfFrequency,
     UnitOfPower,
     UnitOfSoundPressure,
@@ -41,6 +43,7 @@ from .const import (
     MR_SENSOR_OPEN_SSIDS,
     MR_SENSOR_SSID_COUNT,
     MT_BINARY_SENSOR_METRICS,
+    MT_POWER_SENSORS,
     MT_SENSOR_APPARENT_POWER,
     MT_SENSOR_BATTERY,
     MT_SENSOR_BUTTON,
@@ -175,6 +178,19 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     ),
 }
 
+# Energy sensor descriptions for power sensors
+# These are created automatically from power sensors using Riemann sum integration
+MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
+    f"{MT_SENSOR_REAL_POWER}_energy": SensorEntityDescription(
+        key=f"{MT_SENSOR_REAL_POWER}_energy",
+        name="Energy",
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        suggested_display_precision=3,
+    ),
+}
+
 # MR (wireless) sensor descriptions for demonstration of multi-hub architecture
 MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     MR_SENSOR_SSID_COUNT: SensorEntityDescription(
@@ -304,6 +320,39 @@ async def async_setup_entry(
                         _LOGGER.debug(
                             "No sensor description found for metric %s on device %s",
                             metric,
+                            device_serial,
+                        )
+
+                # Create energy sensors for power metrics
+                # These provide cumulative energy consumption for use in energy dashboard
+                power_metrics_available = [
+                    m for m in available_metrics if m in MT_POWER_SENSORS
+                ]
+                for power_metric in power_metrics_available:
+                    energy_key = f"{power_metric}_energy"
+                    energy_description = MT_ENERGY_SENSOR_DESCRIPTIONS.get(energy_key)
+                    if energy_description:
+                        entities.append(
+                            MerakiMTEnergySensor(
+                                coordinator,
+                                device,
+                                energy_description,
+                                config_entry.entry_id,
+                                network_hub,
+                                power_metric,
+                            )
+                        )
+                        _LOGGER.debug(
+                            "Created %s energy sensor for device %s in %s (based on %s)",
+                            energy_key,
+                            device_serial,
+                            network_hub.hub_name,
+                            power_metric,
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "No energy sensor description found for power metric %s on device %s",
+                            power_metric,
                             device_serial,
                         )
 
@@ -566,6 +615,291 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                     temp_data = reading.get(MT_SENSOR_TEMPERATURE, {})
                     if "fahrenheit" in temp_data:
                         attrs["temperature_fahrenheit"] = temp_data["fahrenheit"]
+                break
+
+        return attrs
+
+
+class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSensor):
+    """Representation of a Meraki MT energy sensor.
+
+    This sensor integrates power measurements over time to provide energy consumption
+    in watt-hours, suitable for Home Assistant's energy dashboard and cost tracking.
+
+    The sensor uses a Riemann sum approximation to calculate energy from power readings,
+    which is accurate enough for most energy monitoring purposes when power readings
+    are frequent enough (every few minutes).
+
+    This sensor extends RestoreSensor to maintain energy accumulation across HA restarts.
+    """
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: MerakiSensorCoordinator,
+        device: dict[str, Any],
+        description: SensorEntityDescription,
+        config_entry_id: str,
+        network_hub: Any,
+        power_sensor_key: str,
+    ) -> None:
+        """Initialize the energy sensor.
+
+        Args:
+            coordinator: Data update coordinator
+            device: Device information dictionary from API
+            description: Sensor entity description
+            config_entry_id: Configuration entry ID
+            network_hub: Network hub associated with the device
+            power_sensor_key: The key of the power sensor this energy sensor is based on
+        """
+        CoordinatorEntity.__init__(self, coordinator)
+        RestoreSensor.__init__(self)
+
+        self.entity_description = description
+        self._device = device
+        self._serial = device["serial"]
+        self._config_entry_id = config_entry_id
+        self._network_hub = network_hub
+        self._power_sensor_key = power_sensor_key
+
+        # Set unique ID for this entity
+        self._attr_unique_id = f"{self._serial}_{description.key}"
+
+        # Track energy accumulation - will be restored from state
+        self._total_energy: float = 0.0  # Total accumulated energy in Wh
+        self._last_power_value: float | None = None  # Last power reading in W
+        self._last_update_time: float | None = None  # Last update timestamp
+
+        # Extract and sanitize device name from API data
+        device_name = sanitize_device_name(
+            device.get("name") or f"{device.get('model', 'MT')} {self._serial[-4:]}"
+        )
+
+        # Set device info with all available attributes from API
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self._serial)},
+            name=device_name,
+            manufacturer="Cisco Meraki",
+            model=device.get("model", "Unknown"),
+            serial_number=self._serial,
+            sw_version=device.get("firmware", None),
+            hw_version=device.get("hardware_version", None),
+            via_device=(
+                DOMAIN,
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
+            ),
+            configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
+        )
+
+        # Add MAC address if available
+        if mac := device.get("mac"):
+            self._attr_device_info["connections"] = {("mac", mac)}
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+
+        # Restore the last state
+        if (last_state := await self.async_get_last_state()) is not None:
+            if last_state.state not in (None, "unknown", "unavailable"):
+                try:
+                    self._total_energy = float(last_state.state)
+                    _LOGGER.debug(
+                        "Restored energy state for %s: %s Wh",
+                        self.entity_id,
+                        self._total_energy,
+                    )
+                except (ValueError, TypeError):
+                    _LOGGER.warning(
+                        "Could not restore energy state for %s: %s",
+                        self.entity_id,
+                        last_state.state,
+                    )
+                    self._total_energy = 0.0
+
+            # Restore additional attributes if available
+            if last_state.attributes:
+                self._last_power_value = last_state.attributes.get("last_power_value")
+                if last_update_str := last_state.attributes.get("last_update_time"):
+                    try:
+                        self._last_update_time = float(last_update_str)
+                    except (ValueError, TypeError):
+                        self._last_update_time = None
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information about the MT energy sensor device."""
+        device = self._device
+
+        # Create device registry entry for the physical MT device
+        return DeviceInfo(
+            identifiers={(DOMAIN, device["serial"])},
+            name=sanitize_device_name(device.get("name")),
+            manufacturer="Cisco Meraki",
+            model=device.get("model"),
+            sw_version=device.get("firmware", None),
+            hw_version=device.get("hardware_version", None),
+            via_device=(
+                DOMAIN,
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
+            ),
+            configuration_url=f"https://dashboard.meraki.com/device/{self._serial}",
+        )
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the total accumulated energy in watt-hours."""
+        if not self.coordinator.data:
+            return None
+
+        device_data = self.coordinator.data.get(self._serial)
+        if not device_data:
+            return None
+
+        readings = device_data.get("readings", [])
+        if not readings:
+            return None
+
+        # Find the current power reading
+        current_power = None
+        current_timestamp = None
+
+        for reading in readings:
+            if reading.get("metric") == self._power_sensor_key:
+                metric_data = reading.get(self._power_sensor_key, {})
+                current_timestamp = reading.get("ts")
+
+                # Extract power value based on sensor type
+                if self._power_sensor_key == MT_SENSOR_APPARENT_POWER:
+                    current_power = metric_data.get("draw")
+                elif self._power_sensor_key == MT_SENSOR_REAL_POWER:
+                    current_power = metric_data.get("draw")
+                break
+
+        if current_power is None or current_timestamp is None:
+            return self._total_energy
+
+        # Convert timestamp to seconds since epoch for calculation
+        try:
+            import datetime
+
+            if isinstance(current_timestamp, str):
+                # Parse ISO timestamp
+                current_time = datetime.datetime.fromisoformat(
+                    current_timestamp.replace("Z", "+00:00")
+                ).timestamp()
+            else:
+                current_time = current_timestamp
+        except (ValueError, AttributeError):
+            # If timestamp parsing fails, use current time
+            current_time = datetime.datetime.now().timestamp()
+
+        # Calculate energy increment using trapezoidal rule (Riemann sum)
+        if (
+            self._last_power_value is not None
+            and self._last_update_time is not None
+            and current_time > self._last_update_time
+        ):
+            # Time difference in hours
+            time_diff_hours = (current_time - self._last_update_time) / 3600.0
+
+            # Average power over the interval (trapezoidal rule)
+            avg_power = (current_power + self._last_power_value) / 2.0
+
+            # Energy increment in watt-hours
+            energy_increment = avg_power * time_diff_hours
+
+            # Add to total energy (ensure it's always increasing)
+            if energy_increment > 0:
+                self._total_energy += energy_increment
+                _LOGGER.debug(
+                    "Energy sensor %s: Added %.3f Wh (avg power: %.2f W, time: %.2f h, total: %.3f Wh)",
+                    self.entity_id,
+                    energy_increment,
+                    avg_power,
+                    time_diff_hours,
+                    self._total_energy,
+                )
+            else:
+                _LOGGER.debug(
+                    "Energy sensor %s: Skipped negative energy increment %.3f Wh",
+                    self.entity_id,
+                    energy_increment,
+                )
+        elif self._last_power_value is None:
+            _LOGGER.debug(
+                "Energy sensor %s: First power reading: %.2f W",
+                self.entity_id,
+                current_power,
+            )
+
+        # Update tracking variables
+        self._last_power_value = current_power
+        self._last_update_time = current_time
+
+        return round(self._total_energy, 3) if self._total_energy > 0 else 0.0
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return (
+            self.coordinator.last_update_success
+            and self.coordinator.data is not None
+            and self._serial in self.coordinator.data
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return extra state attributes."""
+        if not self.coordinator.data:
+            return {}
+
+        device_data = self.coordinator.data.get(self._serial)
+        if not device_data:
+            return {}
+
+        # Get the latest device info from coordinator
+        device = self._device
+        for d in self.coordinator.devices:
+            if d["serial"] == self._serial:
+                device = d
+                break
+
+        attrs = {
+            ATTR_SERIAL: self._serial,
+            ATTR_MODEL: device.get("model"),
+            ATTR_NETWORK_ID: device.get("network_id"),
+            ATTR_NETWORK_NAME: device.get("network_name"),
+            "power_sensor": self._power_sensor_key,
+            "last_power_value": self._last_power_value,
+            "last_update_time": self._last_update_time,
+        }
+
+        # Add MAC address if available
+        if mac := device.get("mac"):
+            attrs["mac_address"] = mac
+
+        # Add firmware version if available
+        if firmware := device.get("firmware"):
+            attrs["firmware_version"] = firmware
+
+        # Add device tags if available
+        if tags := device.get("tags"):
+            attrs["tags"] = tags
+
+        # Add device notes if available
+        if notes := device.get("notes"):
+            attrs["notes"] = notes
+
+        # Add last reported timestamp if available
+        readings = device_data.get("readings", [])
+        for reading in readings:
+            if reading.get("metric") == self._power_sensor_key:
+                timestamp = reading.get("ts")
+                if timestamp:
+                    attrs[ATTR_LAST_REPORTED_AT] = timestamp
                 break
 
         return attrs

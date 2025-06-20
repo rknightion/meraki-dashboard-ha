@@ -1,5 +1,22 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- **Energy Sensors**: Automatic creation of energy sensors for real power-measuring MT devices
+  - Cumulative energy tracking using Riemann sum integration of power readings
+  - Compatible with Home Assistant Energy Dashboard and cost tracking integrations
+  - State persistence across Home Assistant restarts
+  - Support for real power (W → Wh) sensors only (apparent power excluded as not useful for energy billing)
+  - Automatic device class and state class configuration for energy dashboard compatibility
+
+### Changed
+
 ## [0.5.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.4.0...v0.5.0) (2025-06-20)
 
 

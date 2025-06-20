@@ -124,6 +124,13 @@ MR_SENSOR_SSID_COUNT: Final = "ssidCount"
 MR_SENSOR_ENABLED_SSIDS: Final = "enabledSsids"
 MR_SENSOR_OPEN_SSIDS: Final = "openSsids"
 
+# Power sensors that should have companion energy sensors for energy dashboard
+# These sensors measure instantaneous power and benefit from integration to energy
+MT_POWER_SENSORS: Final = [
+    MT_SENSOR_REAL_POWER,  # W -> Wh (watt hours) - actual energy consumption
+    # Note: apparentPower is excluded as it's not useful for energy consumption tracking
+    # Apparent power includes reactive power which is not what users get billed for
+]
 
 # Binary sensor metrics
 MT_BINARY_SENSOR_METRICS: Final = [

@@ -37,6 +37,9 @@
       "real_power": {
         "default": "mdi:flash"
       },
+      "real_power_energy": {
+        "default": "mdi:lightning-bolt"
+      },
       "temperature": {
         "default": "mdi:thermometer"
       },
