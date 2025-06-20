@@ -215,9 +215,9 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     # Sort by timestamp and remove duplicates
                     unique_data = {}
                     for data_point in stat_data:
-                        unique_data[data_point["start"]] = data_point
+                        unique_data[data_point.start] = data_point
 
-                    sorted_data = sorted(unique_data.values(), key=lambda x: x["start"])
+                    sorted_data = sorted(unique_data.values(), key=lambda x: x.start)
 
                     _LOGGER.debug(
                         "Importing %d statistics data points for %s",
@@ -397,8 +397,8 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.debug(
             "Created statistics metadata for %s: %s (%s)",
             statistic_id,
-            metadata.name,
-            metadata.unit_of_measurement,
+            metadata["name"],
+            metadata["unit_of_measurement"],
         )
 
     def _extract_numeric_value(

@@ -85,42 +85,15 @@
   "issues": {
     "api_key_expired": {
       "title": "Meraki API Key Expired",
-      "description": "Your Meraki Dashboard API key for '{config_entry_title}' has expired or is invalid. Please update your API key in the integration settings.",
-      "fix_flow": {
-        "step": {
-          "init": {
-            "title": "Update API Key",
-            "description": "Your Meraki Dashboard API key has expired or is invalid. Please enter a new valid API key.",
-            "data": {
-              "api_key": "New API Key"
-            }
-          }
-        }
-      }
+      "description": "Your Meraki Dashboard API key for '{config_entry_title}' has expired or is invalid. Please reconfigure the integration to update your API key."
     },
     "network_access_lost": {
       "title": "Network Access Lost",
-      "description": "Lost access to network '{network_name}' in '{config_entry_title}'. This may be due to network configuration changes or temporary connectivity issues.",
-      "fix_flow": {
-        "step": {
-          "init": {
-            "title": "Fix Network Access Issue",
-            "description": "Access to network '{network_name}' has been lost. Click 'Submit' to attempt reconnection. If the problem persists, check your network configuration in the Meraki Dashboard."
-          }
-        }
-      }
+      "description": "Lost access to network '{network_name}' in '{config_entry_title}'. This may be due to network configuration changes or temporary connectivity issues. Check your network configuration in the Meraki Dashboard."
     },
     "device_discovery_failed": {
       "title": "Device Discovery Failed",
-      "description": "Failed to discover devices in hub '{hub_name}' for '{config_entry_title}'. This may be due to API rate limits or temporary network issues.",
-      "fix_flow": {
-        "step": {
-          "init": {
-            "title": "Fix Device Discovery Issue",
-            "description": "Device discovery failed for hub '{hub_name}'. Click 'Submit' to retry device discovery manually."
-          }
-        }
-      }
+      "description": "Failed to discover devices in hub '{hub_name}' for '{config_entry_title}'. This may be due to API rate limits or temporary network issues. Device discovery will be retried automatically."
     }
   },
   "services": {
