@@ -108,7 +108,10 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 serial for serial in serials if serial not in data or not data[serial]
             ]
             if failed_devices:
-                _LOGGER.debug("Devices with no data in this update: %s", failed_devices)
+                _LOGGER.debug(
+                    "Devices with no new data in this update (normal for MT sensors): %s",
+                    failed_devices,
+                )
 
             return data
 
@@ -169,10 +172,19 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     # Only process metrics that should have statistics (measurement sensors)
                     if self._should_create_statistics(metric):
-                        statistic_id = f"{DOMAIN}:{serial}_{metric}"
+                        # Create a valid statistic_id - must be lowercase alphanumeric with underscores
+                        safe_serial = serial.lower().replace("-", "_")
+                        safe_metric = metric.lower().replace("-", "_")
+                        statistic_id = f"{DOMAIN}:{safe_serial}_{safe_metric}"
 
                         # Ensure metadata exists
                         if statistic_id not in self._statistics_metadata:
+                            _LOGGER.debug(
+                                "Creating statistics metadata for %s (device: %s, metric: %s)",
+                                statistic_id,
+                                serial,
+                                metric,
+                            )
                             await self._create_statistics_metadata(
                                 statistic_id, serial, metric, device_info
                             )
@@ -213,11 +225,23 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         statistic_id,
                     )
 
-                    await async_add_external_statistics(
-                        self.hass,
-                        self._statistics_metadata[statistic_id],
-                        sorted_data,
-                    )
+                    try:
+                        await async_add_external_statistics(
+                            self.hass,
+                            self._statistics_metadata[statistic_id],
+                            sorted_data,
+                        )
+                        _LOGGER.debug(
+                            "Successfully imported statistics for %s", statistic_id
+                        )
+                    except Exception as stats_err:
+                        _LOGGER.error(
+                            "Failed to import statistics for %s: %s (metadata: %s)",
+                            statistic_id,
+                            stats_err,
+                            self._statistics_metadata.get(statistic_id),
+                            exc_info=True,
+                        )
 
             # Update last fetch timestamps
             for serial in data.keys():
@@ -359,15 +383,22 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Power sensors should have sum for energy calculations
         if metric in {MT_SENSOR_REAL_POWER, MT_SENSOR_APPARENT_POWER}:
-            metadata["has_sum"] = True
+            metadata = StatisticMetaData(
+                source=DOMAIN,
+                statistic_id=statistic_id,
+                name=f"{device_name} {metric_name}",
+                unit_of_measurement=unit,
+                has_mean=True,
+                has_sum=True,  # Enable sum for power sensors
+            )
 
         self._statistics_metadata[statistic_id] = metadata
 
         _LOGGER.debug(
             "Created statistics metadata for %s: %s (%s)",
             statistic_id,
-            metadata["name"],
-            metadata["unit_of_measurement"],
+            metadata.name,
+            metadata.unit_of_measurement,
         )
 
     def _extract_numeric_value(

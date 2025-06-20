@@ -195,7 +195,6 @@ class MerakiOrganizationHub:
                     self.hass,
                     DOMAIN,
                     f"api_key_expired_{self.config_entry.entry_id}",
-                    is_fixable=True,
                     severity=ir.IssueSeverity.ERROR,
                     translation_key="api_key_expired",
                     translation_placeholders={
@@ -489,7 +488,6 @@ class MerakiNetworkHub:
                 self.hass,
                 DOMAIN,
                 f"device_discovery_failed_{self.config_entry.entry_id}_{self.network_id}_{self.device_type}",
-                is_fixable=True,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="device_discovery_failed",
                 translation_placeholders={
