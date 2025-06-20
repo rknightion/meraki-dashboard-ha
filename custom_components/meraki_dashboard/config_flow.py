@@ -364,6 +364,114 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
         """Create the options flow."""
         return MerakiDashboardOptionsFlow(config_entry)
 
+    async def async_step_reauth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle reauthentication flow when API key becomes invalid."""
+        reauth_entry = self.context["source_config_entry"]
+
+        if user_input is not None:
+            # Test the new API key
+            api_key = user_input[CONF_API_KEY]
+            base_url = reauth_entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL)
+
+            try:
+                dashboard = meraki.DashboardAPI(
+                    api_key=api_key,
+                    base_url=base_url,
+                    single_request_timeout=30,
+                    wait_on_rate_limit=True,
+                    suppress_logging=True,
+                    print_console=False,
+                    output_log=False,
+                    caller=USER_AGENT,
+                )
+
+                # Test API access with the organization we're configured for
+                org_id = reauth_entry.data[CONF_ORGANIZATION_ID]
+                await self.hass.async_add_executor_job(
+                    dashboard.organizations.getOrganization, org_id
+                )
+
+                # Update the config entry with the new API key
+                new_data = dict(reauth_entry.data)
+                new_data[CONF_API_KEY] = api_key
+
+                self.hass.config_entries.async_update_entry(
+                    reauth_entry,
+                    data=new_data,
+                )
+
+                await self.hass.config_entries.async_reload(reauth_entry.entry_id)
+
+                return self.async_abort(reason="reauth_successful")
+
+            except APIError as err:
+                if err.status == 401:
+                    return self.async_show_form(
+                        step_id="reauth",
+                        data_schema=vol.Schema(
+                            {
+                                vol.Required(CONF_API_KEY): str,
+                            }
+                        ),
+                        errors={"api_key": "invalid_auth"},
+                        description_placeholders={
+                            "organization_name": reauth_entry.title,
+                        },
+                    )
+                elif err.status == 403:
+                    return self.async_show_form(
+                        step_id="reauth",
+                        data_schema=vol.Schema(
+                            {
+                                vol.Required(CONF_API_KEY): str,
+                            }
+                        ),
+                        errors={"api_key": "no_access"},
+                        description_placeholders={
+                            "organization_name": reauth_entry.title,
+                        },
+                    )
+                else:
+                    return self.async_show_form(
+                        step_id="reauth",
+                        data_schema=vol.Schema(
+                            {
+                                vol.Required(CONF_API_KEY): str,
+                            }
+                        ),
+                        errors={"base": "cannot_connect"},
+                        description_placeholders={
+                            "organization_name": reauth_entry.title,
+                        },
+                    )
+            except Exception:
+                return self.async_show_form(
+                    step_id="reauth",
+                    data_schema=vol.Schema(
+                        {
+                            vol.Required(CONF_API_KEY): str,
+                        }
+                    ),
+                    errors={"base": "unknown"},
+                    description_placeholders={
+                        "organization_name": reauth_entry.title,
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="reauth",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): str,
+                }
+            ),
+            description_placeholders={
+                "organization_name": reauth_entry.title,
+            },
+        )
+
 
 class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Meraki Dashboard integration."""

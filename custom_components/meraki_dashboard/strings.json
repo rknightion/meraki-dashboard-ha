@@ -42,16 +42,28 @@
           "auto_discovery": "Automatically discover and add new MT devices.",
           "discovery_interval": "How often to scan for new devices when auto-discovery is enabled."
         }
+      },
+      "reauth": {
+        "title": "Reauthenticate with Meraki Dashboard",
+        "description": "The API key for {organization_name} is no longer valid. Please enter a new API key to continue using this integration.",
+        "data": {
+          "api_key": "New API Key"
+        },
+        "data_description": {
+          "api_key": "Enter a new valid API key for your Meraki Dashboard account."
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to Meraki Dashboard API",
       "invalid_auth": "Invalid API key",
       "no_organizations": "No organizations found for this API key",
+      "no_access": "API key does not have access to this organization",
       "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "Organization is already configured"
+      "already_configured": "Organization is already configured",
+      "reauth_successful": "Reauthentication successful"
     }
   },
   "options": {
@@ -64,6 +76,44 @@
         },
         "data_description": {
           "auto_discovery": "Global auto-discovery setting (used when no per-hub settings are configured)."
+        }
+      }
+    }
+  },
+  "issues": {
+    "api_key_expired": {
+      "title": "API Key Expired",
+      "description": "The API key for '{config_entry_title}' has expired or been revoked. Click 'Fix' to enter a new API key.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Fix API Key Issue",
+            "description": "The API key for '{config_entry_title}' is no longer valid. Click 'Submit' to start the reauthentication process where you can enter a new API key."
+          }
+        }
+      }
+    },
+    "network_access_lost": {
+      "title": "Network Access Lost",
+      "description": "Lost access to network '{network_name}' in '{config_entry_title}'. This may be due to network configuration changes or temporary connectivity issues.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Fix Network Access Issue",
+            "description": "Access to network '{network_name}' has been lost. Click 'Submit' to attempt reconnection. If the problem persists, check your network configuration in the Meraki Dashboard."
+          }
+        }
+      }
+    },
+    "device_discovery_failed": {
+      "title": "Device Discovery Failed",
+      "description": "Failed to discover devices in hub '{hub_name}' for '{config_entry_title}'. This may be due to API rate limits or temporary network issues.",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Fix Device Discovery Issue",
+            "description": "Device discovery failed for hub '{hub_name}'. Click 'Submit' to retry device discovery manually."
+          }
         }
       }
     }

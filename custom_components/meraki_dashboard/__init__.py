@@ -12,6 +12,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_time_interval
 from meraki.exceptions import APIError
 
@@ -186,6 +187,34 @@ class MerakiOrganizationHub:
             self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             if err.status == 401:
+                # Create repair issue for API key expiry
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    f"api_key_expired_{self.config_entry.entry_id}",
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.ERROR,
+                    translation_key="api_key_expired",
+                    translation_placeholders={
+                        "config_entry_title": self.config_entry.title,
+                    },
+                    data={
+                        "config_entry_id": self.config_entry.entry_id,
+                        "config_entry_title": self.config_entry.title,
+                    },
+                )
+
+                # Trigger reauthentication flow
+                self.hass.async_create_task(
+                    self.hass.config_entries.flow.async_init(
+                        DOMAIN,
+                        context={
+                            "source": "reauth",
+                            "source_config_entry": self.config_entry,
+                        },
+                        data=self.config_entry.data,
+                    )
+                )
                 raise ConfigEntryAuthFailed("Invalid API key") from err
             _LOGGER.error("Error connecting to Meraki Dashboard API: %s", err)
             raise ConfigEntryNotReady from err
@@ -451,6 +480,25 @@ class MerakiNetworkHub:
         except Exception as err:
             _LOGGER.error("Error discovering devices for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
+
+            # Create repair issue for device discovery failure
+            ir.async_create_issue(
+                self.hass,
+                DOMAIN,
+                f"device_discovery_failed_{self.config_entry.entry_id}_{self.network_id}_{self.device_type}",
+                is_fixable=True,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="device_discovery_failed",
+                translation_placeholders={
+                    "config_entry_title": self.config_entry.title,
+                    "hub_name": self.hub_name,
+                },
+                data={
+                    "config_entry_id": self.config_entry.entry_id,
+                    "config_entry_title": self.config_entry.title,
+                    "hub_name": self.hub_name,
+                },
+            )
 
     async def _async_setup_wireless_data(self) -> None:
         """Set up wireless data for MR devices (SSIDs, etc.)."""
