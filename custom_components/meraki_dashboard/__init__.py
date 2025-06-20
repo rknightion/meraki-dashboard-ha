@@ -116,12 +116,16 @@ class MerakiOrganizationHub:
         """
         try:
             # Initialize the Meraki Dashboard API client with minimal logging
+            def create_dashboard_api():
+                return meraki.DashboardAPI(
+                    self._api_key,
+                    suppress_logging=True,
+                    print_console=False,
+                    output_log=False,
+                )
+
             self.dashboard = await self.hass.async_add_executor_job(
-                meraki.DashboardAPI,
-                self._api_key,
-                suppress_logging=True,
-                print_console=False,
-                output_log=False,
+                create_dashboard_api
             )
             self.total_api_calls += 1
 
