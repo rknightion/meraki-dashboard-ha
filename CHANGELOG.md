@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.6.0...v0.7.0) (2025-06-20)
+
+
+### Features
+
+* add historical data handling and coordinator enhancements ([8b2ef44](https://github.com/rknightion/meraki-dashboard-ha/commit/8b2ef444702a1afdaf98df50ac9fb1e07f3ac799))
+
 ## [0.6.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.5.0...v0.6.0) (2025-06-20)
 
 
