@@ -64,9 +64,9 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from API endpoint.
 
-        This method now uses the historical API endpoint to ensure complete
-        data capture and imports historical data into Home Assistant's
-        statistics system.
+        This method gets both current sensor data for live sensor states and
+        historical data for statistics import. This ensures sensors appear
+        "alive" while also providing complete historical data capture.
 
         Returns:
             Dictionary mapping serial numbers to their sensor data
@@ -81,19 +81,28 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             update_start = self.hass.loop.time()
 
-            # Get historical sensor readings for complete data capture
-            data = await self.hub.async_get_sensor_data_historical_batch(
-                serials, self.scan_interval, self._last_historical_fetch
-            )
+            # Get CURRENT sensor data for live sensor states (sensors need this to appear "alive")
+            current_data = await self.hub.async_get_sensor_data_batch(serials)
 
-            # Process historical data for statistics
-            await self._process_historical_statistics(data)
+            # Get HISTORICAL sensor data for complete statistics capture (background process)
+            # This runs in parallel and doesn't affect the current sensor states
+            try:
+                historical_data = await self.hub.async_get_sensor_data_historical_batch(
+                    serials, self.scan_interval, self._last_historical_fetch
+                )
+                # Process historical data for statistics (non-blocking)
+                await self._process_historical_statistics(historical_data)
+            except Exception as hist_err:
+                _LOGGER.debug(
+                    "Historical data processing failed (current sensors unaffected): %s",
+                    hist_err,
+                )
 
             update_duration = round((self.hass.loop.time() - update_start) * 1000, 2)
-            successful_devices = len([d for d in data.values() if d])
+            successful_devices = len([d for d in current_data.values() if d])
 
             _LOGGER.debug(
-                "Coordinator update completed in %sms: %d/%d devices returned data",
+                "Coordinator update completed in %sms: %d/%d devices returned current data",
                 update_duration,
                 successful_devices,
                 len(serials),
@@ -101,15 +110,18 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             # Log any devices with issues
             failed_devices = [
-                serial for serial in serials if serial not in data or not data[serial]
+                serial
+                for serial in serials
+                if serial not in current_data or not current_data[serial]
             ]
             if failed_devices:
                 _LOGGER.debug(
-                    "Devices with no new data in this update (normal for MT sensors): %s",
+                    "Devices with no current data in this update: %s",
                     failed_devices,
                 )
 
-            return data
+            # Return CURRENT data for sensor entities (this is what makes sensors appear "alive")
+            return current_data
 
         except Exception as err:
             _LOGGER.error("Error fetching sensor data: %s", err, exc_info=True)
