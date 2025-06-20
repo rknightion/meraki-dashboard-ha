@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.5.0...v0.6.0) (2025-06-20)
+
+
+### Features
+
+* add automatic energy sensors for MT devices ([4a06d8f](https://github.com/rknightion/meraki-dashboard-ha/commit/4a06d8feaba16fe2d69603296088185fed0653fb)), closes [#123](https://github.com/rknightion/meraki-dashboard-ha/issues/123)
+* add diagnostics and repair flows for Meraki Dashboard integration ([d87eee5](https://github.com/rknightion/meraki-dashboard-ha/commit/d87eee563f20403964ed068f0adade1b5364d1d1))
+
 ## [Unreleased]
 
 ### Added
