@@ -25,6 +25,7 @@ jobs:
         with:
           release-type: simple
           package-name: meraki-dashboard-ha
+          include-v-in-tag: true
           changelog-types: |
             [
               {"type":"feat","section":"🚀 Features","hidden":false},
