@@ -41,7 +41,7 @@ bandit = "*"
 types-requests = "*"
 types-PyYAML = "*"
 safety = "*"
-marshmallow = "<4.0.0"
+marshmallow = "<5.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

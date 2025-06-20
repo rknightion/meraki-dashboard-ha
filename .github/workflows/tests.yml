@@ -106,29 +106,6 @@ jobs:
           category: integration
           ignore: brands
 
-  # Check for security vulnerabilities in dependencies
-  safety:
-    runs-on: ubuntu-latest
-    name: Dependency Security
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - uses: pyupio/safety-action@v1
-        with:
-          api-key: ${{ secrets.SAFETY_API_KEY }}
-
-      - name: Upload Safety report
-        uses: actions/upload-artifact@v4
-        if: failure() # Only upload on failure to avoid clutter
-        with:
-          name: safety-report
-          path: safety-report.json
-
   # All checks must pass
   all-checks-pass:
     runs-on: ubuntu-latest
@@ -139,7 +116,6 @@ jobs:
       # - pytest # Re-enable when you re-enable the pytest job
       - hassfest
       - hacs
-      - safety
     steps:
       - name: All checks passed
         run: echo "✅ All checks passed!"

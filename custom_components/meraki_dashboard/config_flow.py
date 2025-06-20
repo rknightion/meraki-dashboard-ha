@@ -8,9 +8,9 @@ from typing import Any
 import meraki
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from meraki.exceptions import APIError
 
@@ -24,6 +24,7 @@ from .const import (
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
     SENSOR_TYPE_MT,
 )
 from .utils import sanitize_device_name
@@ -31,7 +32,7 @@ from .utils import sanitize_device_name
 _LOGGER = logging.getLogger(__name__)
 
 
-class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
+class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for Meraki Dashboard.
 
     This class manages the configuration flow for setting up the integration,
@@ -50,7 +51,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step - API key entry.
 
         This is the first step where users enter their Meraki API key.
@@ -97,7 +98,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     async def async_step_organization(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle organization selection.
 
         After API key validation, users select which organization to monitor.
@@ -196,7 +197,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     async def async_step_device_selection(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle device selection step.
 
         Users can select specific devices to monitor or leave empty to
@@ -279,11 +280,10 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

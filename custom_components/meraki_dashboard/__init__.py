@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import meraki
@@ -20,16 +20,20 @@ from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_DISCOVERY_INTERVAL,
     CONF_ORGANIZATION_ID,
+    CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
     DEFAULT_DISCOVERY_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    SENSOR_TYPE_MT,
 )
+from .coordinator import MerakiSensorCoordinator
 from .utils import sanitize_device_attributes
 
 _LOGGER = logging.getLogger(__name__)
 
 # Platforms to be set up for this integration
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 
 class MerakiDashboardHub:
@@ -68,6 +72,12 @@ class MerakiDashboardHub:
         self._discovery_task = None
         self._device_discovery_unsub = None
 
+        # Hub diagnostic metrics
+        self.last_api_call_error: str | None = None
+        self.total_api_calls = 0
+        self.failed_api_calls = 0
+        self.organization_name: str | None = None
+
     async def async_setup(self) -> bool:
         """Set up the Meraki Dashboard API connection.
 
@@ -86,19 +96,25 @@ class MerakiDashboardHub:
             self.dashboard = await self.hass.async_add_executor_job(
                 meraki.DashboardAPI, self._api_key
             )
+            self.total_api_calls += 1
 
             # Verify connection and get organization info
             org_info = await self.hass.async_add_executor_job(
                 self.dashboard.organizations.getOrganization, self.organization_id
             )
-            _LOGGER.info("Connected to Meraki organization: %s", org_info.get("name"))
+            self.total_api_calls += 1
+            self.organization_name = org_info.get("name")
+            _LOGGER.info("Connected to Meraki organization: %s", self.organization_name)
 
             # Get all networks for the organization
             self.networks = await self.hass.async_add_executor_job(
                 self.dashboard.organizations.getOrganizationNetworks,
                 self.organization_id,
             )
+            self.total_api_calls += 1
             _LOGGER.info("Found %d networks in organization", len(self.networks))
+
+            self.last_api_call_error = None
 
             # Set up periodic device discovery if auto-discovery is enabled
             options = self.config_entry.options
@@ -119,11 +135,15 @@ class MerakiDashboardHub:
             return True
 
         except APIError as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             if err.status == 401:
                 raise ConfigEntryAuthFailed("Invalid API key") from err
             _LOGGER.error("Error connecting to Meraki Dashboard API: %s", err)
             raise ConfigEntryNotReady from err
         except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             _LOGGER.error(
                 "Unexpected error connecting to Meraki Dashboard API: %s", err
             )
@@ -153,6 +173,7 @@ class MerakiDashboardHub:
                 network_devices = await self.hass.async_add_executor_job(
                     self.dashboard.networks.getNetworkDevices, network["id"]
                 )
+                self.total_api_calls += 1
 
                 # Filter devices by type (e.g., 'MT' for sensors)
                 for device in network_devices:
@@ -179,6 +200,9 @@ class MerakiDashboardHub:
                         self.devices[device["serial"]] = device
                         devices.append(device)
 
+                        # Update success timestamp for successful device discovery
+                        self.last_api_call_error = None
+
                         # Log device details for debugging
                         _LOGGER.info(
                             "Found %s device: %s (%s) - Serial: %s, MAC: %s in network %s",
@@ -191,6 +215,8 @@ class MerakiDashboardHub:
                         )
 
             except APIError as err:
+                self.failed_api_calls += 1
+                self.last_api_call_error = str(err)
                 _LOGGER.error(
                     "Error getting devices for network %s: %s", network["name"], err
                 )
@@ -198,21 +224,102 @@ class MerakiDashboardHub:
         _LOGGER.info("Found %d %s devices total", len(devices), device_type)
         return devices
 
-    async def _async_discover_devices(self, _now: Any = None) -> None:
-        """Periodically discover new devices.
+    async def _async_discover_devices(self, _now: datetime | None = None) -> None:
+        """Periodically discover new devices and update existing ones.
 
         This method is called periodically when auto-discovery is enabled.
-        It triggers platform setup which will discover any new devices.
+        It discovers new devices, updates existing device information,
+        and coordinates with the sensor coordinator for graceful handling.
         """
         _LOGGER.debug("Running device discovery")
 
-        # Re-run device discovery for all platforms
-        for platform in PLATFORMS:
-            self.hass.async_create_task(
-                self.hass.config_entries.async_forward_entry_setup(
-                    self.config_entry, platform
+        try:
+            # Get current MT devices from the API
+            discovered_devices = await self.async_get_devices_by_type(SENSOR_TYPE_MT)
+
+            # Track which devices we found
+            discovered_serials = {device["serial"] for device in discovered_devices}
+            existing_serials = {device["serial"] for device in self.devices.values()}
+
+            # Find new devices
+            new_serials = discovered_serials - existing_serials
+            if new_serials:
+                _LOGGER.info(
+                    "Found %d new devices: %s", len(new_serials), list(new_serials)
                 )
+
+                # Trigger platform setup for new devices
+                for platform in PLATFORMS:
+                    self.hass.async_create_task(
+                        self.hass.config_entries.async_forward_entry_setup(
+                            self.config_entry, platform
+                        )
+                    )
+
+            # Find removed devices
+            removed_serials = existing_serials - discovered_serials
+            if removed_serials:
+                _LOGGER.info(
+                    "Detected %d removed devices: %s",
+                    len(removed_serials),
+                    list(removed_serials),
+                )
+                # Remove from our device cache
+                for serial in removed_serials:
+                    if serial in self.devices:
+                        del self.devices[serial]
+
+            # Update device information for existing devices (names, etc.)
+            updated_devices = []
+            for device in discovered_devices:
+                serial = device["serial"]
+                if serial in existing_serials:
+                    # Check if device info has changed
+                    existing_device = self.devices.get(serial, {})
+                    if (
+                        existing_device.get("name") != device.get("name")
+                        or existing_device.get("notes") != device.get("notes")
+                        or existing_device.get("tags") != device.get("tags")
+                    ):
+                        _LOGGER.debug("Device info updated for %s", serial)
+                        updated_devices.append(device)
+
+                # Update our device cache with latest info
+                self.devices[serial] = device
+
+            # Notify coordinator if there are changes
+            coordinator = self.hass.data[DOMAIN].get(
+                f"{self.config_entry.entry_id}_coordinator"
             )
+            if coordinator and (new_serials or removed_serials or updated_devices):
+                # Update coordinator's device list
+                coordinator.devices = list(self.devices.values())
+
+                # Trigger a coordinator refresh to handle new/removed/updated devices
+                await coordinator.async_request_refresh()
+
+                _LOGGER.info(
+                    "Device discovery complete: %d new, %d removed, %d updated",
+                    len(new_serials),
+                    len(removed_serials),
+                    len(updated_devices),
+                )
+            else:
+                _LOGGER.debug("No device changes detected during discovery")
+
+        except Exception as err:
+            _LOGGER.error("Error during device discovery: %s", err)
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+
+    async def async_manual_device_discovery(self) -> None:
+        """Manually trigger device discovery.
+
+        This method can be called by a button or other manual trigger
+        to immediately run device discovery without waiting for the scheduled interval.
+        """
+        _LOGGER.info("Manual device discovery triggered")
+        await self._async_discover_devices()
 
     async def async_get_sensor_data(self, serial: str) -> dict[str, Any] | None:
         """Get sensor data for a specific device.
@@ -223,18 +330,33 @@ class MerakiDashboardHub:
         Returns:
             Dictionary containing sensor readings or None if not found
         """
+        if self.dashboard is None:
+            _LOGGER.error("Dashboard API not initialized")
+            return None
+
         try:
-            if self.dashboard is None:
-                _LOGGER.error("Dashboard API not initialized")
-                return None
+            # Capture dashboard reference to avoid potential None access in inner function
+            dashboard = self.dashboard
+
+            # Create a wrapper function that accepts positional arguments only
+            # This is required because async_add_executor_job doesn't support keyword arguments
+            def get_sensor_readings_with_serials(
+                org_id: str, device_serials: list[str]
+            ):
+                """Wrapper function to call the Meraki SDK with serials parameter."""
+                return dashboard.sensor.getOrganizationSensorReadingsLatest(
+                    org_id, serials=device_serials
+                )
 
             # Get the latest sensor readings for the organization
             # Filter by specific serial number
             all_readings = await self.hass.async_add_executor_job(
-                self.dashboard.sensor.getOrganizationSensorReadingsLatest,
+                get_sensor_readings_with_serials,
                 self.organization_id,
-                serials=[serial],
+                [serial],
             )
+            self.total_api_calls += 1
+            self.last_api_call_error = None
 
             # Find readings for this specific device
             for reading in all_readings:
@@ -244,6 +366,8 @@ class MerakiDashboardHub:
             return None
 
         except APIError as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             _LOGGER.error("Error getting sensor data for %s: %s", serial, err)
             return None
 
@@ -261,20 +385,35 @@ class MerakiDashboardHub:
         Returns:
             Dictionary mapping serial numbers to their sensor data
         """
+        if self.dashboard is None:
+            _LOGGER.error("Dashboard API not initialized")
+            return {}
+
         try:
             _LOGGER.debug("Fetching sensor data for %d devices", len(serials))
 
-            if self.dashboard is None:
-                _LOGGER.error("Dashboard API not initialized")
-                return {}
+            # Capture dashboard reference to avoid potential None access in inner function
+            dashboard = self.dashboard
+
+            # Create a wrapper function that accepts positional arguments only
+            # This is required because async_add_executor_job doesn't support keyword arguments
+            def get_sensor_readings_with_serials(
+                org_id: str, device_serials: list[str]
+            ):
+                """Wrapper function to call the Meraki SDK with serials parameter."""
+                return dashboard.sensor.getOrganizationSensorReadingsLatest(
+                    org_id, serials=device_serials
+                )
 
             # Get the latest sensor readings for multiple devices
             # Don't specify metrics to get all available data
             all_readings = await self.hass.async_add_executor_job(
-                self.dashboard.sensor.getOrganizationSensorReadingsLatest,
+                get_sensor_readings_with_serials,
                 self.organization_id,
-                serials=serials,
+                serials,
             )
+            self.total_api_calls += 1
+            self.last_api_call_error = None
 
             _LOGGER.debug(
                 "Received %d readings from API",
@@ -292,6 +431,8 @@ class MerakiDashboardHub:
             return result
 
         except APIError as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
             _LOGGER.error("Error getting sensor data for devices %s: %s", serials, err)
             return {}
 
@@ -304,28 +445,13 @@ class MerakiDashboardHub:
         Returns:
             Updated device information or None if not found
         """
-        # If we have cached device info, use its network ID
+        # Return the cached device info since we already have it
+        # and getting individual device info isn't critical for sensor functionality
         if serial in self.devices:
-            network_id = self.devices[serial].get("network_id")
-            if network_id and self.dashboard is not None:
-                try:
-                    device = await self.hass.async_add_executor_job(
-                        self.dashboard.devices.getNetworkDevice, network_id, serial
-                    )
+            _LOGGER.debug("Returning cached device info for %s", serial)
+            return self.devices[serial]
 
-                    # Add network information
-                    device["network_id"] = network_id
-                    device["network_name"] = self.devices[serial].get("network_name")
-
-                    # Sanitize and store updated device info
-                    device = sanitize_device_attributes(device)
-                    self.devices[serial] = device
-
-                    return device
-
-                except APIError as err:
-                    _LOGGER.error("Error updating device info for %s: %s", serial, err)
-
+        _LOGGER.debug("No cached device info found for %s", serial)
         return None
 
     async def async_unload(self) -> None:
@@ -370,6 +496,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name=entry.title,
         model="Organization",
     )
+
+    # Get all MT devices and create a shared coordinator
+    mt_devices = await hub.async_get_devices_by_type(SENSOR_TYPE_MT)
+
+    if mt_devices:
+        # Get scan interval from options
+        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+
+        # Create shared coordinator for all platforms
+        coordinator = MerakiSensorCoordinator(
+            hass,
+            hub,
+            mt_devices,
+            scan_interval,
+        )
+
+        # Store coordinator in hass.data for platforms to access
+        hass.data[DOMAIN][f"{entry.entry_id}_coordinator"] = coordinator
+
+        # Initial data fetch
+        await coordinator.async_config_entry_first_refresh()
+
+        # Schedule a refresh after 5 seconds to ensure initial data is available
+        hass.loop.call_later(
+            5, lambda: hass.async_create_task(coordinator.async_request_refresh())
+        )
+    else:
+        _LOGGER.info("No MT devices found during setup")
 
     # Listen for option updates
     entry.async_on_unload(entry.add_update_listener(async_update_options))
