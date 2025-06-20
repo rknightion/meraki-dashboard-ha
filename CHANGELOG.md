@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.4.0...v0.5.0) (2025-06-20)
+
+
+### Features
+
+* enhance logging and discovery configurations ([3a44805](https://github.com/rknightion/meraki-dashboard-ha/commit/3a4480520f72bc77dca87b28987e911bef753516)), closes [#123](https://github.com/rknightion/meraki-dashboard-ha/issues/123)
+
 ## [0.4.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.3.0...v0.4.0) (2025-06-20)
 
 
