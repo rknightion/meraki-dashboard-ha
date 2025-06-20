@@ -565,7 +565,7 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
 
 
 class MerakiHubDeviceCountSensor(SensorEntity):
-    """Sensor showing the number of discovered MT devices."""
+    """Sensor showing the total number of discovered devices across all network hubs."""
 
     _attr_has_entity_name = True
     _attr_name = "Device Count"
@@ -589,8 +589,11 @@ class MerakiHubDeviceCountSensor(SensorEntity):
 
     @property
     def native_value(self) -> int:
-        """Return the number of discovered devices."""
-        return len(self.hub.devices)
+        """Return the total number of discovered devices across all network hubs."""
+        total_devices = 0
+        for network_hub in self.hub.network_hubs.values():
+            total_devices += len(network_hub.devices)
+        return total_devices
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

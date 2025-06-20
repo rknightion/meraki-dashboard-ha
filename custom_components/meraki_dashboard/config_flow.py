@@ -274,17 +274,25 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
                         default=DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT],
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=MIN_SCAN_INTERVAL_MINUTES,
+                            max=60,
+                            step=1,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
                     ),
                     vol.Optional(CONF_AUTO_DISCOVERY, default=True): bool,
                     vol.Optional(
                         CONF_DISCOVERY_INTERVAL,
                         default=DEFAULT_DISCOVERY_INTERVAL_MINUTES,
-                    ): vol.All(
-                        vol.Coerce(int),
-                        vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=MIN_DISCOVERY_INTERVAL_MINUTES,
+                            max=1440,
+                            step=1,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
                     ),
                 }
             ),
@@ -356,7 +364,14 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 default=current_options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
                 // 60,
             )
-        ] = vol.All(vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60))
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=MIN_SCAN_INTERVAL_MINUTES,
+                max=60,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
 
         schema_dict[
             vol.Optional(
@@ -373,8 +388,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 )
                 // 60,
             )
-        ] = vol.All(
-            vol.Coerce(int), vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440)
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=MIN_DISCOVERY_INTERVAL_MINUTES,
+                max=1440,
+                step=1,
+                mode=selector.NumberSelectorMode.BOX,
+            )
         )
 
         # Per-hub scan intervals (in minutes)
@@ -401,8 +421,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"scan_interval_{hub_key}",
                         default=current_scan_minutes,
                     )
-                ] = vol.All(
-                    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60)
+                ] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_SCAN_INTERVAL_MINUTES,
+                        max=60,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
                 )
 
                 # Discovery interval for this hub
@@ -418,9 +443,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"discovery_interval_{hub_key}",
                         default=current_discovery_minutes,
                     )
-                ] = vol.All(
-                    vol.Coerce(int),
-                    vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440),
+                ] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
+                        max=1440,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
                 )
 
         return self.async_show_form(

@@ -1,29 +1,83 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 
+# Enable conventional commit parsing for direct commits to main
+commitish: main
+sort-direction: descending
+
 categories:
   - title: '🚀 Features'
     labels:
       - 'feature'
       - 'enhancement'
+    # Parse conventional commits for features
+    collapse-after: 5
   - title: '🐛 Bug Fixes'
     labels:
       - 'fix'
       - 'bugfix'
       - 'bug'
+    collapse-after: 5
   - title: '🧰 Maintenance'
     labels:
       - 'chore'
       - 'dependencies'
+      - 'ci'
+      - 'build'
+      - 'refactor'
+    collapse-after: 5
   - title: '📚 Documentation'
     labels:
       - 'documentation'
+      - 'docs'
+    collapse-after: 3
   - title: '🔒 Security'
     labels:
       - 'security'
+    collapse-after: 3
 
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
-change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+# Template for individual changes - works with both PRs and commits
+change-template: '- $TITLE @$AUTHOR${{#if number}} (#${{number}})${{else}} (${{commit}})${{/if}}'
+change-title-escapes: '\<*_&'
+
+# Use conventional commits for automatic categorization
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^feat(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'docs'
+    title:
+      - '/^docs(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'ci'
+    title:
+      - '/^ci(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'build'
+    title:
+      - '/^build(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'refactor'
+    title:
+      - '/^refactor(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'perf'
+    title:
+      - '/^perf(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'test'
+    title:
+      - '/^test(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'style'
+    title:
+      - '/^style(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'security'
+    title:
+      - '/^security(\(.+\))?(!)?\s*:\s*(.+)$/i'
+  - label: 'breaking'
+    title:
+      - '/^.+!:\s*(.+)$/i'
 
 version-resolver:
   major:
@@ -35,6 +89,7 @@ version-resolver:
       - 'minor'
       - 'feature'
       - 'enhancement'
+      - 'feat'
   patch:
     labels:
       - 'patch'
@@ -43,6 +98,14 @@ version-resolver:
       - 'bug'
       - 'chore'
       - 'dependencies'
+      - 'docs'
+      - 'ci'
+      - 'build'
+      - 'refactor'
+      - 'perf'
+      - 'test'
+      - 'style'
+      - 'security'
   default: patch
 
 template: |
@@ -71,4 +134,9 @@ exclude-labels:
   - 'duplicate'
   - 'question'
   - 'invalid'
-  - 'wontfix' 
+  - 'wontfix'
+  - 'dependencies' # Exclude dependabot updates from release notes
+
+# Include commits and handle cases where there are no PRs
+include-pre-releases: false
+prerelease: false 
