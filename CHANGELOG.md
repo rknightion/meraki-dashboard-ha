@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.9.4...v0.10.0) (2025-06-20)
+
+
+### Features
+
+* enhance sensor update with live and historical data ([d6201bb](https://github.com/rknightion/meraki-dashboard-ha/commit/d6201bb81c1b00243fc2df5a39170849f9e22cca))
+
 ## [0.9.4](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.9.3...v0.9.4) (2025-06-20)
 
 
