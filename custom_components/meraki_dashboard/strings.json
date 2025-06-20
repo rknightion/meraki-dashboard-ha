@@ -2,15 +2,12 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to Meraki Dashboard",
-        "description": "Enter your Meraki Dashboard API key to connect.",
+        "title": "Meraki Dashboard",
+        "description": "Set up the Meraki Dashboard integration",
         "data": {
           "api_key": "API Key",
-          "base_url": "API Region"
-        },
-        "data_description": {
-          "api_key": "Your Meraki Dashboard API key. You can generate one from the Meraki Dashboard under My Profile > API access.",
-          "base_url": "Select the API endpoint for your region. Choose the region where your Meraki organization is hosted."
+          "organization_id": "Organization ID",
+          "base_url": "Base URL (optional)"
         }
       },
       "organization": {
@@ -44,51 +41,59 @@
         }
       },
       "reauth": {
-        "title": "Reauthenticate with Meraki Dashboard",
-        "description": "The API key for {organization_name} is no longer valid. Please enter a new API key to continue using this integration.",
+        "title": "Reauthenticate Meraki Dashboard",
+        "description": "Please provide your updated API key",
         "data": {
-          "api_key": "New API Key"
-        },
-        "data_description": {
-          "api_key": "Enter a new valid API key for your Meraki Dashboard account."
+          "api_key": "API Key"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to Meraki Dashboard API",
-      "invalid_auth": "Invalid API key",
-      "no_organizations": "No organizations found for this API key",
-      "no_access": "API key does not have access to this organization",
-      "unknown": "Unexpected error"
+      "invalid_auth": "Invalid authentication",
+      "invalid_organization": "Invalid organization ID",
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error occurred"
     },
     "abort": {
       "already_configured": "Organization is already configured",
-      "reauth_successful": "Reauthentication successful"
+      "reauth_successful": "Re-authentication was successful"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Meraki Dashboard Options",
-        "description": "Configure scan intervals, discovery intervals, and auto-discovery settings for each network and device type.\n\n{hub_info}\n\n{scan_info}\n{discovery_info}",
+        "title": "Configure Meraki Dashboard",
+        "description": "Configure scan intervals and device selection. MT sensors now use historical data endpoints for complete data capture.",
         "data": {
-          "auto_discovery": "Enable Auto-Discovery (Global)"
-        },
-        "data_description": {
-          "auto_discovery": "Global auto-discovery setting (used when no per-hub settings are configured)."
+          "scan_interval": "Global scan interval (seconds)",
+          "discovery_interval": "Device discovery interval (seconds)",
+          "auto_discovery": "Enable automatic device discovery",
+          "selected_devices": "Selected devices (leave empty for all)"
+        }
+      },
+      "hub_intervals": {
+        "title": "Hub-Specific Intervals",
+        "description": "Configure individual scan intervals for each hub. MT sensor intervals are capped at 20 minutes (1200 seconds) to ensure complete historical data capture.",
+        "data": {
+          "hub_scan_intervals": "Hub scan intervals (seconds)",
+          "hub_discovery_intervals": "Hub discovery intervals (seconds)",
+          "hub_auto_discovery": "Hub auto-discovery settings"
         }
       }
     }
   },
   "issues": {
     "api_key_expired": {
-      "title": "API Key Expired",
-      "description": "The API key for '{config_entry_title}' has expired or been revoked. Click 'Fix' to enter a new API key.",
+      "title": "Meraki API Key Expired",
+      "description": "Your Meraki Dashboard API key for '{config_entry_title}' has expired or is invalid. Please update your API key in the integration settings.",
       "fix_flow": {
         "step": {
           "init": {
-            "title": "Fix API Key Issue",
-            "description": "The API key for '{config_entry_title}' is no longer valid. Click 'Submit' to start the reauthentication process where you can enter a new API key."
+            "title": "Update API Key",
+            "description": "Your Meraki Dashboard API key has expired or is invalid. Please enter a new valid API key.",
+            "data": {
+              "api_key": "New API Key"
+            }
           }
         }
       }
@@ -116,6 +121,24 @@
           }
         }
       }
+    }
+  },
+  "services": {
+    "update_hub_data": {
+      "name": "Update Hub Data",
+      "description": "Force immediate data update for a specific hub with historical data collection"
+    },
+    "discover_devices": {
+      "name": "Discover Devices",
+      "description": "Scan for new devices in a specific hub"
+    },
+    "update_all_hubs": {
+      "name": "Update All Hubs",
+      "description": "Force immediate data update for all hubs with historical data collection"
+    },
+    "discover_all_devices": {
+      "name": "Discover All Devices",
+      "description": "Scan for new devices across all networks"
     }
   }
 }

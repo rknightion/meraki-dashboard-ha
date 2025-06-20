@@ -5,7 +5,232 @@ title: Usage Guide
 
 # Usage Guide
 
-Learn how to make the most of your Meraki devices in Home Assistant with the **multi-hub architecture**, device information, automations, and dashboards.
+This guide covers how to use the Meraki Dashboard Home Assistant integration effectively.
+
+## Quick Start
+
+1. **Install the integration** via HACS or manually
+2. **Add the integration** in Home Assistant (Settings → Devices & Services → Add Integration)
+3. **Enter your API key** and organization ID
+4. **Configure scan intervals** for optimal performance
+5. **Select devices** to monitor (optional)
+
+## Understanding Hubs
+
+The integration organizes your Meraki devices into **hubs** based on network and device type:
+
+- **Organization Hub**: Central management for API connection and diagnostics
+- **Network Hubs**: One per network per device type (e.g., "Main Office - MT", "Branch - MR")
+- **Device Entities**: Individual sensors and controls under each hub
+
+### Hub Types
+
+- **MT Hubs**: Environmental sensors (temperature, humidity, CO2, etc.)
+- **MR Hubs**: Wireless access points (SSID monitoring, future features)
+- **MS Hubs**: Switches (planned)
+- **MV Hubs**: Cameras (planned)
+
+## Historical Data & Complete Sensor Coverage
+
+### Enhanced Data Collection
+
+The integration now uses **historical data endpoints** to ensure complete sensor data capture:
+
+- **MT sensors** typically report every 20 minutes to the Meraki cloud
+- **Traditional polling** might miss data points between API calls
+- **Historical polling** fetches all readings since the last successful poll
+- **Statistics integration** provides complete historical data to Home Assistant
+
+### How It Works
+
+1. **Smart Time Ranges**: The integration calculates optimal time ranges based on your polling interval
+2. **Gap Prevention**: Uses overlapping time windows to prevent data gaps
+3. **Automatic Backfill**: Fills in any missed data from previous polls
+4. **Statistics Import**: All historical data is imported into Home Assistant's statistics system
+
+### Polling Interval Optimization
+
+**MT Sensor Limits**:
+- Maximum polling interval: **20 minutes (1200 seconds)**
+- Recommended interval: **10-15 minutes** for responsive monitoring
+- Automatic adjustment: Intervals exceeding 20 minutes are automatically reduced
+
+**Why 20 Minutes Maximum?**:
+- MT sensors report to Meraki cloud every 20 minutes by default
+- Polling more frequently than 20 minutes ensures you capture all data points
+- Longer intervals risk missing data if sensors report irregularly
+
+### Benefits
+
+- **Complete Data**: Never miss sensor readings due to timing mismatches
+- **Energy Dashboard**: Historical power data enables accurate energy tracking
+- **Long-term Statistics**: All sensor data is available for historical analysis
+- **Trend Analysis**: Complete datasets enable better trend detection
+
+## Configuration
+
+### Basic Configuration
+
+**Scan Intervals**:
+- **MT Sensors**: 10-20 minutes (default: 10 minutes)
+- **MR Devices**: 5-10 minutes (default: 5 minutes)
+- **Global Fallback**: Used when hub-specific intervals aren't set
+
+**Discovery Intervals**:
+- **How often** to scan for new devices
+- **Default**: 1 hour
+- **Minimum**: 5 minutes
+
+### Advanced Configuration
+
+**Per-Hub Intervals**:
+```yaml
+# Example hub-specific configuration
+hub_scan_intervals:
+  "network_123_MT": 600    # 10 minutes for critical sensors
+  "network_456_MT": 900    # 15 minutes for less critical
+  "network_789_MR": 300    # 5 minutes for network monitoring
+```
+
+**Auto-Discovery**:
+- **Global Setting**: Default for all hubs
+- **Per-Hub Settings**: Override global setting for specific hubs
+- **Recommended**: Enable for dynamic environments
+
+### Device Selection
+
+**Monitor All Devices** (Recommended):
+- Leave device selection empty
+- Automatically includes new devices
+- Works well with hub architecture
+
+**Select Specific Devices**:
+- Choose individual devices to monitor
+- Useful for testing or specific use cases
+- New devices require manual addition
+
+## Monitoring & Diagnostics
+
+### Hub Status
+
+Each hub provides diagnostic information:
+- **Last Update**: When data was last fetched
+- **API Calls**: Total and failed API call counts
+- **Device Count**: Number of monitored devices
+- **Update Interval**: Current polling frequency
+
+### Statistics & Long-term Data
+
+**Automatic Statistics**:
+- All measurement sensors automatically generate statistics
+- Available in Home Assistant's statistics system
+- Used by Energy Dashboard and long-term analytics
+
+**Supported Metrics**:
+- Temperature, Humidity, CO2, TVOC, PM2.5
+- Noise levels, Battery percentage
+- Electrical measurements (Voltage, Current, Power)
+- Indoor Air Quality scores
+
+### Troubleshooting
+
+**Missing Data**:
+1. Check hub update intervals (not exceeding 20 minutes for MT)
+2. Verify device connectivity in Meraki Dashboard
+3. Review integration logs for API errors
+4. Ensure sufficient API rate limit headroom
+
+**Statistics Issues**:
+1. Statistics appear after first historical data import
+2. Check Developer Tools → Statistics for any errors
+3. Historical data may take time to appear in graphs
+
+## Best Practices
+
+### Interval Selection
+
+**For MT Sensors**:
+- **Critical monitoring**: 5-10 minutes
+- **Standard monitoring**: 10-15 minutes  
+- **Background monitoring**: 15-20 minutes
+- **Never exceed**: 20 minutes
+
+**For Network Devices**:
+- **Active monitoring**: 5 minutes
+- **Standard monitoring**: 10 minutes
+- **Background monitoring**: 15-30 minutes
+
+### API Rate Management
+
+- **Meraki Limit**: 10 calls/second per organization
+- **Integration Design**: Batches calls efficiently
+- **Monitor Usage**: Check organization hub diagnostics
+- **Stagger Updates**: Use different intervals for different hubs
+
+### Energy Dashboard Integration
+
+**Power Sensors**:
+- Automatically create energy sensors via Riemann sum integration
+- Historical power data enables accurate energy calculations
+- Use real power sensors for energy billing accuracy
+
+**Setup**:
+1. Power sensors appear automatically for MT40 devices
+2. Energy sensors are created for power sensors
+3. Add energy sensors to Energy Dashboard
+4. Historical data provides complete energy usage
+
+## Advanced Features
+
+### Event Processing
+
+**Supported Events**:
+- Button presses (MT sensors)
+- Door open/close (MT sensors)  
+- Water detection (MT sensors)
+
+**Event Data**:
+- Device information
+- Timestamp
+- Previous and current values
+- Automatic Home Assistant events
+
+### Multi-Hub Architecture
+
+**Benefits**:
+- Independent update intervals per hub
+- Isolated error handling
+- Scalable to large deployments
+- Network-specific configuration
+
+**Management**:
+- Individual hub controls
+- Organization-wide operations
+- Per-hub diagnostics
+- Flexible device grouping
+
+## Migration from Previous Versions
+
+### Automatic Upgrades
+
+- **Historical data** is automatically enabled
+- **Existing sensors** continue working
+- **New statistics** are created for historical data
+- **No configuration changes** required
+
+### What's New
+
+- **Complete data capture** via historical endpoints
+- **Statistics integration** for long-term data
+- **Enhanced logging** with performance metrics
+- **Improved error handling** and diagnostics
+
+### Compatibility
+
+- **Existing automations** continue working
+- **Sensor entities** maintain same IDs
+- **Additional statistics** available in Energy Dashboard
+- **Backward compatible** configuration
 
 ## Understanding the Multi-Hub Architecture
 

@@ -31,6 +31,17 @@ MIN_SCAN_INTERVAL: Final = 60  # 1 minute minimum
 DEFAULT_DISCOVERY_INTERVAL: Final = 3600  # 1 hour for device discovery
 MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes minimum
 
+# Historical data configuration
+MAX_MT_POLL_INTERVAL: Final = (
+    1200  # 20 minutes max for MT sensors to ensure complete data capture
+)
+HISTORICAL_DATA_LOOKBACK: Final = 1200  # 20 minutes lookback for historical data
+HISTORICAL_DATA_OVERLAP: Final = 300  # 5 minutes overlap to prevent gaps
+
+# Configuration keys for historical data tracking
+CONF_LAST_HISTORICAL_FETCH: Final = "last_historical_fetch"
+CONF_HISTORICAL_DATA_ENABLED: Final = "historical_data_enabled"
+
 # Regional API endpoints
 REGIONAL_BASE_URLS: Final = {
     "Global": "https://api.meraki.com/api/v1",
