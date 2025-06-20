@@ -86,6 +86,7 @@
     "api_key_expired": {
       "title": "Meraki API Key Expired",
       "description": "Your Meraki Dashboard API key for '{config_entry_title}' has expired or is invalid. Please update your API key in the integration settings.",
+      "fixable": true,
       "fix_flow": {
         "step": {
           "init": {
@@ -101,6 +102,7 @@
     "network_access_lost": {
       "title": "Network Access Lost",
       "description": "Lost access to network '{network_name}' in '{config_entry_title}'. This may be due to network configuration changes or temporary connectivity issues.",
+      "fixable": true,
       "fix_flow": {
         "step": {
           "init": {
@@ -113,6 +115,7 @@
     "device_discovery_failed": {
       "title": "Device Discovery Failed",
       "description": "Failed to discover devices in hub '{hub_name}' for '{config_entry_title}'. This may be due to API rate limits or temporary network issues.",
+      "fixable": true,
       "fix_flow": {
         "step": {
           "init": {
