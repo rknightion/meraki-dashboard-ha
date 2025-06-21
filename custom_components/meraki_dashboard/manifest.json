@@ -1,9 +1,9 @@
 {
   "domain": "meraki_dashboard",
   "name": "Meraki Dashboard",
+  "after_dependencies": ["recorder"],
   "codeowners": ["@rknightion"],
   "config_flow": true,
-  "after_dependencies": ["recorder"],
   "documentation": "https://rknightion.github.io/meraki-dashboard-ha",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
