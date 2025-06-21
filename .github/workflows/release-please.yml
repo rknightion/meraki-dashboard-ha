@@ -37,7 +37,9 @@ jobs:
     if: ${{ needs.release-please.outputs.pr }}
     steps:
       - name: Enable auto-merge for release PR
-        run: gh pr merge --auto --squash "${{ needs.release-please.outputs.pr }}"
+        run: |
+          PR_NUMBER=$(echo '${{ needs.release-please.outputs.pr }}' | jq -r '.number')
+          gh pr merge --auto --squash "$PR_NUMBER"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
