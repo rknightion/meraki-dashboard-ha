@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.3](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.12.2...v0.12.3) (2025-06-21)
+
+
+### Bug Fixes
+
+* **sensor:** update TVOC unit to micrograms per cubic meter ([9e4be93](https://github.com/rknightion/meraki-dashboard-ha/commit/9e4be93bf2e2103f85a7400dd682a8d47d81c5d3)), closes [#123](https://github.com/rknightion/meraki-dashboard-ha/issues/123)
+
 ## [0.12.2](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.12.1...v0.12.2) (2025-06-21)
 
 
