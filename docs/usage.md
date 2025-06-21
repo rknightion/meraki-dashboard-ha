@@ -17,7 +17,7 @@ Once configured, the integration will automatically discover your Meraki MT devi
 - **Temperature**: Ambient temperature in Celsius
 - **Humidity**: Relative humidity percentage
 - **CO2**: Carbon dioxide concentration in ppm
-- **TVOC**: Total volatile organic compounds in ppb
+- **TVOC**: Total volatile organic compounds in µg/m³
 - **PM2.5**: Particulate matter concentration in µg/m³
 - **Noise**: Ambient noise level in dB
 - **Indoor Air Quality**: Overall air quality score
@@ -453,7 +453,7 @@ Comprehensive environmental monitoring with various sensor types depending on mo
 | Temperature | `sensor` | °C/°F | `TEMPERATURE` | Ambient temperature |
 | Humidity | `sensor` | % | `HUMIDITY` | Relative humidity |
 | CO2 | `sensor` | ppm | `CO2` | Carbon dioxide level |
-| TVOC | `sensor` | ppb | `VOLATILE_ORGANIC_COMPOUNDS` | Total volatile organic compounds |
+| TVOC | `sensor` | µg/m³ | `VOLATILE_ORGANIC_COMPOUNDS` | Total volatile organic compounds |
 | PM2.5 | `sensor` | µg/m³ | `PM25` | Fine particulate matter |
 | Noise | `sensor` | dB | `SOUND_PRESSURE` | Sound level |
 | Indoor Air Quality | `sensor` | 0-500 | `AQI` | Air quality index |

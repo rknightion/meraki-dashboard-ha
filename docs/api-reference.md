@@ -162,7 +162,7 @@ class MerakiSensor(MerakiDevice, SensorEntity):
 | `temperature` | `TEMPERATURE` | °C/°F | Ambient temperature |
 | `humidity` | `HUMIDITY` | % | Relative humidity |
 | `co2` | `CO2` | ppm | Carbon dioxide level |
-| `tvoc` | `VOLATILE_ORGANIC_COMPOUNDS` | ppb | Total volatile organic compounds |
+| `tvoc` | `VOLATILE_ORGANIC_COMPOUNDS` | µg/m³ | Total volatile organic compounds |
 | `pm25` | `PM25` | µg/m³ | Fine particulate matter |
 | `noise` | `SOUND_PRESSURE` | dB | Sound level |
 | `indoor_air_quality` | `AQI` | - | Air quality index |
