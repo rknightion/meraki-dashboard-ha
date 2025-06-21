@@ -1,11 +1,17 @@
 ---
 layout: default
 title: FAQ
+description: Frequently asked questions about the Meraki Dashboard Home Assistant integration including setup, configuration, and device support
 ---
 
 # Frequently Asked Questions
 
 Common questions and answers about the Meraki Dashboard integration's **multi-hub architecture**.
+
+<div class="alert alert-success" role="alert">
+  <i class="bi bi-check-circle me-2"></i>
+  <strong>Can't find what you're looking for?</strong> Check our <a href="troubleshooting" class="alert-link">Troubleshooting Guide</a> or <a href="{{ site.repository }}/issues" class="alert-link">ask a question on GitHub</a>.
+</div>
 
 ## General Questions
 
@@ -322,4 +328,4 @@ Yes! Node-RED can subscribe to entities from all hubs and create complex automat
 
 ---
 
-**Still need help?** Check our [Troubleshooting Guide](troubleshooting.md) or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) on GitHub. 
+**Still need help?** Check our [Troubleshooting Guide](troubleshooting.md) or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) on GitHub.

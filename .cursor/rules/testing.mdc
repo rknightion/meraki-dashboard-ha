@@ -1,32 +1,9 @@
 ---
 description:
-globs:
+globs: **/*_test.py
 alwaysApply: false
 ---
-# Testing Guidelines
-
-## Test Requirements
-- Write tests for all new functionality
-- Use pytest and Home Assistant's test helpers
-- Mock external API calls in tests
-- Test both success and failure scenarios
-- Maintain test coverage above 80%
-
-## Test Structure
-- Mock Meraki SDK calls in tests
-- Test both success and failure scenarios
-- Test configuration flows
-- Test entity creation and updates
-- Test error handling paths
-
-## Pre-commit Checks
-- Run tests before committing
-- Run linting (Black, flake8, mypy)
-- Ensure all tests pass
-- Check test coverage
-
-## Integration Testing
-- Test integration in actual Home Assistant instance
-- Verify device discovery works correctly
-- Test configuration flows
-- Validate sensor data accuracy
+- Use fixtures to manage setup and teardown of test environments efficiently.
+- Organize tests into directories and use meaningful names for test files and functions.
+- Leverage pytest markers to categorize tests (e.g., unit, integration) for selective execution.
+- Aim for high test coverage, but prioritize meaningful tests over quantity.

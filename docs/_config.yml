@@ -13,13 +13,20 @@ plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
 
-# Markdown settings
+# Markdown settings with Mermaid support
 markdown: kramdown
 highlighter: rouge
 kramdown:
   syntax_highlighter: rouge
   syntax_highlighter_opts:
     css_class: 'highlight'
+  input: GFM
+  auto_ids: true
+  footnote_nr: 1
+  entity_output: as_char
+  toc_levels: 1..6
+  smart_quotes: lsquo,rsquo,ldquo,rdquo
+  enable_coderay: false
 
 # Collections
 collections:
@@ -40,6 +47,17 @@ defaults:
     values:
       layout: "device"
 
+# Navigation structure
+navigation:
+  - title: "Home"
+    url: "/"
+  - title: "Development"
+    url: "/development"
+  - title: "FAQ"
+    url: "/faq"
+  - title: "Changelog"
+    url: "/changelog"
+
 # SEO
 author: "rknightion"
 twitter:
@@ -50,4 +68,4 @@ social:
     - https://github.com/rknightion/meraki-dashboard-ha
 
 # Google Analytics (optional)
-# google_analytics: G-XXXXXXXXXX 
+# google_analytics: G-XXXXXXXXXX

@@ -3,11 +3,13 @@
   "name": "Meraki Dashboard",
   "codeowners": ["@rknightion"],
   "config_flow": true,
-  "dependencies": ["recorder"],
-  "documentation": "https://github.com/rknightion/meraki-dashboard-ha",
+  "after_dependencies": ["recorder"],
+  "documentation": "https://rknightion.github.io/meraki-dashboard-ha",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/rknightion/meraki-dashboard-ha/issues",
-  "requirements": ["meraki>=2.0.3,<3.0.0"],
+  "loggers": ["meraki", "urllib3", "requests", "httpcore", "httpx"],
+  "quality_scale": "silver",
+  "requirements": ["meraki==2.0.3"],
   "version": "0.2.0"
 }

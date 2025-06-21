@@ -1,11 +1,17 @@
 ---
 layout: default
 title: Development
+description: Development guide for contributing to the Meraki Dashboard Home Assistant integration including setup, testing, and coding standards
 ---
 
 # Development Guide
 
 This guide will help you set up a development environment for contributing to the Meraki Dashboard Home Assistant integration.
+
+<div class="alert alert-info" role="alert">
+  <i class="bi bi-code-slash me-2"></i>
+  <strong>First time contributing?</strong> Start by reading Home Assistant's <a href="https://developers.home-assistant.io/" class="alert-link">Developer Documentation</a> for core concepts and conventions.
+</div>
 
 ## Development Setup
 
@@ -223,6 +229,165 @@ meraki-dashboard-ha/
 - **Discussions**: Use GitHub Discussions for questions and ideas
 - **Documentation**: Check the `docs/` directory for more information
 
+## Logging Configuration
+
+### Default logging behavior
+
+The integration follows Home Assistant logging best practices:
+
+- **ERROR**: Only critical errors that affect functionality
+- **WARNING**: Potential issues or misconfigurations
+- **INFO**: Limited to important operational information
+- **DEBUG**: Detailed operational information (only when enabled)
+
+### Third-party library logging
+
+The integration automatically suppresses verbose third-party library logging:
+
+- **Meraki Python SDK**: Suppressed to ERROR level only
+- **urllib3/requests**: Suppressed to ERROR level only
+
+### Enable debug logging
+
+Add to `configuration.yaml` for troubleshooting:
+
+```yaml
+logger:
+  default: warning
+  logs:
+    # Enable debug for the integration
+    custom_components.meraki_dashboard: debug
+
+    # Optionally enable for third-party libraries (very verbose)
+    meraki: debug
+    urllib3.connectionpool: debug
+```
+
+### Log level examples
+
+**Minimal logging (production)**
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.meraki_dashboard: warning
+```
+
+**Standard logging (most users)**
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.meraki_dashboard: info
+```
+
+## API Reference
+
+### Device data structures
+
+**MT Environmental Sensor Data**
+```python
+{
+    "serial": "Q2XX-XXXX-XXXX",
+    "model": "MT20",
+    "networkId": "N_123456789",
+    "productType": "sensor",
+    "readings": [
+        {
+            "metric": "temperature",
+            "value": 22.5,
+            "ts": "2024-01-15T10:30:00Z"
+        },
+        {
+            "metric": "humidity",
+            "value": 45.2,
+            "ts": "2024-01-15T10:30:00Z"
+        }
+    ]
+}
+```
+
+**MR Access Point Data**
+```python
+{
+    "serial": "Q2XX-YYYY-YYYY",
+    "model": "MR46",
+    "networkId": "N_123456789",
+    "productType": "wireless",
+    "ssids": [
+        {
+            "number": 0,
+            "name": "Corporate WiFi",
+            "enabled": True,
+            "authMode": "psk"
+        }
+    ]
+}
+```
+
+### Sensor mappings
+
+**Environmental sensors**
+```python
+SENSOR_MAPPINGS = {
+    "temperature": {
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "unit": UnitOfTemperature.CELSIUS,
+        "state_class": SensorStateClass.MEASUREMENT
+    },
+    "humidity": {
+        "device_class": SensorDeviceClass.HUMIDITY,
+        "unit": PERCENTAGE,
+        "state_class": SensorStateClass.MEASUREMENT
+    },
+    "co2": {
+        "device_class": SensorDeviceClass.CO2,
+        "unit": CONCENTRATION_PARTS_PER_MILLION,
+        "state_class": SensorStateClass.MEASUREMENT
+    }
+}
+```
+
+**Binary sensors**
+```python
+BINARY_SENSOR_MAPPINGS = {
+    "water_present": {
+        "device_class": BinarySensorDeviceClass.MOISTURE
+    },
+    "door_open": {
+        "device_class": BinarySensorDeviceClass.DOOR
+    }
+}
+```
+
+### Entity naming conventions
+
+**Sensor entities**: `sensor.{device_model}_{location}_{metric}`
+- Example: `sensor.mt20_office_temperature`
+
+**Binary sensor entities**: `binary_sensor.{device_model}_{location}_{metric}`
+- Example: `binary_sensor.mt15_basement_water_present`
+
+**Device entities**: `{network_name} - {device_type}`
+- Example: `Main Office - MT`
+
+### Error handling
+
+**Authentication errors**
+```python
+raise ConfigEntryAuthFailed("Invalid API key")
+```
+
+**Connection errors**
+```python
+raise ConfigEntryNotReady("Unable to connect to Meraki API")
+```
+
+**Rate limiting**
+```python
+await asyncio.sleep(60)  # Back off for rate limits
+```
+
 ## Contributing Guidelines
 
 1. **Follow the Code Style**: Use the provided linting and formatting tools
@@ -232,7 +397,3 @@ meraki-dashboard-ha/
 5. **Test Thoroughly**: Test with real Home Assistant installation
 
 Thank you for contributing to the Meraki Dashboard Home Assistant integration! 🎉
-
----
-
-**Ready to contribute?** Start by reading the [project overview](/) and checking out the [open issues](https://github.com/rknightion/meraki-dashboard-ha/issues) for ideas!
