@@ -36,6 +36,9 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.pr }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Enable auto-merge for release PR
         run: |
           PR_NUMBER=$(echo '${{ needs.release-please.outputs.pr }}' | jq -r '.number')
