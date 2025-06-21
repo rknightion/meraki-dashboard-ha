@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.11.0...v0.12.0) (2025-06-21)
+
+
+### Features
+
+* **workflow:** enable auto-merge for release PRs ([064dbf9](https://github.com/rknightion/meraki-dashboard-ha/commit/064dbf9d083b66d5d29c4b11e2698ab3ccf59c89))
+
+
+### Bug Fixes
+
+* add checkout step to enable auto-merge ([e527f6d](https://github.com/rknightion/meraki-dashboard-ha/commit/e527f6dc8532218f0b8a6c8a841ffce39f6130a4))
+* enhance duplicate statistics cleanup description ([c2c5dfc](https://github.com/rknightion/meraki-dashboard-ha/commit/c2c5dfcb60d97080d59e29b23d1ded8a203024f7))
+* improve auto-merge command for release PRs ([884cd2c](https://github.com/rknightion/meraki-dashboard-ha/commit/884cd2c6eb981fa16b70da07f259f00b191cd40d))
+
 ## [0.11.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.10.0...v0.11.0) (2025-06-21)
 
 
