@@ -207,17 +207,28 @@ class DuplicateStatisticsRepairFlow(RepairsFlow):
         )
         self._duplicate_statistics: list[str] = []
 
+        _LOGGER.debug("Initializing repair flow with data: %s", data)
+
         if isinstance(duplicates_data, list):
             # Handle the case where duplicates is a list of duplicate info dicts
             for item in duplicates_data:
-                if isinstance(item, dict) and "recorder_stat" in item:
-                    # Extract statistic_id from recorder_stat dict
-                    recorder_stat = item["recorder_stat"]
+                if isinstance(item, dict) and "integration_stat" in item:
+                    # Extract statistic_id from integration_stat dict (old meraki_dashboard stats)
+                    integration_stat = item["integration_stat"]
                     if (
-                        isinstance(recorder_stat, dict)
-                        and "statistic_id" in recorder_stat
+                        isinstance(integration_stat, dict)
+                        and "statistic_id" in integration_stat
                     ):
-                        self._duplicate_statistics.append(recorder_stat["statistic_id"])
+                        # We want to delete the old meraki_dashboard statistics, not recorder ones
+                        statistic_id = integration_stat["statistic_id"]
+                        self._duplicate_statistics.append(statistic_id)
+                        _LOGGER.debug("Added statistic for cleanup: %s", statistic_id)
+
+        _LOGGER.info(
+            "Repair flow initialized with %d statistics to clean up: %s",
+            len(self._duplicate_statistics),
+            self._duplicate_statistics,
+        )
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -231,7 +242,8 @@ class DuplicateStatisticsRepairFlow(RepairsFlow):
                     for statistic_id in self._duplicate_statistics:
                         await async_delete_statistics(self.hass, [statistic_id])
                         _LOGGER.info(
-                            "Deleted duplicate recorder statistic: %s", statistic_id
+                            "Deleted duplicate meraki_dashboard statistic: %s",
+                            statistic_id,
                         )
 
                     _LOGGER.info(

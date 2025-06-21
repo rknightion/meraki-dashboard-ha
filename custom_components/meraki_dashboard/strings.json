@@ -101,7 +101,7 @@
         "step": {
           "init": {
             "title": "Clean Up Duplicate Statistics",
-            "description": "Found {count} duplicate statistics created by Home Assistant's recorder that conflict with the integration's custom statistics. These duplicates should be removed to prevent confusion and ensure proper historical data display.\n\nExamples of statistics to be removed: {example_statistics}\n\nThis will remove the duplicate statistics while keeping the integration's custom statistics (with source 'meraki_dashboard') which provide the same data with better historical coverage.\n\nThis action cannot be undone, but the integration's statistics will continue to work normally."
+            "description": "Found {count} duplicate statistics from an earlier version of the integration that conflict with Home Assistant's built-in recorder statistics. These old custom statistics should be removed to prevent confusion and ensure proper historical data display.\n\nExamples of old statistics to be removed: {example_statistics}\n\nThis will remove the old integration statistics while keeping Home Assistant's recorder statistics (with source 'recorder') which provide the same data. Your historical data will remain intact.\n\nThis action cannot be undone, but your sensor data and statistics will continue to work normally."
           }
         }
       }
