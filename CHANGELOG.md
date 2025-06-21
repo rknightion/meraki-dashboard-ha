@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.12.0...v0.12.1) (2025-06-21)
+
+
+### Bug Fixes
+
+* address duplicate statistics in Meraki integration ([6d5a244](https://github.com/rknightion/meraki-dashboard-ha/commit/6d5a2448f0a1b9003e6eff8182bc168af4550097)), closes [#1234](https://github.com/rknightion/meraki-dashboard-ha/issues/1234)
+
 ## [0.12.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.11.0...v0.12.0) (2025-06-21)
 
 
