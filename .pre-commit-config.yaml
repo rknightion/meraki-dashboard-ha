@@ -60,7 +60,7 @@ repos:
     -   id: check-docstring-first
     -   id: check-executables-have-shebangs
     -   id: check-json
-        exclude: (.vscode|.devcontainer)
+        exclude: .vscode
     -   id: check-merge-conflict
     -   id: check-toml
     -   id: check-xml
@@ -121,23 +121,6 @@ repos:
     hooks:
     -   id: check-github-workflows
 
-  # Home Assistant specific checks - TEMPORARILY DISABLED
-# -   repo: local
-#     hooks:
-#       - id: hassfest
-#         name: hassfest
-#         entry: python3 -m script.hassfest
-#         language: system
-#         pass_filenames: false
-#         files: ^(custom_components/|requirements\.txt|manifest\.json)
-# 
-#       - id: check-translations
-#         name: Check translations
-#         entry: python3 -m script.translations check
-#         language: system
-#         pass_filenames: false
-#         files: ^(custom_components/.+/strings\.json|custom_components/.+/translations/.+\.json)$
-
 # Global excludes (your existing excludes are good)
 exclude: |
   (?x)^(
@@ -145,7 +128,6 @@ exclude: |
     \.venv/|
     venv/|
     \.vscode/|
-    \.devcontainer/|
     __pycache__/|
     \.pytest_cache/|
     \.mypy_cache/|

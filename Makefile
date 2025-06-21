@@ -2,14 +2,14 @@
 
 .PHONY: help install lint format clean pre-commit hassfest docs check-all
 # Removed test-related targets: test coverage
- 
+
 # Default target
 help:
 	@echo "Available commands:"
 	@echo "  make install      Install all dependencies (runtime and dev)"
 	# @echo "  make test         Run all tests with coverage"
-	@echo "  make lint         Run all linters (flake8, pylint, mypy, bandit)"
-	@echo "  make format       Format code with black and isort"
+	@echo "  make lint         Run all linters (ruff, mypy, bandit)"
+	@echo "  make format       Format code with ruff"
 	@echo "  make clean        Remove build artifacts and cache files"
 	# @echo "  make coverage     Generate HTML coverage report"
 	@echo "  make pre-commit   Run pre-commit hooks on all files"
@@ -37,25 +37,11 @@ install:
 # 	poetry run pytest $(FILE) -vv
 
 # Run all linters
-lint: lint-black lint-isort lint-flake8 lint-pylint lint-mypy lint-bandit
+lint: lint-ruff lint-mypy lint-bandit
 
 # Individual linters
-lint-black:
-	poetry run black --check --diff custom_components
-
-lint-isort:
-	poetry run isort --check-only --diff custom_components
-
-lint-flake8:
-	poetry run flake8 custom_components \
-		--max-line-length=88 \
-		--extend-ignore=E203,W503,E501,D202 \
-		--docstring-convention=google
-
-lint-pylint:
-	poetry run pylint custom_components \
-		--max-line-length=88 \
-		--disable=C0103,C0114,C0115,C0116,R0903,R0913,W0613
+lint-ruff:
+	poetry run ruff check custom_components tests
 
 lint-mypy:
 	poetry run mypy custom_components \
@@ -66,10 +52,14 @@ lint-mypy:
 lint-bandit:
 	poetry run bandit -r custom_components -f json -o bandit-report.json
 
-# Format code
+# Format code with ruff
 format:
-	poetry run black custom_components
-	poetry run isort custom_components
+	poetry run ruff format custom_components tests
+	poetry run ruff check --fix custom_components tests
+
+# Type check only
+type-check:
+	poetry run mypy custom_components
 
 # Clean build artifacts
 clean:
@@ -80,6 +70,7 @@ clean:
 	rm -rf htmlcov/
 	rm -rf .pytest_cache/
 	rm -rf .mypy_cache/
+	rm -rf .ruff_cache/
 	rm -rf **/__pycache__/
 	rm -f coverage.xml
 	rm -f bandit-report.json
@@ -162,3 +153,17 @@ new-platform:
 	cp custom_components/meraki_dashboard/sensor.py custom_components/meraki_dashboard/$$platform.py; \
 	echo "Created custom_components/meraki_dashboard/$$platform.py"; \
 	echo "Remember to update PLATFORMS in __init__.py"
+
+# Create integration package for distribution
+package:
+	@echo "Creating integration package..."
+	@rm -rf dist/
+	@mkdir -p dist/
+	@cd custom_components && zip -r ../dist/meraki_dashboard.zip meraki_dashboard/ -x "*.pyc" "*/__pycache__/*"
+	@echo "Package created: dist/meraki_dashboard.zip"
+
+# Setup development environment
+setup: install
+	@echo "Development environment setup complete!"
+	@echo "Run 'make lint' to check code quality"
+	@echo "Run 'make format' to format code"

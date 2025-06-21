@@ -1,0 +1,19 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.mypy-type-checker",
+        "charliermarsh.ruff",
+        "ms-python.debugpy",
+        "ms-python.pytest",
+        "ms-vscode.vscode-json",
+        "ms-vscode.test-adapter-converter",
+        "gruntfuggly.todo-tree"
+    ],
+    "unwantedRecommendations": [
+        "ms-python.pylint",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.flake8"
+    ]
+}

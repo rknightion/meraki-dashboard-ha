@@ -220,13 +220,13 @@ For development and testing:
    ```bash
    # Install Poetry if you haven't already
    curl -sSL https://install.python-poetry.org | python3 -
-   
+
    # Install dependencies
    poetry install
-   
+
    # Activate the virtual environment
    poetry shell
-   
+
    # Install pre-commit hooks
    pre-commit install
    ```
@@ -269,19 +269,23 @@ pre-commit install
 # Run tests
 poetry run pytest
 
-# Run linters
-poetry run black custom_components tests
-poetry run isort custom_components tests
-poetry run flake8 custom_components tests
+# Run linters and formatting
+poetry run ruff check custom_components tests
+poetry run ruff format custom_components tests
 ```
 
 ## Contributing
 
-Contributions are welcome! Please:
+We welcome contributions! Please see our [Development Guide](docs/development.md) for detailed information on setting up your development environment and contributing to the project.
+
+### Quick Start for Developers
+
 1. Fork the repository
 2. Create a feature branch
-3. Follow the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md)
+3. Follow the guidelines in [docs/development.md](docs/development.md)
 4. Submit a pull request
+
+For detailed instructions, see [docs/development.md](docs/development.md).
 
 ## License
 
