@@ -1,0 +1,22 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "meraki-dashboard-ha",
+      "include-v-in-tag": true,
+      "changelog-sections": [
+        {"type": "feat", "section": "🚀 Features", "hidden": false},
+        {"type": "fix", "section": "🐛 Bug Fixes", "hidden": false},
+        {"type": "perf", "section": "⚡ Performance Improvements", "hidden": false},
+        {"type": "revert", "section": "⏪ Reverts", "hidden": false},
+        {"type": "docs", "section": "📚 Documentation", "hidden": false},
+        {"type": "style", "section": "💄 Styles", "hidden": true},
+        {"type": "chore", "section": "🧰 Maintenance", "hidden": false},
+        {"type": "refactor", "section": "♻️ Code Refactoring", "hidden": false},
+        {"type": "test", "section": "✅ Tests", "hidden": true},
+        {"type": "build", "section": "🔧 Build System", "hidden": true},
+        {"type": "ci", "section": "👷 CI/CD", "hidden": true}
+      ]
+    }
+  }
+} 
