@@ -97,6 +97,7 @@ DOCS_FOOTER_EOF
       - name: Commit version and changelog updates
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          TAG_NAME="${{ github.event.release.tag_name }}"
           
           # Configure git
           git config --local user.email "action@github.com"
@@ -105,18 +106,39 @@ DOCS_FOOTER_EOF
           # Check if there are changes to commit
           if git diff --quiet custom_components/meraki_dashboard/manifest.json docs/changelog.md; then
             echo "No changes to commit - files already up to date"
-            exit 0
-          fi
-          
-          # Add and commit the changes
-          git add custom_components/meraki_dashboard/manifest.json docs/changelog.md
-          git commit -m "chore: update version to $VERSION and sync docs changelog
+          else
+            # Add and commit the changes
+            git add custom_components/meraki_dashboard/manifest.json docs/changelog.md
+            git commit -m "chore: update version to $VERSION and sync docs changelog
 
-🤖 Automatically updated manifest.json version and docs/changelog.md to match release tag ${{ github.event.release.tag_name }}
+🤖 Automatically updated manifest.json version and docs/changelog.md to match release tag $TAG_NAME
 
 Co-Authored-By: GitHub Action <action@github.com>"
+            
+            # Push the changes to main
+            git push
+            echo "✅ Committed and pushed version update and changelog sync for $VERSION"
+            
+            # Move the tag to point to the new commit with updated files
+            echo "Moving tag $TAG_NAME to new commit with updated files..."
+            git tag -f "$TAG_NAME"
+            git push origin "$TAG_NAME" --force
+            echo "✅ Updated tag $TAG_NAME to point to commit with version updates"
+          fi
+
+      - name: Create and upload release assets
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG_NAME="${{ github.event.release.tag_name }}"
           
-          # Push the changes
-          git push
+          echo "Creating integration zip for release $TAG_NAME"
           
-          echo "✅ Committed and pushed version update and changelog sync for $VERSION"
+          # Create integration zip from the updated code
+          cd custom_components/meraki_dashboard
+          zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*" "*.DS_Store"
+          cd ../..
+          
+          # Upload the zip to the release
+          gh release upload "$TAG_NAME" meraki_dashboard.zip --clobber
+          
+          echo "✅ Created and uploaded meraki_dashboard.zip to release $TAG_NAME"
