@@ -4,8 +4,6 @@
       "release-type": "simple",
       "package-name": "meraki-dashboard-ha",
       "include-v-in-tag": true,
-      "include-component-in-tag": false,
-      "separate-pull-requests": false,
       "extra-files": [
         {
           "type": "json",
@@ -27,8 +25,5 @@
         {"type": "ci", "section": "👷 CI/CD", "hidden": true}
       ]
     }
-  },
-  "changelog-type": "github",
-  "pull-request-title-pattern": "chore(main): release ${version}",
-  "pull-request-header": "This PR was generated with Release Please. See [documentation](https://github.com/googleapis/release-please#release-please)."
+  }
 }
