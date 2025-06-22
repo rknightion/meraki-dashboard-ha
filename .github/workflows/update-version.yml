@@ -52,23 +52,23 @@ jobs:
           echo "Updating docs/changelog.md with content from CHANGELOG.md"
           
           # Create the Jekyll front matter and header for docs changelog
-          cat > docs/changelog.md << 'DOCS_HEADER_EOF'
----
-layout: default
-title: Changelog
-description: Release history and changelog for the Meraki Dashboard Home Assistant Integration
----
-
-# Changelog
-
-All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-<div class="alert alert-info" role="alert">
-  <i class="bi bi-info-circle me-2"></i>
-  <strong>Note:</strong> This changelog is automatically updated from our <a href="{{ site.repository }}/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.
-</div>
-
-DOCS_HEADER_EOF
+          {
+            echo "---"
+            echo "layout: default"
+            echo "title: Changelog"
+            echo "description: Release history and changelog for the Meraki Dashboard Home Assistant Integration"
+            echo "---"
+            echo ""
+            echo "# Changelog"
+            echo ""
+            echo "All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."
+            echo ""
+            echo '<div class="alert alert-info" role="alert">'
+            echo '  <i class="bi bi-info-circle me-2"></i>'
+            echo '  <strong>Note:</strong> This changelog is automatically updated from our <a href="{{ site.repository }}/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.'
+            echo '</div>'
+            echo ""
+          } > docs/changelog.md
 
           # Extract the changelog content from CHANGELOG.md (skip the header)
           if [ -f CHANGELOG.md ]; then
@@ -77,20 +77,20 @@ DOCS_HEADER_EOF
           fi
 
           # Add footer
-          cat >> docs/changelog.md << 'DOCS_FOOTER_EOF'
-
-## Support
-
-- **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
-- **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
-- **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
-
-## Links
-
-- **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
-- **[Releases]({{ site.repository }}/releases)** - Download specific versions
-- **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
-DOCS_FOOTER_EOF
+          {
+            echo ""
+            echo "## Support"
+            echo ""
+            echo "- **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)"
+            echo "- **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)"
+            echo "- **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)"
+            echo ""
+            echo "## Links"
+            echo ""
+            echo "- **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog"
+            echo "- **[Releases]({{ site.repository }}/releases)** - Download specific versions"
+            echo "- **[Release Notes]({{ site.repository }}/releases)** - Detailed release information"
+          } >> docs/changelog.md
 
           echo "✅ Updated docs/changelog.md"
 
@@ -109,11 +109,9 @@ DOCS_FOOTER_EOF
           else
             # Add and commit the changes
             git add custom_components/meraki_dashboard/manifest.json docs/changelog.md
-            git commit -m "chore: update version to $VERSION and sync docs changelog
-
-🤖 Automatically updated manifest.json version and docs/changelog.md to match release tag $TAG_NAME
-
-Co-Authored-By: GitHub Action <action@github.com>"
+            git commit -m "chore: update version to $VERSION and sync docs changelog" \
+                       -m "🤖 Automatically updated manifest.json version and docs/changelog.md to match release tag $TAG_NAME" \
+                       -m "Co-Authored-By: GitHub Action <action@github.com>"
             
             # Push the changes to main
             git push
