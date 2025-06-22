@@ -48,10 +48,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Handle release creation and asset upload when a release is actually published
+  # Create release assets when release-please creates a release
   create-release-assets:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    needs: release-please
+    if: needs.release-please.outputs.release_created
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -65,7 +66,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.event.release.tag_name }} meraki_dashboard.zip --clobber
+          gh release upload ${{ needs.release-please.outputs.tag_name }} meraki_dashboard.zip --clobber
 
       - name: Update docs changelog
         run: |
@@ -117,6 +118,6 @@ FOOTER_EOF
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "docs: update changelog for ${{ github.event.release.tag_name }}"
+            git commit -m "docs: update changelog for ${{ needs.release-please.outputs.tag_name }}"
             git push
           fi
