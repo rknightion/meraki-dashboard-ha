@@ -4,19 +4,15 @@ on:
   push:
     branches:
       - main
-  release:
-    types: [published]
 
 permissions:
   contents: write
   pull-requests: write
   actions: write
-  releases: write
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
@@ -49,10 +45,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Handle release creation and asset upload when a release is actually published
+  # Handle release creation and asset upload when a release is actually created
   create-release-assets:
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,12 +63,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.event.release.tag_name }} meraki_dashboard.zip --clobber
+          gh release upload ${{ needs.release-please.outputs.tag_name }} meraki_dashboard.zip --clobber
 
       - name: Update docs changelog
         run: |
           # Create header for docs changelog
-          cat > docs/changelog.md << 'EOF'
+          cat > docs/changelog.md << 'CHANGELOG_EOF'
 ---
 layout: default
 title: Changelog
@@ -87,7 +84,7 @@ All notable changes to this project are documented here. The format is based on 
   <strong>Note:</strong> This changelog is automatically generated from our git commit history using <a href="https://github.com/googleapis/release-please">release-please</a>. For the complete changelog including technical details, see the full <a href="{{ site.repository }}/blob/main/CHANGELOG.md">CHANGELOG.md</a> in our repository.
 </div>
 
-EOF
+CHANGELOG_EOF
 
           # Extract content from root CHANGELOG.md (skip first few lines)
           if [ -f CHANGELOG.md ]; then
@@ -95,7 +92,7 @@ EOF
           fi
 
           # Add footer
-          cat >> docs/changelog.md << 'EOF'
+          cat >> docs/changelog.md << 'FOOTER_EOF'
 
 ## Support
 
@@ -108,7 +105,7 @@ EOF
 - **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
 - **[Releases]({{ site.repository }}/releases)** - Download specific versions
 - **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
-EOF
+FOOTER_EOF
 
       - name: Commit updated docs changelog
         run: |
@@ -118,6 +115,6 @@ EOF
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "docs: update changelog for ${{ github.event.release.tag_name }}"
+            git commit -m "docs: update changelog for ${{ needs.release-please.outputs.tag_name }}"
             git push
           fi
