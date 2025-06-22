@@ -21,7 +21,7 @@ This guide will help you set up a development environment for contributing to th
 - Poetry
 - Git
 
-### Setup
+### Dev Setup
 
 1. **Clone the Repository**
    ```bash
