@@ -133,6 +133,8 @@ jobs:
           fi
 
       - name: Create and upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ github.event.release.tag_name }}"
