@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   release-please:
@@ -30,13 +31,20 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
 
-      # Enable auto-merge for release PRs immediately after creation
-      - name: Enable auto-merge for release PR
+      # Auto-approve and merge release PRs
+      - name: Auto-approve and merge release PR
         if: ${{ steps.release.outputs.pr }}
         run: |
           PR_NUMBER=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.number')
-          echo "Enabling auto-merge for PR #${PR_NUMBER}"
-          gh pr merge --auto --squash "$PR_NUMBER" || echo "Auto-merge failed, but continuing..."
+          echo "Auto-approving and merging PR #${PR_NUMBER}"
+
+          # First approve the PR
+          gh pr review --approve "$PR_NUMBER" --body "🤖 Auto-approving release PR"
+
+          # Then enable auto-merge
+          gh pr merge --auto --squash "$PR_NUMBER"
+
+          echo "✅ Release PR #${PR_NUMBER} approved and set to auto-merge"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -49,46 +57,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update docs changelog
-        run: |
-          # Create header for docs changelog
-          cat > docs/changelog.md << 'EOF'
-          ---
-          layout: default
-          title: Changelog
-          description: Release history and changelog for the Meraki Dashboard Home Assistant Integration
-          ---
-
-          # Changelog
-
-          All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-          <div class="alert alert-info" role="alert">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Note:</strong> This changelog is automatically generated from our git commit history using <a href="https://github.com/googleapis/release-please">release-please</a>. For the complete changelog including technical details, see the full <a href="{{ site.repository }}/blob/main/CHANGELOG.md">CHANGELOG.md</a> in our repository.
-          </div>
-
-          EOF
-
-          # Extract content from root CHANGELOG.md (skip first few lines)
-          tail -n +8 CHANGELOG.md | sed 's/## \[/### [/g' >> docs/changelog.md
-
-          # Add footer
-          cat >> docs/changelog.md << 'EOF'
-
-          ## Support
-
-          - **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
-          - **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
-          - **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
-
-          ## Links
-
-          - **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
-          - **[Releases]({{ site.repository }}/releases)** - Download specific versions
-          - **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
-          EOF
-
       - name: Create integration zip
         run: |
           cd custom_components/meraki_dashboard
@@ -99,6 +67,48 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.release-please.outputs.tag_name }} meraki_dashboard.zip --clobber
+
+      - name: Update docs changelog
+        run: |
+          # Create header for docs changelog
+          cat > docs/changelog.md << 'EOF'
+---
+layout: default
+title: Changelog
+description: Release history and changelog for the Meraki Dashboard Home Assistant Integration
+---
+
+# Changelog
+
+All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+<div class="alert alert-info" role="alert">
+  <i class="bi bi-info-circle me-2"></i>
+  <strong>Note:</strong> This changelog is automatically generated from our git commit history using <a href="https://github.com/googleapis/release-please">release-please</a>. For the complete changelog including technical details, see the full <a href="{{ site.repository }}/blob/main/CHANGELOG.md">CHANGELOG.md</a> in our repository.
+</div>
+
+EOF
+
+          # Extract content from root CHANGELOG.md (skip first few lines)
+          if [ -f CHANGELOG.md ]; then
+            tail -n +8 CHANGELOG.md | sed 's/## \[/### [/g' >> docs/changelog.md
+          fi
+
+          # Add footer
+          cat >> docs/changelog.md << 'EOF'
+
+## Support
+
+- **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
+- **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
+- **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
+
+## Links
+
+- **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
+- **[Releases]({{ site.repository }}/releases)** - Download specific versions
+- **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
+EOF
 
       - name: Commit updated docs changelog
         run: |
