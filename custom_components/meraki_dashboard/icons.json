@@ -87,12 +87,6 @@
         "state": {
           "on": "mdi:leak"
         }
-      },
-      "usb_powered": {
-        "default": "mdi:usb-off",
-        "state": {
-          "on": "mdi:usb"
-        }
       }
     }
   }

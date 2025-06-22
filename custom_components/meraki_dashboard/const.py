@@ -117,7 +117,6 @@ MT_SENSOR_REAL_POWER: Final = "realPower"
 MT_SENSOR_REMOTE_LOCKOUT_SWITCH: Final = "remoteLockoutSwitch"
 MT_SENSOR_TEMPERATURE: Final = "temperature"
 MT_SENSOR_TVOC: Final = "tvoc"
-MT_SENSOR_USB_POWERED: Final = "usbPowered"
 MT_SENSOR_VOLTAGE: Final = "voltage"
 MT_SENSOR_WATER: Final = "water"
 
@@ -139,7 +138,6 @@ MT_BINARY_SENSOR_METRICS: Final = [
     MT_SENSOR_DOOR,
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
-    MT_SENSOR_USB_POWERED,
     MT_SENSOR_WATER,
 ]
 

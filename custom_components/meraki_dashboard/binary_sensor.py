@@ -27,7 +27,6 @@ from .const import (
     MT_SENSOR_DOOR,
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
-    MT_SENSOR_USB_POWERED,
     MT_SENSOR_WATER,
 )
 from .coordinator import MerakiSensorCoordinator
@@ -54,12 +53,6 @@ MT_BINARY_SENSOR_DESCRIPTIONS: dict[str, BinarySensorEntityDescription] = {
         name="Remote Lockout Switch",
         device_class=BinarySensorDeviceClass.LOCK,
         icon="mdi:lock",
-    ),
-    MT_SENSOR_USB_POWERED: BinarySensorEntityDescription(
-        key=MT_SENSOR_USB_POWERED,
-        name="USB Powered",
-        device_class=BinarySensorDeviceClass.POWER,
-        icon="mdi:usb",
     ),
     MT_SENSOR_WATER: BinarySensorEntityDescription(
         key=MT_SENSOR_WATER,
@@ -289,8 +282,6 @@ class MerakiMTBinarySensor(
                     return metric_data.get("enabled") is True
                 elif self.entity_description.key == MT_SENSOR_REMOTE_LOCKOUT_SWITCH:
                     return metric_data.get("locked") is True
-                elif self.entity_description.key == MT_SENSOR_USB_POWERED:
-                    return metric_data.get("powered") is True
                 elif self.entity_description.key == MT_SENSOR_WATER:
                     return metric_data.get("present") is True
                 else:

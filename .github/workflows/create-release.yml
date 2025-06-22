@@ -18,61 +18,85 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if this is a release commit and create release
+      - name: Check for recently merged release PR and create release
         run: |
-          # Get the latest commit message
-          COMMIT_MSG=$(git log -1 --pretty=format:%s)
-          echo "Latest commit message: $COMMIT_MSG"
+          # Check for recently merged release PRs in the last 10 minutes
+          echo "Checking for recently merged release PRs..."
           
-          # Check if this is a release commit from release-please
-          if [[ "$COMMIT_MSG" =~ ^chore\(main\):\ release\ meraki-dashboard-ha\ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
-            VERSION="${BASH_REMATCH[1]}"
-            TAG="v${VERSION}"
+          # Get recently merged PRs that match the release-please pattern
+          RECENT_PRS=$(gh pr list --state merged --limit 5 --json number,title,mergedAt,headRefName)
+          
+          echo "Recent merged PRs: $RECENT_PRS"
+          
+          # Find release PRs merged in the last 10 minutes
+          CURRENT_TIME=$(date -u +%s)
+          
+          echo "$RECENT_PRS" | jq -r '.[] | select(.headRefName | startswith("release-please--")) | "\(.title)|\(.mergedAt)|\(.number)"' | while IFS='|' read -r title merged_at pr_number; do
+            # Convert merged time to epoch
+            if command -v gdate >/dev/null 2>&1; then
+              # macOS with GNU date
+              MERGED_EPOCH=$(gdate -d "$merged_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$merged_at" +%s 2>/dev/null || echo 0)
+            else
+              # Linux date
+              MERGED_EPOCH=$(date -d "$merged_at" +%s 2>/dev/null || echo 0)
+            fi
             
-            echo "Detected release commit for version $VERSION"
+            # Check if merged within last 10 minutes (600 seconds)
+            TIME_DIFF=$((CURRENT_TIME - MERGED_EPOCH))
             
-            # Check if release already exists
-            if gh release view "$TAG" >/dev/null 2>&1; then
-              echo "Release $TAG already exists, skipping creation"
+            echo "PR #$pr_number: '$title' merged $TIME_DIFF seconds ago"
+            
+            if [ $TIME_DIFF -le 600 ] && [[ "$title" =~ ^chore\(main\):\ release\ meraki-dashboard-ha\ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+              TAG="v${VERSION}"
+              
+              echo "Found recently merged release PR #$pr_number for version $VERSION"
+              
+              # Check if release already exists
+              if gh release view "$TAG" >/dev/null 2>&1; then
+                echo "Release $TAG already exists, skipping creation"
+                continue
+              fi
+              
+              echo "Creating release $TAG"
+              
+              # Get the changelog content for this version
+              CHANGELOG_CONTENT=""
+              if [ -f CHANGELOG.md ]; then
+                # Extract changelog for this version
+                CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+              fi
+              
+              # Create the release
+              if [ -n "$CHANGELOG_CONTENT" ]; then
+                gh release create "$TAG" \
+                  --title "$TAG" \
+                  --notes "$CHANGELOG_CONTENT" \
+                  --latest
+              else
+                gh release create "$TAG" \
+                  --title "$TAG" \
+                  --generate-notes \
+                  --latest
+              fi
+              
+              echo "✅ Release $TAG created successfully"
+              
+              # Create integration zip
+              cd custom_components/meraki_dashboard
+              zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*"
+              cd ../..
+              
+              # Upload integration zip to release
+              gh release upload "$TAG" meraki_dashboard.zip --clobber
+              
+              echo "✅ Integration zip uploaded to release $TAG"
+              
+              # Exit after creating one release
               exit 0
             fi
-            
-            echo "Creating release $TAG"
-            
-            # Get the changelog content for this version
-            CHANGELOG_CONTENT=""
-            if [ -f CHANGELOG.md ]; then
-              # Extract changelog for this version
-              CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
-            fi
-            
-            # Create the release
-            if [ -n "$CHANGELOG_CONTENT" ]; then
-              gh release create "$TAG" \
-                --title "$TAG" \
-                --notes "$CHANGELOG_CONTENT" \
-                --latest
-            else
-              gh release create "$TAG" \
-                --title "$TAG" \
-                --generate-notes \
-                --latest
-            fi
-            
-            echo "✅ Release $TAG created successfully"
-            
-            # Create integration zip
-            cd custom_components/meraki_dashboard
-            zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*"
-            cd ../..
-            
-            # Upload integration zip to release
-            gh release upload "$TAG" meraki_dashboard.zip --clobber
-            
-            echo "✅ Integration zip uploaded to release $TAG"
-            
-          else
-            echo "Not a release commit, skipping release creation"
-          fi
+          done
+          
+          echo "No recently merged release PRs found or all releases already exist"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
