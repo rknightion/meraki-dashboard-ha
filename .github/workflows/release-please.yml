@@ -48,11 +48,42 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Create release assets when release-please creates a release
+      # Create release after PR merge (when no PR is detected but we're on main after a merge)
+      - name: Create release from merged PR
+        if: ${{ !steps.release.outputs.pr && !steps.release.outputs.release_created }}
+        run: |
+          # Check if this is a release commit (merged release PR)
+          COMMIT_MSG=$(git log -1 --pretty=format:%s)
+          echo "Latest commit message: $COMMIT_MSG"
+          
+          if [[ "$COMMIT_MSG" =~ ^chore\(main\):\ release\ meraki-dashboard-ha\ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            TAG="v${VERSION}"
+            
+            echo "Detected release commit for version $VERSION"
+            echo "Creating release $TAG"
+            
+            # Create the release
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --notes-from-tag \
+              --latest
+            
+            echo "✅ Release $TAG created successfully"
+            echo "release_created=true" >> $GITHUB_OUTPUT
+            echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Not a release commit, skipping release creation"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Create release assets when a release is created
   create-release-assets:
     runs-on: ubuntu-latest
     needs: release-please
-    if: needs.release-please.outputs.release_created
+    if: needs.release-please.outputs.release_created == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -121,3 +152,22 @@ FOOTER_EOF
             git commit -m "docs: update changelog for ${{ needs.release-please.outputs.tag_name }}"
             git push
           fi
+
+  # Fallback job for handling releases created via release events
+  handle-release-event:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create integration zip
+        run: |
+          cd custom_components/meraki_dashboard
+          zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*"
+
+      - name: Upload integration zip to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} meraki_dashboard.zip --clobber
