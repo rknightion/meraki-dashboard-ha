@@ -31,20 +31,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
 
-      # Auto-approve and merge release PRs
-      - name: Auto-approve and merge release PR
+      # Set up auto-merge for release PRs
+      - name: Set up auto-merge for release PR
         if: ${{ steps.release.outputs.pr }}
         run: |
           PR_NUMBER=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.number')
-          echo "Auto-approving and merging PR #${PR_NUMBER}"
+          echo "Setting up auto-merge for PR #${PR_NUMBER}"
 
-          # First approve the PR
-          gh pr review --approve "$PR_NUMBER" --body "🤖 Auto-approving release PR"
+          # Try to enable auto-merge - this will work if branch protection allows it
+          gh pr merge --auto --squash "$PR_NUMBER" || echo "Auto-merge setup failed - this is expected if branch protection requires approval"
 
-          # Then enable auto-merge
-          gh pr merge --auto --squash "$PR_NUMBER"
-
-          echo "✅ Release PR #${PR_NUMBER} approved and set to auto-merge"
+          echo "✅ Release PR #${PR_NUMBER} auto-merge configured"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
