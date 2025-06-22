@@ -16,6 +16,8 @@ jobs:
         with:
           # Use a personal access token or the default token
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Ensure we're on the main branch, not detached HEAD
+          ref: main
 
       - name: Extract version from release tag
         id: version
@@ -103,10 +105,16 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
+          # Ensure we're on main branch (should already be due to checkout, but double-check)
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current HEAD: $(git rev-parse HEAD)"
+          
           # Check if there are changes to commit
           if git diff --quiet custom_components/meraki_dashboard/manifest.json docs/changelog.md; then
             echo "No changes to commit - files already up to date"
           else
+            echo "Changes detected, committing..."
+            
             # Add and commit the changes
             git add custom_components/meraki_dashboard/manifest.json docs/changelog.md
             git commit -m "chore: update version to $VERSION and sync docs changelog" \
@@ -114,7 +122,7 @@ jobs:
                        -m "Co-Authored-By: GitHub Action <action@github.com>"
             
             # Push the changes to main
-            git push
+            git push origin main
             echo "✅ Committed and pushed version update and changelog sync for $VERSION"
             
             # Move the tag to point to the new commit with updated files
