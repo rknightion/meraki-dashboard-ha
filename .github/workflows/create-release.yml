@@ -1,0 +1,78 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if this is a release commit and create release
+        run: |
+          # Get the latest commit message
+          COMMIT_MSG=$(git log -1 --pretty=format:%s)
+          echo "Latest commit message: $COMMIT_MSG"
+          
+          # Check if this is a release commit from release-please
+          if [[ "$COMMIT_MSG" =~ ^chore\(main\):\ release\ meraki-dashboard-ha\ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            TAG="v${VERSION}"
+            
+            echo "Detected release commit for version $VERSION"
+            
+            # Check if release already exists
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "Release $TAG already exists, skipping creation"
+              exit 0
+            fi
+            
+            echo "Creating release $TAG"
+            
+            # Get the changelog content for this version
+            CHANGELOG_CONTENT=""
+            if [ -f CHANGELOG.md ]; then
+              # Extract changelog for this version
+              CHANGELOG_CONTENT=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+            fi
+            
+            # Create the release
+            if [ -n "$CHANGELOG_CONTENT" ]; then
+              gh release create "$TAG" \
+                --title "$TAG" \
+                --notes "$CHANGELOG_CONTENT" \
+                --latest
+            else
+              gh release create "$TAG" \
+                --title "$TAG" \
+                --generate-notes \
+                --latest
+            fi
+            
+            echo "✅ Release $TAG created successfully"
+            
+            # Create integration zip
+            cd custom_components/meraki_dashboard
+            zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*"
+            cd ../..
+            
+            # Upload integration zip to release
+            gh release upload "$TAG" meraki_dashboard.zip --clobber
+            
+            echo "✅ Integration zip uploaded to release $TAG"
+            
+          else
+            echo "Not a release commit, skipping release creation"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
