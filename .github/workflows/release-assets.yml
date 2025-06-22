@@ -1,0 +1,66 @@
+name: Release Assets
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  upload-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update docs changelog for release
+        run: |
+          # Create header for docs changelog
+          cat > docs/changelog.md << 'EOF'
+          ---
+          layout: default
+          title: Changelog
+          description: Release history and changelog for the Meraki Dashboard Home Assistant Integration
+          ---
+
+          # Changelog
+
+          All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+          <div class="alert alert-info" role="alert">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Note:</strong> This changelog is automatically generated from our git commit history using <a href="https://github.com/googleapis/release-please">release-please</a>. For the complete changelog including technical details, see the full <a href="{{ site.repository }}/blob/main/CHANGELOG.md">CHANGELOG.md</a> in our repository.
+          </div>
+
+          EOF
+
+          # Extract content from root CHANGELOG.md (skip first few lines)
+          tail -n +8 CHANGELOG.md | sed 's/## \[/### [/g' >> docs/changelog.md
+
+          # Add footer
+          cat >> docs/changelog.md << 'EOF'
+
+          ## Support
+
+          - **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
+          - **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
+          - **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
+
+          ## Links
+
+          - **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
+          - **[Releases]({{ site.repository }}/releases)** - Download specific versions
+          - **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
+          EOF
+
+      - name: Create integration zip
+        run: |
+          cd custom_components/meraki_dashboard
+          zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*"
+
+      - name: Upload integration zip to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} meraki_dashboard.zip --clobber
