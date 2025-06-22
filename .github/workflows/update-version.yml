@@ -1,0 +1,122 @@
+name: Update Version on Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Use a personal access token or the default token
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from release tag
+        id: version
+        run: |
+          # Get the tag name from the release event
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          echo "Release tag: $TAG_NAME"
+          
+          # Remove 'v' prefix if present
+          VERSION=${TAG_NAME#v}
+          echo "Extracted version: $VERSION"
+          
+          # Validate version format (basic semver check)
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid version format: $VERSION"
+            exit 1
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update manifest.json version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Updating manifest.json to version: $VERSION"
+          
+          # Update the version in manifest.json using jq
+          jq --arg version "$VERSION" '.version = $version' custom_components/meraki_dashboard/manifest.json > temp.json
+          mv temp.json custom_components/meraki_dashboard/manifest.json
+          
+          echo "✅ Updated manifest.json version to $VERSION"
+
+      - name: Update docs changelog
+        run: |
+          echo "Updating docs/changelog.md with content from CHANGELOG.md"
+          
+          # Create the Jekyll front matter and header for docs changelog
+          cat > docs/changelog.md << 'DOCS_HEADER_EOF'
+---
+layout: default
+title: Changelog
+description: Release history and changelog for the Meraki Dashboard Home Assistant Integration
+---
+
+# Changelog
+
+All notable changes to this project are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+<div class="alert alert-info" role="alert">
+  <i class="bi bi-info-circle me-2"></i>
+  <strong>Note:</strong> This changelog is automatically updated from our <a href="{{ site.repository }}/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.
+</div>
+
+DOCS_HEADER_EOF
+
+          # Extract the changelog content from CHANGELOG.md (skip the header)
+          if [ -f CHANGELOG.md ]; then
+            # Skip the first 6 lines (header) and add the rest
+            tail -n +7 CHANGELOG.md >> docs/changelog.md
+          fi
+
+          # Add footer
+          cat >> docs/changelog.md << 'DOCS_FOOTER_EOF'
+
+## Support
+
+- **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
+- **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
+- **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
+
+## Links
+
+- **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
+- **[Releases]({{ site.repository }}/releases)** - Download specific versions
+- **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
+DOCS_FOOTER_EOF
+
+          echo "✅ Updated docs/changelog.md"
+
+      - name: Commit version and changelog updates
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Check if there are changes to commit
+          if git diff --quiet custom_components/meraki_dashboard/manifest.json docs/changelog.md; then
+            echo "No changes to commit - files already up to date"
+            exit 0
+          fi
+          
+          # Add and commit the changes
+          git add custom_components/meraki_dashboard/manifest.json docs/changelog.md
+          git commit -m "chore: update version to $VERSION and sync docs changelog
+
+🤖 Automatically updated manifest.json version and docs/changelog.md to match release tag ${{ github.event.release.tag_name }}
+
+Co-Authored-By: GitHub Action <action@github.com>"
+          
+          # Push the changes
+          git push
+          
+          echo "✅ Committed and pushed version update and changelog sync for $VERSION"

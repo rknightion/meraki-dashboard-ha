@@ -5,13 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.23.0 (2025-06-22)
+## [Unreleased]
 
-**Full Changelog**: https://github.com/rknightion/meraki-dashboard-ha/compare/meraki-dashboard-ha-v0.22.0...meraki-dashboard-ha-v0.23.0
+### Removed
+- Removed USB power detection functionality (not supported by Meraki API)
 
-## [0.22.0](https://github.com/rknightion/meraki-dashboard-ha/compare/meraki-dashboard-ha-v0.21.0...meraki-dashboard-ha-v0.22.0) (2025-06-22)
+## [0.23.0] - 2025-06-22
 
+### Fixed
+- Enhanced release workflow and removed obsolete sensor
 
-### 🐛 Bug Fixes
+## [0.22.0] - 2025-06-22
 
-* enhance release workflow and remove obsolete sensor ([2a8ce0f](https://github.com/rknightion/meraki-dashboard-ha/commit/2a8ce0f681f65eb7d1e5232a8d978b7a9b2f3ade))
+### Fixed
+- Enhanced release workflow and removed obsolete sensor
+
+---
+
+For releases prior to v0.22.0, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases).
