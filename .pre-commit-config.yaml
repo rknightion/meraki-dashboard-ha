@@ -117,7 +117,7 @@ repos:
 
   # Validate GitHub Actions workflow files
 -   repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.33.0 # Keep updated
+    rev: 0.33.1 # Keep updated
     hooks:
     -   id: check-github-workflows
 

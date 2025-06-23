@@ -66,7 +66,7 @@ class ApiKeyExpiredRepairFlow(RepairsFlow):
             ir.async_delete_issue(self.hass, DOMAIN, self.issue_id)
 
             return self.async_create_entry(
-                title="API Key Repair",
+                title="API         Key Repair",
                 data={},
             )
 

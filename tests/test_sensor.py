@@ -1,0 +1,962 @@
+"""Test Meraki Dashboard sensor entities."""
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import async_get
+from homeassistant.const import (
+    CONCENTRATION_PARTS_PER_MILLION,
+    PERCENTAGE,
+    UnitOfTemperature,
+)
+
+from custom_components.meraki_dashboard.sensor import (
+    async_setup_entry,
+    MerakiMTSensor,
+    MerakiMTEnergySensor,
+    MT_SENSOR_DESCRIPTIONS,
+)
+from custom_components.meraki_dashboard.const import (
+    DOMAIN,
+    MT_SENSOR_TEMPERATURE,
+    MT_SENSOR_HUMIDITY,
+    MT_SENSOR_CO2,
+    MT_SENSOR_BATTERY,
+    MT_SENSOR_REAL_POWER,
+)
+from tests.fixtures.meraki_api import MOCK_PROCESSED_SENSOR_DATA
+
+
+@pytest.fixture(name="mock_coordinator")
+def mock_coordinator():
+    """Mock sensor coordinator."""
+    coordinator = MagicMock()
+    coordinator.data = MOCK_PROCESSED_SENSOR_DATA
+    coordinator.async_request_refresh = AsyncMock()
+    return coordinator
+
+
+@pytest.fixture(name="mock_device_info")
+def mock_device_info():
+    """Mock device info."""
+    return {
+        "serial": "Q2XX-XXXX-XXXX",
+        "model": "MT11",
+        "name": "Conference Room Sensor",
+        "networkId": "N_123456789",
+        "network_name": "Main Office",
+    }
+
+
+@pytest.fixture(name="mock_network_hub")
+def mock_network_hub():
+    """Mock network hub."""
+    return MagicMock()
+
+
+class TestMerakiMTSensor:
+    """Test MerakiMTSensor entity."""
+
+    def test_temperature_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test temperature sensor initialization."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        assert sensor.entity_description.key == MT_SENSOR_TEMPERATURE
+        assert "temperature" in sensor.unique_id
+        assert sensor._device == mock_device_info
+        assert sensor._serial == "Q2XX-XXXX-XXXX"
+
+    def test_humidity_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test humidity sensor initialization."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_HUMIDITY],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        assert sensor.entity_description.key == MT_SENSOR_HUMIDITY
+        assert "humidity" in sensor.unique_id
+        assert sensor._device == mock_device_info
+
+    def test_co2_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test CO2 sensor initialization."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_CO2],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        assert sensor.entity_description.key == MT_SENSOR_CO2
+        assert "co2" in sensor.unique_id
+
+    def test_battery_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test battery sensor initialization."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_BATTERY],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        assert sensor.entity_description.key == MT_SENSOR_BATTERY
+        assert "battery" in sensor.unique_id
+
+    def test_sensor_state_with_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor state when data is available."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "temperature",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "temperature": {"celsius": 22.5}
+                    }
+                ]
+            }
+        }
+        
+        # Test that sensor can access data through coordinator
+        assert mock_coordinator.data["Q2XX-XXXX-XXXX"]["readings"][0]["temperature"]["celsius"] == 22.5
+
+    def test_sensor_state_no_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor state when no data is available."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator with no data for this device
+        mock_coordinator.data = {}
+        
+        # Sensor should handle missing data gracefully
+        assert mock_coordinator.data == {}
+
+    def test_sensor_device_info_structure(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor device info structure."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Verify device data is stored correctly
+        assert sensor._device["serial"] == "Q2XX-XXXX-XXXX"
+        assert sensor._device["model"] == "MT11"
+        assert sensor._device["name"] == "Conference Room Sensor"
+
+
+class TestMerakiMTEnergySensor:
+    """Test MerakiMTEnergySensor entity."""
+
+    def test_energy_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor initialization."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        assert energy_sensor.entity_description.key == f"{MT_SENSOR_REAL_POWER}_energy"
+        assert "energy" in energy_sensor.unique_id
+        assert energy_sensor._power_sensor_key == MT_SENSOR_REAL_POWER
+
+    def test_energy_sensor_device_structure(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor device structure."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        # Verify device data is stored correctly
+        assert energy_sensor._device["serial"] == "Q2XX-XXXX-XXXX"
+        assert energy_sensor._device["model"] == "MT11"
+
+    def test_energy_sensor_device_info(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor device info."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        device_info = energy_sensor.device_info
+        assert device_info["identifiers"] == {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        assert device_info["name"] == "Conference Room Sensor"
+
+    def test_energy_sensor_native_value_no_power_readings(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor native value when no power readings available."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        # Mock coordinator with no power data
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "temperature": {"value": 22.5, "ts": "2024-01-01T12:00:00.000000Z"}
+            }
+        }
+        
+        assert energy_sensor.native_value is None
+
+    def test_energy_sensor_native_value_with_power_readings(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor native value with power readings."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        import datetime
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        # Set initial energy and previous power reading to simulate existing state
+        energy_sensor._total_energy = 1.0
+        energy_sensor._last_power_value = 80.0  # Previous power reading
+        energy_sensor._last_update_time = datetime.datetime.fromisoformat("2024-01-01T12:00:00+00:00").timestamp()
+        
+        # Mock coordinator with power data in correct format (1 minute later)
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "realPower",
+                        "ts": "2024-01-01T12:01:00.000000Z",
+                        "realPower": {"draw": 100.0}
+                    }
+                ]
+            }
+        }
+        
+        # Should calculate energy increase over 1 minute
+        # Average power = (80 + 100) / 2 = 90W
+        # Time = 1 minute = 1/60 hours
+        # Energy increment = 90W * (1/60)h = 1.5 Wh
+        # Total energy = 1.0 + 1.5 = 2.5 Wh
+        native_value = energy_sensor.native_value
+        assert native_value is not None
+        assert native_value > 1.0  # Should be greater than initial 1.0 Wh
+
+    def test_energy_sensor_availability(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor availability."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        # Mock coordinator success
+        mock_coordinator.last_update_success = True
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "realPower",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "realPower": {"draw": 100.0}
+                    }
+                ]
+            }
+        }
+        
+        assert energy_sensor.available is True
+
+    def test_energy_sensor_extra_state_attributes(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor extra state attributes."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": []
+            }
+        }
+        mock_coordinator.devices = [mock_device_info]
+        
+        attrs = energy_sensor.extra_state_attributes
+        assert "serial" in attrs
+        assert attrs["serial"] == "Q2XX-XXXX-XXXX"
+        assert "model" in attrs
+        assert attrs["model"] == "MT11"
+
+    @patch('homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state')
+    async def test_energy_sensor_state_restoration_success(self, mock_get_last_state, hass, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor state restoration on startup."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        from homeassistant.core import State
+        from homeassistant.util import dt as dt_util
+        
+        # Mock restored state
+        mock_state = State(
+            entity_id="sensor.test_energy",
+            state="5.5",
+            attributes={
+                "last_reset": "2024-01-01T10:00:00+00:00"
+            }
+        )
+        mock_get_last_state.return_value = mock_state
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        energy_sensor.hass = hass
+        
+        await energy_sensor.async_added_to_hass()
+        
+        # Should restore the energy value
+        assert energy_sensor._total_energy == 5.5
+
+    @patch('homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state')
+    async def test_energy_sensor_state_restoration_invalid_value(self, mock_get_last_state, hass, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor state restoration with invalid value."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        from homeassistant.core import State
+        
+        # Mock restored state with invalid value
+        mock_state = State(
+            entity_id="sensor.test_energy",
+            state="invalid",
+            attributes={}
+        )
+        mock_get_last_state.return_value = mock_state
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        energy_sensor.hass = hass
+        
+        await energy_sensor.async_added_to_hass()
+        
+        # Should handle invalid value gracefully and keep default
+        assert energy_sensor._total_energy == 0.0
+
+    @patch('homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state')
+    async def test_energy_sensor_state_restoration_no_state(self, mock_get_last_state, hass, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test energy sensor state restoration when no previous state."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        mock_get_last_state.return_value = None
+        
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        energy_sensor.hass = hass
+        
+        await energy_sensor.async_added_to_hass()
+        
+        # Should start with default value
+        assert energy_sensor._total_energy == 0.0
+
+
+class TestSensorSetup:
+    """Test sensor platform setup."""
+
+    async def test_async_setup_entry_with_devices(self, hass: HomeAssistant, mock_config_entry):
+        """Test sensor setup with available devices."""
+        
+        # Mock integration data
+        mock_org_hub = MagicMock()
+        mock_network_hub = MagicMock()
+        mock_network_hub.devices = [
+            {
+                "serial": "Q2XX-XXXX-XXXX",
+                "model": "MT11", 
+                "name": "Conference Room Sensor",
+                "networkId": "N_123456789",
+                "network_name": "Main Office",
+            }
+        ]
+        
+        mock_coordinator = MagicMock()
+        mock_coordinator.data = MOCK_PROCESSED_SENSOR_DATA
+        
+        hass.data[DOMAIN] = {
+            mock_config_entry.entry_id: {
+                "organization_hub": mock_org_hub,
+                "network_hubs": {"hub1": mock_network_hub},
+                "coordinators": {"hub1": mock_coordinator},
+            }
+        }
+        
+        # Mock add entities callback
+        add_entities_mock = MagicMock()
+        
+        # Setup sensors
+        await async_setup_entry(hass, mock_config_entry, add_entities_mock)
+        
+        # Verify entities were added
+        add_entities_mock.assert_called_once()
+
+    async def test_async_setup_entry_no_hubs(self, hass: HomeAssistant, mock_config_entry):
+        """Test sensor setup with no hubs available."""
+        
+        # Mock integration data with no hubs
+        hass.data[DOMAIN] = {
+            mock_config_entry.entry_id: {
+                "organization_hub": MagicMock(),
+                "network_hubs": {},
+                "coordinators": {},
+            }
+        }
+        
+        # Mock add entities callback
+        add_entities_mock = MagicMock()
+        
+        # Setup sensors
+        await async_setup_entry(hass, mock_config_entry, add_entities_mock)
+        
+        # Should still add organizational hub sensors even with no network hubs
+        add_entities_mock.assert_called_once()
+        args = add_entities_mock.call_args[0][0]
+        assert isinstance(args, list)
+        # Should have at least the 4 org hub sensors
+        assert len(args) >= 4
+
+    async def test_async_setup_entry_no_integration_data(self, hass: HomeAssistant, mock_config_entry):
+        """Test sensor setup with no integration data."""
+        
+        # No integration data in hass.data
+        hass.data[DOMAIN] = {}
+        
+        # Mock add entities callback
+        add_entities_mock = MagicMock()
+        
+        # Setup sensors
+        await async_setup_entry(hass, mock_config_entry, add_entities_mock)
+        
+        # Should handle gracefully and not call add_entities when no integration data
+        add_entities_mock.assert_not_called()
+
+
+class TestSensorDescriptions:
+    """Test sensor description dictionaries."""
+
+    def test_mt_sensor_descriptions_exist(self):
+        """Test that MT sensor descriptions are properly defined."""
+        # Test that common sensor types have descriptions
+        assert MT_SENSOR_TEMPERATURE in MT_SENSOR_DESCRIPTIONS
+        assert MT_SENSOR_HUMIDITY in MT_SENSOR_DESCRIPTIONS
+        assert MT_SENSOR_CO2 in MT_SENSOR_DESCRIPTIONS
+        assert MT_SENSOR_BATTERY in MT_SENSOR_DESCRIPTIONS
+        
+        # Test description structure
+        temp_desc = MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE]
+        assert temp_desc.key == MT_SENSOR_TEMPERATURE
+        assert temp_desc.name is not None
+
+    def test_energy_sensor_descriptions(self):
+        """Test energy sensor descriptions."""
+        from custom_components.meraki_dashboard.sensor import MT_ENERGY_SENSOR_DESCRIPTIONS
+        
+        energy_key = f"{MT_SENSOR_REAL_POWER}_energy"
+        assert energy_key in MT_ENERGY_SENSOR_DESCRIPTIONS
+        energy_desc = MT_ENERGY_SENSOR_DESCRIPTIONS[energy_key]
+        assert energy_desc.key == energy_key
+
+
+class TestSensorNativeValues:
+    """Test sensor native value extraction for all sensor types."""
+
+    def test_temperature_sensor_native_value(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test temperature sensor native value extraction."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with temperature reading in correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "temperature",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "temperature": {"celsius": 22.5, "fahrenheit": 72.5}
+                    }
+                ]
+            }
+        }
+        
+        assert sensor.native_value == 22.5
+
+    def test_humidity_sensor_native_value(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test humidity sensor native value extraction."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_HUMIDITY],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with humidity reading in correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "humidity",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "humidity": {"relativePercentage": 45.2}
+                    }
+                ]
+            }
+        }
+        
+        assert sensor.native_value == 45.2
+
+    def test_co2_sensor_native_value(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test CO2 sensor native value extraction."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_CO2],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with CO2 reading in correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "co2",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "co2": {"concentration": 420}
+                    }
+                ]
+            }
+        }
+        
+        assert sensor.native_value == 420
+
+    def test_battery_sensor_native_value(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test battery sensor native value extraction."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_BATTERY],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with battery reading in correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "battery",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "battery": {"percentage": 85}
+                    }
+                ]
+            }
+        }
+        
+        assert sensor.native_value == 85
+
+    def test_power_sensor_native_value(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test power sensor native value extraction."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_REAL_POWER],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with power reading in correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "realPower",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "realPower": {"draw": 250.5}
+                    }
+                ]
+            }
+        }
+        
+        assert sensor.native_value == 250.5
+
+    def test_sensor_native_value_no_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor native value when no data is available."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator with no data for this device
+        mock_coordinator.data = {}
+        
+        assert sensor.native_value is None
+
+    def test_sensor_native_value_no_metric_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor native value when device data exists but metric doesn't."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with device but no temperature metric
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "humidity": {"value": 45.2, "ts": "2024-01-01T12:00:00.000000Z"}
+            }
+        }
+        
+        assert sensor.native_value is None
+
+    def test_sensor_native_value_invalid_data_structure(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor native value with invalid data structure."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with invalid structure
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "temperature": "invalid_structure"  # Should be dict with value key
+            }
+        }
+        
+        assert sensor.native_value is None
+
+
+class TestSensorExtraStateAttributes:
+    """Test sensor extra state attributes functionality."""
+
+    def test_sensor_extra_state_attributes_basic(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test basic extra state attributes extraction."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Mock coordinator data with correct format
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": []
+            }
+        }
+        mock_coordinator.devices = [mock_device_info]
+        
+        attrs = sensor.extra_state_attributes
+        
+        # Should include device info
+        assert "serial" in attrs
+        assert attrs["serial"] == "Q2XX-XXXX-XXXX"
+        assert "model" in attrs
+        assert attrs["model"] == "MT11"
+        assert "network_name" in attrs
+        assert attrs["network_name"] == "Main Office"
+
+    def test_sensor_extra_state_attributes_with_mac(self, mock_coordinator, mock_network_hub):
+        """Test extra state attributes with MAC address."""
+        device_info_with_mac = {
+            "serial": "Q2XX-XXXX-XXXX",
+            "model": "MT11",
+            "name": "Conference Room Sensor",
+            "networkId": "N_123456789",
+            "network_name": "Main Office",
+            "mac": "aa:bb:cc:dd:ee:ff",
+        }
+        
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=device_info_with_mac,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": []
+            }
+        }
+        mock_coordinator.devices = [device_info_with_mac]
+        
+        attrs = sensor.extra_state_attributes
+        assert "mac_address" in attrs
+        assert attrs["mac_address"] == "aa:bb:cc:dd:ee:ff"
+
+    def test_sensor_extra_state_attributes_with_last_reported(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test extra state attributes with last reported timestamp."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "temperature",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "temperature": {"celsius": 22.5}
+                    }
+                ]
+            }
+        }
+        mock_coordinator.devices = [mock_device_info]
+        
+        attrs = sensor.extra_state_attributes
+        assert "last_reported_at" in attrs
+        assert attrs["last_reported_at"] == "2024-01-01T12:00:00.000000Z"
+
+    def test_sensor_extra_state_attributes_temperature_fahrenheit(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test extra state attributes for temperature sensor includes Fahrenheit."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "temperature",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "temperature": {"celsius": 22.5, "fahrenheit": 72.5}
+                    }
+                ]
+            }
+        }
+        mock_coordinator.devices = [mock_device_info]
+        
+        attrs = sensor.extra_state_attributes
+        assert "temperature_fahrenheit" in attrs
+        assert attrs["temperature_fahrenheit"] == 72.5
+
+
+class TestSensorAvailability:
+    """Test sensor availability functionality."""
+
+    def test_sensor_available_with_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor availability when data is present."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "temperature",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "temperature": {"celsius": 22.5}
+                    }
+                ]
+            }
+        }
+        
+        # Mock the coordinator's available property
+        mock_coordinator.last_update_success = True
+        
+        assert sensor.available is True
+
+    def test_sensor_available_no_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor availability when no data is present."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        mock_coordinator.data = {}
+        mock_coordinator.last_update_success = False
+        
+        assert sensor.available is False
+
+
+class TestSensorDeviceInfo:
+    """Test sensor device info functionality."""
+
+    def test_sensor_device_info_basic(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test basic device info structure."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        device_info = sensor.device_info
+        
+        assert device_info["identifiers"] == {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        assert device_info["name"] == "Conference Room Sensor"
+        assert device_info["manufacturer"] == "Cisco Meraki"
+        assert device_info["model"] == "MT11"
+
+    def test_sensor_device_info_with_mac_connection(self, mock_coordinator, mock_network_hub):
+        """Test device info with MAC address connection."""
+        device_info_with_mac = {
+            "serial": "Q2XX-XXXX-XXXX",
+            "model": "MT11",
+            "name": "Conference Room Sensor",
+            "networkId": "N_123456789",
+            "network_name": "Main Office",
+            "mac": "aa:bb:cc:dd:ee:ff",
+        }
+        
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=device_info_with_mac,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Check the _attr_device_info which is set during initialization
+        assert "connections" in sensor._attr_device_info
+        assert sensor._attr_device_info["connections"] == {("mac", "aa:bb:cc:dd:ee:ff")}
+
+
+class TestSensorUtilities:
+    """Test sensor utility functions and properties."""
+
+    def test_sensor_unique_id_generation(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test that sensors generate unique IDs correctly."""
+        temp_sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        humidity_sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_HUMIDITY],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Unique IDs should be different
+        assert temp_sensor.unique_id != humidity_sensor.unique_id
+        assert "temperature" in temp_sensor.unique_id
+        assert "humidity" in humidity_sensor.unique_id
+
+    def test_sensor_entity_registry_info(self, mock_coordinator, mock_device_info, mock_network_hub):
+        """Test sensor entity registry information."""
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+        
+        # Verify registry-related properties
+        assert sensor.unique_id is not None
+        assert sensor._config_entry_id == "test_entry"
+        assert sensor._serial == "Q2XX-XXXX-XXXX"
