@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.12] - 2025-06-25
+
+### 🚀 Features
+- add daily Jekyll deployment schedule
+### 🐛 Bug Fixes
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.11] - 2025-06-25
 
 ### 🚀 Features
