@@ -71,11 +71,12 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     VERSION = 1
     MINOR_VERSION = 1
+    # Set the domain at the class level so Home Assistant can properly register the handler
+    domain = DOMAIN
 
     def __init__(self) -> None:
         """Initialize the config flow."""
         super().__init__()
-        self.domain = DOMAIN
         self._api_key: str | None = None
         self._base_url: str = DEFAULT_BASE_URL
         self._organizations: list[dict[str, Any]] = []
