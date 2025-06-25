@@ -74,6 +74,8 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     def __init__(self) -> None:
         """Initialize the config flow."""
+        super().__init__()
+        self.domain = DOMAIN
         self._api_key: str | None = None
         self._base_url: str = DEFAULT_BASE_URL
         self._organizations: list[dict[str, Any]] = []
