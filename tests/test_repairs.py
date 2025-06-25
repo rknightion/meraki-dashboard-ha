@@ -75,7 +75,7 @@ class TestAsyncCreateFixFlow:
         flow = await async_create_fix_flow(hass, issue_id, data)
 
         # Should create a ConfirmRepairFlow instance for unknown types
-        mock_confirm_flow.assert_called_once_with(hass, issue_id, data)
+        mock_confirm_flow.assert_called_once_with()
         assert flow == mock_instance
 
 
@@ -109,7 +109,10 @@ class TestRepairFlowPatternMatching:
 
             await async_create_fix_flow(hass, issue_id, data)
 
-            expected_mock.assert_called_with(hass, issue_id, data)
+            if expected_mock == mock_confirm:
+                expected_mock.assert_called_with()
+            else:
+                expected_mock.assert_called_with(hass, issue_id, data)
 
             # Reset mocks for next iteration
             for mock in [mock_api, mock_network, mock_device, mock_confirm]:
@@ -192,7 +195,7 @@ class TestRepairFlowEdgeCases:
         flow = await async_create_fix_flow(hass, issue_id, data)
 
         # Should fall back to ConfirmRepairFlow for empty issue ID
-        mock_confirm_flow.assert_called_once_with(hass, issue_id, data)
+        mock_confirm_flow.assert_called_once_with()
         assert flow == mock_instance
 
     @patch("custom_components.meraki_dashboard.repairs.ConfirmRepairFlow")
@@ -207,7 +210,7 @@ class TestRepairFlowEdgeCases:
         flow = await async_create_fix_flow(hass, issue_id, data)
 
         # Should NOT match because startswith() is used and this doesn't start with "api_key_expired"
-        mock_confirm_flow.assert_called_once_with(hass, issue_id, data)
+        mock_confirm_flow.assert_called_once_with()
         assert flow == mock_instance
 
     @patch("custom_components.meraki_dashboard.repairs.ConfirmRepairFlow")
@@ -224,7 +227,7 @@ class TestRepairFlowEdgeCases:
         flow = await async_create_fix_flow(hass, issue_id, data)
 
         # Should fall back to ConfirmRepairFlow because matching is case-sensitive
-        mock_confirm_flow.assert_called_once_with(hass, issue_id, data)
+        mock_confirm_flow.assert_called_once_with()
         assert flow == mock_instance
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -165,19 +166,24 @@ class MerakiOrganizationHub:
             self.total_api_calls += 1
 
             # Verify connection and get organization info
-            org_info = await self.hass.async_add_executor_job(
-                self.dashboard.organizations.getOrganization, self.organization_id
-            )
-            self.total_api_calls += 1
-            self.organization_name = org_info.get("name")
-            _LOGGER.info("Connected to Meraki organization: %s", self.organization_name)
+            if self.dashboard is not None:
+                org_info = await self.hass.async_add_executor_job(
+                    self.dashboard.organizations.getOrganization, self.organization_id
+                )
+                self.total_api_calls += 1
+                self.organization_name = org_info.get("name")
+                _LOGGER.info(
+                    "Connected to Meraki organization: %s", self.organization_name
+                )
 
-            # Get all networks for the organization
-            self.networks = await self.hass.async_add_executor_job(
-                self.dashboard.organizations.getOrganizationNetworks,
-                self.organization_id,
-            )
-            self.total_api_calls += 1
+                # Get all networks for the organization
+                self.networks = await self.hass.async_add_executor_job(
+                    self.dashboard.organizations.getOrganizationNetworks,
+                    self.organization_id,
+                )
+                self.total_api_calls += 1
+            else:
+                raise ConfigEntryNotReady("Dashboard API not initialized")
             _LOGGER.debug("Found %d networks in organization", len(self.networks))
 
             self.last_api_call_error = None
@@ -192,6 +198,7 @@ class MerakiOrganizationHub:
                     self.hass,
                     DOMAIN,
                     f"api_key_expired_{self.config_entry.entry_id}",
+                    is_fixable=True,
                     severity=ir.IssueSeverity.ERROR,
                     translation_key="api_key_expired",
                     translation_placeholders={
@@ -360,7 +367,7 @@ class MerakiNetworkHub:
 
         # Auto-discovery
         self._discovery_task = None
-        self._device_discovery_unsub = None
+        self._device_discovery_unsub: Callable[[], None] | None = None
 
         # Event handler for sensor state changes (MT devices only)
         self.event_handler = (
@@ -485,6 +492,7 @@ class MerakiNetworkHub:
                 self.hass,
                 DOMAIN,
                 f"device_discovery_failed_{self.config_entry.entry_id}_{self.network_id}_{self.device_type}",
+                is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="device_discovery_failed",
                 translation_placeholders={
@@ -560,7 +568,7 @@ class MerakiNetworkHub:
             # Create wrapper function for API call
             def get_sensor_readings_with_serials(
                 org_id: str, device_serials: list[str]
-            ):
+            ) -> list[dict[str, Any]]:
                 if self.dashboard is None:
                     raise RuntimeError("Dashboard API not initialized")
                 return self.dashboard.sensor.getOrganizationSensorReadingsLatest(
@@ -585,10 +593,10 @@ class MerakiNetworkHub:
             )
 
             # Organize readings by serial number
-            result = {}
+            result: dict[str, dict[str, Any]] = {}
             for reading in all_readings:
                 serial = reading.get("serial")
-                if serial in serials:
+                if serial and serial in serials:
                     result[serial] = reading
 
                     # Process events for state changes

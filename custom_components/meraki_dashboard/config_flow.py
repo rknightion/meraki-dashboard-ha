@@ -62,7 +62,7 @@ for logger_name in loggers_to_configure:
     logger.propagate = False
 
 
-class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
+class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
     """Handle a config flow for Meraki Dashboard.
 
     This class manages the configuration flow for setting up the integration,
@@ -71,6 +71,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
 
     VERSION = 1
     MINOR_VERSION = 1
+
+    # Set the domain as a class attribute (modern approach)
+    domain = DOMAIN
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -138,7 +141,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[
-                                {"value": url, "label": region}
+                                selector.SelectOptionDict(value=url, label=region)
                                 for region, url in REGIONAL_BASE_URLS.items()
                             ],
                             mode=selector.SelectSelectorMode.DROPDOWN,
@@ -368,7 +371,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # ty
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle reauthentication flow when API key becomes invalid."""
-        reauth_entry = self.context["source_config_entry"]
+        reauth_entry = self.context.get("source_config_entry")
+        if not isinstance(reauth_entry, config_entries.ConfigEntry):
+            return self.async_abort(reason="reauth_failed")
 
         if user_input is not None:
             # Test the new API key
@@ -486,7 +491,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         """Manage the options."""
         if user_input is not None:
             # Get current options first
-            current_options = self.config_entry.options or {}
+            current_options = dict(self.config_entry.options or {})
 
             # Convert minutes back to seconds for storage
             options = dict(user_input)
@@ -569,9 +574,9 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
 
         # Get current hub information from hass.data if available
         hubs_info = await self._get_available_hubs()
-        current_options = self.config_entry.options or {}
+        current_options = dict(self.config_entry.options or {})
 
-        schema_dict = {}
+        schema_dict: dict[vol.Marker, Any] = {}
 
         # Global auto-discovery setting (only if no hubs are available)
         if not hubs_info:
@@ -612,7 +617,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"auto_discovery_{hub_display_name}",
                         default=current_hub_auto_discovery.get(hub_key, True),
                     )
-                ] = selector.BooleanSelector()
+                ] = bool
 
                 # Scan interval for this hub
                 current_scan_minutes = (
@@ -628,13 +633,8 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"scan_interval_{hub_display_name}",
                         default=current_scan_minutes,
                     )
-                ] = selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_SCAN_INTERVAL_MINUTES,
-                        max=60,
-                        step=1,
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
+                ] = vol.All(
+                    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60)
                 )
 
                 # Discovery interval for this hub
@@ -650,13 +650,9 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"discovery_interval_{hub_display_name}",
                         default=current_discovery_minutes,
                     )
-                ] = selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
-                        max=1440,
-                        step=1,
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
+                ] = vol.All(
+                    vol.Coerce(int),
+                    vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440),
                 )
 
         # Build description placeholders with hub names

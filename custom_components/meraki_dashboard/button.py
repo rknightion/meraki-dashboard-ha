@@ -48,7 +48,7 @@ async def async_setup_entry(
         return
 
     # Create button entities
-    buttons = []
+    buttons: list[ButtonEntity] = []
 
     # Create organization-level buttons
     buttons.append(MerakiOrgUpdateButton(org_hub, config_entry, coordinators))

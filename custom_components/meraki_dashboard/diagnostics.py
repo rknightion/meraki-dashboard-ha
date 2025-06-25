@@ -166,7 +166,7 @@ def _get_device_models(devices: list[dict[str, Any]]) -> dict[str, int]:
     return models
 
 
-def _count_by_manufacturer(devices) -> dict[str, int]:
+def _count_by_manufacturer(devices: Any) -> dict[str, int]:
     """Count devices by manufacturer."""
     manufacturers: dict[str, int] = {}
     for device in devices:
@@ -175,7 +175,7 @@ def _count_by_manufacturer(devices) -> dict[str, int]:
     return manufacturers
 
 
-def _count_by_model(devices) -> dict[str, int]:
+def _count_by_model(devices: Any) -> dict[str, int]:
     """Count devices by model."""
     models: dict[str, int] = {}
     for device in devices:
@@ -184,7 +184,7 @@ def _count_by_model(devices) -> dict[str, int]:
     return models
 
 
-def _count_by_platform(entities) -> dict[str, int]:
+def _count_by_platform(entities: Any) -> dict[str, int]:
     """Count entities by platform."""
     platforms: dict[str, int] = {}
     for entity in entities:

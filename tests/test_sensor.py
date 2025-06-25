@@ -274,7 +274,7 @@ class TestMerakiMTEnergySensor:
             }
         }
 
-        assert energy_sensor.native_value is None
+        assert energy_sensor.native_value == 0.0
 
     def test_energy_sensor_native_value_with_power_readings(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -318,11 +318,11 @@ class TestMerakiMTEnergySensor:
         # Should calculate energy increase over 1 minute
         # Average power = (80 + 100) / 2 = 90W
         # Time = 1 minute = 1/60 hours
-        # Energy increment = 90W * (1/60)h = 1.5 Wh = 0.0015 kWh
-        # Total energy = 1.0 + 0.0015 = 1.0015 kWh
+        # Energy increment = 90W * (1/60)h = 1.5 Wh
+        # Total energy = 1.0 + 1.5 = 2.5 Wh
         native_value = energy_sensor.native_value
         assert native_value is not None
-        assert native_value > 1.0  # Should be greater than initial 1.0 kWh
+        assert native_value > 1.0  # Should be greater than initial 1.0 Wh
 
     def test_energy_sensor_availability(
         self, mock_coordinator, mock_device_info, mock_network_hub
