@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Removed
-- Removed USB power detection functionality (not supported by Meraki API)
+
+## [0.24.6] - 2025-06-25
+
+* No changes
 
 ## [0.23.0] - 2025-06-22
 

@@ -16,8 +16,10 @@ All notable changes to this project are documented here. The format is based on 
 
 ## [Unreleased]
 
-### Removed
-- Removed USB power detection functionality (not supported by Meraki API)
+
+## [0.24.6] - 2025-06-25
+
+* No changes
 
 ## [0.23.0] - 2025-06-22
 
