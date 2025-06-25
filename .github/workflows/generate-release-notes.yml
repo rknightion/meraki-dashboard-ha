@@ -1,0 +1,117 @@
+name: Generate Release Notes from Git History
+
+on:
+  workflow_dispatch:
+    inputs:
+      since_tag:
+        description: 'Generate notes since this tag (e.g., v0.24.4)'
+        required: false
+        type: string
+      target_version:
+        description: 'Target version for the release (e.g., 0.24.10)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes from git history
+        id: generate_notes
+        run: |
+          TARGET_VERSION="${{ github.event.inputs.target_version }}"
+          SINCE_TAG="${{ github.event.inputs.since_tag }}"
+
+          # If no since_tag provided, get the latest tag
+          if [ -z "$SINCE_TAG" ]; then
+            SINCE_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          fi
+
+          echo "Generating release notes for v$TARGET_VERSION"
+          echo "Since tag: $SINCE_TAG"
+
+          # Create release notes
+          cat > /tmp/release_notes.md << 'EOF'
+          ## Changes
+
+          EOF
+
+          # Get commits since the last tag
+          if [ -n "$SINCE_TAG" ]; then
+            COMMITS=$(git log --oneline "$SINCE_TAG..HEAD" --grep="^feat" --grep="^fix" --grep="^docs" --grep="^refactor" --grep="^perf" --grep="^test" --grep="^build" --grep="^ci" --grep="^style" --grep="^chore" --grep="^security" --extended-regexp)
+          else
+            COMMITS=$(git log --oneline HEAD~10..HEAD --grep="^feat" --grep="^fix" --grep="^docs" --grep="^refactor" --grep="^perf" --grep="^test" --grep="^build" --grep="^ci" --grep="^style" --grep="^chore" --grep="^security" --extended-regexp)
+          fi
+
+          # Categorize commits
+          echo "### 🚀 Features" >> /tmp/release_notes.md
+          echo "$COMMITS" | grep "^[a-f0-9]* feat" | sed 's/^[a-f0-9]* feat[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No new features" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+
+          echo "### 🐛 Bug Fixes" >> /tmp/release_notes.md
+          echo "$COMMITS" | grep "^[a-f0-9]* fix" | sed 's/^[a-f0-9]* fix[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No bug fixes" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+
+          echo "### 🧰 Maintenance" >> /tmp/release_notes.md
+          echo "$COMMITS" | grep -E "^[a-f0-9]* (chore|ci|build|refactor)" | sed -E 's/^[a-f0-9]* (chore|ci|build|refactor)[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No maintenance changes" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+
+          echo "### 📚 Documentation" >> /tmp/release_notes.md
+          echo "$COMMITS" | grep "^[a-f0-9]* docs" | sed 's/^[a-f0-9]* docs[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No documentation changes" >> /tmp/release_notes.md
+          echo "" >> /tmp/release_notes.md
+
+          # Add installation instructions
+          cat >> /tmp/release_notes.md << 'EOF'
+          ## Installation
+
+          ### HACS (Recommended)
+          1. Add this repository as a custom repository in HACS
+          2. Install "Meraki Dashboard" integration
+          3. Restart Home Assistant
+
+          ### Manual Installation
+          1. Download the `meraki_dashboard.zip` file from the Assets section below
+          2. Extract to `custom_components/meraki_dashboard/` in your Home Assistant config directory
+          3. Restart Home Assistant
+
+          ## Contributors
+
+          Thanks to all contributors who made this release possible! 🎉
+          EOF
+
+          echo "Generated release notes:"
+          cat /tmp/release_notes.md
+
+          # Save for next step
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create or update draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TARGET_VERSION="${{ github.event.inputs.target_version }}"
+          TAG_NAME="v$TARGET_VERSION"
+
+          # Check if draft release already exists
+          EXISTING_RELEASE=$(gh release list --limit 50 | grep "Draft" | grep "$TAG_NAME" | head -1 | cut -f1 || echo "")
+
+          if [ -n "$EXISTING_RELEASE" ]; then
+            echo "Updating existing draft release: $EXISTING_RELEASE"
+            gh release edit "$EXISTING_RELEASE" --notes-file /tmp/release_notes.md
+          else
+            echo "Creating new draft release: $TAG_NAME"
+            gh release create "$TAG_NAME" --draft --title "$TAG_NAME" --notes-file /tmp/release_notes.md
+          fi
+
+          echo "✅ Release notes generated and applied to draft release $TAG_NAME"
