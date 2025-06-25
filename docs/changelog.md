@@ -17,6 +17,18 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.11] - 2025-06-25
+
+### 🚀 Features
+- auto-run release notes generation on pushes to main
+- enhance release note generation for direct commits
+### 🐛 Bug Fixes
+- handle existing tags in release note generation
+### 🧰 Maintenance
+- remove node_modules from search exclusion
+- remove problematic release-drafter in favor of generate-release-notes
+### 📚 Documentation
+
 ## [0.24.10] - 2025-06-25
 
 * No changes
