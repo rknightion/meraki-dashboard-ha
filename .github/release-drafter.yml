@@ -1,8 +1,6 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 
-# Enable conventional commit parsing for direct commits to main
-commitish: main
 sort-direction: descending
 
 categories:
@@ -139,4 +137,13 @@ exclude-labels:
 
 # Include commits and handle cases where there are no PRs
 include-pre-releases: false
-prerelease: false 
+prerelease: false
+
+# Enable commit-based release notes (not just PRs)
+commitish: main
+filter-by-commitish: true
+
+# Replacers to clean up commit messages for better changelog entries
+replacers:
+  - search: '/^(feat|fix|docs|style|refactor|perf|test|chore|ci|build)(\(.+\))?(!)?\s*:\s*(.+)$/gm'
+    replace: '$4'
