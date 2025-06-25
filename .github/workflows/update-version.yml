@@ -196,6 +196,17 @@ jobs:
             echo "✅ Updated tag $TAG_NAME to point to commit with version updates"
           fi
 
+      - name: Trigger Jekyll deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Triggering Jekyll deployment to publish updated docs..."
+          # Wait a moment for the commit to be fully processed
+          sleep 10
+          # Trigger the Jekyll workflow to deploy the updated docs
+          gh workflow run "jekyll-gh-pages.yml" --ref main
+          echo "✅ Jekyll deployment triggered - docs will be updated shortly"
+
       - name: Create and upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
