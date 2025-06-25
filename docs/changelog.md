@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.15] - 2025-06-25
+
+### 🚀 Features
+### 🐛 Bug Fixes
+- manual sleepz
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.14] - 2025-06-25
 
 ### 🚀 Features
