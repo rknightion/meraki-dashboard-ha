@@ -183,6 +183,7 @@ jobs:
                     # Check if there are changes to commit
           if git diff --quiet CHANGELOG.md custom_components/meraki_dashboard/manifest.json docs/changelog.md; then
             echo "No changes to commit - files already up to date"
+            sleep 10s
           else
             echo "Changes detected, committing..."
 
@@ -201,13 +202,18 @@ jobs:
             git tag -f "$TAG_NAME"
             git push origin "$TAG_NAME" --force
             echo "✅ Updated tag $TAG_NAME to point to commit with version updates"
+            sleep 10s
           fi
 
       - name: Fresh checkout for Jekyll deployment
         uses: actions/checkout@v4
+
         with:
+          # Use a personal access token or the default token
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Ensure we're on the main branch, not detached HEAD
           ref: main
+          fetch-depth: 0
           clean: true
 
       - name: Setup Pages
