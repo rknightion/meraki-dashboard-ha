@@ -126,18 +126,56 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TARGET_VERSION="${{ github.event.inputs.target_version }}"
-          TAG_NAME="v$TARGET_VERSION"
-
-          # Check if draft release already exists
-          EXISTING_RELEASE=$(gh release list --limit 50 | grep "Draft" | grep "$TAG_NAME" | head -1 | cut -f1 || echo "")
-
-          if [ -n "$EXISTING_RELEASE" ]; then
-            echo "Updating existing draft release: $EXISTING_RELEASE"
-            gh release edit "$EXISTING_RELEASE" --notes-file /tmp/release_notes.md
+          # Get the target version from the previous step
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET_VERSION="${{ github.event.inputs.target_version }}"
+            if [ -z "$TARGET_VERSION" ]; then
+              # Auto-generate if not provided in manual mode
+              LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
+              LATEST_VERSION=${LATEST_TAG#v}
+              IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
+              NEW_PATCH=$((patch + 1))
+              TARGET_VERSION="$major.$minor.$NEW_PATCH"
+            fi
           else
-            echo "Creating new draft release: $TAG_NAME"
-            gh release create "$TAG_NAME" --draft --title "$TAG_NAME" --notes-file /tmp/release_notes.md
+            # Auto-triggered by push - generate next version
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
+            LATEST_VERSION=${LATEST_TAG#v}
+            IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
+            NEW_PATCH=$((patch + 1))
+            TARGET_VERSION="$major.$minor.$NEW_PATCH"
           fi
 
-          echo "✅ Release notes generated and applied to draft release $TAG_NAME"
+          TAG_NAME="v$TARGET_VERSION"
+
+          # Check if ANY release (draft or published) already exists with this tag
+          EXISTING_RELEASE=$(gh release list --limit 50 | grep "$TAG_NAME" | head -1 | cut -f1 || echo "")
+
+          if [ -n "$EXISTING_RELEASE" ]; then
+            # Check if it's a draft
+            IS_DRAFT=$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')
+            if [ "$IS_DRAFT" = "true" ]; then
+              echo "Updating existing draft release: $TAG_NAME"
+              gh release edit "$TAG_NAME" --notes-file /tmp/release_notes.md
+              echo "✅ Updated draft release $TAG_NAME with new release notes"
+            else
+              echo "Release $TAG_NAME already exists and is published. Skipping update."
+              echo "✅ Skipped updating published release $TAG_NAME"
+            fi
+          else
+            # Find a unique version number if needed
+            COUNTER=0
+            ORIGINAL_VERSION="$TARGET_VERSION"
+            while gh release view "v$TARGET_VERSION" >/dev/null 2>&1; do
+              COUNTER=$((COUNTER + 1))
+              IFS='.' read -r major minor patch <<< "$ORIGINAL_VERSION"
+              NEW_PATCH=$((patch + COUNTER))
+              TARGET_VERSION="$major.$minor.$NEW_PATCH"
+              echo "Tag v$ORIGINAL_VERSION exists, trying v$TARGET_VERSION"
+            done
+
+            TAG_NAME="v$TARGET_VERSION"
+            echo "Creating new draft release: $TAG_NAME"
+            gh release create "$TAG_NAME" --draft --title "$TAG_NAME" --notes-file /tmp/release_notes.md
+            echo "✅ Created new draft release $TAG_NAME"
+          fi
