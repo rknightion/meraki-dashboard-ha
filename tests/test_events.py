@@ -1,25 +1,24 @@
 """Test event handling for Meraki Dashboard integration."""
 
-import pytest
 from unittest.mock import MagicMock, patch
-from datetime import datetime
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
 
-from custom_components.meraki_dashboard.events import MerakiEventHandler
+import pytest
+from homeassistant.core import HomeAssistant
+
 from custom_components.meraki_dashboard.const import (
     DOMAIN,
-    EVENT_TYPE,
     EVENT_DEVICE_ID,
     EVENT_DEVICE_SERIAL,
-    EVENT_SENSOR_TYPE,
-    EVENT_VALUE,
     EVENT_PREVIOUS_VALUE,
+    EVENT_SENSOR_TYPE,
     EVENT_TIMESTAMP,
+    EVENT_TYPE,
+    EVENT_VALUE,
+    MT_SENSOR_BUTTON,
     MT_SENSOR_DOOR,
     MT_SENSOR_WATER,
-    MT_SENSOR_BUTTON,
 )
+from custom_components.meraki_dashboard.events import MerakiEventHandler
 
 
 @pytest.fixture(name="event_handler")
@@ -32,6 +31,7 @@ def event_handler_fixture(hass: HomeAssistant):
 def sample_device_info():
     """Sample device info."""
     from custom_components.meraki_dashboard.const import DOMAIN
+
     return {
         "serial": "Q2XX-XXXX-XXXX",
         "model": "MT14",
@@ -47,14 +47,16 @@ class TestMerakiEventHandler:
     def test_event_handler_initialization(self, hass: HomeAssistant):
         """Test event handler initialization."""
         handler = MerakiEventHandler(hass)
-        
+
         assert handler.hass is hass
         assert isinstance(handler._previous_states, dict)
         assert len(handler._previous_states) == 0
 
-    @patch('custom_components.meraki_dashboard.events.dr.async_get')
-    @patch('homeassistant.core.EventBus.async_fire')
-    def test_track_sensor_data_basic(self, mock_fire, mock_dr_get, event_handler, sample_device_info):
+    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    @patch("homeassistant.core.EventBus.async_fire")
+    def test_track_sensor_data_basic(
+        self, mock_fire, mock_dr_get, event_handler, sample_device_info
+    ):
         """Test basic sensor data tracking."""
         # Mock device registry
         mock_registry = MagicMock()
@@ -62,7 +64,7 @@ class TestMerakiEventHandler:
         mock_device.id = "test_device_id"
         mock_registry.async_get_device.return_value = mock_device
         mock_dr_get.return_value = mock_registry
-        
+
         # Door sensor readings
         door_readings = [
             {
@@ -76,18 +78,20 @@ class TestMerakiEventHandler:
                 "value": 22.5,
             },
         ]
-        
+
         # Track sensor data
         event_handler.track_sensor_data(
             device_serial="Q2XX-XXXX-XXXX",
             sensor_readings=door_readings,
             device_info=sample_device_info,
         )
-        
+
         # Verify device registry lookup was called
         mock_dr_get.assert_called_once()
 
-    def test_track_sensor_data_no_event_metrics(self, event_handler, sample_device_info):
+    def test_track_sensor_data_no_event_metrics(
+        self, event_handler, sample_device_info
+    ):
         """Test tracking sensor data with no event-generating metrics."""
         # Temperature reading (not an event metric)
         temp_readings = [
@@ -97,19 +101,21 @@ class TestMerakiEventHandler:
                 "value": 22.5,
             }
         ]
-        
-        with patch('homeassistant.core.EventBus.async_fire') as mock_fire:
+
+        with patch("homeassistant.core.EventBus.async_fire") as mock_fire:
             event_handler.track_sensor_data(
                 device_serial="Q2XX-XXXX-XXXX",
                 sensor_readings=temp_readings,
                 device_info=sample_device_info,
             )
-            
+
             # Should not have fired any events
             mock_fire.assert_not_called()
 
-    @patch('custom_components.meraki_dashboard.events.dr.async_get')
-    def test_track_multiple_devices(self, mock_dr_get, event_handler, sample_device_info):
+    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    def test_track_multiple_devices(
+        self, mock_dr_get, event_handler, sample_device_info
+    ):
         """Test tracking multiple devices simultaneously."""
         # Mock device registry
         mock_registry = MagicMock()
@@ -117,17 +123,17 @@ class TestMerakiEventHandler:
         mock_device1.id = "device1_id"
         mock_device2 = MagicMock()
         mock_device2.id = "device2_id"
-        
+
         def mock_get_device(identifiers):
             if (DOMAIN, "Q2XX-XXXX-XXXX") in identifiers:
                 return mock_device1
             elif (DOMAIN, "Q2YY-YYYY-YYYY") in identifiers:
                 return mock_device2
             return None
-            
+
         mock_registry.async_get_device = mock_get_device
         mock_dr_get.return_value = mock_registry
-        
+
         # Device 1 readings
         device1_readings = [
             {
@@ -136,7 +142,7 @@ class TestMerakiEventHandler:
                 "value": True,
             }
         ]
-        
+
         # Device 2 readings
         device2_readings = [
             {
@@ -145,7 +151,7 @@ class TestMerakiEventHandler:
                 "value": False,
             }
         ]
-        
+
         device2_info = {
             "serial": "Q2YY-YYYY-YYYY",
             "model": "MT12",
@@ -153,21 +159,21 @@ class TestMerakiEventHandler:
             "networkId": "N_123456789",
             "domain": DOMAIN,
         }
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             # Track both devices
             event_handler.track_sensor_data(
                 device_serial="Q2XX-XXXX-XXXX",
                 sensor_readings=device1_readings,
                 device_info=sample_device_info,
             )
-            
+
             event_handler.track_sensor_data(
                 device_serial="Q2YY-YYYY-YYYY",
                 sensor_readings=device2_readings,
                 device_info=device2_info,
             )
-        
+
         # Should have separate state tracking for each device
         assert "Q2XX-XXXX-XXXX_door" in event_handler._previous_states
         assert "Q2YY-YYYY-YYYY_water" in event_handler._previous_states
@@ -175,14 +181,14 @@ class TestMerakiEventHandler:
 
     def test_empty_sensor_readings(self, event_handler, sample_device_info):
         """Test handling empty sensor readings."""
-        with patch('homeassistant.core.EventBus.async_fire') as mock_fire:
+        with patch("homeassistant.core.EventBus.async_fire") as mock_fire:
             # Empty readings list
             event_handler.track_sensor_data(
                 device_serial="Q2XX-XXXX-XXXX",
                 sensor_readings=[],
                 device_info=sample_device_info,
             )
-            
+
             # Should handle gracefully
             mock_fire.assert_not_called()
 
@@ -195,8 +201,8 @@ class TestMerakiEventHandler:
                 # Missing metric and value
             }
         ]
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             # Should handle gracefully
             try:
                 event_handler.track_sensor_data(
@@ -208,7 +214,7 @@ class TestMerakiEventHandler:
                 # Should not raise exceptions
                 pytest.fail("Event handler should handle malformed readings gracefully")
 
-    @patch('custom_components.meraki_dashboard.events.dr.async_get')
+    @patch("custom_components.meraki_dashboard.events.dr.async_get")
     def test_state_persistence(self, mock_dr_get, event_handler, sample_device_info):
         """Test that previous states are properly maintained."""
         # Mock device registry
@@ -217,17 +223,17 @@ class TestMerakiEventHandler:
         mock_device1.id = "device1_id"
         mock_device2 = MagicMock()
         mock_device2.id = "device2_id"
-        
+
         def mock_get_device(identifiers):
             if (DOMAIN, "Q2XX-XXXX-XXXX") in identifiers:
                 return mock_device1
             elif (DOMAIN, "Q2YY-YYYY-YYYY") in identifiers:
                 return mock_device2
             return None
-            
+
         mock_registry.async_get_device = mock_get_device
         mock_dr_get.return_value = mock_registry
-        
+
         # First reading
         first_readings = [
             {
@@ -236,25 +242,29 @@ class TestMerakiEventHandler:
                 "value": False,
             }
         ]
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             event_handler.track_sensor_data(
                 device_serial="Q2XX-XXXX-XXXX",
                 sensor_readings=first_readings,
                 device_info=sample_device_info,
             )
-        
+
         # Verify state was stored
         assert "Q2XX-XXXX-XXXX_door" in event_handler._previous_states
-        
+
         # Different device should not interfere
-        with patch('homeassistant.core.EventBus.async_fire'):
+        with patch("homeassistant.core.EventBus.async_fire"):
             event_handler.track_sensor_data(
                 device_serial="Q2YY-YYYY-YYYY",
                 sensor_readings=first_readings,
-                device_info={**sample_device_info, "serial": "Q2YY-YYYY-YYYY", "domain": DOMAIN},
+                device_info={
+                    **sample_device_info,
+                    "serial": "Q2YY-YYYY-YYYY",
+                    "domain": DOMAIN,
+                },
             )
-        
+
         # Original device state should still be there
         assert "Q2XX-XXXX-XXXX_door" in event_handler._previous_states
         assert "Q2YY-YYYY-YYYY_door" in event_handler._previous_states
@@ -278,7 +288,7 @@ class TestEventConstants:
             EVENT_PREVIOUS_VALUE,
             EVENT_TIMESTAMP,
         ]
-        
+
         # All should be strings
         for key in event_keys:
             assert isinstance(key, str)
@@ -287,7 +297,7 @@ class TestEventConstants:
     def test_event_sensor_metrics(self):
         """Test that event sensor metrics include expected sensors."""
         from custom_components.meraki_dashboard.const import MT_EVENT_SENSOR_METRICS
-        
+
         # Should include door, water, and button sensors
         expected_event_sensors = [MT_SENSOR_DOOR, MT_SENSOR_WATER, MT_SENSOR_BUTTON]
         for sensor in expected_event_sensors:
@@ -302,7 +312,7 @@ class TestEventHandlerMethods:
         # Initially empty
         assert isinstance(event_handler._previous_states, dict)
         assert len(event_handler._previous_states) == 0
-        
+
         # Can be manually modified for testing
         event_handler._previous_states["test_device"] = {"door": True}
         assert "test_device" in event_handler._previous_states
@@ -311,23 +321,25 @@ class TestEventHandlerMethods:
     def test_hass_reference(self, event_handler, hass):
         """Test that event handler maintains correct hass reference."""
         assert event_handler.hass is hass
-        assert hasattr(event_handler.hass, 'bus')
-        assert hasattr(event_handler.hass.bus, 'async_fire')
+        assert hasattr(event_handler.hass, "bus")
+        assert hasattr(event_handler.hass.bus, "async_fire")
 
-    @patch('custom_components.meraki_dashboard.events.dr.async_get')
-    def test_device_registry_integration(self, mock_dr_get, event_handler, sample_device_info):
+    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    def test_device_registry_integration(
+        self, mock_dr_get, event_handler, sample_device_info
+    ):
         """Test integration with device registry."""
         # Mock device registry
         mock_registry = MagicMock()
         mock_dr_get.return_value = mock_registry
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             event_handler.track_sensor_data(
                 device_serial="Q2XX-XXXX-XXXX",
                 sensor_readings=[],
                 device_info=sample_device_info,
             )
-        
+
         # Should have attempted to get device registry
         mock_dr_get.assert_called_once_with(event_handler.hass)
 
@@ -351,8 +363,8 @@ class TestEventHandlerMethods:
                 "value": 45.2,
             },
         ]
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             # Should handle mixed readings without errors
             try:
                 event_handler.track_sensor_data(
@@ -376,8 +388,8 @@ class TestEventHandlerEdgeCases:
                 "value": None,
             }
         ]
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             # Should handle None values gracefully
             try:
                 event_handler.track_sensor_data(
@@ -402,8 +414,8 @@ class TestEventHandlerEdgeCases:
                 "value": False,
             },
         ]
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             # Should handle duplicate metrics gracefully
             try:
                 event_handler.track_sensor_data(
@@ -414,28 +426,34 @@ class TestEventHandlerEdgeCases:
             except Exception as e:
                 pytest.fail(f"Should handle duplicate metrics gracefully: {e}")
 
-    @patch('custom_components.meraki_dashboard.events.dr.async_get')
-    def test_very_long_device_serial(self, mock_dr_get, event_handler, sample_device_info):
+    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    def test_very_long_device_serial(
+        self, mock_dr_get, event_handler, sample_device_info
+    ):
         """Test handling of very long device serial numbers."""
         long_serial = "A" * 1000  # Very long serial
-        
+
         # Mock device registry
         mock_registry = MagicMock()
         mock_device = MagicMock()
         mock_device.id = "device_id"
         mock_registry.async_get_device.return_value = mock_device
         mock_dr_get.return_value = mock_registry
-        
-        with patch('homeassistant.core.EventBus.async_fire'):
+
+        with patch("homeassistant.core.EventBus.async_fire"):
             try:
                 event_handler.track_sensor_data(
                     device_serial=long_serial,
                     sensor_readings=[],
-                    device_info={**sample_device_info, "serial": long_serial, "domain": DOMAIN},
+                    device_info={
+                        **sample_device_info,
+                        "serial": long_serial,
+                        "domain": DOMAIN,
+                    },
                 )
             except Exception as e:
                 pytest.fail(f"Should handle long serials gracefully: {e}")
-        
+
         # No sensor readings means no state tracking
         # But the method should not fail
         assert len(event_handler._previous_states) == 0

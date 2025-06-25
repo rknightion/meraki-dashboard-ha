@@ -1,7 +1,8 @@
 """Test the Meraki Dashboard coordinator."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -53,17 +54,17 @@ class TestMerakiSensorCoordinator:
         """Test successful data update."""
         # Set up mock to return data
         mock_hub.async_get_sensor_data.return_value = MOCK_PROCESSED_SENSOR_DATA
-        
+
         # Call update
         data = await coordinator._async_update_data()
-        
+
         # Verify data is returned correctly
         assert data == MOCK_PROCESSED_SENSOR_DATA
         assert "Q2XX-XXXX-XXXX" in data
         assert "Q2YY-YYYY-YYYY" in data
         assert data["Q2XX-XXXX-XXXX"]["temperature"]["value"] == 22.5
         assert data["Q2YY-YYYY-YYYY"]["door"]["value"] is True
-        
+
         # Verify hub method was called
         mock_hub.async_get_sensor_data.assert_called_once()
 
@@ -71,11 +72,11 @@ class TestMerakiSensorCoordinator:
         """Test handling of hub errors during data update."""
         # Set up mock to raise exception
         mock_hub.async_get_sensor_data.side_effect = Exception("API connection failed")
-        
+
         # Call update and expect UpdateFailed
         with pytest.raises(UpdateFailed, match="Error communicating with API"):
             await coordinator._async_update_data()
-        
+
         # Verify hub method was called
         mock_hub.async_get_sensor_data.assert_called_once()
 
@@ -83,33 +84,37 @@ class TestMerakiSensorCoordinator:
         """Test handling of empty data response."""
         # Set up mock to return empty data
         mock_hub.async_get_sensor_data.return_value = {}
-        
+
         # Call update
         data = await coordinator._async_update_data()
-        
+
         # Verify empty data is handled
         assert data == {}
         mock_hub.async_get_sensor_data.assert_called_once()
 
-    async def test_async_request_refresh_delayed(self, hass: HomeAssistant, coordinator):
+    async def test_async_request_refresh_delayed(
+        self, hass: HomeAssistant, coordinator
+    ):
         """Test delayed refresh functionality."""
         # Mock the coordinator's async_request_refresh method
         coordinator.async_request_refresh = AsyncMock()
-        
+
         # Create a mock event loop
         loop_mock = MagicMock()
         hass.loop = loop_mock
-        
+
         # Call delayed refresh
         await coordinator.async_request_refresh_delayed(5)
-        
+
         # Verify call_later was called with correct parameters
         loop_mock.call_later.assert_called_once()
         call_args = loop_mock.call_later.call_args[0]
         assert call_args[0] == 5  # delay seconds
         assert callable(call_args[1])  # callback function
 
-    async def test_coordinator_with_different_scan_intervals(self, hass: HomeAssistant, mock_hub, mock_devices, mock_config_entry):
+    async def test_coordinator_with_different_scan_intervals(
+        self, hass: HomeAssistant, mock_hub, mock_devices, mock_config_entry
+    ):
         """Test coordinator with different scan intervals."""
         # Test with 5-minute interval
         coordinator_5min = MerakiSensorCoordinator(
@@ -120,7 +125,7 @@ class TestMerakiSensorCoordinator:
             config_entry=mock_config_entry,
         )
         assert coordinator_5min.update_interval.total_seconds() == 300
-        
+
         # Test with 1-minute interval
         coordinator_1min = MerakiSensorCoordinator(
             hass=hass,
@@ -131,7 +136,9 @@ class TestMerakiSensorCoordinator:
         )
         assert coordinator_1min.update_interval.total_seconds() == 60
 
-    async def test_coordinator_with_no_devices(self, hass: HomeAssistant, mock_hub, mock_config_entry):
+    async def test_coordinator_with_no_devices(
+        self, hass: HomeAssistant, mock_hub, mock_config_entry
+    ):
         """Test coordinator with empty device list."""
         coordinator = MerakiSensorCoordinator(
             hass=hass,
@@ -140,17 +147,21 @@ class TestMerakiSensorCoordinator:
             scan_interval=60,
             config_entry=mock_config_entry,
         )
-        
+
         assert len(coordinator.devices) == 0
-        
+
         # Should still be able to update data
         mock_hub.async_get_sensor_data.return_value = {}
         data = await coordinator._async_update_data()
         assert data == {}
 
-    async def test_coordinator_logging(self, hass: HomeAssistant, mock_hub, mock_devices, mock_config_entry):
+    async def test_coordinator_logging(
+        self, hass: HomeAssistant, mock_hub, mock_devices, mock_config_entry
+    ):
         """Test coordinator logging during initialization and updates."""
-        with patch("custom_components.meraki_dashboard.coordinator._LOGGER") as mock_logger:
+        with patch(
+            "custom_components.meraki_dashboard.coordinator._LOGGER"
+        ) as mock_logger:
             # Create coordinator
             coordinator = MerakiSensorCoordinator(
                 hass=hass,
@@ -159,19 +170,19 @@ class TestMerakiSensorCoordinator:
                 scan_interval=60,
                 config_entry=mock_config_entry,
             )
-            
+
             # Verify debug log was called during initialization
             mock_logger.debug.assert_called_with(
                 "Sensor coordinator initialized with %d second update interval",
                 60,
             )
-            
+
             # Test error logging during update failure
             mock_hub.async_get_sensor_data.side_effect = Exception("Test error")
-            
+
             with pytest.raises(UpdateFailed):
                 await coordinator._async_update_data()
-            
+
             # Verify error was logged
             mock_logger.error.assert_called_once()
             error_call_args = mock_logger.error.call_args
@@ -182,12 +193,14 @@ class TestMerakiSensorCoordinator:
         """Test coordinator maintains correct hub reference."""
         assert coordinator.hub is mock_hub
         assert coordinator.hub.hub_name == "Test Hub"
-        
+
         # Test that coordinator uses the hub correctly
         await coordinator._async_update_data()
         coordinator.hub.async_get_sensor_data.assert_called_once()
 
-    async def test_coordinator_config_entry_reference(self, coordinator, mock_config_entry):
+    async def test_coordinator_config_entry_reference(
+        self, coordinator, mock_config_entry
+    ):
         """Test coordinator maintains correct config entry reference."""
         assert coordinator.config_entry is mock_config_entry
         assert coordinator.config_entry.domain == "meraki_dashboard"
@@ -203,10 +216,10 @@ class TestMerakiSensorCoordinator:
             # Q2YY-YYYY-YYYY is missing (simulating device offline or API error)
         }
         mock_hub.async_get_sensor_data.return_value = partial_data
-        
+
         # Call update
         data = await coordinator._async_update_data()
-        
+
         # Verify partial data is returned
         assert data == partial_data
         assert "Q2XX-XXXX-XXXX" in data

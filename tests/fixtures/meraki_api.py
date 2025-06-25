@@ -29,7 +29,7 @@ MOCK_NETWORKS_DATA = [
     },
     {
         "id": "N_987654321",
-        "organizationId": "123456", 
+        "organizationId": "123456",
         "name": "Branch Office",
         "productTypes": ["sensor"],
         "timeZone": "America/New_York",
@@ -93,7 +93,7 @@ MOCK_DEVICES_DATA = {
         {
             "serial": "Q2AA-AAAA-AAAA",
             "mac": "00:18:0a:aa:aa:aa",
-            "networkId": "N_987654321", 
+            "networkId": "N_987654321",
             "model": "MT12",
             "name": "Branch Entrance",
             "lat": 40.7589,

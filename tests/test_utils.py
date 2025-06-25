@@ -1,10 +1,10 @@
 """Test utility functions for Meraki Dashboard integration."""
 
 from custom_components.meraki_dashboard.utils import (
-    sanitize_entity_id,
-    sanitize_device_name,
     sanitize_attribute_value,
     sanitize_device_attributes,
+    sanitize_device_name,
+    sanitize_entity_id,
 )
 
 
@@ -38,8 +38,12 @@ class TestSanitizeEntityId:
     def test_string_with_underscores(self):
         """Test sanitization of strings with underscores."""
         assert sanitize_entity_id("test_string") == "test_string"
-        assert sanitize_entity_id("test__string") == "test_string"  # Remove consecutive underscores
-        assert sanitize_entity_id("_test_") == "test"  # Remove leading/trailing underscores
+        assert (
+            sanitize_entity_id("test__string") == "test_string"
+        )  # Remove consecutive underscores
+        assert (
+            sanitize_entity_id("_test_") == "test"
+        )  # Remove leading/trailing underscores
 
     def test_edge_cases(self):
         """Test edge cases for entity ID sanitization."""
@@ -91,7 +95,9 @@ class TestSanitizeDeviceName:
 
     def test_real_world_examples(self):
         """Test sanitization of real-world device names."""
-        assert sanitize_device_name("Conference Room Sensor") == "Conference Room Sensor"
+        assert (
+            sanitize_device_name("Conference Room Sensor") == "Conference Room Sensor"
+        )
         assert sanitize_device_name("MT11@Office#1") == "MT11 Office 1"
         assert sanitize_device_name("WiFi-AP (Floor-2)") == "WiFi-AP (Floor-2)"
 
@@ -139,9 +145,9 @@ class TestSanitizeDeviceAttributes:
             "serial": "12345",
             "model": "MT11",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device"
         assert result["serial"] == "12345"
         assert result["model"] == "MT11"
@@ -152,9 +158,9 @@ class TestSanitizeDeviceAttributes:
             "name": "Test@Device#1",
             "serial": "12345",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device 1"
         assert result["serial"] == "12345"
 
@@ -166,9 +172,9 @@ class TestSanitizeDeviceAttributes:
             "address": "123 Main St\x01",
             "url": "https://example.com\x02",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device"
         assert result["notes"] == "This is a testdevice"
         assert result["address"] == "123 Main St"
@@ -180,21 +186,21 @@ class TestSanitizeDeviceAttributes:
             "name": "Test Device",
             "tags": "tag1, tag2, tag3",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device"
         assert result["tags"] == ["tag1", "tag2", "tag3"]
 
     def test_device_with_list_tags(self):
         """Test sanitization of device with list tags."""
         device = {
-            "name": "Test Device", 
+            "name": "Test Device",
             "tags": ["tag1", "tag2\x00", "tag3"],
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device"
         # List tags are passed through unchanged (only string tags are processed)
         assert result["tags"] == ["tag1", "tag2\x00", "tag3"]
@@ -205,9 +211,9 @@ class TestSanitizeDeviceAttributes:
             "name": "Test Device",
             "tags": "tag1, , tag3,  ,tag4",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device"
         assert result["tags"] == ["tag1", "tag3", "tag4"]
 
@@ -217,9 +223,9 @@ class TestSanitizeDeviceAttributes:
             "serial": "12345",
             "model": "MT11",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["serial"] == "12345"
         assert result["model"] == "MT11"
         assert "name" not in result
@@ -233,9 +239,9 @@ class TestSanitizeDeviceAttributes:
             "online": True,
             "ports": [1, 2, 3],
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Test Device"
         assert result["lat"] == 37.4419
         assert result["lng"] == -122.1419
@@ -250,13 +256,13 @@ class TestSanitizeDeviceAttributes:
         }
         original_name = device["name"]
         original_notes = device["notes"]
-        
+
         result = sanitize_device_attributes(device)
-        
+
         # Original should be unchanged
         assert device["name"] == original_name
         assert device["notes"] == original_notes
-        
+
         # Result should be sanitized
         assert result["name"] == "Test Device"
         assert result["notes"] == "Originalnotes"
@@ -277,9 +283,9 @@ class TestSanitizeDeviceAttributes:
             "configurationUpdatedAt": "2023-01-01T00:00:00Z",
             "firmware": "mt-11-21.2.1",
         }
-        
+
         result = sanitize_device_attributes(device)
-        
+
         assert result["name"] == "Conference Room (Main Floor)"
         assert result["tags"] == ["conference-room", "main-floor"]
         assert result["address"] == "1600 Amphitheatre Parkway, Mountain View, CA"

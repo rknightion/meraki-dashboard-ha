@@ -1,61 +1,59 @@
 """Test constants for Meraki Dashboard integration."""
 
-import pytest
-
 from custom_components.meraki_dashboard.const import (
-    DOMAIN,
-    USER_AGENT,
-    CONF_API_KEY,
-    CONF_BASE_URL,
-    CONF_ORGANIZATION_ID,
-    CONF_NETWORKS,
-    CONF_SCAN_INTERVAL,
-    CONF_SELECTED_DEVICES,
-    CONF_AUTO_DISCOVERY,
-    CONF_DISCOVERY_INTERVAL,
-    DEFAULT_NAME,
-    DEFAULT_BASE_URL,
-    DEFAULT_SCAN_INTERVAL,
-    MIN_SCAN_INTERVAL,
-    DEFAULT_DISCOVERY_INTERVAL,
-    MIN_DISCOVERY_INTERVAL,
-    REGIONAL_BASE_URLS,
-    SENSOR_TYPE_MT,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
-    SENSOR_TYPE_MV,
-    DEVICE_TYPE_SCAN_INTERVALS,
-    DEFAULT_SCAN_INTERVAL_MINUTES,
-    DEFAULT_DISCOVERY_INTERVAL_MINUTES,
-    MIN_SCAN_INTERVAL_MINUTES,
-    MIN_DISCOVERY_INTERVAL_MINUTES,
-    DEVICE_TYPE_MAPPINGS,
-    HUB_TYPE_ORGANIZATION,
-    HUB_TYPE_NETWORK,
-    ORG_HUB_SUFFIX,
-    MT_SENSOR_TEMPERATURE,
-    MT_SENSOR_HUMIDITY,
-    MT_SENSOR_CO2,
-    MT_SENSOR_BATTERY,
-    MT_SENSOR_DOOR,
-    MT_SENSOR_WATER,
-    MT_SENSOR_DOWNSTREAM_POWER,
-    MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
-    MT_POWER_SENSORS,
-    MT_BINARY_SENSOR_METRICS,
-    MT_EVENT_SENSOR_METRICS,
-    EVENT_TYPE,
-    EVENT_DEVICE_ID,
-    EVENT_DEVICE_SERIAL,
-    EVENT_SENSOR_TYPE,
-    EVENT_VALUE,
-    EVENT_PREVIOUS_VALUE,
-    EVENT_TIMESTAMP,
+    ATTR_LAST_REPORTED_AT,
+    ATTR_MODEL,
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
     ATTR_SERIAL,
-    ATTR_MODEL,
-    ATTR_LAST_REPORTED_AT,
+    CONF_API_KEY,
+    CONF_AUTO_DISCOVERY,
+    CONF_BASE_URL,
+    CONF_DISCOVERY_INTERVAL,
+    CONF_NETWORKS,
+    CONF_ORGANIZATION_ID,
+    CONF_SCAN_INTERVAL,
+    CONF_SELECTED_DEVICES,
+    DEFAULT_BASE_URL,
+    DEFAULT_DISCOVERY_INTERVAL,
+    DEFAULT_DISCOVERY_INTERVAL_MINUTES,
+    DEFAULT_NAME,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL_MINUTES,
+    DEVICE_TYPE_MAPPINGS,
+    DEVICE_TYPE_SCAN_INTERVALS,
+    DOMAIN,
+    EVENT_DEVICE_ID,
+    EVENT_DEVICE_SERIAL,
+    EVENT_PREVIOUS_VALUE,
+    EVENT_SENSOR_TYPE,
+    EVENT_TIMESTAMP,
+    EVENT_TYPE,
+    EVENT_VALUE,
+    HUB_TYPE_NETWORK,
+    HUB_TYPE_ORGANIZATION,
+    MIN_DISCOVERY_INTERVAL,
+    MIN_DISCOVERY_INTERVAL_MINUTES,
+    MIN_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL_MINUTES,
+    MT_BINARY_SENSOR_METRICS,
+    MT_EVENT_SENSOR_METRICS,
+    MT_POWER_SENSORS,
+    MT_SENSOR_BATTERY,
+    MT_SENSOR_CO2,
+    MT_SENSOR_DOOR,
+    MT_SENSOR_DOWNSTREAM_POWER,
+    MT_SENSOR_HUMIDITY,
+    MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
+    MT_SENSOR_TEMPERATURE,
+    MT_SENSOR_WATER,
+    ORG_HUB_SUFFIX,
+    REGIONAL_BASE_URLS,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
+    SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
+    USER_AGENT,
 )
 
 
@@ -85,13 +83,13 @@ class TestDomainAndBasicConstants:
             CONF_AUTO_DISCOVERY,
             CONF_DISCOVERY_INTERVAL,
         ]
-        
+
         # All should be strings
         assert all(isinstance(key, str) for key in config_keys)
-        
+
         # Should not be empty
         assert all(len(key) > 0 for key in config_keys)
-        
+
         # Most should be snake_case (allowing for some exceptions)
         snake_case_keys = [key for key in config_keys if "_" in key]
         assert len(snake_case_keys) >= 6  # Most should follow snake_case
@@ -122,11 +120,11 @@ class TestRegionalConfiguration:
         """Test regional base URLs dictionary."""
         assert isinstance(REGIONAL_BASE_URLS, dict)
         assert len(REGIONAL_BASE_URLS) > 0
-        
+
         # Should contain Global region
         assert "Global" in REGIONAL_BASE_URLS
         assert REGIONAL_BASE_URLS["Global"] == DEFAULT_BASE_URL
-        
+
         # All values should be valid URLs
         for region, url in REGIONAL_BASE_URLS.items():
             assert isinstance(region, str)
@@ -148,7 +146,7 @@ class TestSensorTypes:
     def test_sensor_type_constants(self):
         """Test sensor type constants are properly defined."""
         sensor_types = [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV]
-        
+
         # Should be 2-letter codes
         for sensor_type in sensor_types:
             assert isinstance(sensor_type, str)
@@ -158,9 +156,14 @@ class TestSensorTypes:
     def test_device_type_scan_intervals(self):
         """Test device type scan intervals."""
         assert isinstance(DEVICE_TYPE_SCAN_INTERVALS, dict)
-        
+
         # Should have entries for all sensor types
-        for sensor_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV]:
+        for sensor_type in [
+            SENSOR_TYPE_MT,
+            SENSOR_TYPE_MR,
+            SENSOR_TYPE_MS,
+            SENSOR_TYPE_MV,
+        ]:
             assert sensor_type in DEVICE_TYPE_SCAN_INTERVALS
             assert isinstance(DEVICE_TYPE_SCAN_INTERVALS[sensor_type], int)
             assert DEVICE_TYPE_SCAN_INTERVALS[sensor_type] > 0
@@ -168,14 +171,19 @@ class TestSensorTypes:
     def test_default_scan_interval_minutes(self):
         """Test default scan interval minutes."""
         assert isinstance(DEFAULT_SCAN_INTERVAL_MINUTES, dict)
-        
+
         # Should have entries for all sensor types
-        for sensor_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV]:
+        for sensor_type in [
+            SENSOR_TYPE_MT,
+            SENSOR_TYPE_MR,
+            SENSOR_TYPE_MS,
+            SENSOR_TYPE_MV,
+        ]:
             assert sensor_type in DEFAULT_SCAN_INTERVAL_MINUTES
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
             assert isinstance(minutes, int)
             assert minutes > 0
-            
+
             # Should match corresponding seconds value
             seconds = DEVICE_TYPE_SCAN_INTERVALS[sensor_type]
             assert minutes == seconds // 60
@@ -183,16 +191,21 @@ class TestSensorTypes:
     def test_device_type_mappings(self):
         """Test device type mappings structure."""
         assert isinstance(DEVICE_TYPE_MAPPINGS, dict)
-        
-        for sensor_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV]:
+
+        for sensor_type in [
+            SENSOR_TYPE_MT,
+            SENSOR_TYPE_MR,
+            SENSOR_TYPE_MS,
+            SENSOR_TYPE_MV,
+        ]:
             assert sensor_type in DEVICE_TYPE_MAPPINGS
             mapping = DEVICE_TYPE_MAPPINGS[sensor_type]
-            
+
             # Should have required keys
             assert "name_suffix" in mapping
             assert "description" in mapping
             assert "model_prefixes" in mapping
-            
+
             # Should have proper types
             assert isinstance(mapping["name_suffix"], str)
             assert isinstance(mapping["description"], str)
@@ -231,7 +244,7 @@ class TestMTSensorConstants:
             MT_SENSOR_DOWNSTREAM_POWER,
             MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
         ]
-        
+
         for sensor in mt_sensors:
             assert isinstance(sensor, str)
             assert len(sensor) > 0
@@ -240,10 +253,10 @@ class TestMTSensorConstants:
         """Test MT power sensor list."""
         assert isinstance(MT_POWER_SENSORS, list)
         assert len(MT_POWER_SENSORS) > 0
-        
+
         # Should contain real power
         assert any("realPower" in sensor for sensor in MT_POWER_SENSORS)
-        
+
         # All should be strings
         assert all(isinstance(sensor, str) for sensor in MT_POWER_SENSORS)
 
@@ -251,7 +264,7 @@ class TestMTSensorConstants:
         """Test MT binary sensor metrics list."""
         assert isinstance(MT_BINARY_SENSOR_METRICS, list)
         assert len(MT_BINARY_SENSOR_METRICS) > 0
-        
+
         # Should contain expected binary sensors
         expected_binary = [MT_SENSOR_DOOR, MT_SENSOR_WATER]
         for sensor in expected_binary:
@@ -261,7 +274,7 @@ class TestMTSensorConstants:
         """Test MT event sensor metrics list."""
         assert isinstance(MT_EVENT_SENSOR_METRICS, list)
         assert len(MT_EVENT_SENSOR_METRICS) > 0
-        
+
         # Should contain sensors that emit events
         event_sensors = [MT_SENSOR_DOOR, MT_SENSOR_WATER]
         for sensor in event_sensors:
@@ -286,10 +299,10 @@ class TestEventConstants:
             EVENT_PREVIOUS_VALUE,
             EVENT_TIMESTAMP,
         ]
-        
+
         # All should be strings
         assert all(isinstance(key, str) for key in event_keys)
-        
+
         # Should not be empty
         assert all(len(key) > 0 for key in event_keys)
 
@@ -306,10 +319,10 @@ class TestAttributeConstants:
             ATTR_MODEL,
             ATTR_LAST_REPORTED_AT,
         ]
-        
+
         # All should be strings
         assert all(isinstance(attr, str) for attr in attributes)
-        
+
         # Should not be empty
         assert all(len(attr) > 0 for attr in attributes)
 
@@ -320,7 +333,12 @@ class TestConstantConsistency:
     def test_scan_interval_consistency(self):
         """Test scan interval constants are consistent."""
         # Minutes should convert properly to seconds
-        for sensor_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV]:
+        for sensor_type in [
+            SENSOR_TYPE_MT,
+            SENSOR_TYPE_MR,
+            SENSOR_TYPE_MS,
+            SENSOR_TYPE_MV,
+        ]:
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
             seconds = DEVICE_TYPE_SCAN_INTERVALS[sensor_type]
             assert minutes * 60 == seconds
@@ -369,7 +387,7 @@ class TestConstantTypes:
             MIN_SCAN_INTERVAL_MINUTES,
             MIN_DISCOVERY_INTERVAL_MINUTES,
         ]
-        
+
         for constant in numeric_constants:
             assert isinstance(constant, int)
             assert constant > 0
@@ -388,7 +406,7 @@ class TestConstantTypes:
             HUB_TYPE_ORGANIZATION,
             EVENT_TYPE,
         ]
-        
+
         for constant in string_constants:
             assert isinstance(constant, str)
             assert len(constant) > 0

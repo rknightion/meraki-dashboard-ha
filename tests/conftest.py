@@ -1,24 +1,25 @@
 """Global test fixtures for Meraki Dashboard integration."""
 
-import pytest
 from unittest.mock import MagicMock, patch
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+import pytest
 from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.meraki_dashboard.const import (
     CONF_API_KEY,
+    CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
+    CONF_DISCOVERY_INTERVAL,
+    CONF_HUB_AUTO_DISCOVERY,
+    CONF_HUB_DISCOVERY_INTERVALS,
+    CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
-    CONF_AUTO_DISCOVERY,
-    CONF_DISCOVERY_INTERVAL,
     CONF_SELECTED_DEVICES,
-    CONF_HUB_SCAN_INTERVALS,
-    CONF_HUB_DISCOVERY_INTERVALS,
-    CONF_HUB_AUTO_DISCOVERY,
     DEFAULT_BASE_URL,
-    DEFAULT_SCAN_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
 
@@ -165,6 +166,7 @@ def mock_empty_sensor_data():
 def api_error_401():
     """Mock 401 API error."""
     from meraki.exceptions import APIError
+
     response_mock = MagicMock()
     response_mock.status_code = 401
     metadata = {"tags": ["401 Unauthorized"], "operation": "test_operation"}
@@ -177,6 +179,7 @@ def api_error_401():
 def api_error_403():
     """Mock 403 API error."""
     from meraki.exceptions import APIError
+
     response_mock = MagicMock()
     response_mock.status_code = 403
     metadata = {"tags": ["403 Forbidden"], "operation": "test_operation"}
@@ -189,6 +192,7 @@ def api_error_403():
 def api_error_500():
     """Mock 500 API error."""
     from meraki.exceptions import APIError
+
     response_mock = MagicMock()
     response_mock.status_code = 500
     error = APIError(metadata="500 Internal Server Error", response=response_mock)

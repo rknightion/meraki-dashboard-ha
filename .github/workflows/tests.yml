@@ -30,9 +30,35 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - uses: astral-sh/ruff-action@v3
-      - run: ruff check --fix
-      - run: ruff format
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction
+
+      - name: Run Ruff linting
+        run: poetry run ruff check --fix custom_components tests
+
+      - name: Run Ruff formatting
+        run: poetry run ruff format custom_components tests
 
   # Check with Home Assistant's hassfest
   hassfest:
@@ -107,7 +133,6 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false

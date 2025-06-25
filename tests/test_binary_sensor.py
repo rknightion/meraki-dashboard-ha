@@ -1,21 +1,22 @@
 """Test Meraki Dashboard binary sensor entities."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from homeassistant.core import HomeAssistant
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+from homeassistant.core import HomeAssistant
 
 from custom_components.meraki_dashboard.binary_sensor import (
-    async_setup_entry,
-    MerakiMTBinarySensor,
     MT_BINARY_SENSOR_DESCRIPTIONS,
+    MerakiMTBinarySensor,
+    async_setup_entry,
 )
 from custom_components.meraki_dashboard.const import (
     DOMAIN,
     MT_SENSOR_DOOR,
-    MT_SENSOR_WATER,
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
+    MT_SENSOR_WATER,
 )
 from tests.fixtures.meraki_api import MOCK_PROCESSED_SENSOR_DATA
 
@@ -50,7 +51,9 @@ def mock_network_hub():
 class TestMerakiMTBinarySensor:
     """Test MerakiMTBinarySensor entity."""
 
-    def test_door_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_door_sensor_initialization(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test door sensor initialization."""
         sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -59,13 +62,15 @@ class TestMerakiMTBinarySensor:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         assert sensor.entity_description.key == MT_SENSOR_DOOR
         assert sensor.entity_description.device_class == BinarySensorDeviceClass.DOOR
         assert "door" in sensor.unique_id
         assert sensor._device == mock_device_info
 
-    def test_water_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_water_sensor_initialization(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test water sensor initialization."""
         sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -74,12 +79,16 @@ class TestMerakiMTBinarySensor:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         assert sensor.entity_description.key == MT_SENSOR_WATER
-        assert sensor.entity_description.device_class == BinarySensorDeviceClass.MOISTURE
+        assert (
+            sensor.entity_description.device_class == BinarySensorDeviceClass.MOISTURE
+        )
         assert "water" in sensor.unique_id
 
-    def test_downstream_power_sensor_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_downstream_power_sensor_initialization(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test downstream power sensor initialization."""
         sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -88,12 +97,14 @@ class TestMerakiMTBinarySensor:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         assert sensor.entity_description.key == MT_SENSOR_DOWNSTREAM_POWER
         assert sensor.entity_description.device_class == BinarySensorDeviceClass.POWER
         assert "downstreamPower" in sensor.unique_id
 
-    def test_remote_lockout_switch_initialization(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_remote_lockout_switch_initialization(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test remote lockout switch initialization."""
         sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -102,48 +113,54 @@ class TestMerakiMTBinarySensor:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         assert sensor.entity_description.key == MT_SENSOR_REMOTE_LOCKOUT_SWITCH
         assert sensor.entity_description.device_class == BinarySensorDeviceClass.LOCK
         assert "remoteLockoutSwitch" in sensor.unique_id
 
-    def test_binary_sensor_state_handling(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_binary_sensor_state_handling(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test binary sensor state handling."""
-        sensor = MerakiMTBinarySensor(
+        _sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
             device=mock_device_info,
             description=MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_DOOR],
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         # Test with coordinator data containing boolean values
         mock_coordinator.data = {
             "Q2YY-YYYY-YYYY": {
                 "door": {"value": True, "ts": "2024-01-01T12:00:00.000000Z"}
             }
         }
-        
+
         # Verify sensor can access coordinator data
         assert mock_coordinator.data["Q2YY-YYYY-YYYY"]["door"]["value"] is True
 
-    def test_binary_sensor_no_data(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_binary_sensor_no_data(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test binary sensor with no data."""
-        sensor = MerakiMTBinarySensor(
+        _sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
             device=mock_device_info,
             description=MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_DOOR],
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         # Mock coordinator with no data for this device
         mock_coordinator.data = {}
-        
+
         # Sensor should handle missing data gracefully
         assert mock_coordinator.data == {}
 
-    def test_binary_sensor_device_info_structure(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_binary_sensor_device_info_structure(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test binary sensor device info structure."""
         sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -152,22 +169,24 @@ class TestMerakiMTBinarySensor:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         # Verify device data is stored correctly
         assert sensor._device["serial"] == "Q2YY-YYYY-YYYY"
         assert sensor._device["model"] == "MT14"
         assert sensor._device["name"] == "Office Door Sensor"
 
-    def test_binary_sensor_numeric_values(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_binary_sensor_numeric_values(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test binary sensor handling of numeric values (0/1)."""
-        sensor = MerakiMTBinarySensor(
+        _sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
             device=mock_device_info,
             description=MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_DOWNSTREAM_POWER],
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         # Test with numeric 1 (should represent True)
         mock_coordinator.data = {
             "Q2YY-YYYY-YYYY": {
@@ -175,7 +194,7 @@ class TestMerakiMTBinarySensor:
             }
         }
         assert mock_coordinator.data["Q2YY-YYYY-YYYY"]["downstreamPower"]["value"] == 1
-        
+
         # Test with numeric 0 (should represent False)
         mock_coordinator.data = {
             "Q2YY-YYYY-YYYY": {
@@ -188,9 +207,11 @@ class TestMerakiMTBinarySensor:
 class TestBinarySensorSetup:
     """Test binary sensor platform setup."""
 
-    async def test_async_setup_entry_with_binary_sensors(self, hass: HomeAssistant, mock_config_entry):
+    async def test_async_setup_entry_with_binary_sensors(
+        self, hass: HomeAssistant, mock_config_entry
+    ):
         """Test binary sensor setup with devices that have binary sensors."""
-        
+
         # Mock integration data
         mock_org_hub = MagicMock()
         mock_network_hub = MagicMock()
@@ -203,7 +224,7 @@ class TestBinarySensorSetup:
                 "network_name": "Main Office",
             }
         ]
-        
+
         mock_coordinator = MagicMock()
         mock_coordinator.data = {
             "Q2YY-YYYY-YYYY": {
@@ -211,7 +232,7 @@ class TestBinarySensorSetup:
                 "water": {"value": False, "ts": "2024-01-01T12:00:00.000000Z"},
             }
         }
-        
+
         hass.data[DOMAIN] = {
             mock_config_entry.entry_id: {
                 "organization_hub": mock_org_hub,
@@ -219,19 +240,21 @@ class TestBinarySensorSetup:
                 "coordinators": {"hub1": mock_coordinator},
             }
         }
-        
+
         # Mock add entities callback
         add_entities_mock = MagicMock()
-        
+
         # Setup binary sensors
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
-        
+
         # Verify entities were added
         add_entities_mock.assert_called_once()
 
-    async def test_async_setup_entry_no_binary_sensors(self, hass: HomeAssistant, mock_config_entry):
+    async def test_async_setup_entry_no_binary_sensors(
+        self, hass: HomeAssistant, mock_config_entry
+    ):
         """Test binary sensor setup with devices that have no binary sensor data."""
-        
+
         # Mock integration data
         mock_org_hub = MagicMock()
         mock_network_hub = MagicMock()
@@ -244,7 +267,7 @@ class TestBinarySensorSetup:
                 "network_name": "Main Office",
             }
         ]
-        
+
         mock_coordinator = MagicMock()
         mock_coordinator.data = {
             "Q2XX-XXXX-XXXX": {
@@ -252,7 +275,7 @@ class TestBinarySensorSetup:
                 "temperature": {"value": 22.5, "ts": "2024-01-01T12:00:00.000000Z"}
             }
         }
-        
+
         hass.data[DOMAIN] = {
             mock_config_entry.entry_id: {
                 "organization_hub": mock_org_hub,
@@ -260,19 +283,21 @@ class TestBinarySensorSetup:
                 "coordinators": {"hub1": mock_coordinator},
             }
         }
-        
+
         # Mock add entities callback
         add_entities_mock = MagicMock()
-        
+
         # Setup binary sensors
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
-        
+
         # Should not add any binary sensor entities
         add_entities_mock.assert_called_once_with([])
 
-    async def test_async_setup_entry_no_hubs(self, hass: HomeAssistant, mock_config_entry):
+    async def test_async_setup_entry_no_hubs(
+        self, hass: HomeAssistant, mock_config_entry
+    ):
         """Test binary sensor setup with no hubs available."""
-        
+
         # Mock integration data with no hubs
         hass.data[DOMAIN] = {
             mock_config_entry.entry_id: {
@@ -281,28 +306,30 @@ class TestBinarySensorSetup:
                 "coordinators": {},
             }
         }
-        
+
         # Mock add entities callback
         add_entities_mock = MagicMock()
-        
+
         # Setup binary sensors
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
-        
+
         # Should not add any entities
         add_entities_mock.assert_called_once_with([])
 
-    async def test_async_setup_entry_no_integration_data(self, hass: HomeAssistant, mock_config_entry):
+    async def test_async_setup_entry_no_integration_data(
+        self, hass: HomeAssistant, mock_config_entry
+    ):
         """Test binary sensor setup with no integration data."""
-        
+
         # No integration data
         hass.data[DOMAIN] = {}
-        
+
         # Mock add entities callback
         add_entities_mock = MagicMock()
-        
+
         # Setup binary sensors
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
-        
+
         # Should handle gracefully and not call add_entities when no integration data
         add_entities_mock.assert_not_called()
 
@@ -317,7 +344,7 @@ class TestBinarySensorDescriptions:
         assert MT_SENSOR_WATER in MT_BINARY_SENSOR_DESCRIPTIONS
         assert MT_SENSOR_DOWNSTREAM_POWER in MT_BINARY_SENSOR_DESCRIPTIONS
         assert MT_SENSOR_REMOTE_LOCKOUT_SWITCH in MT_BINARY_SENSOR_DESCRIPTIONS
-        
+
         # Test description structure
         door_desc = MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_DOOR]
         assert door_desc.key == MT_SENSOR_DOOR
@@ -329,7 +356,7 @@ class TestBinarySensorDescriptions:
         door_desc = MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_DOOR]
         water_desc = MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_WATER]
         power_desc = MT_BINARY_SENSOR_DESCRIPTIONS[MT_SENSOR_DOWNSTREAM_POWER]
-        
+
         assert door_desc.device_class == BinarySensorDeviceClass.DOOR
         assert water_desc.device_class == BinarySensorDeviceClass.MOISTURE
         assert power_desc.device_class == BinarySensorDeviceClass.POWER
@@ -338,7 +365,9 @@ class TestBinarySensorDescriptions:
 class TestBinarySensorUtilities:
     """Test binary sensor utility functions and properties."""
 
-    def test_binary_sensor_unique_id_generation(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_binary_sensor_unique_id_generation(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test that binary sensors generate unique IDs correctly."""
         door_sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -347,7 +376,7 @@ class TestBinarySensorUtilities:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         water_sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
             device=mock_device_info,
@@ -355,13 +384,15 @@ class TestBinarySensorUtilities:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         # Unique IDs should be different
         assert door_sensor.unique_id != water_sensor.unique_id
         assert "door" in door_sensor.unique_id
         assert "water" in water_sensor.unique_id
 
-    def test_binary_sensor_entity_registry_info(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_binary_sensor_entity_registry_info(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test binary sensor entity registry information."""
         sensor = MerakiMTBinarySensor(
             coordinator=mock_coordinator,
@@ -370,18 +401,24 @@ class TestBinarySensorUtilities:
             config_entry_id="test_entry",
             network_hub=mock_network_hub,
         )
-        
+
         # Verify registry-related properties
         assert sensor.unique_id is not None
         assert sensor._config_entry_id == "test_entry"
         assert sensor._serial == "Q2YY-YYYY-YYYY"
 
-    def test_multiple_binary_sensors_same_device(self, mock_coordinator, mock_device_info, mock_network_hub):
+    def test_multiple_binary_sensors_same_device(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
         """Test multiple binary sensors on the same device."""
         sensors = []
-        
+
         # Create multiple binary sensor types for the same device
-        for sensor_type in [MT_SENSOR_DOOR, MT_SENSOR_WATER, MT_SENSOR_DOWNSTREAM_POWER]:
+        for sensor_type in [
+            MT_SENSOR_DOOR,
+            MT_SENSOR_WATER,
+            MT_SENSOR_DOWNSTREAM_POWER,
+        ]:
             sensor = MerakiMTBinarySensor(
                 coordinator=mock_coordinator,
                 device=mock_device_info,
@@ -390,11 +427,13 @@ class TestBinarySensorUtilities:
                 network_hub=mock_network_hub,
             )
             sensors.append(sensor)
-        
+
         # Verify unique IDs are unique
         unique_ids = [sensor.unique_id for sensor in sensors]
-        assert len(unique_ids) == len(set(unique_ids))  # All unique IDs should be different
-        
+        assert len(unique_ids) == len(
+            set(unique_ids)
+        )  # All unique IDs should be different
+
         # Verify all have same device but different sensor types
         assert all(sensor._device == mock_device_info for sensor in sensors)
         assert all(sensor._serial == "Q2YY-YYYY-YYYY" for sensor in sensors)

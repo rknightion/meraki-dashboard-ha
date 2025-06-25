@@ -119,7 +119,7 @@ class TestMerakiMTSensor:
         self, mock_coordinator, mock_device_info, mock_network_hub
     ):
         """Test sensor state when data is available."""
-        sensor = MerakiMTSensor(
+        _sensor = MerakiMTSensor(
             coordinator=mock_coordinator,
             device=mock_device_info,
             description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
@@ -152,7 +152,7 @@ class TestMerakiMTSensor:
         self, mock_coordinator, mock_device_info, mock_network_hub
     ):
         """Test sensor state when no data is available."""
-        sensor = MerakiMTSensor(
+        _sensor = MerakiMTSensor(
             coordinator=mock_coordinator,
             device=mock_device_info,
             description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_TEMPERATURE],
