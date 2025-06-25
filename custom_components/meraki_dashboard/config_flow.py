@@ -62,7 +62,7 @@ for logger_name in loggers_to_configure:
     logger.propagate = False
 
 
-class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
+class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Meraki Dashboard.
 
     This class manages the configuration flow for setting up the integration,
@@ -71,7 +71,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
 
     VERSION = 1
     MINOR_VERSION = 1
-    # Set the domain at the class level so Home Assistant can properly register the handler
+    # Explicit class-level attribute for compatibility with older HA versions
     domain = DOMAIN
 
     def __init__(self) -> None:
