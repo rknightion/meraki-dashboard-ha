@@ -213,6 +213,7 @@ jobs:
           TAG_NAME="${{ github.event.release.tag_name }}"
 
           echo "Creating integration zip for release $TAG_NAME"
+          sleep 10s
 
           # Create integration zip from the updated code
           cd custom_components/meraki_dashboard
@@ -221,6 +222,7 @@ jobs:
 
           # Upload the zip to the release
           gh release upload "$TAG_NAME" meraki_dashboard.zip --clobber
+          sleep 10s
 
           echo "✅ Created and uploaded meraki_dashboard.zip to release $TAG_NAME"
 
