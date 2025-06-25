@@ -1,6 +1,9 @@
 name: Generate Release Notes from Git History
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       since_tag:
@@ -9,7 +12,7 @@ on:
         type: string
       target_version:
         description: 'Target version for the release (e.g., 0.24.10)'
-        required: true
+        required: false
         type: string
 
 permissions:
@@ -28,12 +31,35 @@ jobs:
       - name: Generate release notes from git history
         id: generate_notes
         run: |
-          TARGET_VERSION="${{ github.event.inputs.target_version }}"
-          SINCE_TAG="${{ github.event.inputs.since_tag }}"
+          # Handle both manual and automatic triggers
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TARGET_VERSION="${{ github.event.inputs.target_version }}"
+            SINCE_TAG="${{ github.event.inputs.since_tag }}"
+          else
+            # Auto-triggered by push - generate next version
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
+            echo "Latest tag: $LATEST_TAG"
 
-          # If no since_tag provided, get the latest tag
+            # Extract version and increment patch number
+            LATEST_VERSION=${LATEST_TAG#v}
+            IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
+            NEW_PATCH=$((patch + 1))
+            TARGET_VERSION="$major.$minor.$NEW_PATCH"
+            SINCE_TAG="$LATEST_TAG"
+          fi
+
+          # If no since_tag provided in manual mode, get the latest tag
           if [ -z "$SINCE_TAG" ]; then
             SINCE_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          fi
+
+          # If no target_version provided in manual mode, auto-generate
+          if [ -z "$TARGET_VERSION" ]; then
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
+            LATEST_VERSION=${LATEST_TAG#v}
+            IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
+            NEW_PATCH=$((patch + 1))
+            TARGET_VERSION="$major.$minor.$NEW_PATCH"
           fi
 
           echo "Generating release notes for v$TARGET_VERSION"
