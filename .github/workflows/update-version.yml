@@ -23,12 +23,15 @@ jobs:
       - name: Update CHANGELOG.md first
         run: |
           TAG_NAME="${{ github.event.release.tag_name }}"
-          RELEASE_BODY="${{ github.event.release.body }}"
           RELEASE_DATE=$(date -u +"%Y-%m-%d")
           VERSION=${TAG_NAME#v}
 
           echo "Updating CHANGELOG.md for version $VERSION"
-          echo "$RELEASE_BODY" > /tmp/release_body.md
+
+          # Save release body to a file safely
+          cat > /tmp/release_body.md << 'RELEASE_BODY_EOF'
+          ${{ github.event.release.body }}
+          RELEASE_BODY_EOF
 
           # Create new changelog with header
           cat > /tmp/new_changelog.md << 'EOF'
