@@ -205,35 +205,6 @@ jobs:
             sleep 10s
           fi
 
-      - name: Fresh checkout for Jekyll deployment
-        uses: actions/checkout@v4
-
-        with:
-          # Use a personal access token or the default token
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # Ensure we're on the main branch, not detached HEAD
-          ref: main
-          fetch-depth: 0
-          clean: true
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Build Jekyll site
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./docs
-          destination: ./_site
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: github-pages
-
       - name: Create and upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -252,3 +223,33 @@ jobs:
           gh release upload "$TAG_NAME" meraki_dashboard.zip --clobber
 
           echo "✅ Created and uploaded meraki_dashboard.zip to release $TAG_NAME"
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          clean: true
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
