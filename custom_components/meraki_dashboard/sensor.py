@@ -185,8 +185,8 @@ MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         name="Energy",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        suggested_display_precision=3,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=6,
     ),
 }
 
@@ -625,7 +625,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
     """Representation of a Meraki MT energy sensor.
 
     This sensor integrates power measurements over time to provide energy consumption
-    in watt-hours, suitable for Home Assistant's energy dashboard and cost tracking.
+    in kilowatt-hours, suitable for Home Assistant's energy dashboard and cost tracking.
 
     The sensor uses a Riemann sum approximation to calculate energy from power readings,
     which is accurate enough for most energy monitoring purposes when power readings
@@ -669,7 +669,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         self._attr_unique_id = f"{self._serial}_{description.key}"
 
         # Track energy accumulation - will be restored from state
-        self._total_energy: float = 0.0  # Total accumulated energy in Wh
+        self._total_energy: float = 0.0  # Total accumulated energy in kWh
         self._last_power_value: float | None = None  # Last power reading in W
         self._last_update_time: float | None = None  # Last update timestamp
 
@@ -708,7 +708,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
                 try:
                     self._total_energy = float(last_state.state)
                     _LOGGER.debug(
-                        "Restored energy state for %s: %s Wh",
+                        "Restored energy state for %s: %s kWh",
                         self.entity_id,
                         self._total_energy,
                     )
@@ -751,7 +751,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
 
     @property
     def native_value(self) -> float | None:
-        """Return the total accumulated energy in watt-hours."""
+        """Return the total accumulated energy in kilowatt-hours."""
         if not self.coordinator.data:
             return None
 
@@ -809,25 +809,26 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
             # Average power over the interval (trapezoidal rule)
             avg_power = (current_power + self._last_power_value) / 2.0
 
-            # Energy increment in watt-hours
-            energy_increment = avg_power * time_diff_hours
+            # Energy increment in watt-hours, then convert to kilowatt-hours
+            energy_increment_wh = avg_power * time_diff_hours
+            energy_increment_kwh = energy_increment_wh / 1000.0
 
             # Add to total energy (ensure it's always increasing)
-            if energy_increment > 0:
-                self._total_energy += energy_increment
+            if energy_increment_kwh > 0:
+                self._total_energy += energy_increment_kwh
                 _LOGGER.debug(
-                    "Energy sensor %s: Added %.3f Wh (avg power: %.2f W, time: %.2f h, total: %.3f Wh)",
+                    "Energy sensor %s: Added %.6f kWh (avg power: %.2f W, time: %.2f h, total: %.6f kWh)",
                     self.entity_id,
-                    energy_increment,
+                    energy_increment_kwh,
                     avg_power,
                     time_diff_hours,
                     self._total_energy,
                 )
             else:
                 _LOGGER.debug(
-                    "Energy sensor %s: Skipped negative energy increment %.3f Wh",
+                    "Energy sensor %s: Skipped negative energy increment %.6f kWh",
                     self.entity_id,
-                    energy_increment,
+                    energy_increment_kwh,
                 )
         elif self._last_power_value is None:
             _LOGGER.debug(
@@ -840,7 +841,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         self._last_power_value = current_power
         self._last_update_time = current_time
 
-        return round(self._total_energy, 3) if self._total_energy > 0 else 0.0
+        return round(self._total_energy, 6) if self._total_energy > 0 else 0.0
 
     @property
     def available(self) -> bool:

@@ -1,6 +1,6 @@
 ---
 description:
-globs: **/*_test.py
+globs: **/*_test.py,**/*test_*.py
 alwaysApply: false
 ---
 - Use fixtures to manage setup and teardown of test environments efficiently.
