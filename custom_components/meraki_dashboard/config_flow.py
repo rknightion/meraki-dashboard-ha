@@ -72,9 +72,6 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow):
     VERSION = 1
     MINOR_VERSION = 1
 
-    # Set the domain as a class attribute (modern approach)
-    domain = DOMAIN
-
     def __init__(self) -> None:
         """Initialize the config flow."""
         self._api_key: str | None = None

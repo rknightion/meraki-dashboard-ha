@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 # Meraki Dashboard Home Assistant Integration
@@ -9,6 +9,7 @@ alwaysApply: true
 Home Assistant custom integration for Cisco Meraki Dashboard API, focusing on MT series environmental sensors with plans to expand to other device types.
 
 ## Core Principles
+- Always use Poetry to run any terminal command involving python to ensure proper venv setup
 - Always use Meraki Python SDK for all API interactions (never direct HTTP calls)
 - Follow Home Assistant integration patterns and conventions
 - Implement proper async/await patterns for all I/O operations
