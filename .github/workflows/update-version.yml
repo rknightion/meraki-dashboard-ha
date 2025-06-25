@@ -203,6 +203,13 @@ jobs:
             echo "✅ Updated tag $TAG_NAME to point to commit with version updates"
           fi
 
+      - name: Fresh checkout for Jekyll deployment
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+          clean: true
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
