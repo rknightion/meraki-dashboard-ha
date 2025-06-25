@@ -17,6 +17,15 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.13] - 2025-06-25
+
+### 🚀 Features
+### 🐛 Bug Fixes
+- gh pages maybe
+- add some sleeps
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.12] - 2025-06-25
 
 ### 🚀 Features
