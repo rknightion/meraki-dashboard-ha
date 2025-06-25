@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.8] - 2025-06-25
+
+* No changes
+
+## [0.24.7] - 2025-06-25
+
+**Full Changelog**: https://github.com/rknightion/meraki-dashboard-ha/compare/v0.24.6...v0.24.7
+
 ## [0.24.6] - 2025-06-25
 
 * No changes
