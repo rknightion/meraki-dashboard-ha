@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.11] - 2025-06-25
+
+### 🚀 Features
+- auto-run release notes generation on pushes to main
+- enhance release note generation for direct commits
+### 🐛 Bug Fixes
+- handle existing tags in release note generation
+### 🧰 Maintenance
+- remove node_modules from search exclusion
+- remove problematic release-drafter in favor of generate-release-notes
+### 📚 Documentation
+
 ## [0.24.10] - 2025-06-25
 
 * No changes
