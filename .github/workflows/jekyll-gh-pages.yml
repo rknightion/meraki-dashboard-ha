@@ -2,10 +2,6 @@
 name: Deploy Documentation to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
-
   # Run daily at 2 AM UTC to ensure docs are always up-to-date
   schedule:
     - cron: '0 2 * * *'
