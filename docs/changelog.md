@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.14] - 2025-06-25
+
+### 🚀 Features
+### 🐛 Bug Fixes
+- ordering
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.13] - 2025-06-25
 
 ### 🚀 Features
