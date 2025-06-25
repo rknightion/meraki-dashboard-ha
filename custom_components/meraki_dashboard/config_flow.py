@@ -62,7 +62,9 @@ for logger_name in loggers_to_configure:
     logger.propagate = False
 
 
-class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class MerakiDashboardConfigFlow(  # type: ignore[call-arg]
+    config_entries.ConfigFlow, domain=DOMAIN
+):
     """Handle a config flow for Meraki Dashboard.
 
     This class manages the configuration flow for setting up the integration,

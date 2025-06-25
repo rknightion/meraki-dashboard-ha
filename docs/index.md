@@ -14,10 +14,10 @@ The integration automatically creates multiple specialized hubs for optimal orga
 
 <div class="mermaid">
 graph TB
-    A["🏢 Organization Hub<br/>Acme Corp - Organisation"] --> B["🌡️ Network Hub<br/>Main Office - MT"]
-    A --> C["📡 Network Hub<br/>Main Office - MR"]
-    A --> D["🌡️ Network Hub<br/>Branch Office - MT"]
-    A --> E ["📡 Network Hub<br/>Remote Site - MR"]
+    A["Organization Hub<br/>Acme Corp - Organisation"] --> B["Network Hub<br/>Main Office - MT"]
+    A --> C["Network Hub<br/>Main Office - MR"]
+    A --> D["Network Hub<br/>Branch Office - MT"]
+    A --> E["Network Hub<br/>Remote Site - MR"]
 
     B --> F["MT20 Temperature Sensor"]
     B --> G["MT15 Water Sensor"]

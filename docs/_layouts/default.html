@@ -21,14 +21,13 @@
     <!-- Custom CSS -->
     <style>
         :root {
-            --primary-color: #0277bd;
-            --secondary-color: #7b1fa2;
+            --primary-color: #008a3e; /* Meraki Green */
+            --secondary-color: #00b0b9; /* Meraki Blue */
+            --light-background: #f5f5f5;
+            --hero-gradient-start: #e6f3ec;
+            --hero-gradient-end: #e0f7f8;
             --success-color: #388e3c;
             --warning-color: #f57c00;
-            --light-blue: #e1f5fe;
-            --light-purple: #f3e5f5;
-            --light-green: #e8f5e8;
-            --light-orange: #fff3e0;
         }
 
         .navbar-brand {
@@ -51,7 +50,7 @@
         }
 
         .hero-section {
-            background: linear-gradient(135deg, var(--light-blue) 0%, var(--light-purple) 100%);
+            background: linear-gradient(135deg, var(--hero-gradient-start) 0%, var(--hero-gradient-end) 100%);
             padding: 3rem 0;
             margin-bottom: 2rem;
         }
@@ -62,7 +61,7 @@
         }
 
         .badge-custom {
-            background: var(--light-blue);
+            background: #ffffff;
             color: var(--primary-color);
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
@@ -71,6 +70,7 @@
             display: inline-block;
             margin: 0.25rem;
             transition: all 0.3s ease;
+            border: 1px solid var(--primary-color);
         }
 
         .badge-custom:hover {
@@ -83,6 +83,10 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 1rem;
+        }
+
+        .mermaid svg {
+            max-width: 100%;
         }
 
         .mermaid {
@@ -102,7 +106,7 @@
         }
 
         code {
-            background-color: #f8f9fa;
+            background-color: #f0f0f0;
             padding: 0.2rem 0.4rem;
             border-radius: 0.25rem;
             font-size: 0.875em;
@@ -116,7 +120,7 @@
         }
 
         .alert-info {
-            background-color: var(--light-blue);
+            background-color: var(--hero-gradient-start);
             border-color: var(--primary-color);
             color: var(--primary-color);
         }
@@ -127,8 +131,8 @@
         }
 
         .btn-primary:hover {
-            background-color: #0156a3;
-            border-color: #0156a3;
+            background-color: #006d31; /* Darker Meraki Green */
+            border-color: #006d31;
         }
 
         @media (max-width: 768px) {
@@ -147,7 +151,8 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="{{ site.baseurl }}/">
-                <i class="bi bi-router me-2"></i>{{ site.title }}
+                <img src="{{ site.baseurl }}/docs/images/icon.png" alt="Logo" height="30" class="d-inline-block align-top me-2">
+                {{ site.title }}
             </a>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -236,12 +241,12 @@
             startOnLoad: true,
             theme: 'default',
             themeVariables: {
-                primaryColor: '#e1f5fe',
-                primaryTextColor: '#0277bd',
-                primaryBorderColor: '#0277bd',
+                primaryColor: '#e6f3ec',
+                primaryTextColor: '#008a3e',
+                primaryBorderColor: '#008a3e',
                 lineColor: '#666',
-                secondaryColor: '#f3e5f5',
-                tertiaryColor: '#e8f5e8'
+                secondaryColor: '#e0f7f8',
+                tertiaryColor: '#f5f5f5'
             }
         });
     </script>
