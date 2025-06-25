@@ -1,0 +1,108 @@
+name: Update Changelog on Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Extract version and release info
+        id: release_info
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          RELEASE_BODY="${{ github.event.release.body }}"
+          RELEASE_DATE=$(date -u +"%Y-%m-%d")
+          VERSION=${TAG_NAME#v}
+
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
+
+          echo "$RELEASE_BODY" > /tmp/release_body.md
+
+      - name: Update CHANGELOG.md
+        run: |
+          VERSION="${{ steps.release_info.outputs.version }}"
+          RELEASE_DATE="${{ steps.release_info.outputs.release_date }}"
+
+          echo "Updating CHANGELOG.md for version $VERSION"
+
+          # Create new changelog with header
+          cat > /tmp/new_changelog.md << 'EOF'
+          # Changelog
+
+          All notable changes to this project will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+          ## [Unreleased]
+
+          EOF
+
+          # Add new release section
+          echo "" >> /tmp/new_changelog.md
+          echo "## [$VERSION] - $RELEASE_DATE" >> /tmp/new_changelog.md
+          echo "" >> /tmp/new_changelog.md
+
+          # Extract changes from release body
+          if grep -q "## Changes" /tmp/release_body.md; then
+            sed -n '/## Changes/,/## Installation/p' /tmp/release_body.md | \
+              sed '/## Installation/d' | \
+              sed '/## Changes/d' | \
+              sed '/^[[:space:]]*$/d' >> /tmp/new_changelog.md
+          else
+            echo "### Changed" >> /tmp/new_changelog.md
+            echo "- Release $VERSION" >> /tmp/new_changelog.md
+          fi
+
+          echo "" >> /tmp/new_changelog.md
+
+          # Add existing releases
+          if [ -f CHANGELOG.md ]; then
+            RELEASES_START=$(grep -n "^## \[.*\] - " CHANGELOG.md | head -1 | cut -d: -f1)
+            if [ -n "$RELEASES_START" ]; then
+              tail -n +$RELEASES_START CHANGELOG.md >> /tmp/new_changelog.md
+            else
+              echo "---" >> /tmp/new_changelog.md
+              echo "" >> /tmp/new_changelog.md
+              echo "For releases prior to v$VERSION, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases)." >> /tmp/new_changelog.md
+            fi
+          else
+            echo "---" >> /tmp/new_changelog.md
+            echo "" >> /tmp/new_changelog.md
+            echo "For releases prior to v$VERSION, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases)." >> /tmp/new_changelog.md
+          fi
+
+          mv /tmp/new_changelog.md CHANGELOG.md
+          echo "✅ Updated CHANGELOG.md with release $VERSION"
+
+      - name: Commit changelog update
+        run: |
+          VERSION="${{ steps.release_info.outputs.version }}"
+          TAG_NAME="${{ steps.release_info.outputs.tag_name }}"
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          if ! git diff --quiet CHANGELOG.md; then
+            git add CHANGELOG.md
+            git commit -m "docs: update CHANGELOG.md for release $VERSION" \
+                       -m "🤖 Automatically updated CHANGELOG.md with release notes from $TAG_NAME"
+            git push origin main
+            echo "✅ Committed and pushed CHANGELOG.md update for $VERSION"
+          else
+            echo "No changes to CHANGELOG.md"
+          fi

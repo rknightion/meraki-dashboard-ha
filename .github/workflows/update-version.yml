@@ -1,4 +1,4 @@
-name: Update Version on Release
+name: Update Version and Changelog on Release
 
 on:
   release:
@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  update-version:
+  update-changelog-and-version:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -18,6 +18,67 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Ensure we're on the main branch, not detached HEAD
           ref: main
+          fetch-depth: 0
+
+      - name: Update CHANGELOG.md first
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          RELEASE_BODY="${{ github.event.release.body }}"
+          RELEASE_DATE=$(date -u +"%Y-%m-%d")
+          VERSION=${TAG_NAME#v}
+
+          echo "Updating CHANGELOG.md for version $VERSION"
+          echo "$RELEASE_BODY" > /tmp/release_body.md
+
+          # Create new changelog with header
+          cat > /tmp/new_changelog.md << 'EOF'
+          # Changelog
+
+          All notable changes to this project will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+          ## [Unreleased]
+
+          EOF
+
+          # Add new release section
+          echo "" >> /tmp/new_changelog.md
+          echo "## [$VERSION] - $RELEASE_DATE" >> /tmp/new_changelog.md
+          echo "" >> /tmp/new_changelog.md
+
+          # Extract changes from release body
+          if grep -q "## Changes" /tmp/release_body.md; then
+            sed -n '/## Changes/,/## Installation/p' /tmp/release_body.md | \
+              sed '/## Installation/d' | \
+              sed '/## Changes/d' | \
+              sed '/^[[:space:]]*$/d' >> /tmp/new_changelog.md
+          else
+            echo "### Changed" >> /tmp/new_changelog.md
+            echo "- Release $VERSION" >> /tmp/new_changelog.md
+          fi
+
+          echo "" >> /tmp/new_changelog.md
+
+          # Add existing releases
+          if [ -f CHANGELOG.md ]; then
+            RELEASES_START=$(grep -n "^## \[.*\] - " CHANGELOG.md | head -1 | cut -d: -f1)
+            if [ -n "$RELEASES_START" ]; then
+              tail -n +$RELEASES_START CHANGELOG.md >> /tmp/new_changelog.md
+            else
+              echo "---" >> /tmp/new_changelog.md
+              echo "" >> /tmp/new_changelog.md
+              echo "For releases prior to v$VERSION, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases)." >> /tmp/new_changelog.md
+            fi
+          else
+            echo "---" >> /tmp/new_changelog.md
+            echo "" >> /tmp/new_changelog.md
+            echo "For releases prior to v$VERSION, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases)." >> /tmp/new_changelog.md
+          fi
+
+          mv /tmp/new_changelog.md CHANGELOG.md
+          echo "✅ Updated CHANGELOG.md with release $VERSION"
 
       - name: Extract version from release tag
         id: version
@@ -25,34 +86,34 @@ jobs:
           # Get the tag name from the release event
           TAG_NAME="${{ github.event.release.tag_name }}"
           echo "Release tag: $TAG_NAME"
-          
+
           # Remove 'v' prefix if present
           VERSION=${TAG_NAME#v}
           echo "Extracted version: $VERSION"
-          
+
           # Validate version format (basic semver check)
           if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Error: Invalid version format: $VERSION"
             exit 1
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update manifest.json version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Updating manifest.json to version: $VERSION"
-          
+
           # Update the version in manifest.json using jq
           jq --arg version "$VERSION" '.version = $version' custom_components/meraki_dashboard/manifest.json > temp.json
           mv temp.json custom_components/meraki_dashboard/manifest.json
-          
+
           echo "✅ Updated manifest.json version to $VERSION"
 
       - name: Update docs changelog
         run: |
           echo "Updating docs/changelog.md with content from CHANGELOG.md"
-          
+
           # Create the Jekyll front matter and header for docs changelog
           {
             echo "---"
@@ -100,31 +161,31 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ github.event.release.tag_name }}"
-          
+
           # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          
+
           # Ensure we're on main branch (should already be due to checkout, but double-check)
           echo "Current branch: $(git branch --show-current)"
           echo "Current HEAD: $(git rev-parse HEAD)"
-          
-          # Check if there are changes to commit
-          if git diff --quiet custom_components/meraki_dashboard/manifest.json docs/changelog.md; then
+
+                    # Check if there are changes to commit
+          if git diff --quiet CHANGELOG.md custom_components/meraki_dashboard/manifest.json docs/changelog.md; then
             echo "No changes to commit - files already up to date"
           else
             echo "Changes detected, committing..."
-            
+
             # Add and commit the changes
-            git add custom_components/meraki_dashboard/manifest.json docs/changelog.md
-            git commit -m "chore: update version to $VERSION and sync docs changelog" \
-                       -m "🤖 Automatically updated manifest.json version and docs/changelog.md to match release tag $TAG_NAME" \
+            git add CHANGELOG.md custom_components/meraki_dashboard/manifest.json docs/changelog.md
+            git commit -m "chore: update version to $VERSION and sync changelog" \
+                       -m "🤖 Automatically updated CHANGELOG.md, manifest.json, and docs/changelog.md for release $TAG_NAME" \
                        -m "Co-Authored-By: GitHub Action <action@github.com>"
-            
+
             # Push the changes to main
             git push origin main
             echo "✅ Committed and pushed version update and changelog sync for $VERSION"
-            
+
             # Move the tag to point to the new commit with updated files
             echo "Moving tag $TAG_NAME to new commit with updated files..."
             git tag -f "$TAG_NAME"
@@ -138,15 +199,15 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG_NAME="${{ github.event.release.tag_name }}"
-          
+
           echo "Creating integration zip for release $TAG_NAME"
-          
+
           # Create integration zip from the updated code
           cd custom_components/meraki_dashboard
           zip -r ../../meraki_dashboard.zip . -x "*.pyc" "*/__pycache__/*" "*.git*" "*.DS_Store"
           cd ../..
-          
+
           # Upload the zip to the release
           gh release upload "$TAG_NAME" meraki_dashboard.zip --clobber
-          
+
           echo "✅ Created and uploaded meraki_dashboard.zip to release $TAG_NAME"
