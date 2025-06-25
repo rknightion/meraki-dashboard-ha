@@ -1,10 +1,14 @@
-# Sample workflow for building and deploying a Jekyll site to GitHub Pages
-name: Deploy Jekyll with GitHub Pages dependencies preinstalled
+# Deploy Jekyll documentation site to GitHub Pages
+name: Deploy Documentation to GitHub Pages
 
 on:
   # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
+
+  # Run daily at 2 AM UTC to ensure docs are always up-to-date
+  schedule:
+    - cron: '0 2 * * *'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -26,8 +30,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout latest code
         uses: actions/checkout@v4
+        with:
+          ref: main
+          clean: true
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Build with Jekyll
