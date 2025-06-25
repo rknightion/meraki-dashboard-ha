@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.16] - 2025-06-25
+
+proper hacky
+### 🚀 Features
+### 🐛 Bug Fixes
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.15] - 2025-06-25
 
 ### 🚀 Features
