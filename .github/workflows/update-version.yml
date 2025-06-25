@@ -6,6 +6,13 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+# Prevent concurrent deployments to Pages
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   update-changelog-and-version:
@@ -196,16 +203,23 @@ jobs:
             echo "✅ Updated tag $TAG_NAME to point to commit with version updates"
           fi
 
-      - name: Trigger Jekyll deployment
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Triggering Jekyll deployment to publish updated docs..."
-          # Wait a moment for the commit to be fully processed
-          sleep 10
-          # Trigger the Jekyll workflow to deploy the updated docs
-          gh workflow run "jekyll-gh-pages.yml" --ref main
-          echo "✅ Jekyll deployment triggered - docs will be updated shortly"
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build Jekyll site
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
 
       - name: Create and upload release assets
         env:
