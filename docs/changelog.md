@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.18] - 2025-06-26
+
+### 🚀 Features
+### 🐛 Bug Fixes
+- codecov
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.17] - 2025-06-26
 
 ### 🚀 Features

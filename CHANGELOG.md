@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.18] - 2025-06-26
+
+### 🚀 Features
+### 🐛 Bug Fixes
+- codecov
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.17] - 2025-06-26
 
 ### 🚀 Features
