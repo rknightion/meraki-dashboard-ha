@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import logging
 from typing import Any
 
@@ -184,9 +185,9 @@ MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key=f"{MT_SENSOR_REAL_POWER}_energy",
         name="Energy",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
-        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
-        suggested_display_precision=1,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_display_precision=3,
     ),
 }
 
@@ -795,8 +796,6 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
 
         # Convert timestamp to seconds since epoch for calculation
         try:
-            import datetime
-
             if isinstance(current_timestamp, str):
                 # Parse ISO timestamp
                 current_time = datetime.datetime.fromisoformat(
@@ -810,7 +809,6 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
 
         # Check for daily reset (like other HA energy sensors)
         # Use timezone-aware comparison for more accurate daily reset
-        import datetime
 
         # Get current local date
         current_local_time = datetime.datetime.now()
@@ -884,7 +882,9 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         self._last_power_value = current_power
         self._last_update_time = current_time
 
-        return round(self._total_energy, 1) if self._total_energy > 0 else 0.0
+        # Return energy in kWh (convert from Wh by dividing by 1000)
+        energy_kwh = self._total_energy / 1000.0 if self._total_energy > 0 else 0.0
+        return round(energy_kwh, 3)
 
     @property
     def available(self) -> bool:
@@ -894,6 +894,32 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
             and self.coordinator.data is not None
             and self._serial in self.coordinator.data
         )
+
+    @property
+    def last_reset(self) -> datetime.datetime | None:
+        """Return the last reset time for the energy sensor.
+
+        This is critical for Home Assistant Energy Dashboard and cost trackers
+        to properly understand daily-resetting energy sensors.
+        """
+        if self._last_reset_date:
+            try:
+                # Return midnight of the current day in local timezone
+                reset_date = datetime.datetime.strptime(
+                    self._last_reset_date, "%Y-%m-%d"
+                )
+                # Convert to local timezone midnight
+                reset_datetime = reset_date.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                return reset_datetime
+            except (ValueError, TypeError):
+                # Fallback to current day midnight if parsing fails
+                current_date = datetime.datetime.now().replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+                return current_date
+        return None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -920,9 +946,10 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
             "power_sensor": self._power_sensor_key,
             "last_power_value": self._last_power_value,
             "last_update_time": self._last_update_time,
-            "total_energy_wh": self._total_energy,
+            "total_energy_wh": self._total_energy,  # Keep Wh for debugging
+            "total_energy_kwh": round(self._total_energy / 1000.0, 3),  # Add kWh
             "last_reset_date": self._last_reset_date,
-            "unit_of_measurement": "Wh",
+            "unit_of_measurement": "kWh",  # Updated unit
         }
 
         # Add MAC address if available
