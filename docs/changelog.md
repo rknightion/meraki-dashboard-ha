@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.20] - 2025-06-26
+
+### 🚀 Features
+### 🐛 Bug Fixes
+### 🧰 Maintenance
+- switch energy sensor to Wh measurement
+### 📚 Documentation
+
 ## [0.24.19] - 2025-06-26
 
 ### 🚀 Features
