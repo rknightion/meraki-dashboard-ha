@@ -114,8 +114,8 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           echo "Updating manifest.json to version: $VERSION"
 
-          # Update the version in manifest.json using jq
-          jq --arg version "$VERSION" '.version = $version' custom_components/meraki_dashboard/manifest.json > temp.json
+          # Update the version in manifest.json using jq with compact output to match prettier formatting
+          jq --compact-output --arg version "$VERSION" '.version = $version' custom_components/meraki_dashboard/manifest.json > temp.json
           mv temp.json custom_components/meraki_dashboard/manifest.json
 
           echo "✅ Updated manifest.json version to $VERSION"

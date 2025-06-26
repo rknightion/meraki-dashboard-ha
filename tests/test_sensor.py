@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.components.sensor import SensorStateClass
 from homeassistant.core import HomeAssistant
 
 from custom_components.meraki_dashboard.const import (
@@ -610,6 +611,9 @@ class TestSensorDescriptions:
         assert energy_key in MT_ENERGY_SENSOR_DESCRIPTIONS
         energy_desc = MT_ENERGY_SENSOR_DESCRIPTIONS[energy_key]
         assert energy_desc.key == energy_key
+        # Verify that energy sensors use TOTAL state class (not TOTAL_INCREASING)
+        # This is required for sensors that have a last_reset property
+        assert energy_desc.state_class == SensorStateClass.TOTAL
 
 
 class TestSensorNativeValues:
