@@ -130,9 +130,12 @@ jobs:
             --cov-fail-under=10 \
             -v
 
+      # Coverage reports are generated locally (see htmlcov/ directory)
+      # Uncomment below to upload to Codecov (requires CODECOV_TOKEN secret)
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
