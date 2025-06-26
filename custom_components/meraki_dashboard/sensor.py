@@ -186,8 +186,8 @@ MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         name="Energy",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
-        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
-        suggested_display_precision=3,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        suggested_display_precision=1,
     ),
 }
 
@@ -711,22 +711,38 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         if (last_state := await self.async_get_last_state()) is not None:
             if last_state.state not in (None, "unknown", "unavailable"):
                 try:
-                    # State is stored in kWh, but we need to convert to Wh for internal storage
-                    restored_kwh = float(last_state.state)
-                    self._total_energy = restored_kwh * 1000.0  # Convert kWh to Wh
+                    restored_value = float(last_state.state)
+
+                    # Check the unit of measurement from the restored state
+                    restored_unit = last_state.attributes.get(
+                        "unit_of_measurement", "Wh"
+                    )
+
+                    if restored_unit == "kWh":
+                        # Convert from kWh to Wh for internal storage
+                        self._total_energy = restored_value * 1000.0
+                        _LOGGER.debug(
+                            "Restored energy state for %s: %.1f Wh (converted from %.3f kWh)",
+                            self.entity_id,
+                            self._total_energy,
+                            restored_value,
+                        )
+                    else:
+                        # Already in Wh, use directly
+                        self._total_energy = restored_value
+                        _LOGGER.debug(
+                            "Restored energy state for %s: %.1f Wh",
+                            self.entity_id,
+                            self._total_energy,
+                        )
+
                     # Also restore the last reset date if available
                     if (
                         last_state.attributes
                         and "last_reset_date" in last_state.attributes
                     ):
                         self._last_reset_date = last_state.attributes["last_reset_date"]
-                    _LOGGER.debug(
-                        "Restored energy state for %s: %.1f Wh (%.3f kWh) (last reset: %s)",
-                        self.entity_id,
-                        self._total_energy,
-                        restored_kwh,
-                        self._last_reset_date,
-                    )
+
                 except (ValueError, TypeError):
                     _LOGGER.warning(
                         "Could not restore energy state for %s: %s",
@@ -885,9 +901,8 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         self._last_power_value = current_power
         self._last_update_time = current_time
 
-        # Return energy in kWh (convert from Wh by dividing by 1000)
-        energy_kwh = self._total_energy / 1000.0 if self._total_energy > 0 else 0.0
-        return round(energy_kwh, 3)
+        # Return energy in Wh (matching meross_lan approach)
+        return round(self._total_energy, 1) if self._total_energy > 0 else 0.0
 
     @property
     def available(self) -> bool:
@@ -949,10 +964,12 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
             "power_sensor": self._power_sensor_key,
             "last_power_value": self._last_power_value,
             "last_update_time": self._last_update_time,
-            "total_energy_wh": self._total_energy,  # Keep Wh for debugging
-            "total_energy_kwh": round(self._total_energy / 1000.0, 3),  # Add kWh
+            "total_energy_wh": self._total_energy,  # Native Wh value
+            "total_energy_kwh": round(
+                self._total_energy / 1000.0, 3
+            ),  # Converted kWh for reference
             "last_reset_date": self._last_reset_date,
-            "unit_of_measurement": "kWh",  # Updated unit
+            "unit_of_measurement": "Wh",  # Native unit
         }
 
         # Add MAC address if available

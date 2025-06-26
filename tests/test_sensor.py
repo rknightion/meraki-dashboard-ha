@@ -300,7 +300,7 @@ class TestMerakiMTEnergySensor:
         # Note: We set the reset date to today to prevent daily reset during test
         current_date = datetime.datetime.now().strftime("%Y-%m-%d")
         energy_sensor._last_reset_date = current_date
-        energy_sensor._total_energy = 1000.0  # 1000 Wh = 1.0 kWh
+        energy_sensor._total_energy = 1000.0  # 1000 Wh
         energy_sensor._last_power_value = 80.0  # Previous power reading
         energy_sensor._last_update_time = datetime.datetime.fromisoformat(
             "2024-01-01T12:00:00+00:00"
@@ -323,13 +323,13 @@ class TestMerakiMTEnergySensor:
         # Average power = (80 + 100) / 2 = 90W
         # Time = 1 minute = 1/60 hours
         # Energy increment = 90W * (1/60)h = 1.5 Wh
-        # Total energy = 1000.0 + 1.5 = 1001.5 Wh = 1.0015 kWh
+        # Total energy = 1000.0 + 1.5 = 1001.5 Wh
         native_value = energy_sensor.native_value
         assert native_value is not None
-        assert native_value > 1.0  # Should be greater than initial 1.0 kWh
+        assert native_value > 1000.0  # Should be greater than initial 1000 Wh
         assert (
-            native_value < 1.01
-        )  # Should be less than 1.01 kWh (reasonable upper bound)
+            native_value < 1010.0
+        )  # Should be less than 1010 Wh (reasonable upper bound)
 
     def test_energy_sensor_availability(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -406,11 +406,14 @@ class TestMerakiMTEnergySensor:
             MT_ENERGY_SENSOR_DESCRIPTIONS,
         )
 
-        # Mock restored state - state is in kWh, but internally stored as Wh
+        # Mock restored state - state is in kWh (old format), should be converted to Wh
         mock_state = State(
             entity_id="sensor.test_energy",
             state="5.5",  # 5.5 kWh
-            attributes={"last_reset": "2024-01-01T10:00:00+00:00"},
+            attributes={
+                "last_reset": "2024-01-01T10:00:00+00:00",
+                "unit_of_measurement": "kWh",
+            },
         )
         mock_get_last_state.return_value = mock_state
 
@@ -466,6 +469,48 @@ class TestMerakiMTEnergySensor:
 
         # Should handle invalid value gracefully and keep default
         assert energy_sensor._total_energy == 0.0
+
+    @patch("homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state")
+    async def test_energy_sensor_state_restoration_wh_format(
+        self,
+        mock_get_last_state,
+        hass,
+        mock_coordinator,
+        mock_device_info,
+        mock_network_hub,
+    ):
+        """Test energy sensor state restoration with Wh format (new format)."""
+        from homeassistant.core import State
+
+        from custom_components.meraki_dashboard.sensor import (
+            MT_ENERGY_SENSOR_DESCRIPTIONS,
+        )
+
+        # Mock restored state in Wh (new format)
+        mock_state = State(
+            entity_id="sensor.test_energy",
+            state="2500.0",  # 2500 Wh
+            attributes={
+                "last_reset": "2024-01-01T10:00:00+00:00",
+                "unit_of_measurement": "Wh",
+            },
+        )
+        mock_get_last_state.return_value = mock_state
+
+        energy_sensor = MerakiMTEnergySensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_ENERGY_SENSOR_DESCRIPTIONS[f"{MT_SENSOR_REAL_POWER}_energy"],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+            power_sensor_key=MT_SENSOR_REAL_POWER,
+        )
+        energy_sensor.hass = hass
+
+        await energy_sensor.async_added_to_hass()
+
+        # Should restore the energy value directly (already in Wh)
+        assert energy_sensor._total_energy == 2500.0
 
     @patch("homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state")
     async def test_energy_sensor_state_restoration_no_state(
@@ -603,6 +648,8 @@ class TestSensorDescriptions:
 
     def test_energy_sensor_descriptions(self):
         """Test energy sensor descriptions."""
+        from homeassistant.const import UnitOfEnergy
+
         from custom_components.meraki_dashboard.sensor import (
             MT_ENERGY_SENSOR_DESCRIPTIONS,
         )
@@ -614,6 +661,8 @@ class TestSensorDescriptions:
         # Verify that energy sensors use TOTAL state class (not TOTAL_INCREASING)
         # This is required for sensors that have a last_reset property
         assert energy_desc.state_class == SensorStateClass.TOTAL
+        # Verify that energy sensors use Wh as native unit (matching meross_lan approach)
+        assert energy_desc.native_unit_of_measurement == UnitOfEnergy.WATT_HOUR
 
 
 class TestSensorNativeValues:
