@@ -17,6 +17,16 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.17] - 2025-06-26
+
+### 🚀 Features
+- enhance energy sensor precision and add reset logic
+### 🐛 Bug Fixes
+- convert energy state from kWh to Wh during restoration
+### 🧰 Maintenance
+- update zizmor hook to v1.10.0
+### 📚 Documentation
+
 ## [0.24.16] - 2025-06-25
 
 proper hacky
