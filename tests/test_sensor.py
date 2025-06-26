@@ -296,7 +296,10 @@ class TestMerakiMTEnergySensor:
         )
 
         # Set initial energy and previous power reading to simulate existing state
-        energy_sensor._total_energy = 1.0
+        # Note: We set the reset date to today to prevent daily reset during test
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        energy_sensor._last_reset_date = current_date
+        energy_sensor._total_energy = 1000.0  # 1000 Wh = 1.0 kWh
         energy_sensor._last_power_value = 80.0  # Previous power reading
         energy_sensor._last_update_time = datetime.datetime.fromisoformat(
             "2024-01-01T12:00:00+00:00"
@@ -319,10 +322,13 @@ class TestMerakiMTEnergySensor:
         # Average power = (80 + 100) / 2 = 90W
         # Time = 1 minute = 1/60 hours
         # Energy increment = 90W * (1/60)h = 1.5 Wh
-        # Total energy = 1.0 + 1.5 = 2.5 Wh
+        # Total energy = 1000.0 + 1.5 = 1001.5 Wh = 1.0015 kWh
         native_value = energy_sensor.native_value
         assert native_value is not None
-        assert native_value > 1.0  # Should be greater than initial 1.0 Wh
+        assert native_value > 1.0  # Should be greater than initial 1.0 kWh
+        assert (
+            native_value < 1.01
+        )  # Should be less than 1.01 kWh (reasonable upper bound)
 
     def test_energy_sensor_availability(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -399,10 +405,10 @@ class TestMerakiMTEnergySensor:
             MT_ENERGY_SENSOR_DESCRIPTIONS,
         )
 
-        # Mock restored state
+        # Mock restored state - state is in kWh, but internally stored as Wh
         mock_state = State(
             entity_id="sensor.test_energy",
-            state="5.5",
+            state="5.5",  # 5.5 kWh
             attributes={"last_reset": "2024-01-01T10:00:00+00:00"},
         )
         mock_get_last_state.return_value = mock_state
@@ -419,8 +425,9 @@ class TestMerakiMTEnergySensor:
 
         await energy_sensor.async_added_to_hass()
 
-        # Should restore the energy value
-        assert energy_sensor._total_energy == 5.5
+        # Should restore the energy value converted from kWh to Wh
+        # 5.5 kWh = 5500 Wh
+        assert energy_sensor._total_energy == 5500.0
 
     @patch("homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state")
     async def test_energy_sensor_state_restoration_invalid_value(

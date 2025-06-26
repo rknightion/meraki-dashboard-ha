@@ -711,7 +711,9 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         if (last_state := await self.async_get_last_state()) is not None:
             if last_state.state not in (None, "unknown", "unavailable"):
                 try:
-                    self._total_energy = float(last_state.state)
+                    # State is stored in kWh, but we need to convert to Wh for internal storage
+                    restored_kwh = float(last_state.state)
+                    self._total_energy = restored_kwh * 1000.0  # Convert kWh to Wh
                     # Also restore the last reset date if available
                     if (
                         last_state.attributes
@@ -719,9 +721,10 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
                     ):
                         self._last_reset_date = last_state.attributes["last_reset_date"]
                     _LOGGER.debug(
-                        "Restored energy state for %s: %s Wh (last reset: %s)",
+                        "Restored energy state for %s: %.1f Wh (%.3f kWh) (last reset: %s)",
                         self.entity_id,
                         self._total_energy,
+                        restored_kwh,
                         self._last_reset_date,
                     )
                 except (ValueError, TypeError):
