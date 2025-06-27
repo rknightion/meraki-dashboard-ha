@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.21] - 2025-06-27
+
+### 🚀 Features
+### 🐛 Bug Fixes
+- pr labeller
+### 🧰 Maintenance
+### 📚 Documentation
+
 ## [0.24.20] - 2025-06-26
 
 ### 🚀 Features
