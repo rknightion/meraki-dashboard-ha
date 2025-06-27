@@ -3,68 +3,103 @@
 
 # Core integration files
 integration:
-  - 'custom_components/meraki_dashboard/**'
-  - '!custom_components/meraki_dashboard/README.md'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/**'
+      - '!custom_components/meraki_dashboard/README.md'
 
 # Sensor platform
 sensor:
-  - 'custom_components/meraki_dashboard/sensor.py'
-  - 'custom_components/meraki_dashboard/binary_sensor.py'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/sensor.py'
+      - 'custom_components/meraki_dashboard/binary_sensor.py'
 
 # Configuration flow
 config-flow:
-  - 'custom_components/meraki_dashboard/config_flow.py'
-  - 'custom_components/meraki_dashboard/strings.json'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/config_flow.py'
+      - 'custom_components/meraki_dashboard/strings.json'
 
 # Core coordinator and hub
 coordinator:
-  - 'custom_components/meraki_dashboard/coordinator.py'
-  - 'custom_components/meraki_dashboard/__init__.py'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/coordinator.py'
+      - 'custom_components/meraki_dashboard/__init__.py'
 
 # Events and buttons
 events:
-  - 'custom_components/meraki_dashboard/events.py'
-  - 'custom_components/meraki_dashboard/button.py'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/events.py'
+      - 'custom_components/meraki_dashboard/button.py'
 
 # Constants and utilities
 constants:
-  - 'custom_components/meraki_dashboard/const.py'
-  - 'custom_components/meraki_dashboard/utils.py'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/const.py'
+      - 'custom_components/meraki_dashboard/utils.py'
 
 # Manifest and metadata
 manifest:
-  - 'custom_components/meraki_dashboard/manifest.json'
-  - 'custom_components/meraki_dashboard/icons.json'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'custom_components/meraki_dashboard/manifest.json'
+      - 'custom_components/meraki_dashboard/icons.json'
 
 # Documentation
 documentation:
-  - 'docs/**'
-  - '**.md'
-  - 'README.md'
-  - 'CHANGELOG.md'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - '**/*.md'
+      - 'README.md'
+      - 'CHANGELOG.md'
 
 # Tests
 test:
-  - 'tests/**'
-  - 'pytest.ini'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'tests/**'
+      - 'conftest.py'
 
 # CI/CD
 ci:
-  - '.github/**'
-  - 'Makefile'
-  - '.pre-commit-config.yaml'
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+      - 'Makefile'
+      - '.pre-commit-config.yaml'
 
 # Dependencies
 dependencies:
-  - 'pyproject.toml'
-  - 'poetry.lock'
-  - 'requirements*.txt'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - 'requirements*.txt'
 
 # HACS
 hacs:
-  - 'hacs.json'
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'hacs.json'
 
-# Version files
-version:
-  - 'VERSION'
-  - 'custom_components/meraki_dashboard/manifest.json' 
+# Configuration files
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.editorconfig'
+      - '.gitignore'
+      - 'pyproject.toml'
+
+# Build and development
+build:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Makefile'
+      - '.pre-commit-config.yaml'
+      - 'pyproject.toml'
