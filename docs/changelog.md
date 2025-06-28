@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.22] - 2025-06-28
+
+### 🚀 Features
+### 🐛 Bug Fixes
+### 🧰 Maintenance
+- update ruff version and enhance config flow options
+### 📚 Documentation
+
 ## [0.24.21] - 2025-06-27
 
 ### 🚀 Features

@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.22] - 2025-06-28
+
+### 🚀 Features
+### 🐛 Bug Fixes
+### 🧰 Maintenance
+- update ruff version and enhance config flow options
+### 📚 Documentation
+
 ## [0.24.21] - 2025-06-27
 
 ### 🚀 Features
