@@ -62,9 +62,7 @@ for logger_name in loggers_to_configure:
     logger.propagate = False
 
 
-class MerakiDashboardConfigFlow(  # type: ignore[call-arg]
-    config_entries.ConfigFlow, domain=DOMAIN
-):
+class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Meraki Dashboard.
 
     This class manages the configuration flow for setting up the integration,
@@ -635,8 +633,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"scan_interval_{hub_display_name}",
                         default=current_scan_minutes,
                     )
-                ] = vol.All(
-                    vol.Coerce(int), vol.Range(min=MIN_SCAN_INTERVAL_MINUTES, max=60)
+                ] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_SCAN_INTERVAL_MINUTES,
+                        max=60,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
                 )
 
                 # Discovery interval for this hub
@@ -652,9 +655,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         f"discovery_interval_{hub_display_name}",
                         default=current_discovery_minutes,
                     )
-                ] = vol.All(
-                    vol.Coerce(int),
-                    vol.Range(min=MIN_DISCOVERY_INTERVAL_MINUTES, max=1440),
+                ] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
+                        max=1440,
+                        step=1,
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
                 )
 
         # Build description placeholders with hub names
