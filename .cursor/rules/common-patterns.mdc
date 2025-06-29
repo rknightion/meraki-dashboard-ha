@@ -1,13 +1,14 @@
 ---
-description: project patterns
-globs: 
-alwaysApply: false
+description:
+globs:
+alwaysApply: true
 ---
 # Common Patterns
+- Use context7 mcp server for all supported libraries/documentation and search for docs there before doing your own search
 
 ## Adding New Sensor Types
 1. Add metric constant to `const.py`
-2. Add sensor description to `sensor.py` or `binary_sensor.py`
+2. Add sensor description to `sensor.py` or `binary_sensor.py` or to the relevant .py file in the `devices` folder
 3. Update `icons.json` for new sensor types
 4. Test with actual device data
 

@@ -120,10 +120,49 @@ MT_SENSOR_TVOC: Final = "tvoc"
 MT_SENSOR_VOLTAGE: Final = "voltage"
 MT_SENSOR_WATER: Final = "water"
 
-# MR (wireless) sensor metrics - for demonstration of multi-hub architecture
+# MR (wireless) sensor metrics
 MR_SENSOR_SSID_COUNT: Final = "ssidCount"
 MR_SENSOR_ENABLED_SSIDS: Final = "enabledSsids"
 MR_SENSOR_OPEN_SSIDS: Final = "openSsids"
+MR_SENSOR_CLIENT_COUNT: Final = "clientCount"
+MR_SENSOR_CHANNEL_UTILIZATION_2_4: Final = "channelUtilization24"
+MR_SENSOR_CHANNEL_UTILIZATION_5: Final = "channelUtilization5"
+MR_SENSOR_DATA_RATE_2_4: Final = "dataRate24"
+MR_SENSOR_DATA_RATE_5: Final = "dataRate5"
+MR_SENSOR_CONNECTION_SUCCESS_RATE: Final = "connectionSuccessRate"
+MR_SENSOR_CONNECTION_FAILURES: Final = "connectionFailures"
+MR_SENSOR_TRAFFIC_SENT: Final = "trafficSent"
+MR_SENSOR_TRAFFIC_RECV: Final = "trafficRecv"
+MR_SENSOR_RF_POWER: Final = "rfPower"
+MR_SENSOR_RF_POWER_2_4: Final = "rfPower24"  # 2.4GHz band RF power
+MR_SENSOR_RF_POWER_5: Final = "rfPower5"  # 5GHz band RF power
+MR_SENSOR_RADIO_CHANNEL_2_4: Final = "radioChannel24"  # 2.4GHz channel
+MR_SENSOR_RADIO_CHANNEL_5: Final = "radioChannel5"  # 5GHz channel
+
+# MS (switch) sensor metrics for network monitoring
+MS_SENSOR_PORT_COUNT: Final = "portCount"
+MS_SENSOR_CONNECTED_PORTS: Final = "connectedPorts"
+MS_SENSOR_POE_PORTS: Final = "poePorts"
+MS_SENSOR_PORT_UTILIZATION_SENT: Final = "portUtilizationSent"
+MS_SENSOR_PORT_UTILIZATION_RECV: Final = "portUtilizationRecv"
+MS_SENSOR_PORT_TRAFFIC_SENT: Final = "portTrafficSent"
+MS_SENSOR_PORT_TRAFFIC_RECV: Final = "portTrafficRecv"
+MS_SENSOR_POE_POWER: Final = "poePower"
+MS_SENSOR_CONNECTED_CLIENTS: Final = "connectedClients"
+MS_SENSOR_POWER_MODULE_STATUS: Final = "powerModuleStatus"
+MS_SENSOR_PORT_ERRORS: Final = "portErrors"
+MS_SENSOR_PORT_DISCARDS: Final = "portDiscards"
+MS_SENSOR_PORT_LINK_COUNT: Final = "portLinkCount"
+MS_SENSOR_POE_DRAW: Final = "poeDraw"
+MS_SENSOR_POE_LIMIT: Final = "poeLimit"
+MS_SENSOR_PORT_UTILIZATION: Final = "portUtilization"  # Overall port utilization
+
+# Organization-level monitoring metrics
+ORG_SENSOR_DEVICE_STATUS: Final = "deviceStatus"
+ORG_SENSOR_LICENSE_INVENTORY: Final = "licenseInventory"
+ORG_SENSOR_LICENSE_EXPIRING: Final = "licenseExpiring"
+ORG_SENSOR_RECENT_ALERTS: Final = "recentAlerts"
+ORG_SENSOR_UPLINK_STATUS: Final = "uplinkStatus"
 
 # Power sensors that should have companion energy sensors for energy dashboard
 # These sensors measure instantaneous power and benefit from integration to energy

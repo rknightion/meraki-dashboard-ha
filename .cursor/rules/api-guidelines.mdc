@@ -1,7 +1,7 @@
 ---
 description:
 globs:
-alwaysApply: false
+alwaysApply: true
 ---
 # API Guidelines
 
@@ -11,6 +11,7 @@ alwaysApply: false
 - Implement proper rate limiting and error handling
 - Use batch operations where possible
 - Cache device information appropriately
+- SDK helper – the Python library transparently handles pagination (total_pages='all').  Wrap each call in a tiny decorator that records meraki_http_latency_seconds and meraki_http_errors_total to spot API hiccups.
 
 ## Error Handling
 - Implement ConfigEntryAuthFailed and ConfigEntryNotReady appropriately

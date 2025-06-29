@@ -36,6 +36,7 @@ from .const import (
     DOMAIN,
     ORG_HUB_SUFFIX,
     SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
     USER_AGENT,
 )
@@ -137,6 +138,16 @@ class MerakiOrganizationHub:
         # Network hubs managed by this organization hub
         self.network_hubs: dict[str, MerakiNetworkHub] = {}
 
+        # Organization-level monitoring data
+        self.licenses_info: dict[str, Any] = {}
+        self.licenses_expiring_count = 0
+        self.recent_alerts: list[dict[str, Any]] = []
+        self.active_alerts_count = 0
+        self.device_statuses: list[dict[str, Any]] = []
+
+        # Organization data update timer
+        self._organization_data_unsub: Callable[[], None] | None = None
+
     async def async_setup(self) -> bool:
         """Set up the organization hub and create network hubs.
 
@@ -187,6 +198,18 @@ class MerakiOrganizationHub:
             _LOGGER.debug("Found %d networks in organization", len(self.networks))
 
             self.last_api_call_error = None
+
+            # Set up periodic organization data updates (every 5 minutes)
+            async def _update_org_data(_now: datetime | None = None) -> None:
+                await self.async_update_organization_data()
+
+            self._organization_data_unsub = async_track_time_interval(
+                self.hass, _update_org_data, timedelta(minutes=5)
+            )
+
+            # Perform initial organization data update
+            await self.async_update_organization_data()
+
             return True
 
         except APIError as err:
@@ -278,6 +301,195 @@ class MerakiOrganizationHub:
 
         return hubs
 
+    async def async_update_organization_data(self) -> None:
+        """Update organization-level monitoring data."""
+        if not self.dashboard:
+            return
+
+        try:
+            # Fetch license information
+            await self._fetch_license_data()
+            # Fetch alerts and events
+            await self._fetch_alerts_data()
+            # Fetch device statuses
+            await self._fetch_device_statuses()
+
+        except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            _LOGGER.error("Error fetching organization data: %s", err)
+
+    async def _fetch_license_data(self) -> None:
+        """Fetch license information for the organization."""
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            # Get license overview
+            licenses = await self.hass.async_add_executor_job(
+                self.dashboard.organizations.getOrganizationLicenses,
+                self.organization_id,
+            )
+            self.total_api_calls += 1
+
+            # Process license data
+            current_time = datetime.now(UTC)
+            expiring_soon = []
+
+            for license_info in licenses:
+                expiry_date = license_info.get("expirationDate")
+                if expiry_date:
+                    try:
+                        # Parse expiry date
+                        expiry_dt = datetime.fromisoformat(
+                            expiry_date.replace("Z", "+00:00")
+                        )
+                        days_until_expiry = (expiry_dt - current_time).days
+
+                        # Check if expiring within 90 days
+                        if 0 <= days_until_expiry <= 90:
+                            expiring_soon.append(
+                                {
+                                    "license_type": license_info.get(
+                                        "deviceSerial", "Unknown"
+                                    ),
+                                    "expiry_date": expiry_date,
+                                    "days_remaining": days_until_expiry,
+                                }
+                            )
+                    except (ValueError, TypeError):
+                        continue
+
+            self.licenses_expiring_count = len(expiring_soon)
+            self.licenses_info = {
+                "total_licenses": len(licenses),
+                "expiring_soon": expiring_soon[:5],  # Limit to 5 for attributes
+                "licenses_by_type": {},
+            }
+
+            # Group licenses by type
+            for license_info in licenses:
+                license_type = license_info.get("licenseType", "Unknown")
+                if license_type not in self.licenses_info["licenses_by_type"]:
+                    self.licenses_info["licenses_by_type"][license_type] = 0
+                self.licenses_info["licenses_by_type"][license_type] += 1
+
+        except Exception as err:
+            _LOGGER.warning("Could not fetch license data: %s", err)
+
+    async def _fetch_alerts_data(self) -> None:
+        """Fetch alerts and events for the organization."""
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            # Get organization alerts (last 24 hours)
+            end_time = datetime.now(UTC)
+            start_time = end_time - timedelta(hours=24)
+
+            # Fetch alerts
+            try:
+                await self.hass.async_add_executor_job(
+                    self.dashboard.organizations.getOrganizationAlertsProfiles,
+                    self.organization_id,
+                )
+                self.total_api_calls += 1
+
+                # Process alerts - this is alert configuration, not active alerts
+                # For active alerts, we'd need to check device status or events
+                self.active_alerts_count = 0
+                self.recent_alerts = []
+
+            except Exception:
+                # If alerts endpoint doesn't work, try events instead
+                # This is expected for some organizations without alert profiles
+                _LOGGER.debug("Alert profiles endpoint not available, will try events")
+
+            # Try to get events as an alternative
+            try:
+                events = await self.hass.async_add_executor_job(
+                    self.dashboard.organizations.getOrganizationEvents,
+                    self.organization_id,
+                    **{
+                        "startingAfter": start_time.isoformat(),
+                        "endingBefore": end_time.isoformat(),
+                        "perPage": 100,
+                    },
+                )
+                self.total_api_calls += 1
+
+                # Process events and emit HA events
+                await self._process_organization_events(events)
+
+                # Count alert-type events
+                alert_events = [
+                    e
+                    for e in events
+                    if e.get("eventType", "").lower()
+                    in [
+                        "device_went_offline",
+                        "device_came_online",
+                        "device_alert",
+                        "sensor_alert",
+                        "gateway_alert",
+                    ]
+                ]
+                self.active_alerts_count = len(alert_events)
+                self.recent_alerts = alert_events[:5]  # Keep last 5 for attributes
+
+            except Exception as event_err:
+                _LOGGER.debug("Could not fetch events: %s", event_err)
+
+        except Exception as err:
+            _LOGGER.warning("Could not fetch alerts data: %s", err)
+
+    async def _process_organization_events(self, events: list[dict[str, Any]]) -> None:
+        """Process organization events and emit Home Assistant events."""
+        for event in events:
+            # Emit HA event for each Meraki event
+            event_data = {
+                "organization_id": self.organization_id,
+                "organization_name": self.organization_name,
+                "event_type": event.get("eventType"),
+                "event_description": event.get("eventDescription"),
+                "timestamp": event.get("timestamp"),
+                "network_id": event.get("networkId"),
+                "device_serial": event.get("deviceSerial"),
+                "device_name": event.get("deviceName"),
+                "client_id": event.get("clientId"),
+                "client_description": event.get("clientDescription"),
+            }
+
+            # Remove None values
+            event_data = {k: v for k, v in event_data.items() if v is not None}
+
+            # Emit HA event
+            self.hass.bus.async_fire(f"{DOMAIN}_organization_event", event_data)
+
+    async def _fetch_device_statuses(self) -> None:
+        """Fetch device status information across the organization."""
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            # Get organization device statuses
+            device_statuses = await self.hass.async_add_executor_job(
+                self.dashboard.organizations.getOrganizationDevicesStatuses,
+                self.organization_id,
+            )
+            self.total_api_calls += 1
+
+            self.device_statuses = device_statuses
+
+        except Exception as err:
+            _LOGGER.warning("Could not fetch device statuses: %s", err)
+
     async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:
         """Check if a network has devices of a specific type.
 
@@ -317,6 +529,11 @@ class MerakiOrganizationHub:
 
     async def async_unload(self) -> None:
         """Unload the organization hub and all network hubs."""
+        # Cancel organization data updates
+        if self._organization_data_unsub:
+            self._organization_data_unsub()
+            self._organization_data_unsub = None
+
         for hub in self.network_hubs.values():
             await hub.async_unload()
         self.network_hubs.clear()
@@ -361,18 +578,23 @@ class MerakiNetworkHub:
         self.organization_id = organization_hub.organization_id
         self.dashboard = organization_hub.dashboard
 
-        # Device management
+        # Device discovery tracking
         self.devices: list[dict[str, Any]] = []
-        self.wireless_data: dict[str, Any] = {}  # For MR devices
-
-        # Auto-discovery
-        self._discovery_task = None
+        self._last_discovery_time: datetime | None = None
         self._device_discovery_unsub: Callable[[], None] | None = None
 
-        # Event handler for sensor state changes (MT devices only)
-        self.event_handler = (
-            MerakiEventHandler(hass) if device_type == SENSOR_TYPE_MT else None
-        )
+        # Wireless data for MR devices
+        self.wireless_data: dict[str, Any] = {}  # For MR devices
+
+        # Switch data for MS devices
+        self.switch_data: dict[str, Any] = {}  # For MS devices
+
+        # Event handler for state change events
+        self.event_handler: MerakiEventHandler | None = None
+
+        # Initialize event handler for MT devices
+        if device_type == SENSOR_TYPE_MT:
+            self.event_handler = MerakiEventHandler(hass)
 
     async def async_setup(self) -> bool:
         """Set up the network hub and discover devices.
@@ -387,6 +609,9 @@ class MerakiNetworkHub:
             # Set up device-type-specific functionality
             if self.device_type == SENSOR_TYPE_MR:
                 await self._async_setup_wireless_data()
+
+            # Set up switch data if this is an MS hub
+            await self._async_setup_switch_data()
 
             # Set up periodic device discovery if auto-discovery is enabled
             options = self.config_entry.options
@@ -507,7 +732,7 @@ class MerakiNetworkHub:
             )
 
     async def _async_setup_wireless_data(self) -> None:
-        """Set up wireless data for MR devices (SSIDs, etc.)."""
+        """Set up wireless data for MR devices (SSIDs, device stats, radio settings, etc.)."""
         if self.device_type != SENSOR_TYPE_MR:
             return
 
@@ -521,20 +746,376 @@ class MerakiNetworkHub:
             )
             self.organization_hub.total_api_calls += 1
 
+            # Get wireless devices in this network for additional metrics
+            devices = await self.hass.async_add_executor_job(
+                self.dashboard.networks.getNetworkDevices, self.network_id
+            )
+            self.organization_hub.total_api_calls += 1
+
+            # Filter for wireless devices and gather additional info
+            wireless_devices = [
+                device for device in devices if device.get("model", "").startswith("MR")
+            ]
+
+            devices_info = []
+            for device in wireless_devices:
+                try:
+                    device_serial = device.get("serial")
+                    if not device_serial:
+                        continue
+
+                    device_info = {
+                        "serial": device_serial,
+                        "name": device.get("name", device_serial),
+                        "model": device.get("model"),
+                        "clientCount": 0,
+                        "channelUtilization24": 0,
+                        "channelUtilization5": 0,
+                        "dataRate24": 0,
+                        "dataRate5": 0,
+                        "connectionSuccessRate": 0,
+                        "connectionFailures": 0,
+                        "trafficSent": 0,
+                        "trafficRecv": 0,
+                        "rfPower": 0,
+                        "radioSettings": {},
+                        "portConfig": {},
+                    }
+
+                    # Get wireless device status and statistics
+                    try:
+                        device_status = await self.hass.async_add_executor_job(
+                            self.dashboard.wireless.getDeviceWirelessStatus,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        # Update device info with status data
+                        if device_status:
+                            basic_service_sets = device_status.get(
+                                "basicServiceSets", []
+                            )
+                            for bss in basic_service_sets:
+                                if bss.get("band") == "2.4":
+                                    device_info["channelUtilization24"] = bss.get(
+                                        "channelUtilization", {}
+                                    ).get("total", 0)
+                                    device_info["dataRate24"] = bss.get("channel", 0)
+                                elif bss.get("band") == "5":
+                                    device_info["channelUtilization5"] = bss.get(
+                                        "channelUtilization", {}
+                                    ).get("total", 0)
+                                    device_info["dataRate5"] = bss.get("channel", 0)
+
+                    except Exception as status_err:
+                        _LOGGER.debug(
+                            "Could not get wireless status for %s: %s",
+                            device_serial,
+                            status_err,
+                        )
+
+                    # Get radio settings for RF power limits
+                    try:
+                        radio_settings = await self.hass.async_add_executor_job(
+                            self.dashboard.wireless.getDeviceWirelessRadioSettings,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        device_info["radioSettings"] = radio_settings
+
+                        # Extract RF power from radio settings
+                        for radio in radio_settings:
+                            band = radio.get("band")
+                            power = radio.get("txPower", 0)
+                            if band == "2.4":
+                                device_info["rfPower"] = max(
+                                    device_info["rfPower"], power
+                                )
+                            elif band == "5":
+                                device_info["rfPower"] = max(
+                                    device_info["rfPower"], power
+                                )
+
+                    except Exception as radio_err:
+                        _LOGGER.debug(
+                            "Could not get radio settings for %s: %s",
+                            device_serial,
+                            radio_err,
+                        )
+
+                    # Get client count and connection statistics
+                    try:
+                        clients = await self.hass.async_add_executor_job(
+                            self.dashboard.wireless.getDeviceWirelessConnectionStats,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        if clients:
+                            device_info["clientCount"] = len(clients.get("clients", []))
+                            device_info["connectionSuccessRate"] = clients.get(
+                                "connectionSuccessRate", 0
+                            )
+                            device_info["connectionFailures"] = clients.get(
+                                "connectionFailures", 0
+                            )
+
+                    except Exception as client_err:
+                        _LOGGER.debug(
+                            "Could not get connection stats for %s: %s",
+                            device_serial,
+                            client_err,
+                        )
+
+                    # Get traffic statistics
+                    try:
+                        # Get device traffic over the last hour
+                        from datetime import timedelta
+
+                        end_time = datetime.now(UTC)
+                        start_time = end_time - timedelta(hours=1)
+
+                        traffic_analysis = await self.hass.async_add_executor_job(
+                            self.dashboard.wireless.getNetworkWirelessUsageHistory,
+                            self.network_id,
+                            **{
+                                "t0": start_time.isoformat(),
+                                "t1": end_time.isoformat(),
+                                "resolution": 3600,  # 1 hour resolution
+                                "perPage": 1000,
+                            },
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        # Process traffic data for this specific device
+                        total_sent = 0
+                        total_recv = 0
+
+                        for entry in traffic_analysis:
+                            if entry.get("serial") == device_serial:
+                                total_sent += entry.get("sent", 0)
+                                total_recv += entry.get("received", 0)
+
+                        device_info["trafficSent"] = total_sent
+                        device_info["trafficRecv"] = total_recv
+
+                    except Exception as traffic_err:
+                        _LOGGER.debug(
+                            "Could not get traffic stats for %s: %s",
+                            device_serial,
+                            traffic_err,
+                        )
+
+                    devices_info.append(device_info)
+
+                except Exception as device_err:
+                    _LOGGER.debug(
+                        "Error getting wireless info for device %s: %s",
+                        device.get("serial"),
+                        device_err,
+                    )
+                    continue
+
             self.wireless_data = {
                 "ssids": ssids,
+                "devices_info": devices_info,
                 "network_id": self.network_id,
                 "network_name": self.network_name,
+                "last_updated": datetime.now(UTC).isoformat(),
             }
 
             _LOGGER.debug(
-                "Retrieved %d SSIDs for wireless network %s",
+                "Retrieved %d SSIDs and %d wireless devices for network %s",
                 len(ssids),
+                len(devices_info),
                 self.network_name,
             )
 
         except Exception as err:
             _LOGGER.error("Error getting wireless data for %s: %s", self.hub_name, err)
+            self.organization_hub.failed_api_calls += 1
+
+    async def _async_setup_switch_data(self) -> None:
+        """Set up switch data for MS devices (ports, status, power modules, configuration, etc.)."""
+        if self.device_type != SENSOR_TYPE_MS:
+            return
+
+        try:
+            if self.dashboard is None:
+                return
+
+            # Get switch devices in this network
+            devices = await self.hass.async_add_executor_job(
+                self.dashboard.networks.getNetworkDevices, self.network_id
+            )
+            self.organization_hub.total_api_calls += 1
+
+            # Filter for switch devices
+            switch_devices = [
+                device for device in devices if device.get("model", "").startswith("MS")
+            ]
+
+            if not switch_devices:
+                _LOGGER.debug(
+                    "No switch devices found in network %s", self.network_name
+                )
+                return
+
+            # Get comprehensive port and device information for all switches
+            all_ports_status = []
+            all_power_modules = []
+            all_port_configs = []
+
+            for device in switch_devices:
+                try:
+                    device_serial = device.get("serial")
+                    if not device_serial:
+                        continue
+
+                    device_name = device.get("name", device_serial)
+
+                    # Get port status
+                    try:
+                        ports_status = await self.hass.async_add_executor_job(
+                            self.dashboard.switch.getDeviceSwitchPortsStatuses,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        # Add device info to each port for tracking
+                        for port in ports_status:
+                            port["device_serial"] = device_serial
+                            port["device_name"] = device_name
+                            port["device_model"] = device.get("model")
+
+                        all_ports_status.extend(ports_status)
+                    except Exception as port_err:
+                        _LOGGER.debug(
+                            "Could not get port status for %s: %s",
+                            device_serial,
+                            port_err,
+                        )
+
+                    # Get port configuration
+                    try:
+                        port_configs = await self.hass.async_add_executor_job(
+                            self.dashboard.switch.getDeviceSwitchPorts,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        # Add device info to each port config for tracking
+                        for port_config in port_configs:
+                            port_config["device_serial"] = device_serial
+                            port_config["device_name"] = device_name
+
+                        all_port_configs.extend(port_configs)
+                    except Exception as config_err:
+                        _LOGGER.debug(
+                            "Could not get port config for %s: %s",
+                            device_serial,
+                            config_err,
+                        )
+
+                    # Get power module status (for PoE switches)
+                    try:
+                        power_status = await self.hass.async_add_executor_job(
+                            self.dashboard.switch.getDeviceSwitchPowerStatus,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        if power_status:
+                            power_info = {
+                                "device_serial": device_serial,
+                                "device_name": device_name,
+                                "power_status": power_status,
+                            }
+                            all_power_modules.append(power_info)
+
+                    except Exception as power_err:
+                        _LOGGER.debug(
+                            "Could not get power status for %s: %s",
+                            device_serial,
+                            power_err,
+                        )
+
+                    # Get port statistics for error/discard counters
+                    try:
+                        for port_status in ports_status:
+                            port_id = port_status.get("portId")
+                            if port_id:
+                                port_stats = await self.hass.async_add_executor_job(
+                                    self.dashboard.switch.getDeviceSwitchPortStatuses,
+                                    device_serial,
+                                )
+                                self.organization_hub.total_api_calls += 1
+
+                                # Find matching port and add stats
+                                for stat_port in port_stats:
+                                    if stat_port.get("portId") == port_id:
+                                        # Find the corresponding port in all_ports_status and update it
+                                        for port in all_ports_status:
+                                            if (
+                                                port.get("device_serial")
+                                                == device_serial
+                                                and port.get("portId") == port_id
+                                            ):
+                                                port.update(
+                                                    {
+                                                        "packets_sent": stat_port.get(
+                                                            "packetsTotal", {}
+                                                        ).get("sent", 0),
+                                                        "packets_recv": stat_port.get(
+                                                            "packetsTotal", {}
+                                                        ).get("recv", 0),
+                                                        "errors": stat_port.get(
+                                                            "errors", 0
+                                                        ),
+                                                        "discards": stat_port.get(
+                                                            "discards", 0
+                                                        ),
+                                                    }
+                                                )
+                                                break
+                                        break
+
+                    except Exception as stats_err:
+                        _LOGGER.debug(
+                            "Could not get port statistics for %s: %s",
+                            device_serial,
+                            stats_err,
+                        )
+
+                except Exception as device_err:
+                    _LOGGER.debug(
+                        "Error getting switch info for device %s: %s",
+                        device.get("serial"),
+                        device_err,
+                    )
+                    continue
+
+            self.switch_data = {
+                "devices": switch_devices,
+                "ports_status": all_ports_status,
+                "port_configs": all_port_configs,
+                "power_modules": all_power_modules,
+                "network_id": self.network_id,
+                "network_name": self.network_name,
+                "last_updated": datetime.now(UTC).isoformat(),
+            }
+
+            _LOGGER.debug(
+                "Retrieved %d switch devices with %d ports, %d power modules for network %s",
+                len(switch_devices),
+                len(all_ports_status),
+                len(all_power_modules),
+                self.network_name,
+            )
+
+        except Exception as err:
+            _LOGGER.error("Error getting switch data for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
 
     async def async_get_sensor_data(self) -> dict[str, dict[str, Any]]:
