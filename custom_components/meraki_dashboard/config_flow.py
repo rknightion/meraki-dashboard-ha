@@ -19,12 +19,15 @@ from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
+    CONF_DYNAMIC_DATA_INTERVAL,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
+    CONF_SEMI_STATIC_DATA_INTERVAL,
+    CONF_STATIC_DATA_INTERVAL,
     DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL_MINUTES,
@@ -33,10 +36,13 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
+    DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES,
     MIN_DISCOVERY_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
     REGIONAL_BASE_URLS,
+    SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     SENSOR_TYPE_MT,
+    STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     USER_AGENT,
 )
 from .utils import sanitize_device_name
@@ -237,6 +243,13 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_HUB_SCAN_INTERVALS: {},
                         CONF_HUB_DISCOVERY_INTERVALS: {},
                         CONF_HUB_AUTO_DISCOVERY: {},
+                        # Initialize tiered refresh intervals with defaults
+                        CONF_STATIC_DATA_INTERVAL: STATIC_DATA_REFRESH_INTERVAL_MINUTES
+                        * 60,
+                        CONF_SEMI_STATIC_DATA_INTERVAL: SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES
+                        * 60,
+                        CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
+                        * 60,
                     },
                 )
 
@@ -301,6 +314,13 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_HUB_SCAN_INTERVALS: {},
                     CONF_HUB_DISCOVERY_INTERVALS: {},
                     CONF_HUB_AUTO_DISCOVERY: {},
+                    # Initialize tiered refresh intervals with defaults
+                    CONF_STATIC_DATA_INTERVAL: STATIC_DATA_REFRESH_INTERVAL_MINUTES
+                    * 60,
+                    CONF_SEMI_STATIC_DATA_INTERVAL: SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES
+                    * 60,
+                    CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
+                    * 60,
                 },
             )
 
@@ -570,6 +590,20 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             if CONF_DISCOVERY_INTERVAL in options:
                 options[CONF_DISCOVERY_INTERVAL] = options[CONF_DISCOVERY_INTERVAL] * 60
 
+            # Convert tiered refresh intervals from minutes to seconds
+            if CONF_STATIC_DATA_INTERVAL in options:
+                options[CONF_STATIC_DATA_INTERVAL] = (
+                    options[CONF_STATIC_DATA_INTERVAL] * 60
+                )
+            if CONF_SEMI_STATIC_DATA_INTERVAL in options:
+                options[CONF_SEMI_STATIC_DATA_INTERVAL] = (
+                    options[CONF_SEMI_STATIC_DATA_INTERVAL] * 60
+                )
+            if CONF_DYNAMIC_DATA_INTERVAL in options:
+                options[CONF_DYNAMIC_DATA_INTERVAL] = (
+                    options[CONF_DYNAMIC_DATA_INTERVAL] * 60
+                )
+
             return self.async_create_entry(title="", data=options)
 
         # Get current hub information from hass.data if available
@@ -668,6 +702,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         description_placeholders = {
             "scan_info": "Scan intervals control how often sensor data is updated (in minutes)",
             "discovery_info": "Discovery intervals control how often new devices are detected (in minutes)",
+            "tiered_refresh_info": "Tiered refresh intervals control how often different types of organization data are updated",
         }
 
         # Add hub-specific descriptions
@@ -679,6 +714,72 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     f"• {hub_name}: {hub_info['device_count']} devices"
                 )
             description_placeholders["hub_info"] = "\n".join(hub_descriptions)
+
+        # Add tiered refresh interval options for organization-level data
+        # These control how often different types of organization data are refreshed
+        current_static_interval = (
+            current_options.get(
+                CONF_STATIC_DATA_INTERVAL, STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+            )
+            // 60
+        )  # Convert to minutes for display
+
+        current_semi_static_interval = (
+            current_options.get(
+                CONF_SEMI_STATIC_DATA_INTERVAL,
+                SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60,
+            )
+            // 60
+        )  # Convert to minutes for display
+
+        current_dynamic_interval = (
+            current_options.get(
+                CONF_DYNAMIC_DATA_INTERVAL, DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+            )
+            // 60
+        )  # Convert to minutes for display
+
+        schema_dict[
+            vol.Optional(
+                CONF_STATIC_DATA_INTERVAL,
+                default=current_static_interval,
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=30,  # 30 minutes minimum for static data
+                max=1440,  # 24 hours maximum
+                step=30,  # 30-minute increments
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
+
+        schema_dict[
+            vol.Optional(
+                CONF_SEMI_STATIC_DATA_INTERVAL,
+                default=current_semi_static_interval,
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=15,  # 15 minutes minimum for semi-static data
+                max=720,  # 12 hours maximum
+                step=15,  # 15-minute increments
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
+
+        schema_dict[
+            vol.Optional(
+                CONF_DYNAMIC_DATA_INTERVAL,
+                default=current_dynamic_interval,
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,  # 1 minute minimum for dynamic data
+                max=60,  # 1 hour maximum
+                step=1,  # 1-minute increments
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
 
         return self.async_show_form(
             step_id="init",

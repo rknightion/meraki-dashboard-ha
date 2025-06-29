@@ -254,7 +254,19 @@ class MerakiOrganizationHub:
             self.last_api_call_error = None
 
             # Set up tiered refresh timers instead of single organization data update
-            # Static data (licenses, org info) - every hour
+            # Get configured intervals from config entry options, with fallback to defaults
+            options = self.config_entry.options or {}
+            static_interval = options.get(
+                "static_data_interval", STATIC_DATA_REFRESH_INTERVAL
+            )
+            semi_static_interval = options.get(
+                "semi_static_data_interval", SEMI_STATIC_DATA_REFRESH_INTERVAL
+            )
+            dynamic_interval = options.get(
+                "dynamic_data_interval", DYNAMIC_DATA_REFRESH_INTERVAL
+            )
+
+            # Static data (licenses, org info) - configurable interval (default: every hour)
             async def _update_static_data(_now: datetime | None = None) -> None:
                 await self._fetch_license_data()
                 self._last_license_update = datetime.now(UTC)
@@ -263,10 +275,10 @@ class MerakiOrganizationHub:
             self._static_data_unsub = async_track_time_interval(
                 self.hass,
                 _update_static_data,
-                timedelta(seconds=STATIC_DATA_REFRESH_INTERVAL),
+                timedelta(seconds=static_interval),
             )
 
-            # Semi-static data (device statuses) - every 30 minutes
+            # Semi-static data (device statuses) - configurable interval (default: every 30 minutes)
             async def _update_semi_static_data(_now: datetime | None = None) -> None:
                 await self._fetch_device_statuses()
                 self._last_device_status_update = datetime.now(UTC)
@@ -275,10 +287,10 @@ class MerakiOrganizationHub:
             self._semi_static_data_unsub = async_track_time_interval(
                 self.hass,
                 _update_semi_static_data,
-                timedelta(seconds=SEMI_STATIC_DATA_REFRESH_INTERVAL),
+                timedelta(seconds=semi_static_interval),
             )
 
-            # Dynamic data (alerts, events) - every 5 minutes
+            # Dynamic data (alerts, events) - configurable interval (default: every 5 minutes)
             async def _update_dynamic_data(_now: datetime | None = None) -> None:
                 await self._fetch_alerts_data()
                 self._last_alerts_update = datetime.now(UTC)
@@ -287,7 +299,7 @@ class MerakiOrganizationHub:
             self._dynamic_data_unsub = async_track_time_interval(
                 self.hass,
                 _update_dynamic_data,
-                timedelta(seconds=DYNAMIC_DATA_REFRESH_INTERVAL),
+                timedelta(seconds=dynamic_interval),
             )
 
             # Perform initial organization data update for all data types
