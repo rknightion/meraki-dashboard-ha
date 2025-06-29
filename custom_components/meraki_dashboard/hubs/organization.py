@@ -255,7 +255,11 @@ class MerakiOrganizationHub:
 
             # Set up tiered refresh timers instead of single organization data update
             # Get configured intervals from config entry options, with fallback to defaults
-            options = self.config_entry.options or {}
+            from types import MappingProxyType
+
+            options: MappingProxyType[str, Any] | dict[str, Any] = (
+                self.config_entry.options or {}
+            )
             static_interval = options.get(
                 "static_data_interval", STATIC_DATA_REFRESH_INTERVAL
             )
@@ -469,8 +473,6 @@ class MerakiOrganizationHub:
             # - Per-device licensing (PDL): Each device has individual expiration dates
             # - Subscription licensing: Newer subscription-based model
 
-            licensing_model = "unknown"
-
             # Try to detect licensing model by calling the appropriate API
             try:
                 # Try co-term licensing overview first (most common)
@@ -479,7 +481,6 @@ class MerakiOrganizationHub:
                     self.organization_id,
                 )
                 self.total_api_calls += 1
-                licensing_model = "co-term"
 
                 # Process co-term license data
                 current_time = datetime.now(UTC)
@@ -549,7 +550,6 @@ class MerakiOrganizationHub:
                         self.organization_id,
                     )
                     self.total_api_calls += 1
-                    licensing_model = "per-device"
 
                     # Process per-device license data
                     current_time = datetime.now(UTC)

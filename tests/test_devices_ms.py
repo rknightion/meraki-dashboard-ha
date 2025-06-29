@@ -12,6 +12,8 @@ from custom_components.meraki_dashboard.const import (
     MS_SENSOR_CONNECTED_PORTS,
     MS_SENSOR_POE_POWER,
     MS_SENSOR_PORT_COUNT,
+    MS_SENSOR_PORT_TRAFFIC_RECV,
+    MS_SENSOR_PORT_TRAFFIC_SENT,
     SENSOR_TYPE_MS,
 )
 from custom_components.meraki_dashboard.coordinator import MerakiSensorCoordinator

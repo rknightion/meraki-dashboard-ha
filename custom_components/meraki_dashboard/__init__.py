@@ -19,7 +19,6 @@ from .const import (
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
     ORG_HUB_SUFFIX,
-    SENSOR_TYPE_MT,
 )
 from .coordinator import MerakiSensorCoordinator
 from .hubs import MerakiOrganizationHub
