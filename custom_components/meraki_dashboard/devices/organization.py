@@ -119,10 +119,40 @@ class MerakiHubApiCallsSensor(SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
-        return {
+        attrs = {
             "organization_id": self._organization_hub.organization_id,
             "organization_name": self._organization_hub.organization_name,
+            "average_api_call_duration": self._organization_hub.average_api_call_duration,
         }
+
+        # Add tiered refresh diagnostic information
+        license_age = self._organization_hub.last_license_update_age_minutes
+        if license_age is not None:
+            attrs["license_data_age_minutes"] = license_age
+            attrs["license_data_status"] = (
+                "fresh" if license_age < 65 else "stale"
+            )  # 65 min = 1hr + buffer
+
+        device_status_age = self._organization_hub.last_device_status_update_age_minutes
+        if device_status_age is not None:
+            attrs["device_status_age_minutes"] = device_status_age
+            attrs["device_status_status"] = (
+                "fresh" if device_status_age < 35 else "stale"
+            )  # 35 min = 30min + buffer
+
+        alerts_age = self._organization_hub.last_alerts_update_age_minutes
+        if alerts_age is not None:
+            attrs["alerts_data_age_minutes"] = alerts_age
+            attrs["alerts_data_status"] = (
+                "fresh" if alerts_age < 8 else "stale"
+            )  # 8 min = 5min + buffer
+
+        # Add refresh intervals for reference
+        attrs["static_data_refresh_interval_minutes"] = 60  # 1 hour
+        attrs["semi_static_data_refresh_interval_minutes"] = 30  # 30 minutes
+        attrs["dynamic_data_refresh_interval_minutes"] = 5  # 5 minutes
+
+        return attrs
 
 
 class MerakiHubFailedApiCallsSensor(SensorEntity):

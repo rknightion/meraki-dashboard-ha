@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfPower
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import (
     ATTR_LAST_REPORTED_AT,
@@ -38,6 +39,7 @@ from ..const import (
     MS_SENSOR_PORT_UTILIZATION_SENT,
     MS_SENSOR_POWER_MODULE_STATUS,
 )
+from ..coordinator import MerakiSensorCoordinator
 from ..utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
@@ -84,7 +86,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:upload",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Bps",
+        native_unit_of_measurement="B/s",
         suggested_display_precision=0,
     ),
     MS_SENSOR_PORT_TRAFFIC_RECV: SensorEntityDescription(
@@ -93,12 +95,13 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:download",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Bps",
+        native_unit_of_measurement="B/s",
         suggested_display_precision=0,
     ),
     MS_SENSOR_POE_POWER: SensorEntityDescription(
         key=MS_SENSOR_POE_POWER,
         name="PoE Power Usage",
+        icon="mdi:power-plug",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -137,6 +140,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     MS_SENSOR_POE_DRAW: SensorEntityDescription(
         key=MS_SENSOR_POE_DRAW,
         name="PoE Power Draw",
+        icon="mdi:power-plug",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -145,6 +149,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     MS_SENSOR_POE_LIMIT: SensorEntityDescription(
         key=MS_SENSOR_POE_LIMIT,
         name="PoE Power Limit",
+        icon="mdi:power-plug-outline",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -183,6 +188,7 @@ MS_NETWORK_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     f"network_{MS_SENSOR_POE_POWER}": SensorEntityDescription(
         key=f"network_{MS_SENSOR_POE_POWER}",
         name="Network PoE Power Usage",
+        icon="mdi:power-plug",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -197,7 +203,7 @@ MS_NETWORK_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
 }
 
 
-class MerakiMSDeviceSensor(SensorEntity):
+class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     """Representation of a Meraki MS device sensor.
 
     Each instance represents a metric from a specific switch device,
@@ -209,13 +215,13 @@ class MerakiMSDeviceSensor(SensorEntity):
     def __init__(
         self,
         device: dict[str, Any],
-        network_hub: Any,
+        coordinator: MerakiSensorCoordinator,
         description: SensorEntityDescription,
         config_entry_id: str,
     ) -> None:
         """Initialize the MS device sensor."""
+        super().__init__(coordinator)
         self._device = device
-        self._network_hub = network_hub
         self.entity_description = description
         self._config_entry_id = config_entry_id
         self._device_serial = device["serial"]
@@ -232,27 +238,58 @@ class MerakiMSDeviceSensor(SensorEntity):
         device_name = sanitize_device_name(self._device.get("name", device_serial))
         device_model = self._device.get("model", "Unknown")
 
-        return DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
             name=device_name,
             manufacturer="Cisco Meraki",
             model=device_model,
             serial_number=device_serial,
-            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
+            configuration_url=f"{self.coordinator.network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
             via_device=(
                 DOMAIN,
-                f"{self._config_entry_id}_{self._network_hub.hub_name}",
+                f"{self._config_entry_id}_{self.coordinator.network_hub.hub_name}",
             ),
         )
+
+        # Add MAC address connection if available
+        device_mac = self._device.get("mac")
+        if device_mac:
+            device_info["connections"] = {("mac", device_mac)}
+
+        return device_info
 
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
-        if not self._network_hub.switch_data:
+        if not self.coordinator.data:
             return None
 
-        # Get ports for this specific device
-        ports_status = self._network_hub.switch_data.get("ports_status", [])
+        # First try to get device info from devices_info array
+        devices_info = self.coordinator.data.get("devices_info", [])
+        device_info = None
+        for device in devices_info:
+            if device.get("serial") == self._device_serial:
+                device_info = device
+                break
+
+        if device_info:
+            # Use aggregated device data if available
+            if self.entity_description.key == MS_SENSOR_PORT_COUNT:
+                return device_info.get("port_count", 0)
+            elif self.entity_description.key == MS_SENSOR_CONNECTED_CLIENTS:
+                return device_info.get("connected_clients", 0)
+            elif self.entity_description.key == MS_SENSOR_CONNECTED_PORTS:
+                return device_info.get("connected_ports", 0)
+            elif self.entity_description.key == MS_SENSOR_POE_PORTS:
+                return device_info.get("poe_ports", 0)
+            elif self.entity_description.key == MS_SENSOR_POE_POWER:
+                return device_info.get("poe_power_draw", 0)
+            elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION:
+                return device_info.get("port_utilization", 0)
+            # Add other metrics as needed
+
+        # Fallback to port-level data if device info not available
+        ports_status = self.coordinator.data.get("ports_status", [])
         device_ports = [
             port
             for port in ports_status
@@ -262,7 +299,7 @@ class MerakiMSDeviceSensor(SensorEntity):
         if not device_ports:
             return None
 
-        # Calculate device-specific metrics
+        # Calculate device-specific metrics from port data
         if self.entity_description.key == MS_SENSOR_PORT_COUNT:
             return len(device_ports)
         elif self.entity_description.key == MS_SENSOR_CONNECTED_PORTS:
@@ -351,26 +388,26 @@ class MerakiMSDeviceSensor(SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._network_hub.switch_data is not None
+        return self.coordinator.data is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
+            ATTR_NETWORK_ID: self.coordinator.network_hub.network_id,
+            ATTR_NETWORK_NAME: self.coordinator.network_hub.network_name,
             ATTR_SERIAL: self._device_serial,
             ATTR_MODEL: self._device.get("model"),
         }
 
-        if self._network_hub.switch_data:
+        if self.coordinator.data:
             # Add timestamp if available
-            timestamp = self._network_hub.switch_data.get("last_updated")
+            timestamp = self.coordinator.data.get("last_updated")
             if timestamp:
                 attrs[ATTR_LAST_REPORTED_AT] = timestamp
 
             # Add port configuration as attributes
-            port_configs = self._network_hub.switch_data.get("port_configs", [])
+            port_configs = self.coordinator.data.get("port_configs", [])
             device_port_configs = [
                 config
                 for config in port_configs
@@ -412,7 +449,7 @@ class MerakiMSDeviceSensor(SensorEntity):
                 attrs["port_configurations"] = device_port_configs[:10]
 
             # Add power module information if available
-            power_modules = self._network_hub.switch_data.get("power_modules", [])
+            power_modules = self.coordinator.data.get("power_modules", [])
             device_power = next(
                 (
                     pm
@@ -432,7 +469,7 @@ class MerakiMSDeviceSensor(SensorEntity):
         return attrs
 
 
-class MerakiMSSensor(SensorEntity):
+class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     """Representation of a Meraki MS network-level sensor.
 
     This sensor provides network-level aggregated switch metrics
@@ -443,32 +480,54 @@ class MerakiMSSensor(SensorEntity):
 
     def __init__(
         self,
-        network_hub: Any,
+        coordinator: MerakiSensorCoordinator,
         description: SensorEntityDescription,
         config_entry_id: str,
     ) -> None:
         """Initialize the network MS sensor."""
-        self._network_hub = network_hub
+        super().__init__(coordinator)
         self.entity_description = description
         self._config_entry_id = config_entry_id
 
         # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_{network_hub.network_id}_{network_hub.device_type}_{description.key}"
+        self._attr_unique_id = f"{config_entry_id}_{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}_{description.key}"
 
         # Set device info to the network hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_{network_hub.hub_name}")},
+            identifiers={
+                (DOMAIN, f"{config_entry_id}_{coordinator.network_hub.hub_name}")
+            },
         )
 
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
-        if not self._network_hub.switch_data:
+        if not self.coordinator.data:
             return None
 
-        ports_status = self._network_hub.switch_data.get("ports_status", [])
+        # First try to get aggregated data from devices_info
+        devices_info = self.coordinator.data.get("devices_info", [])
+        if devices_info:
+            # Handle network-level aggregated sensors using device info
+            if self.entity_description.key == f"network_{MS_SENSOR_PORT_COUNT}":
+                return sum(device.get("port_count", 0) for device in devices_info)
+            elif self.entity_description.key == f"network_{MS_SENSOR_CONNECTED_PORTS}":
+                return sum(device.get("connected_ports", 0) for device in devices_info)
+            elif self.entity_description.key == f"network_{MS_SENSOR_POE_PORTS}":
+                return sum(device.get("poe_ports", 0) for device in devices_info)
+            elif self.entity_description.key == f"network_{MS_SENSOR_POE_POWER}":
+                return sum(device.get("poe_power_draw", 0) for device in devices_info)
+            elif (
+                self.entity_description.key == f"network_{MS_SENSOR_CONNECTED_CLIENTS}"
+            ):
+                return sum(
+                    device.get("connected_clients", 0) for device in devices_info
+                )
 
-        # Handle network-level aggregated sensors
+        # Fallback to port-level data if device info not available
+        ports_status = self.coordinator.data.get("ports_status", [])
+
+        # Handle network-level aggregated sensors using port data
         if self.entity_description.key == f"network_{MS_SENSOR_PORT_COUNT}":
             return len(ports_status)
         elif self.entity_description.key == f"network_{MS_SENSOR_CONNECTED_PORTS}":
@@ -513,18 +572,18 @@ class MerakiMSSensor(SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._network_hub.switch_data is not None
+        return self.coordinator.data is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
+            ATTR_NETWORK_ID: self.coordinator.network_hub.network_id,
+            ATTR_NETWORK_NAME: self.coordinator.network_hub.network_name,
         }
 
-        if self._network_hub.switch_data:
-            switch_data = self._network_hub.switch_data
+        if self.coordinator.data:
+            switch_data = self.coordinator.data
             attrs["devices_count"] = len(switch_data.get("devices", []))
             attrs["total_ports"] = len(switch_data.get("ports_status", []))
 

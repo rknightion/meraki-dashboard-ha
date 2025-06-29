@@ -214,12 +214,12 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_serial = self._device.get("serial")
+        device_serial = self._device.get("serial", "")
         device_name = sanitize_device_name(self._device.get("name", device_serial))
         device_model = self._device.get("model", "Unknown")
 
-        return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
+        device_info = DeviceInfo(
+            identifiers={(DOMAIN, device_serial)},
             name=device_name,
             manufacturer="Cisco Meraki",
             model=device_model,
@@ -230,6 +230,16 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                 f"{self._config_entry_id}_{self._network_hub.hub_name}",
             ),
         )
+
+        # Add MAC address connection if available
+        mac_address = self._device.get("mac")
+        if mac_address and isinstance(mac_address, str):
+            device_info["connections"] = {("mac", mac_address)}
+
+        # Store for _attr_device_info access in tests
+        self._attr_device_info = device_info
+
+        return device_info
 
     @property
     def native_value(self) -> Any:
@@ -249,7 +259,74 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         for reading in readings:
             metric = reading.get("metric")
             if metric == self.entity_description.key:
-                return reading.get("value")
+                # Extract value based on metric type
+                if metric == "temperature":
+                    temp_data = reading.get("temperature", {})
+                    return temp_data.get("celsius")
+                elif metric == "humidity":
+                    humidity_data = reading.get("humidity", {})
+                    return humidity_data.get("relativePercentage")
+                elif metric == "co2":
+                    co2_data = reading.get("co2", {})
+                    return co2_data.get("concentration")
+                elif metric == "battery":
+                    battery_data = reading.get("battery", {})
+                    return battery_data.get("percentage")
+                elif metric == "realPower":
+                    power_data = reading.get("realPower", {})
+                    return power_data.get("draw")
+                elif metric == "apparentPower":
+                    power_data = reading.get("apparentPower", {})
+                    return power_data.get("draw")
+                elif metric == "current":
+                    current_data = reading.get("current", {})
+                    return current_data.get("draw")
+                elif metric == "voltage":
+                    voltage_data = reading.get("voltage", {})
+                    return voltage_data.get("level")
+                elif metric == "frequency":
+                    frequency_data = reading.get("frequency", {})
+                    return frequency_data.get("level")
+                elif metric == "powerFactor":
+                    pf_data = reading.get("powerFactor", {})
+                    return pf_data.get("percentage")
+                elif metric == "pm25":
+                    pm25_data = reading.get("pm25", {})
+                    return pm25_data.get("concentration")
+                elif metric == "tvoc":
+                    tvoc_data = reading.get("tvoc", {})
+                    return tvoc_data.get("concentration")
+                elif metric == "noise":
+                    noise_data = reading.get("noise", {})
+                    # Handle different noise data structures from the API
+                    if isinstance(noise_data, dict):
+                        # Try multiple possible keys for the noise level
+                        noise_value = (
+                            noise_data.get("ambient")
+                            or noise_data.get("level")
+                            or noise_data.get("value")
+                            or noise_data.get("db")
+                        )
+                        # If we got a dict as the noise_value, try to extract from it
+                        if isinstance(noise_value, dict):
+                            noise_value = (
+                                noise_value.get("level")
+                                or noise_value.get("value")
+                                or noise_value.get("db")
+                            )
+                        return noise_value
+                    else:
+                        # If noise_data is already a number, return it directly
+                        return noise_data
+                elif metric == "indoorAirQuality":
+                    iaq_data = reading.get("indoorAirQuality", {})
+                    return iaq_data.get("score")
+                elif metric == "button":
+                    button_data = reading.get("button", {})
+                    return button_data.get("pressType")
+                else:
+                    # Fallback to simple value extraction
+                    return reading.get("value")
 
         return None
 
@@ -280,13 +357,34 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
             ATTR_MODEL: self._device.get("model"),
         }
 
+        # Add MAC address if available
+        if mac_address := self._device.get("mac"):
+            attrs["mac_address"] = mac_address
+
         if self.coordinator.data:
             device_data = self.coordinator.data.get(self._device_serial)
             if device_data:
+                readings = device_data.get("readings", [])
+
                 # Add timestamp if available
-                timestamp = device_data.get("ts")
-                if timestamp:
-                    attrs[ATTR_LAST_REPORTED_AT] = timestamp
+                if readings:
+                    # Use the timestamp from the first reading or device data
+                    for reading in readings:
+                        if reading.get("metric") == self.entity_description.key:
+                            timestamp = reading.get("ts") or device_data.get("ts")
+                            if timestamp:
+                                attrs[ATTR_LAST_REPORTED_AT] = timestamp
+                            break
+
+                # For temperature sensors, also include Fahrenheit value
+                if self.entity_description.key == "temperature":
+                    for reading in readings:
+                        if reading.get("metric") == "temperature":
+                            temp_data = reading.get("temperature", {})
+                            fahrenheit = temp_data.get("fahrenheit")
+                            if fahrenheit is not None:
+                                attrs["temperature_fahrenheit"] = fahrenheit
+                            break
 
         return attrs
 
@@ -333,14 +431,21 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         await super().async_added_to_hass()
 
         # Restore previous energy value
-        if (last_sensor_data := await self.async_get_last_sensor_data()) is not None:
-            if last_sensor_data.native_value is not None:
+        if (last_state := await self.async_get_last_state()) is not None:
+            if last_state.state not in (None, "unknown", "unavailable"):
                 try:
                     # Handle various numeric types that might be restored
-                    value = last_sensor_data.native_value
-                    if isinstance(value, int | float):
-                        self._energy_value = float(value)
-                    elif isinstance(value, str):
+                    value = last_state.state
+                    if isinstance(value, str):
+                        # Check if the old state was in kWh and convert to Wh
+                        unit = last_state.attributes.get("unit_of_measurement", "Wh")
+                        if unit == "kWh":
+                            self._energy_value = (
+                                float(value) * 1000
+                            )  # Convert kWh to Wh
+                        else:
+                            self._energy_value = float(value)
+                    elif isinstance(value, int | float):
                         self._energy_value = float(value)
                     else:
                         # Handle Decimal or other numeric types
@@ -355,19 +460,19 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
                     _LOGGER.warning(
                         "Could not restore energy value for %s: %s",
                         self._device_serial,
-                        last_sensor_data.native_value,
+                        last_state.state,
                     )
                     self._energy_value = 0.0
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_serial = self._device.get("serial")
+        device_serial = self._device.get("serial", "")
         device_name = sanitize_device_name(self._device.get("name", device_serial))
         device_model = self._device.get("model", "Unknown")
 
         return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
+            identifiers={(DOMAIN, device_serial)},
             name=device_name,
             manufacturer="Cisco Meraki",
             model=device_model,
@@ -399,8 +504,16 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
 
         for reading in readings:
             if reading.get("metric") == self._power_sensor_key:
+                # Try to get power value from different possible structures
                 current_power = reading.get("value")
-                timestamp_str = device_data.get("ts")
+                if current_power is None:
+                    # Check for nested power data (like realPower.draw)
+                    power_data = reading.get(self._power_sensor_key, {})
+                    if isinstance(power_data, dict):
+                        current_power = power_data.get("draw")
+
+                # Get timestamp from reading or device data
+                timestamp_str = reading.get("ts") or device_data.get("ts")
                 if timestamp_str:
                     try:
                         current_timestamp = datetime.datetime.fromisoformat(

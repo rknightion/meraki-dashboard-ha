@@ -205,3 +205,43 @@ ATTR_NETWORK_NAME: Final = "network_name"
 ATTR_SERIAL: Final = "serial"
 ATTR_MODEL: Final = "model"
 ATTR_LAST_REPORTED_AT: Final = "last_reported_at"
+
+# Tiered refresh intervals for different data types (in seconds)
+# Static data that rarely changes
+STATIC_DATA_REFRESH_INTERVAL: Final = 3600  # 1 hour
+STATIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 60  # 1 hour
+
+# Semi-static data that changes occasionally
+SEMI_STATIC_DATA_REFRESH_INTERVAL: Final = 1800  # 30 minutes
+SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 30  # 30 minutes
+
+# Dynamic data that changes frequently
+DYNAMIC_DATA_REFRESH_INTERVAL: Final = 300  # 5 minutes
+DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 5  # 5 minutes
+
+# Data type classifications
+STATIC_DATA_TYPES: Final = [
+    "license_data",
+    "organization_info",
+    "network_topology",
+    "device_inventory",
+]
+
+SEMI_STATIC_DATA_TYPES: Final = [
+    "device_statuses",
+    "network_settings",
+    "ssid_configuration",
+    "switch_configuration",
+]
+
+DYNAMIC_DATA_TYPES: Final = [
+    "alerts_and_events",
+    "sensor_readings",
+    "wireless_clients",
+    "network_traffic",
+]
+
+# Configuration keys for tiered refresh
+CONF_STATIC_DATA_INTERVAL: Final = "static_data_interval"
+CONF_SEMI_STATIC_DATA_INTERVAL: Final = "semi_static_data_interval"
+CONF_DYNAMIC_DATA_INTERVAL: Final = "dynamic_data_interval"

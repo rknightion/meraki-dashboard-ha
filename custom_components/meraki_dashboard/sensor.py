@@ -10,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import MerakiOrganizationHub
 from .const import (
     DOMAIN,
     MT_POWER_SENSORS,
@@ -56,8 +55,15 @@ async def async_setup_entry(
     """Set up Meraki Dashboard sensors from a config entry."""
     _LOGGER.debug("Setting up Meraki Dashboard sensor platform")
 
-    # Get the organization hub from the domain data
-    organization_hub: MerakiOrganizationHub = hass.data[DOMAIN][config_entry.entry_id]
+    # Get domain data - handle case where integration data doesn't exist
+    if DOMAIN not in hass.data or config_entry.entry_id not in hass.data[DOMAIN]:
+        _LOGGER.warning("No integration data found for sensor setup")
+        async_add_entities([], True)
+        return
+
+    # Get the domain data
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
+    organization_hub = domain_data["organization_hub"]
 
     entities: list[SensorEntity] = []
 
@@ -108,7 +114,8 @@ async def async_setup_entry(
             )
 
     # Process each network hub
-    for network_hub in organization_hub.network_hubs.values():
+    network_hubs = domain_data["network_hubs"]
+    for network_hub in network_hubs.values():
         _LOGGER.debug(
             "Processing network hub: %s (type: %s)",
             network_hub.hub_name,
@@ -149,7 +156,8 @@ async def _setup_mt_sensors(
     _LOGGER.debug("Setting up MT sensors for %s", network_hub.hub_name)
 
     # Get the coordinator for this network from domain data
-    coordinators = hass.data[DOMAIN][config_entry.entry_id]["coordinators"]
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = domain_data["coordinators"]
     coordinator = None
 
     # Find the coordinator for this hub
@@ -207,9 +215,24 @@ async def _setup_mr_sensors(
     """Set up MR wireless sensor entities."""
     _LOGGER.debug("Setting up MR sensors for %s", network_hub.hub_name)
 
-    # Create network-level sensors (for backward compatibility)
+    # Get the coordinator for this network from domain data
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = domain_data["coordinators"]
+    coordinator = None
+
+    # Find the coordinator for this hub
+    for _hub_id, coord in coordinators.items():
+        if coord.network_hub == network_hub:
+            coordinator = coord
+            break
+
+    if not coordinator:
+        _LOGGER.warning("No coordinator found for MR network %s", network_hub.hub_name)
+        return
+
+    # Create network-level sensors
     for description in MR_NETWORK_SENSOR_DESCRIPTIONS.values():
-        entities.append(MerakiMRSensor(network_hub, description, config_entry.entry_id))
+        entities.append(MerakiMRSensor(coordinator, description, config_entry.entry_id))
 
     # Create device-specific sensors for each MR device
     for device in network_hub.devices:
@@ -223,7 +246,7 @@ async def _setup_mr_sensors(
         for description in MR_SENSOR_DESCRIPTIONS.values():
             entities.append(
                 MerakiMRDeviceSensor(
-                    device, network_hub, description, config_entry.entry_id
+                    device, coordinator, description, config_entry.entry_id
                 )
             )
 
@@ -239,9 +262,24 @@ async def _setup_ms_sensors(
     """Set up MS switch sensor entities."""
     _LOGGER.debug("Setting up MS sensors for %s", network_hub.hub_name)
 
+    # Get the coordinator for this network from domain data
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = domain_data["coordinators"]
+    coordinator = None
+
+    # Find the coordinator for this hub
+    for _hub_id, coord in coordinators.items():
+        if coord.network_hub == network_hub:
+            coordinator = coord
+            break
+
+    if not coordinator:
+        _LOGGER.warning("No coordinator found for MS network %s", network_hub.hub_name)
+        return
+
     # Create network-level sensors (aggregated across all switches)
     for description in MS_NETWORK_SENSOR_DESCRIPTIONS.values():
-        entities.append(MerakiMSSensor(network_hub, description, config_entry.entry_id))
+        entities.append(MerakiMSSensor(coordinator, description, config_entry.entry_id))
 
     # Create device-specific sensors for each MS device
     for device in network_hub.devices:
@@ -255,7 +293,7 @@ async def _setup_ms_sensors(
         for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
             entities.append(
                 MerakiMSDeviceSensor(
-                    device, network_hub, description, config_entry.entry_id
+                    device, coordinator, description, config_entry.entry_id
                 )
             )
 

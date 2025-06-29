@@ -291,7 +291,7 @@ class TestBinarySensorSetup:
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
 
         # Should not add any binary sensor entities
-        add_entities_mock.assert_called_once_with([])
+        add_entities_mock.assert_called_once_with([], True)
 
     async def test_async_setup_entry_no_hubs(
         self, hass: HomeAssistant, mock_config_entry
@@ -314,7 +314,7 @@ class TestBinarySensorSetup:
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
 
         # Should not add any entities
-        add_entities_mock.assert_called_once_with([])
+        add_entities_mock.assert_called_once_with([], True)
 
     async def test_async_setup_entry_no_integration_data(
         self, hass: HomeAssistant, mock_config_entry
@@ -330,8 +330,8 @@ class TestBinarySensorSetup:
         # Setup binary sensors
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
 
-        # Should handle gracefully and not call add_entities when no integration data
-        add_entities_mock.assert_not_called()
+        # Should handle gracefully and call add_entities with empty list
+        add_entities_mock.assert_called_once_with([], True)
 
 
 class TestBinarySensorDescriptions:
@@ -405,7 +405,7 @@ class TestBinarySensorUtilities:
         # Verify registry-related properties
         assert sensor.unique_id is not None
         assert sensor._config_entry_id == "test_entry"
-        assert sensor._serial == "Q2YY-YYYY-YYYY"
+        assert sensor._device_serial == "Q2YY-YYYY-YYYY"
 
     def test_multiple_binary_sensors_same_device(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -436,4 +436,4 @@ class TestBinarySensorUtilities:
 
         # Verify all have same device but different sensor types
         assert all(sensor._device == mock_device_info for sensor in sensors)
-        assert all(sensor._serial == "Q2YY-YYYY-YYYY" for sensor in sensors)
+        assert all(sensor._device_serial == "Q2YY-YYYY-YYYY" for sensor in sensors)

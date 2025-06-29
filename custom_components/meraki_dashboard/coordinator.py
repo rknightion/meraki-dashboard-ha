@@ -16,16 +16,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Coordinator to manage fetching Meraki sensor data.
+    """Coordinator to manage fetching Meraki device data.
 
-    This coordinator handles periodic updates of sensor data for all devices,
+    This coordinator handles periodic updates of device data for all device types (MT, MR, MS),
     making efficient batch API calls to minimize API usage.
     """
 
     def __init__(
         self,
         hass: HomeAssistant,
-        hub: Any,  # MerakiDashboardHub
+        hub: Any,  # MerakiNetworkHub
         devices: list[dict[str, Any]],
         scan_interval: int,
         config_entry: ConfigEntry,
@@ -46,28 +46,92 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             update_interval=timedelta(seconds=scan_interval),
         )
         self.hub = hub
+        self.network_hub = hub
         self.devices = devices
         self.scan_interval = scan_interval
         self.config_entry = config_entry
 
+        # Performance tracking
+        self._update_count = 0
+        self._failed_updates = 0
+        self._last_update_duration: float | None = None
+
         _LOGGER.debug(
-            "Sensor coordinator initialized with %d second update interval",
+            "Device coordinator initialized for %s (%s) with %d devices and %d second update interval",
+            hub.hub_name,
+            hub.device_type,
+            len(devices),
             scan_interval,
         )
+
+    @property
+    def success_rate(self) -> float:
+        """Get the update success rate as a percentage."""
+        if self._update_count == 0:
+            return 100.0
+        return ((self._update_count - self._failed_updates) / self._update_count) * 100
+
+    @property
+    def last_update_duration(self) -> float | None:
+        """Get the duration of the last update in seconds."""
+        return self._last_update_duration
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Meraki Dashboard API.
 
-        Returns a dictionary with device serial numbers as keys and their sensor data as values.
+        Returns device data appropriate for the hub's device type:
+        - For MT devices: Dictionary with device serial numbers as keys and sensor data as values
+        - For MR devices: Dictionary with wireless network data
+        - For MS devices: Dictionary with switch network data
         """
+        update_start_time = self.hass.loop.time()
+        self._update_count += 1
+
         try:
-            # Get data from the hub
-            data = await self.hub.async_get_sensor_data()
+            # Get data from the hub based on device type
+            if self.hub.device_type == "MT":
+                data = await self.hub.async_get_sensor_data()
+            elif self.hub.device_type == "MR":
+                # Update wireless data and return it
+                await self.hub._async_setup_wireless_data()
+                data = self.hub.wireless_data or {}
+            elif self.hub.device_type == "MS":
+                # Update switch data and return it
+                await self.hub._async_setup_switch_data()
+                data = self.hub.switch_data or {}
+            else:
+                _LOGGER.warning("Unknown device type: %s", self.hub.device_type)
+                data = {}
+
+            # Track update duration
+            self._last_update_duration = self.hass.loop.time() - update_start_time
+
+            # Log performance metrics periodically
+            if self._update_count % 10 == 0:  # Every 10 updates
+                _LOGGER.debug(
+                    "Coordinator %s (%s) performance: %d updates, %.1f%% success rate, last update: %.2fs",
+                    self.name,
+                    self.hub.device_type,
+                    self._update_count,
+                    self.success_rate,
+                    self._last_update_duration,
+                )
 
             return data
 
         except Exception as err:
-            _LOGGER.error("Error fetching sensor data: %s", err, exc_info=True)
+            self._failed_updates += 1
+            self._last_update_duration = self.hass.loop.time() - update_start_time
+
+            _LOGGER.error(
+                "Error fetching %s data for %s (attempt %d, %.1f%% success rate): %s",
+                self.hub.device_type,
+                self.hub.hub_name,
+                self._update_count,
+                self.success_rate,
+                err,
+                exc_info=True,
+            )
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     async def async_request_refresh_delayed(self, delay_seconds: int = 5) -> None:

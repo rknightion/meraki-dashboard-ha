@@ -16,7 +16,6 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import MerakiOrganizationHub
 from .const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
@@ -46,6 +45,18 @@ MT_BINARY_SENSOR_DESCRIPTIONS: dict[str, BinarySensorEntityDescription] = {
         device_class=BinarySensorDeviceClass.DOOR,
         icon="mdi:door",
     ),
+    "downstreamPower": BinarySensorEntityDescription(
+        key="downstreamPower",
+        name="Downstream Power",
+        device_class=BinarySensorDeviceClass.POWER,
+        icon="mdi:power-plug",
+    ),
+    "remoteLockoutSwitch": BinarySensorEntityDescription(
+        key="remoteLockoutSwitch",
+        name="Remote Lockout Switch",
+        device_class=BinarySensorDeviceClass.LOCK,
+        icon="mdi:lock",
+    ),
 }
 
 
@@ -57,19 +68,26 @@ async def async_setup_entry(
     """Set up Meraki Dashboard binary sensors from a config entry."""
     _LOGGER.debug("Setting up Meraki Dashboard binary sensor platform")
 
-    # Get the organization hub from the domain data
-    organization_hub: MerakiOrganizationHub = hass.data[DOMAIN][config_entry.entry_id]
+    # Get domain data - handle case where integration data doesn't exist
+    if DOMAIN not in hass.data or config_entry.entry_id not in hass.data[DOMAIN]:
+        _LOGGER.warning("No integration data found for binary sensor setup")
+        async_add_entities([], True)
+        return
+
+    # Get the domain data
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
 
     entities: list[BinarySensorEntity] = []
 
     # Process each network hub
-    for network_hub in organization_hub.network_hubs.values():
+    network_hubs = domain_data["network_hubs"]
+    for network_hub in network_hubs.values():
         # Only create binary sensors for MT devices
         if network_hub.device_type != SENSOR_TYPE_MT:
             continue
 
         # Get the coordinator for this network from domain data
-        coordinators = hass.data[DOMAIN][config_entry.entry_id]["coordinators"]
+        coordinators = domain_data["coordinators"]
         coordinator = None
 
         # Find the coordinator for this hub

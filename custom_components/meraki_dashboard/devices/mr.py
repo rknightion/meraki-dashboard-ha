@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import (
     ATTR_LAST_REPORTED_AT,
@@ -39,6 +40,7 @@ from ..const import (
     MR_SENSOR_TRAFFIC_RECV,
     MR_SENSOR_TRAFFIC_SENT,
 )
+from ..coordinator import MerakiSensorCoordinator
 from ..utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
@@ -91,7 +93,7 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:speedometer",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbps",
+        native_unit_of_measurement="Mbit/s",
         suggested_display_precision=1,
     ),
     MR_SENSOR_DATA_RATE_5: SensorEntityDescription(
@@ -100,7 +102,7 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:speedometer",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbps",
+        native_unit_of_measurement="Mbit/s",
         suggested_display_precision=1,
     ),
     MR_SENSOR_CONNECTION_SUCCESS_RATE: SensorEntityDescription(
@@ -123,7 +125,7 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:upload",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbps",
+        native_unit_of_measurement="Mbit/s",
         suggested_display_precision=2,
     ),
     MR_SENSOR_TRAFFIC_RECV: SensorEntityDescription(
@@ -132,7 +134,7 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:download",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbps",
+        native_unit_of_measurement="Mbit/s",
         suggested_display_precision=2,
     ),
     MR_SENSOR_RF_POWER: SensorEntityDescription(
@@ -176,7 +178,7 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     ),
 }
 
-# Network-level MR sensor descriptions (for backward compatibility)
+# Network-level MR sensor descriptions
 MR_NETWORK_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     f"network_{MR_SENSOR_SSID_COUNT}": SensorEntityDescription(
         key=f"network_{MR_SENSOR_SSID_COUNT}",
@@ -199,7 +201,7 @@ MR_NETWORK_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
 }
 
 
-class MerakiMRDeviceSensor(SensorEntity):
+class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     """Representation of a Meraki MR device sensor.
 
     Each instance represents a metric from a specific MR device,
@@ -211,13 +213,13 @@ class MerakiMRDeviceSensor(SensorEntity):
     def __init__(
         self,
         device: dict[str, Any],
-        network_hub: Any,
+        coordinator: MerakiSensorCoordinator,
         description: SensorEntityDescription,
         config_entry_id: str,
     ) -> None:
         """Initialize the MR device sensor."""
+        super().__init__(coordinator)
         self._device = device
-        self._network_hub = network_hub
         self.entity_description = description
         self._config_entry_id = config_entry_id
         self._device_serial = device["serial"]
@@ -234,27 +236,34 @@ class MerakiMRDeviceSensor(SensorEntity):
         device_name = sanitize_device_name(self._device.get("name", device_serial))
         device_model = self._device.get("model", "Unknown")
 
-        return DeviceInfo(
+        device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
             name=device_name,
             manufacturer="Cisco Meraki",
             model=device_model,
             serial_number=device_serial,
-            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
+            configuration_url=f"{self.coordinator.network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
             via_device=(
                 DOMAIN,
-                f"{self._config_entry_id}_{self._network_hub.hub_name}",
+                f"{self._config_entry_id}_{self.coordinator.network_hub.hub_name}",
             ),
         )
+
+        # Add MAC address connection if available
+        device_mac = self._device.get("mac")
+        if device_mac:
+            device_info["connections"] = {("mac", device_mac)}
+
+        return device_info
 
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
-        if not self._network_hub.wireless_data:
+        if not self.coordinator.data:
             return None
 
-        # Get device-specific data from wireless_data
-        devices_info = self._network_hub.wireless_data.get("devices_info", [])
+        # Get device-specific data from coordinator data
+        devices_info = self.coordinator.data.get("devices_info", [])
         device_info = next(
             (d for d in devices_info if d.get("serial") == self._device_serial), None
         )
@@ -264,26 +273,26 @@ class MerakiMRDeviceSensor(SensorEntity):
 
         # Return the appropriate metric value
         if self.entity_description.key == MR_SENSOR_CLIENT_COUNT:
-            return device_info.get("clientCount", 0)
+            return device_info.get("client_count", 0)
         elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_2_4:
-            return device_info.get("channelUtilization24", 0)
+            return device_info.get("channel_utilization_2_4", 0)
         elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_5:
-            return device_info.get("channelUtilization5", 0)
+            return device_info.get("channel_utilization_5", 0)
         elif self.entity_description.key == MR_SENSOR_DATA_RATE_2_4:
-            return device_info.get("dataRate24", 0)
+            return device_info.get("data_rate_2_4", 0)
         elif self.entity_description.key == MR_SENSOR_DATA_RATE_5:
-            return device_info.get("dataRate5", 0)
+            return device_info.get("data_rate_5", 0)
         elif self.entity_description.key == MR_SENSOR_SSID_COUNT:
             # Count SSIDs available on this device (same as network for now)
-            ssids = self._network_hub.wireless_data.get("ssids", [])
+            ssids = self.coordinator.data.get("ssids", [])
             return len(ssids)
         elif self.entity_description.key == MR_SENSOR_ENABLED_SSIDS:
             # Count enabled SSIDs available on this device
-            ssids = self._network_hub.wireless_data.get("ssids", [])
+            ssids = self.coordinator.data.get("ssids", [])
             return len([ssid for ssid in ssids if ssid.get("enabled", False)])
         elif self.entity_description.key == MR_SENSOR_OPEN_SSIDS:
             # Count open SSIDs available on this device
-            ssids = self._network_hub.wireless_data.get("ssids", [])
+            ssids = self.coordinator.data.get("ssids", [])
             return len(
                 [
                     ssid
@@ -307,87 +316,80 @@ class MerakiMRDeviceSensor(SensorEntity):
             # RF power in dBm
             return device_info.get("rfPower", -20)  # Default reasonable power level
         elif self.entity_description.key == MR_SENSOR_RF_POWER_2_4:
-            # RF power for 2.4GHz band from radio settings
-            radio_settings = device_info.get("radioSettings", [])
-            for radio in radio_settings:
-                if radio.get("band") == "2.4":
-                    return radio.get("txPower", 0)
-            return 0
+            # RF power for 2.4GHz band
+            return device_info.get("rf_power_2_4", 0)
         elif self.entity_description.key == MR_SENSOR_RF_POWER_5:
-            # RF power for 5GHz band from radio settings
-            radio_settings = device_info.get("radioSettings", [])
-            for radio in radio_settings:
-                if radio.get("band") == "5":
-                    return radio.get("txPower", 0)
-            return 0
+            # RF power for 5GHz band
+            return device_info.get("rf_power_5", 0)
         elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_2_4:
             # Channel for 2.4GHz band
-            return device_info.get("dataRate24", 0)  # This is actually channel number
+            return device_info.get("radio_channel_2_4", 0)
         elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_5:
             # Channel for 5GHz band
-            return device_info.get("dataRate5", 0)  # This is actually channel number
+            return device_info.get("radio_channel_5", 0)
 
         return None
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._network_hub.wireless_data is not None
+        return self.coordinator.data is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
+            ATTR_NETWORK_ID: self.coordinator.network_hub.network_id,
+            ATTR_NETWORK_NAME: self.coordinator.network_hub.network_name,
             ATTR_SERIAL: self._device_serial,
             ATTR_MODEL: self._device.get("model"),
         }
 
-        if self._network_hub.wireless_data:
+        if self.coordinator.data:
             # Add timestamp if available
-            timestamp = self._network_hub.wireless_data.get("last_updated")
+            timestamp = self.coordinator.data.get("last_updated")
             if timestamp:
                 attrs[ATTR_LAST_REPORTED_AT] = timestamp
 
         return attrs
 
 
-class MerakiMRSensor(SensorEntity):
+class MerakiMRSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     """Representation of a Meraki MR network-level sensor.
 
     This sensor provides network-level aggregated wireless metrics.
-    Kept for backward compatibility with existing deployments.
     """
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        network_hub: Any,
+        coordinator: MerakiSensorCoordinator,
         description: SensorEntityDescription,
         config_entry_id: str,
     ) -> None:
         """Initialize the network MR sensor."""
-        self._network_hub = network_hub
+        super().__init__(coordinator)
         self.entity_description = description
         self._config_entry_id = config_entry_id
 
         # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_{network_hub.network_id}_{network_hub.device_type}_{description.key}"
+        self._attr_unique_id = f"{config_entry_id}_{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}_{description.key}"
 
         # Set device info to the network hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_{network_hub.hub_name}")},
+            identifiers={
+                (DOMAIN, f"{config_entry_id}_{coordinator.network_hub.hub_name}")
+            },
         )
 
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
-        if not self._network_hub.wireless_data:
+        if not self.coordinator.data:
             return None
 
-        ssids = self._network_hub.wireless_data.get("ssids", [])
+        ssids = self.coordinator.data.get("ssids", [])
 
         # Handle network-level sensors
         if self.entity_description.key == f"network_{MR_SENSOR_SSID_COUNT}":
@@ -408,18 +410,18 @@ class MerakiMRSensor(SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._network_hub.wireless_data is not None
+        return self.coordinator.data is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
+            ATTR_NETWORK_ID: self.coordinator.network_hub.network_id,
+            ATTR_NETWORK_NAME: self.coordinator.network_hub.network_name,
         }
 
-        if self._network_hub.wireless_data:
-            wireless_data = self._network_hub.wireless_data
+        if self.coordinator.data:
+            wireless_data = self.coordinator.data
             attrs["devices_count"] = len(wireless_data.get("devices_info", []))
             attrs["total_ssids"] = len(wireless_data.get("ssids", []))
 

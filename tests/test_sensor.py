@@ -68,7 +68,7 @@ class TestMerakiMTSensor:
         assert sensor.entity_description.key == MT_SENSOR_TEMPERATURE
         assert "temperature" in sensor.unique_id
         assert sensor._device == mock_device_info
-        assert sensor._serial == "Q2XX-XXXX-XXXX"
+        assert sensor._device_serial == "Q2XX-XXXX-XXXX"
 
     def test_humidity_sensor_initialization(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -297,14 +297,11 @@ class TestMerakiMTEnergySensor:
         )
 
         # Set initial energy and previous power reading to simulate existing state
-        # Note: We set the reset date to today to prevent daily reset during test
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        energy_sensor._last_reset_date = current_date
-        energy_sensor._total_energy = 1000.0  # 1000 Wh
+        energy_sensor._energy_value = 1000.0  # 1000 Wh
         energy_sensor._last_power_value = 80.0  # Previous power reading
-        energy_sensor._last_update_time = datetime.datetime.fromisoformat(
+        energy_sensor._last_power_timestamp = datetime.datetime.fromisoformat(
             "2024-01-01T12:00:00+00:00"
-        ).timestamp()
+        )
 
         # Mock coordinator with power data in correct format (1 minute later)
         mock_coordinator.data = {
@@ -431,7 +428,7 @@ class TestMerakiMTEnergySensor:
 
         # Should restore the energy value converted from kWh to Wh
         # 5.5 kWh = 5500 Wh
-        assert energy_sensor._total_energy == 5500.0
+        assert energy_sensor._energy_value == 5500.0
 
     @patch("homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state")
     async def test_energy_sensor_state_restoration_invalid_value(
@@ -468,7 +465,7 @@ class TestMerakiMTEnergySensor:
         await energy_sensor.async_added_to_hass()
 
         # Should handle invalid value gracefully and keep default
-        assert energy_sensor._total_energy == 0.0
+        assert energy_sensor._energy_value == 0.0
 
     @patch("homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state")
     async def test_energy_sensor_state_restoration_wh_format(
@@ -510,7 +507,7 @@ class TestMerakiMTEnergySensor:
         await energy_sensor.async_added_to_hass()
 
         # Should restore the energy value directly (already in Wh)
-        assert energy_sensor._total_energy == 2500.0
+        assert energy_sensor._energy_value == 2500.0
 
     @patch("homeassistant.helpers.restore_state.RestoreEntity.async_get_last_state")
     async def test_energy_sensor_state_restoration_no_state(
@@ -541,7 +538,7 @@ class TestMerakiMTEnergySensor:
         await energy_sensor.async_added_to_hass()
 
         # Should start with default value
-        assert energy_sensor._total_energy == 0.0
+        assert energy_sensor._energy_value == 0.0
 
 
 class TestSensorSetup:
@@ -626,8 +623,8 @@ class TestSensorSetup:
         # Setup sensors
         await async_setup_entry(hass, mock_config_entry, add_entities_mock)
 
-        # Should handle gracefully and not call add_entities when no integration data
-        add_entities_mock.assert_not_called()
+        # Should handle gracefully and call add_entities with empty list
+        add_entities_mock.assert_called_once_with([], True)
 
 
 class TestSensorDescriptions:
@@ -788,20 +785,90 @@ class TestSensorNativeValues:
             network_hub=mock_network_hub,
         )
 
-        # Mock coordinator data with power reading in correct format
+        # Mock coordinator data with power reading
         mock_coordinator.data = {
             "Q2XX-XXXX-XXXX": {
                 "readings": [
                     {
                         "metric": "realPower",
                         "ts": "2024-01-01T12:00:00.000000Z",
-                        "realPower": {"draw": 250.5},
+                        "realPower": {"draw": 15.2},
                     }
                 ]
             }
         }
 
-        assert sensor.native_value == 250.5
+        assert sensor.native_value == 15.2
+
+    def test_noise_sensor_native_value_different_structures(
+        self, mock_coordinator, mock_device_info, mock_network_hub
+    ):
+        """Test noise sensor handles different data structures from Meraki API."""
+        from custom_components.meraki_dashboard.const import MT_SENSOR_NOISE
+
+        sensor = MerakiMTSensor(
+            coordinator=mock_coordinator,
+            device=mock_device_info,
+            description=MT_SENSOR_DESCRIPTIONS[MT_SENSOR_NOISE],
+            config_entry_id="test_entry",
+            network_hub=mock_network_hub,
+        )
+
+        # Test case 1: Standard structure with "ambient" key
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "noise",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "noise": {"ambient": 45.2},
+                    }
+                ]
+            }
+        }
+        assert sensor.native_value == 45.2
+
+        # Test case 2: Structure with "level" key (the problematic case)
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "noise",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "noise": {"level": 33},
+                    }
+                ]
+            }
+        }
+        assert sensor.native_value == 33
+
+        # Test case 3: Nested structure where level is also a dict
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "noise",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "noise": {"level": {"level": 42}},
+                    }
+                ]
+            }
+        }
+        assert sensor.native_value == 42
+
+        # Test case 4: Direct numeric value
+        mock_coordinator.data = {
+            "Q2XX-XXXX-XXXX": {
+                "readings": [
+                    {
+                        "metric": "noise",
+                        "ts": "2024-01-01T12:00:00.000000Z",
+                        "noise": 50.5,
+                    }
+                ]
+            }
+        }
+        assert sensor.native_value == 50.5
 
     def test_sensor_native_value_no_data(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -890,7 +957,7 @@ class TestSensorExtraStateAttributes:
         assert "model" in attrs
         assert attrs["model"] == "MT11"
         assert "network_name" in attrs
-        assert attrs["network_name"] == "Main Office"
+        assert attrs["network_name"] == mock_network_hub.network_name
 
     def test_sensor_extra_state_attributes_with_mac(
         self, mock_coordinator, mock_network_hub
@@ -1072,9 +1139,16 @@ class TestSensorDeviceInfo:
             network_hub=mock_network_hub,
         )
 
-        # Check the _attr_device_info which is set during initialization
+        # Access device_info property to trigger initialization
+        device_info = sensor.device_info
+
+        # Check that connections are set correctly
+        assert "connections" in device_info
+        assert device_info["connections"] == {("mac", "aa:bb:cc:dd:ee:ff")}
+
+        # Also verify _attr_device_info is set after accessing device_info
+        assert sensor._attr_device_info is not None
         assert "connections" in sensor._attr_device_info
-        assert sensor._attr_device_info["connections"] == {("mac", "aa:bb:cc:dd:ee:ff")}
 
 
 class TestSensorUtilities:
@@ -1120,4 +1194,4 @@ class TestSensorUtilities:
         # Verify registry-related properties
         assert sensor.unique_id is not None
         assert sensor._config_entry_id == "test_entry"
-        assert sensor._serial == "Q2XX-XXXX-XXXX"
+        assert sensor._device_serial == "Q2XX-XXXX-XXXX"

@@ -15,6 +15,7 @@ def mock_hub():
     """Mock a Meraki hub."""
     hub = MagicMock()
     hub.hub_name = "Test Hub"
+    hub.device_type = "MT"
     hub.async_get_sensor_data = AsyncMock(return_value=MOCK_PROCESSED_SENSOR_DATA)
     return hub
 
@@ -173,7 +174,10 @@ class TestMerakiSensorCoordinator:
 
             # Verify debug log was called during initialization
             mock_logger.debug.assert_called_with(
-                "Sensor coordinator initialized with %d second update interval",
+                "Device coordinator initialized for %s (%s) with %d devices and %d second update interval",
+                "Test Hub",
+                "MT",
+                2,
                 60,
             )
 
@@ -186,8 +190,16 @@ class TestMerakiSensorCoordinator:
             # Verify error was logged
             mock_logger.error.assert_called_once()
             error_call_args = mock_logger.error.call_args
-            assert "Error fetching sensor data" in error_call_args[0][0]
-            assert "Test error" in str(error_call_args[0][1])
+            # The log format is: "Error fetching %s data for %s (attempt %d, %.1f%% success rate): %s"
+            assert (
+                error_call_args[0][0]
+                == "Error fetching %s data for %s (attempt %d, %.1f%% success rate): %s"
+            )
+            assert error_call_args[0][1] == "MT"  # device_type
+            assert error_call_args[0][2] == "Test Hub"  # hub_name
+            assert error_call_args[0][3] == 1  # attempt count
+            assert error_call_args[0][4] == 0.0  # success rate
+            assert "Test error" in str(error_call_args[0][5])  # error message
 
     async def test_coordinator_hub_reference(self, coordinator, mock_hub):
         """Test coordinator maintains correct hub reference."""
