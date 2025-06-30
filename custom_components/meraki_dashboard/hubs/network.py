@@ -478,65 +478,64 @@ class MerakiNetworkHub:
                         )
                         self.organization_hub.total_api_calls += 1
 
-                        # Handle different radio_settings formats (list or dict)
+                        # Handle the actual API response structure
                         if radio_settings:
                             device_info["radioSettings"] = radio_settings
 
-                            # Handle list format (multiple radios)
-                            if isinstance(radio_settings, list):
-                                for radio in radio_settings:
-                                    if isinstance(radio, dict):
-                                        band = radio.get("band")
-                                        power = radio.get("txPower", 0)
-                                        if band == "2.4":
-                                            device_info["rf_power_2_4"] = power
-                                            device_info["rfPower"] = max(
-                                                device_info["rfPower"], power
-                                            )
-                                        elif band == "5":
-                                            device_info["rf_power_5"] = power
-                                            device_info["rfPower"] = max(
-                                                device_info["rfPower"], power
-                                            )
+                            # Debug: Log the actual structure to understand API response
+                            _LOGGER.debug(
+                                "Raw radio settings for %s: %s",
+                                device_serial,
+                                radio_settings,
+                            )
 
-                            # Handle dict format (single radio or different structure)
-                            elif isinstance(radio_settings, dict):
-                                # Check if it's a dict containing radio data directly
-                                if "band" in radio_settings:
-                                    band = radio_settings.get("band")
-                                    power = radio_settings.get("txPower", 0)
-                                    if band == "2.4":
-                                        device_info["rf_power_2_4"] = power
+                            # Extract power from the correct API structure
+                            # API returns: {"twoFourGhzSettings": {"targetPower": 21}, "fiveGhzSettings": {"targetPower": 15}}
+                            if isinstance(radio_settings, dict):
+                                # Extract RF Profile ID (if available)
+                                rf_profile_id = radio_settings.get("rfProfileId")
+                                if rf_profile_id is not None:
+                                    device_info["rfProfileId"] = rf_profile_id
+
+                                # Extract 2.4GHz power
+                                two_four_settings = radio_settings.get(
+                                    "twoFourGhzSettings", {}
+                                )
+                                if isinstance(two_four_settings, dict):
+                                    power_2_4 = two_four_settings.get("targetPower")
+                                    if power_2_4 is not None:
+                                        device_info["rf_power_2_4"] = power_2_4
                                         device_info["rfPower"] = max(
-                                            device_info["rfPower"], power
+                                            device_info["rfPower"], power_2_4
                                         )
-                                    elif band == "5":
-                                        device_info["rf_power_5"] = power
+
+                                # Extract 5GHz power and channel width
+                                five_ghz_settings = radio_settings.get(
+                                    "fiveGhzSettings", {}
+                                )
+                                if isinstance(five_ghz_settings, dict):
+                                    power_5 = five_ghz_settings.get("targetPower")
+                                    if power_5 is not None:
+                                        device_info["rf_power_5"] = power_5
                                         device_info["rfPower"] = max(
-                                            device_info["rfPower"], power
+                                            device_info["rfPower"], power_5
                                         )
-                                else:
-                                    # Check if it's a dict containing arrays by band
-                                    for band_key, band_data in radio_settings.items():
-                                        if isinstance(band_data, dict):
-                                            power = band_data.get("txPower", 0)
-                                            if "2.4" in band_key or "24" in band_key:
-                                                device_info["rf_power_2_4"] = power
-                                                device_info["rfPower"] = max(
-                                                    device_info["rfPower"], power
-                                                )
-                                            elif "5" in band_key:
-                                                device_info["rf_power_5"] = power
-                                                device_info["rfPower"] = max(
-                                                    device_info["rfPower"], power
-                                                )
+
+                                    # Extract channel width (only available for 5GHz)
+                                    channel_width_5 = five_ghz_settings.get(
+                                        "channelWidth"
+                                    )
+                                    if channel_width_5 is not None:
+                                        device_info["channelWidth5"] = channel_width_5
 
                             _LOGGER.debug(
-                                "Processed radio settings for %s: format=%s, power_2_4=%s, power_5=%s",
+                                "Processed radio settings for %s: format=%s, power_2_4=%s, power_5=%s, channel_width_5=%s, rf_profile=%s",
                                 device_serial,
                                 type(radio_settings).__name__,
                                 device_info.get("rf_power_2_4"),
                                 device_info.get("rf_power_5"),
+                                device_info.get("channelWidth5"),
+                                device_info.get("rfProfileId"),
                             )
                         else:
                             _LOGGER.debug(
@@ -587,13 +586,45 @@ class MerakiNetworkHub:
                             )
                             self.organization_hub.total_api_calls += 1
 
-                            if connection_stats and isinstance(connection_stats, dict):
-                                device_info["connectionSuccessRate"] = (
-                                    connection_stats.get("connectionSuccessRate", 0)
+                            if connection_stats:
+                                # Handle different response formats
+                                if isinstance(connection_stats, dict):
+                                    # Direct dict format
+                                    device_info["connectionSuccessRate"] = (
+                                        connection_stats.get("connectionSuccessRate", 0)
+                                        or connection_stats.get("assocs", 0)
+                                        or 0
+                                    )
+                                    device_info["connectionFailures"] = (
+                                        connection_stats.get("connectionFailures", 0)
+                                        or connection_stats.get("authFailures", 0)
+                                        or 0
+                                    )
+                                elif (
+                                    isinstance(connection_stats, list)
+                                    and connection_stats
+                                ):
+                                    # List format - take the most recent entry
+                                    latest_stats = connection_stats[-1]
+                                    if isinstance(latest_stats, dict):
+                                        device_info["connectionSuccessRate"] = (
+                                            latest_stats.get("connectionSuccessRate", 0)
+                                            or latest_stats.get("assocs", 0)
+                                            or 0
+                                        )
+                                        device_info["connectionFailures"] = (
+                                            latest_stats.get("connectionFailures", 0)
+                                            or latest_stats.get("authFailures", 0)
+                                            or 0
+                                        )
+
+                                _LOGGER.debug(
+                                    "Connection stats for %s: success_rate=%s, failures=%s",
+                                    device_serial,
+                                    device_info.get("connectionSuccessRate"),
+                                    device_info.get("connectionFailures"),
                                 )
-                                device_info["connectionFailures"] = (
-                                    connection_stats.get("connectionFailures", 0)
-                                )
+
                         except Exception as conn_err:
                             _LOGGER.debug(
                                 "Could not get connection stats for %s: %s",
@@ -629,13 +660,61 @@ class MerakiNetworkHub:
                             for bss in basic_service_sets:
                                 performance = bss.get("performance", {})
                                 if isinstance(performance, dict):
-                                    total_sent += performance.get("trafficSent", 0)
-                                    total_recv += performance.get("trafficReceived", 0)
+                                    # Try different field names for traffic data
+                                    sent = performance.get(
+                                        "trafficSent", 0
+                                    ) or performance.get("sent", 0)
+                                    recv = (
+                                        performance.get("trafficReceived", 0)
+                                        or performance.get("received", 0)
+                                        or performance.get("recv", 0)
+                                    )
+                                    total_sent += sent
+                                    total_recv += recv
 
                             if total_sent > 0 or total_recv > 0:
                                 device_info["trafficSent"] = total_sent
                                 device_info["trafficRecv"] = total_recv
                                 traffic_found = True
+
+                        # If no traffic found, try alternative API endpoints
+                        if not traffic_found:
+                            try:
+                                # Get latency and loss stats which sometimes includes traffic
+                                def get_latency_stats(serial: str):
+                                    if self.dashboard is None:
+                                        return None
+                                    return self.dashboard.devices.getDeviceLossAndLatencyHistory(
+                                        serial,
+                                        timespan=3600,  # 1 hour
+                                    )
+
+                                latency_stats = await self.hass.async_add_executor_job(
+                                    get_latency_stats, device_serial
+                                )
+                                self.organization_hub.total_api_calls += 1
+
+                                if latency_stats and isinstance(latency_stats, list):
+                                    for entry in latency_stats:
+                                        if isinstance(entry, dict):
+                                            # Some devices include traffic data in latency stats
+                                            sent = entry.get("sent", 0)
+                                            recv = entry.get("received", 0)
+                                            if sent > 0 or recv > 0:
+                                                device_info["trafficSent"] = max(
+                                                    device_info["trafficSent"], sent
+                                                )
+                                                device_info["trafficRecv"] = max(
+                                                    device_info["trafficRecv"], recv
+                                                )
+                                                traffic_found = True
+
+                            except Exception as latency_err:
+                                _LOGGER.debug(
+                                    "Could not get latency stats for %s: %s",
+                                    device_serial,
+                                    latency_err,
+                                )
 
                         if not traffic_found:
                             # Fallback: Get usage history if device status unavailable
@@ -920,30 +999,48 @@ class MerakiNetworkHub:
                             if port.get("enabled", False)
                             and port.get("status") == "Connected"
                         )
-                        device_info["connected_clients"] = sum(
-                            port.get("clientCount", 0) for port in ports_status
-                        )
+
+                        # Safe aggregation of client counts (ensure numeric values)
+                        client_counts = []
+                        for port in ports_status:
+                            client_count = port.get("clientCount", 0)
+                            if isinstance(client_count, int | float):
+                                client_counts.append(client_count)
+                        device_info["connected_clients"] = sum(client_counts)
+
                         device_info["poe_ports"] = sum(
                             1
                             for port in ports_status
                             if port.get("powerUsageInWh") is not None
                             and port.get("powerUsageInWh") > 0
                         )
-                        # Sum PoE power (API returns in deciwatts, convert to watts)
-                        device_info["poe_power_draw"] = (
-                            sum(
-                                port.get("powerUsageInWh", 0)
-                                for port in ports_status
-                                if port.get("powerUsageInWh") is not None
-                            )
-                            / 10
-                        )
-                        device_info["port_errors"] = sum(
-                            port.get("errors", 0) for port in ports_status
-                        )
-                        device_info["port_discards"] = sum(
-                            port.get("discards", 0) for port in ports_status
-                        )
+
+                        # Safe aggregation of PoE power (ensure numeric values)
+                        power_values = []
+                        for port in ports_status:
+                            power_usage = port.get("powerUsageInWh")
+                            if power_usage is not None and isinstance(
+                                power_usage, int | float
+                            ):
+                                power_values.append(power_usage)
+                        device_info["poe_power_draw"] = sum(power_values) / 10
+
+                        # Safe aggregation of port errors (ensure numeric values)
+                        error_counts = []
+                        for port in ports_status:
+                            errors = port.get("errors", 0)
+                            if isinstance(errors, int | float):
+                                error_counts.append(errors)
+                        device_info["port_errors"] = sum(error_counts)
+
+                        # Safe aggregation of port discards (ensure numeric values)
+                        discard_counts = []
+                        for port in ports_status:
+                            discards = port.get("discards", 0)
+                            if isinstance(discards, int | float):
+                                discard_counts.append(discards)
+                        device_info["port_discards"] = sum(discard_counts)
+
                         device_info["port_link_count"] = sum(
                             1
                             for port in ports_status
@@ -957,9 +1054,14 @@ class MerakiNetworkHub:
                             if usage and isinstance(usage, dict):
                                 sent = usage.get("sent", 0)
                                 recv = usage.get("recv", 0)
-                                # Convert from Kb to percentage (assuming 1Gbps ports)
-                                port_util = min(100.0, ((sent + recv) / 1000000) * 100)
-                                utilizations.append(port_util)
+                                if isinstance(sent, int | float) and isinstance(
+                                    recv, int | float
+                                ):
+                                    # Convert from Kb to percentage (assuming 1Gbps ports)
+                                    port_util = min(
+                                        100.0, ((sent + recv) / 1000000) * 100
+                                    )
+                                    utilizations.append(port_util)
 
                         device_info["port_utilization"] = (
                             sum(utilizations) / len(utilizations) if utilizations else 0

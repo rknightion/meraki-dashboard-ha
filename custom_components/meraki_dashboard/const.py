@@ -138,6 +138,8 @@ MR_SENSOR_RF_POWER_2_4: Final = "rfPower24"  # 2.4GHz band RF power
 MR_SENSOR_RF_POWER_5: Final = "rfPower5"  # 5GHz band RF power
 MR_SENSOR_RADIO_CHANNEL_2_4: Final = "radioChannel24"  # 2.4GHz channel
 MR_SENSOR_RADIO_CHANNEL_5: Final = "radioChannel5"  # 5GHz channel
+MR_SENSOR_CHANNEL_WIDTH_5: Final = "channelWidth5"  # 5GHz channel width
+MR_SENSOR_RF_PROFILE_ID: Final = "rfProfileId"  # RF profile ID
 
 # MS (switch) sensor metrics for network monitoring
 MS_SENSOR_PORT_COUNT: Final = "portCount"

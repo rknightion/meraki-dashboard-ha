@@ -719,6 +719,8 @@ class TestDeviceCapabilityFilter:
             "rfPower5",  # 5GHz band RF power
             "radioChannel24",  # 2.4GHz radio channel
             "radioChannel5",  # 5GHz radio channel
+            "channelWidth5",  # 5GHz channel width
+            "rfProfileId",  # RF profile ID
             "trafficSent",
             "trafficRecv",
         }

@@ -209,6 +209,8 @@ MOCK_MR_WIRELESS_DATA = {
             "rf_power_2_4": 17,
             "rf_power_5": 20,
             "rfPower": 20,
+            "channelWidth5": 80,
+            "rfProfileId": "1234",
             "trafficSent": 1500000,
             "trafficRecv": 2500000,
             "connectionSuccessRate": 98.5,
@@ -345,6 +347,22 @@ MOCK_PROCESSED_SENSOR_DATA = {
     },
 }
 
+# Mock radio settings data that matches actual API structure
+MOCK_RADIO_SETTINGS = {
+    "Q2ZZ-ZZZZ-ZZZZ": {
+        "serial": "Q2ZZ-ZZZZ-ZZZZ",
+        "rfProfileId": "1234",
+        "twoFourGhzSettings": {
+            "channel": 11,
+            "targetPower": 17
+        },
+        "fiveGhzSettings": {
+            "channel": 149,
+            "channelWidth": 80,
+            "targetPower": 20
+        }
+    }
+}
 
 def get_organization_by_id(org_id: str) -> dict[str, Any] | None:
     """Get organization data by ID."""

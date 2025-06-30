@@ -117,12 +117,24 @@ jobs:
           key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
+        run: |
+          # Always install dependencies to ensure they're up to date
+          poetry install --no-interaction --with dev
+          # Verify installation
+          poetry show
+
+      - name: Verify Python environment
+        run: |
+          poetry run python --version
+          poetry run python -c "import sys; print('Python executable:', sys.executable)"
+          poetry run python -c "import homeassistant; print('Home Assistant version:', homeassistant.__version__)"
+
+      - name: Create Home Assistant config directory
+        run: mkdir -p /tmp/homeassistant
 
       - name: Run tests with coverage
         env:
-          # Disable Home Assistant analytics and other optional features that might cause issues in CI
+          # Set Python path to include the workspace
           PYTHONPATH: ${{ github.workspace }}
           # Ensure UTF-8 encoding for tests
           PYTHONIOENCODING: utf-8
@@ -132,13 +144,18 @@ jobs:
           HA_DISABLE_ANALYTICS: true
           # Set Home Assistant configuration directory
           HOMEASSISTANT_CONFIG_DIR: /tmp/homeassistant
+          # Ensure proper locale
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
         run: |
+          # Run tests using poetry environment
           poetry run python -m pytest tests/ \
             --cov=custom_components.meraki_dashboard \
             --cov-report=term-missing \
             --cov-report=xml \
             --cov-report=html \
             --cov-fail-under=10 \
+            --tb=short \
             -v
 
       # Coverage reports are generated locally (see htmlcov/ directory)

@@ -24,6 +24,7 @@ from ..const import (
     DOMAIN,
     MR_SENSOR_CHANNEL_UTILIZATION_2_4,
     MR_SENSOR_CHANNEL_UTILIZATION_5,
+    MR_SENSOR_CHANNEL_WIDTH_5,
     MR_SENSOR_CLIENT_COUNT,
     MR_SENSOR_CONNECTION_FAILURES,
     MR_SENSOR_CONNECTION_SUCCESS_RATE,
@@ -36,6 +37,7 @@ from ..const import (
     MR_SENSOR_RF_POWER,
     MR_SENSOR_RF_POWER_2_4,
     MR_SENSOR_RF_POWER_5,
+    MR_SENSOR_RF_PROFILE_ID,
     MR_SENSOR_SSID_COUNT,
     MR_SENSOR_TRAFFIC_RECV,
     MR_SENSOR_TRAFFIC_SENT,
@@ -174,6 +176,20 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key=MR_SENSOR_RADIO_CHANNEL_5,
         name="5GHz Radio Channel",
         icon="mdi:antenna",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_CHANNEL_WIDTH_5: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_WIDTH_5,
+        name="5GHz Channel Width",
+        icon="mdi:wifi-strength-4",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement="MHz",
+        suggested_display_precision=0,
+    ),
+    MR_SENSOR_RF_PROFILE_ID: SensorEntityDescription(
+        key=MR_SENSOR_RF_PROFILE_ID,
+        name="RF Profile ID",
+        icon="mdi:cog",
         state_class=SensorStateClass.MEASUREMENT,
     ),
 }
@@ -335,6 +351,10 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_5:
             # Channel for 5GHz band
             return device_info.get("radioChannel5", 0) or 0
+        elif self.entity_description.key == MR_SENSOR_CHANNEL_WIDTH_5:
+            return device_info.get("channelWidth5", 0) or 0
+        elif self.entity_description.key == MR_SENSOR_RF_PROFILE_ID:
+            return device_info.get("rfProfileId", 0) or 0
 
         return None
 

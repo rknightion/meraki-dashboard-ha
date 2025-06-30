@@ -664,6 +664,7 @@ class MerakiOrganizationHub:
                                 net_id,
                                 endingBefore=end_time.isoformat(),
                                 perPage=50,  # Limit per network to avoid too many events
+                                productType="wireless",  # Required parameter
                             )
 
                         network_events = await self.hass.async_add_executor_job(
