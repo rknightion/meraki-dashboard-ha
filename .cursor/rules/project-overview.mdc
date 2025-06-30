@@ -11,6 +11,7 @@ Home Assistant custom integration for Cisco Meraki Dashboard API, focusing on MT
 ## Core Principles
 - Always use Poetry to run any terminal command involving python to ensure proper venv setup
 - Always use Meraki Python SDK for all API interactions (never direct HTTP calls)
+- Never run any git commands
 - Follow Home Assistant integration patterns and conventions
 - Implement proper async/await patterns for all I/O operations
 - Maintain comprehensive test coverage (>80%)

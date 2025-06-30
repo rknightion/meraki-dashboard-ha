@@ -651,40 +651,68 @@ class MerakiOrganizationHub:
                 # This is expected for some organizations without alert profiles
                 _LOGGER.debug("Alert profiles endpoint not available, will try events")
 
-            # Try to get events as an alternative
+            # Try to get network events for each network as an alternative
             try:
-                events = await self.hass.async_add_executor_job(
-                    self.dashboard.organizations.getOrganizationEvents,
-                    self.organization_id,
-                    **{
-                        "startingAfter": start_time.isoformat(),
-                        "endingBefore": end_time.isoformat(),
-                        "perPage": 100,
-                    },
-                )
-                self.total_api_calls += 1
+                all_events = []
 
-                # Process events and emit HA events
-                await self._process_organization_events(events)
+                # Get events from each network since there's no organization-level events endpoint
+                for network_hub in self.network_hubs.values():
+                    try:
+                        network_events = await self.hass.async_add_executor_job(
+                            self.dashboard.networks.getNetworkEvents,
+                            network_hub.network_id,
+                            **{
+                                "startingAfter": start_time.isoformat(),
+                                "endingBefore": end_time.isoformat(),
+                                "perPage": 50,  # Limit per network to avoid too many events
+                            },
+                        )
+                        self.total_api_calls += 1
 
-                # Count alert-type events
-                alert_events = [
-                    e
-                    for e in events
-                    if e.get("eventType", "").lower()
-                    in [
-                        "device_went_offline",
-                        "device_came_online",
-                        "device_alert",
-                        "sensor_alert",
-                        "gateway_alert",
+                        if network_events:
+                            # Add network context to events
+                            for event in network_events:
+                                event["source_network_id"] = network_hub.network_id
+                                event["source_network_name"] = network_hub.network_name
+                            all_events.extend(network_events)
+
+                    except Exception as network_event_err:
+                        _LOGGER.debug(
+                            "Could not fetch events for network %s: %s",
+                            network_hub.network_name,
+                            network_event_err,
+                        )
+                        continue
+
+                # Process aggregated events and emit HA events
+                if all_events:
+                    await self._process_organization_events(all_events)
+
+                    # Count alert-type events
+                    alert_events = [
+                        e
+                        for e in all_events
+                        if e.get("eventType", "").lower()
+                        in [
+                            "device_went_offline",
+                            "device_came_online",
+                            "device_alert",
+                            "sensor_alert",
+                            "gateway_alert",
+                            "ap_down",
+                            "ap_up",
+                            "switch_down",
+                            "switch_up",
+                        ]
                     ]
-                ]
-                self.active_alerts_count = len(alert_events)
-                self.recent_alerts = alert_events[:5]  # Keep last 5 for attributes
+                    self.active_alerts_count = len(alert_events)
+                    self.recent_alerts = alert_events[:5]  # Keep last 5 for attributes
+                else:
+                    self.active_alerts_count = 0
+                    self.recent_alerts = []
 
             except Exception as event_err:
-                _LOGGER.debug("Could not fetch events: %s", event_err)
+                _LOGGER.debug("Could not fetch network events: %s", event_err)
 
         except Exception as err:
             _LOGGER.warning("Could not fetch alerts data: %s", err)

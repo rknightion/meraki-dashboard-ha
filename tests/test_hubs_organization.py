@@ -449,9 +449,15 @@ class TestMerakiOrganizationHub:
                 "deviceSerial": "device1",
             }
         ]
-        mock_dashboard_api.organizations.getOrganizationEvents.return_value = (
+        mock_dashboard_api.networks.getNetworkEvents.return_value = (
             mock_events
         )
+
+        # Set up mock network hubs for the new implementation
+        mock_network_hub = Mock()
+        mock_network_hub.network_id = "network1"
+        mock_network_hub.network_name = "Test Network"
+        organization_hub.network_hubs = {"network1": mock_network_hub}
 
         # Mock async_add_executor_job to handle keyword arguments
         original_async_add_executor_job = organization_hub.hass.async_add_executor_job
@@ -460,7 +466,7 @@ class TestMerakiOrganizationHub:
             # Call the function directly since we're in test mode
             if func == mock_dashboard_api.organizations.getOrganizationAlertsProfiles:
                 return func(*args)
-            elif func == mock_dashboard_api.organizations.getOrganizationEvents:
+            elif func == mock_dashboard_api.networks.getNetworkEvents:
                 return func(*args)
             else:
                 return await original_async_add_executor_job(func, *args, **kwargs)

@@ -49,9 +49,24 @@ class MerakiEventHandler:
         """
         # Get device ID from device registry for event attribution
         device_registry = dr.async_get(self.hass)
+
+        # Try the exact identifier format first (legacy support)
         device_entry = device_registry.async_get_device(
             identifiers={(device_info["domain"], device_serial)}
         )
+
+        # If not found, search through all devices for one with matching identifier pattern
+        if not device_entry:
+            domain = device_info["domain"]
+            for device in device_registry.devices.values():
+                for identifier in device.identifiers:
+                    if identifier[0] == domain and identifier[1].endswith(
+                        f"_{device_serial}"
+                    ):
+                        device_entry = device
+                        break
+                if device_entry:
+                    break
 
         if not device_entry:
             _LOGGER.debug(

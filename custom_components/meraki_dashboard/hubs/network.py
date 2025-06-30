@@ -442,15 +442,33 @@ class MerakiNetworkHub:
                         )
                         self.organization_hub.total_api_calls += 1
 
-                        # Handle case where radio_settings might be a string or empty
-                        if radio_settings and isinstance(radio_settings, list):
+                        # Handle different radio_settings formats (list or dict)
+                        if radio_settings:
                             device_info["radioSettings"] = radio_settings
 
-                            # Extract RF power from radio settings
-                            for radio in radio_settings:
-                                if isinstance(radio, dict):
-                                    band = radio.get("band")
-                                    power = radio.get("txPower", 0)
+                            # Handle list format (multiple radios)
+                            if isinstance(radio_settings, list):
+                                for radio in radio_settings:
+                                    if isinstance(radio, dict):
+                                        band = radio.get("band")
+                                        power = radio.get("txPower", 0)
+                                        if band == "2.4":
+                                            device_info["rf_power_2_4"] = power
+                                            device_info["rfPower"] = max(
+                                                device_info["rfPower"], power
+                                            )
+                                        elif band == "5":
+                                            device_info["rf_power_5"] = power
+                                            device_info["rfPower"] = max(
+                                                device_info["rfPower"], power
+                                            )
+
+                            # Handle dict format (single radio or different structure)
+                            elif isinstance(radio_settings, dict):
+                                # Check if it's a dict containing radio data directly
+                                if "band" in radio_settings:
+                                    band = radio_settings.get("band")
+                                    power = radio_settings.get("txPower", 0)
                                     if band == "2.4":
                                         device_info["rf_power_2_4"] = power
                                         device_info["rfPower"] = max(
@@ -461,11 +479,32 @@ class MerakiNetworkHub:
                                         device_info["rfPower"] = max(
                                             device_info["rfPower"], power
                                         )
+                                else:
+                                    # Check if it's a dict containing arrays by band
+                                    for band_key, band_data in radio_settings.items():
+                                        if isinstance(band_data, dict):
+                                            power = band_data.get("txPower", 0)
+                                            if "2.4" in band_key or "24" in band_key:
+                                                device_info["rf_power_2_4"] = power
+                                                device_info["rfPower"] = max(
+                                                    device_info["rfPower"], power
+                                                )
+                                            elif "5" in band_key:
+                                                device_info["rf_power_5"] = power
+                                                device_info["rfPower"] = max(
+                                                    device_info["rfPower"], power
+                                                )
+
+                            _LOGGER.debug(
+                                "Processed radio settings for %s: format=%s, power_2_4=%s, power_5=%s",
+                                device_serial,
+                                type(radio_settings).__name__,
+                                device_info.get("rf_power_2_4"),
+                                device_info.get("rf_power_5"),
+                            )
                         else:
                             _LOGGER.debug(
-                                "Radio settings for %s returned unexpected format: %s",
-                                device_serial,
-                                type(radio_settings),
+                                "No radio settings returned for %s", device_serial
                             )
 
                     except Exception as radio_err:
