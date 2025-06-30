@@ -109,6 +109,38 @@ def sanitize_device_name(name: str | None) -> str | None:
     return sanitized.strip()
 
 
+def get_device_display_name(device: dict[str, Any]) -> str:
+    """Get the best available display name for a device.
+
+    Prioritizes API-provided names, falls back to serial number or MAC address.
+
+    Args:
+        device: Device dictionary from the API
+
+    Returns:
+        A suitable display name for the device
+    """
+    # Try the API-provided name first
+    api_name = device.get("name")
+    if api_name:
+        sanitized_name = sanitize_device_name(api_name)
+        if sanitized_name and sanitized_name.strip():
+            return sanitized_name
+
+    # Fall back to serial number
+    serial = device.get("serial")
+    if serial and serial.strip():
+        return serial
+
+    # Fall back to MAC address as last resort
+    mac = device.get("mac")
+    if mac and mac.strip():
+        return mac
+
+    # Ultimate fallback
+    return "Unknown Device"
+
+
 def sanitize_device_name_for_entity_id(name: str) -> str:
     """Sanitize device name for use in entity IDs.
 
@@ -411,25 +443,40 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
         Set of supported sensor/metric keys for this device
     """
     if device_type == "MT":
-        # MT device capabilities based on model
+        # Corrected MT device capabilities based on official Cisco documentation
+        # This serves as a fallback when no actual sensor data is available yet
         mt_capabilities = {
             "MT10": {"temperature", "humidity"},
-            "MT11": {"temperature", "humidity"},
-            "MT12": {
+            "MT11": {"temperature"},  # Probe sensor - temperature only
+            "MT12": {"water"},  # Water detection sensor only
+            "MT14": {
+                "temperature",
+                "humidity",
+                "pm25",
+                "tvoc",
+                "noise",
+            },
+            "MT15": {  # MT15 was missing - indoor air quality + CO2
                 "temperature",
                 "humidity",
                 "co2",
-                "tvoc",
                 "pm25",
+                "tvoc",
+                "noise",
                 "indoor_air_quality",
             },
-            "MT14": {"temperature", "humidity", "noise"},
-            "MT20": {"temperature", "humidity", "button"},
-            "MT21": {"temperature", "humidity", "button"},
-            "MT30": {"temperature", "water"},
-            "MT40": {
+            "MT20": {"temperature", "humidity", "button", "door", "battery"},
+            "MT21": {
                 "temperature",
                 "humidity",
+                "button",
+                "door",
+                "battery",
+            },  # Similar to MT20
+            "MT30": {
+                "button"
+            },  # Smart automation button only - no environmental sensors
+            "MT40": {  # Smart power controller - power monitoring only, NO temperature/humidity
                 "real_power",
                 "apparent_power",
                 "current",
@@ -482,6 +529,90 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
     return set()
 
 
+def discover_device_capabilities_from_readings(
+    device_serial: str, sensor_readings: dict[str, Any]
+) -> set[str]:
+    """Dynamically discover device capabilities from actual sensor readings.
+
+    This is the preferred method as it uses real API data to determine
+    what metrics each device actually provides.
+
+    Args:
+        device_serial: Device serial number
+        sensor_readings: Raw sensor readings from getOrganizationSensorReadingsLatest
+
+    Returns:
+        Set of actual sensor metrics this device provides
+    """
+    capabilities: set[str] = set()
+
+    if device_serial not in sensor_readings:
+        return capabilities
+
+    device_data = sensor_readings[device_serial]
+    readings = device_data.get("readings", [])
+
+    # Extract unique metric names from actual readings
+    for reading in readings:
+        metric = reading.get("metric")
+        if metric:
+            capabilities.add(metric)
+
+    return capabilities
+
+
+def get_device_capabilities(
+    device: dict[str, Any], coordinator_data: dict[str, Any] | None = None
+) -> set[str]:
+    """Get device capabilities using dynamic discovery with fallback.
+
+    Tries dynamic discovery first, falls back to model-based capabilities.
+
+    Args:
+        device: Device information
+        coordinator_data: Current coordinator data with sensor readings (if available)
+
+    Returns:
+        Set of supported sensor/metric keys for this device
+    """
+    device_serial = device.get("serial", "")
+    device_model = device.get("model", "")
+    device_type = device_model[:2] if len(device_model) >= 2 else ""
+
+    # Try dynamic discovery first if we have sensor data
+    if coordinator_data and device_serial in coordinator_data:
+        dynamic_capabilities = discover_device_capabilities_from_readings(
+            device_serial, coordinator_data
+        )
+
+        if dynamic_capabilities:
+            _LOGGER.debug(
+                "Using dynamic capabilities for %s (%s): %s",
+                device_serial,
+                device_model,
+                sorted(dynamic_capabilities),
+            )
+            return dynamic_capabilities
+
+    # Fall back to model-based capabilities
+    static_capabilities = create_device_capability_filter(device_model, device_type)
+    if static_capabilities:
+        _LOGGER.debug(
+            "Using static capabilities for %s (%s): %s",
+            device_serial,
+            device_model,
+            sorted(static_capabilities),
+        )
+    else:
+        _LOGGER.warning(
+            "No capabilities found for device %s (%s) - may be unsupported model",
+            device_serial,
+            device_model,
+        )
+
+    return static_capabilities
+
+
 def should_create_entity(
     device: dict[str, Any],
     entity_key: str,
@@ -497,21 +628,26 @@ def should_create_entity(
     Returns:
         True if entity should be created
     """
-    device_model = device.get("model", "")
-    device_type = device_model[:2] if len(device_model) >= 2 else ""
-    device_serial = device.get("serial", "")
+    # Get device capabilities using the new dynamic discovery system
+    supported_metrics = get_device_capabilities(device, coordinator_data)
 
-    # Get device capabilities
-    supported_metrics = create_device_capability_filter(device_model, device_type)
+    # If we have coordinator data with actual readings, be more strict
+    if coordinator_data:
+        device_serial = device.get("serial", "")
+        if device_serial in coordinator_data:
+            device_data = coordinator_data[device_serial]
+            readings = device_data.get("readings", [])
 
-    # If we have coordinator data, check if this metric is actually available
-    if coordinator_data and device_serial in coordinator_data:
-        device_data = coordinator_data[device_serial]
-        # For MT devices, check if the metric has actual data
-        if device_type == "MT":
-            return entity_key in device_data and entity_key in supported_metrics
+            # For devices with actual readings, only create entities for metrics that have data
+            if readings:
+                actual_metrics = {
+                    reading.get("metric")
+                    for reading in readings
+                    if reading.get("metric")
+                }
+                return entity_key in actual_metrics
 
-    # Fallback to model-based capability check
+    # Fallback to capability-based check
     return entity_key in supported_metrics
 
 

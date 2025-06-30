@@ -27,7 +27,7 @@ from .const import (
     SENSOR_TYPE_MT,
 )
 from .coordinator import MerakiSensorCoordinator
-from .utils import sanitize_device_name, should_create_entity
+from .utils import get_device_display_name, should_create_entity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -181,7 +181,7 @@ class MerakiMTBinarySensor(
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial")
-        device_name = sanitize_device_name(self._device.get("name", device_serial))
+        device_name = get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         return DeviceInfo(

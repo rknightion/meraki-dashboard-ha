@@ -178,6 +178,8 @@ MT_BINARY_SENSOR_METRICS: Final = [
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
     MT_SENSOR_WATER,
+    # Note: MT_SENSOR_BUTTON is handled as events, not binary sensors
+    # Button presses are momentary events, not persistent states
 ]
 
 # Event-emitting sensor metrics - these will fire Home Assistant events

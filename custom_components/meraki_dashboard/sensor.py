@@ -12,7 +12,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    MT_POWER_SENSORS,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
@@ -153,7 +152,7 @@ async def _setup_mt_sensors(
     config_entry: ConfigEntry,
     entities: list[SensorEntity],
 ) -> None:
-    """Set up MT environmental sensor entities."""
+    """Set up MT sensor entities."""
     _LOGGER.debug("Setting up MT sensors for %s", network_hub.hub_name)
 
     # Get the coordinator for this network from domain data
@@ -179,67 +178,10 @@ async def _setup_mt_sensors(
 
         _LOGGER.debug("Creating sensors for MT device: %s", device_serial)
 
-        # Get available metrics for this device to avoid creating unsupported sensors
-        available_metrics = set()
-        if coordinator.data and device_serial in coordinator.data:
-            device_data = coordinator.data[device_serial]
-            readings = device_data.get("readings", [])
-            for reading in readings:
-                metric = reading.get("metric")
-                if metric:
-                    available_metrics.add(metric)
-
-        # If no data yet, create sensors for common metrics based on device model
-        if not available_metrics:
-            device_model = device.get("model", "").upper()
-            # Determine likely supported metrics based on device model
-            if "MT10" in device_model or "MT11" in device_model:
-                # Temperature and humidity sensors
-                available_metrics = {"temperature", "humidity"}
-            elif "MT12" in device_model:
-                # Temperature, humidity, and air quality sensors
-                available_metrics = {"temperature", "humidity", "tvoc", "pm25"}
-            elif "MT14" in device_model:
-                # Temperature, humidity, air quality, and noise sensors
-                available_metrics = {
-                    "temperature",
-                    "humidity",
-                    "tvoc",
-                    "pm25",
-                    "noise",
-                    "indoorAirQuality",
-                }
-            elif "MT15" in device_model:
-                # Ambient light sensors
-                available_metrics = {"temperature", "humidity"}
-            elif "MT20" in device_model or "MT21" in device_model:
-                # Button and water sensors
-                available_metrics = {"button"}
-            elif "MT30" in device_model:
-                # Water detection sensors
-                available_metrics = {"water"}
-            elif "MT40" in device_model:
-                # Power monitoring sensors
-                available_metrics = {
-                    "realPower",
-                    "apparentPower",
-                    "current",
-                    "voltage",
-                    "frequency",
-                    "powerFactor",
-                }
-            else:
-                # Unknown model - create basic temperature/humidity sensors as fallback
-                available_metrics = {"temperature", "humidity"}
-                _LOGGER.debug(
-                    "Unknown MT device model %s for %s, using default metrics",
-                    device_model,
-                    device_serial,
-                )
-
-        # Create regular sensors only for metrics the device supports
+        # Create regular sensors for each metric that the device supports
+        entities_created_for_device = 0
         for description in MT_SENSOR_DESCRIPTIONS.values():
-            if description.key in available_metrics:
+            if should_create_entity(device, description.key, coordinator.data):
                 entities.append(
                     MerakiMTSensor(
                         coordinator,
@@ -249,31 +191,40 @@ async def _setup_mt_sensors(
                         network_hub,
                     )
                 )
+                entities_created_for_device += 1
                 _LOGGER.debug(
                     "Created %s sensor for device %s", description.key, device_serial
                 )
 
         # Create energy sensors for power-monitoring devices
-        if any(power_metric in available_metrics for power_metric in MT_POWER_SENSORS):
-            for description in MT_ENERGY_SENSOR_DESCRIPTIONS.values():
-                # Only create energy sensor if this device has the corresponding power sensor
-                power_sensor_key = description.key.replace("_energy", "")
-                if power_sensor_key in available_metrics:
-                    entities.append(
-                        MerakiMTEnergySensor(
-                            coordinator,
-                            device,
-                            description,
-                            config_entry.entry_id,
-                            network_hub,
-                            power_sensor_key,
-                        )
+        # Check if the device has any power sensors that can be used for energy calculation
+        for description in MT_ENERGY_SENSOR_DESCRIPTIONS.values():
+            # Extract the base power sensor key from the energy sensor key
+            power_sensor_key = description.key.replace("_energy", "")
+            if should_create_entity(device, power_sensor_key, coordinator.data):
+                entities.append(
+                    MerakiMTEnergySensor(
+                        coordinator,
+                        device,
+                        description,
+                        config_entry.entry_id,
+                        network_hub,
+                        power_sensor_key,
                     )
-                    _LOGGER.debug(
-                        "Created %s energy sensor for device %s",
-                        description.key,
-                        device_serial,
-                    )
+                )
+                entities_created_for_device += 1
+                _LOGGER.debug(
+                    "Created %s energy sensor for device %s",
+                    description.key,
+                    device_serial,
+                )
+
+        if entities_created_for_device == 0:
+            _LOGGER.debug(
+                "No sensors created for device %s (model: %s) - no supported metrics found",
+                device_serial,
+                device.get("model", "Unknown"),
+            )
 
     _LOGGER.debug("Created MT sensors for %d devices", len(network_hub.devices))
 

@@ -26,6 +26,7 @@ from ..events import MerakiEventHandler
 from ..utils import (
     cache_api_response,
     get_cached_api_response,
+    get_device_display_name,
     performance_monitor,
     sanitize_device_attributes,
 )
@@ -385,7 +386,7 @@ class MerakiNetworkHub:
 
                     device_info = {
                         "serial": device_serial,
-                        "name": device.get("name", device_serial),
+                        "name": get_device_display_name(device),
                         "model": device.get("model"),
                         "clientCount": 0,
                         "channelUtilization24": 0,
@@ -514,7 +515,10 @@ class MerakiNetworkHub:
                         traffic_start_time = traffic_end_time - timedelta(hours=1)
 
                         # Create a wrapper function to handle the parameters correctly
-                        def get_wireless_usage_history(start_time: str, end_time: str):
+                        # Note: API requires either device serial or client specification
+                        def get_wireless_usage_history(
+                            start_time: str, end_time: str, serial: str
+                        ):
                             if self.dashboard is None:
                                 return None
                             return (
@@ -524,6 +528,7 @@ class MerakiNetworkHub:
                                     t1=end_time,
                                     resolution=3600,  # 1 hour resolution
                                     perPage=1000,
+                                    deviceSerial=serial,  # Specify device serial
                                 )
                             )
 
@@ -531,6 +536,7 @@ class MerakiNetworkHub:
                             get_wireless_usage_history,
                             traffic_start_time.isoformat(),
                             traffic_end_time.isoformat(),
+                            device_serial,
                         )
                         self.organization_hub.total_api_calls += 1
 
@@ -540,9 +546,8 @@ class MerakiNetworkHub:
 
                         if traffic_analysis and isinstance(traffic_analysis, list):
                             for entry in traffic_analysis:
-                                if entry.get("serial") == device_serial:
-                                    total_sent += entry.get("sent", 0)
-                                    total_recv += entry.get("received", 0)
+                                total_sent += entry.get("sent", 0)
+                                total_recv += entry.get("received", 0)
 
                         device_info["trafficSent"] = total_sent
                         device_info["trafficRecv"] = total_recv
@@ -636,7 +641,7 @@ class MerakiNetworkHub:
                     if not device_serial:
                         continue
 
-                    device_name = device.get("name", device_serial)
+                    device_name = get_device_display_name(device)
 
                     # Get port status
                     try:
@@ -682,20 +687,30 @@ class MerakiNetworkHub:
                         )
 
                     # Get power module status (for PoE switches)
+                    # Note: This method may not exist for all switch models or SDK versions
                     try:
-                        power_status = await self.hass.async_add_executor_job(
-                            self.dashboard.switch.getDeviceSwitchPowerModulesStatuses,
-                            device_serial,
-                        )
-                        self.organization_hub.total_api_calls += 1
+                        # Check if the method exists before calling it
+                        if hasattr(
+                            self.dashboard.switch, "getDeviceSwitchPowerModulesStatuses"
+                        ):
+                            power_status = await self.hass.async_add_executor_job(
+                                self.dashboard.switch.getDeviceSwitchPowerModulesStatuses,
+                                device_serial,
+                            )
+                            self.organization_hub.total_api_calls += 1
 
-                        if power_status:
-                            power_info = {
-                                "device_serial": device_serial,
-                                "device_name": device_name,
-                                "power_status": power_status,
-                            }
-                            all_power_modules.append(power_info)
+                            if power_status:
+                                power_info = {
+                                    "device_serial": device_serial,
+                                    "device_name": device_name,
+                                    "power_status": power_status,
+                                }
+                                all_power_modules.append(power_info)
+                        else:
+                            _LOGGER.debug(
+                                "Power module status method not available for switch %s",
+                                device_serial,
+                            )
 
                     except Exception as power_err:
                         _LOGGER.debug(

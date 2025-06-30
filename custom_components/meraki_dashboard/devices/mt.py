@@ -52,7 +52,7 @@ from ..const import (
     MT_SENSOR_VOLTAGE,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils import sanitize_device_name
+from ..utils import get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -215,7 +215,7 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial", "")
-        device_name = sanitize_device_name(self._device.get("name", device_serial))
+        device_name = get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         device_info = DeviceInfo(
@@ -468,7 +468,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial", "")
-        device_name = sanitize_device_name(self._device.get("name", device_serial))
+        device_name = get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         return DeviceInfo(

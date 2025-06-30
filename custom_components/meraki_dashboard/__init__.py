@@ -185,9 +185,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Performance: %d API calls (%.2fms avg), %d errors",
             len(network_hubs),
             coordinator_count,
-            perf_metrics["api_calls"],
-            perf_metrics["avg_duration"],
-            perf_metrics["api_errors"],
+            perf_metrics["total_api_calls"],
+            perf_metrics["average_duration"],
+            perf_metrics["total_api_errors"],
         )
 
         return True

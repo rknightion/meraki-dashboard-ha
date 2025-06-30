@@ -41,7 +41,7 @@ from ..const import (
     MR_SENSOR_TRAFFIC_SENT,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils import sanitize_device_name
+from ..utils import get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial")
-        device_name = sanitize_device_name(self._device.get("name", device_serial))
+        device_name = get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         device_info = DeviceInfo(
