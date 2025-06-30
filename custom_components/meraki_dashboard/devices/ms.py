@@ -218,12 +218,14 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         coordinator: MerakiSensorCoordinator,
         description: SensorEntityDescription,
         config_entry_id: str,
+        network_hub: Any,
     ) -> None:
         """Initialize the MS device sensor."""
         super().__init__(coordinator)
         self._device = device
         self.entity_description = description
         self._config_entry_id = config_entry_id
+        self._network_hub = network_hub
         self._device_serial = device["serial"]
 
         # Set unique ID
@@ -244,10 +246,10 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             manufacturer="Cisco Meraki",
             model=device_model,
             serial_number=device_serial,
-            configuration_url=f"{self.coordinator.network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
+            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
             via_device=(
                 DOMAIN,
-                f"{self._config_entry_id}_{self.coordinator.network_hub.hub_name}",
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
             ),
         )
 
@@ -316,6 +318,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     port
                     for port in device_ports
                     if port.get("powerUsageInWh") is not None
+                    and port.get("powerUsageInWh") > 0
                 ]
             )
         elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION_SENT:
@@ -363,7 +366,19 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             )
             return total_kb * 1024  # Convert KB to bytes
         elif self.entity_description.key == MS_SENSOR_POE_POWER:
-            # Sum PoE power usage across device ports
+            # Fallback: Convert energy (Wh) to estimated power (W) if that's what API provides
+            # Note: powerUsageInWh might actually be instantaneous power despite the name
+            total_power = sum(
+                [
+                    port.get("powerUsageInWh", 0)
+                    for port in device_ports
+                    if port.get("powerUsageInWh") is not None
+                ]
+            )
+            # The API field name suggests Wh but might actually be W - use as-is for now
+            return total_power
+        elif self.entity_description.key == MS_SENSOR_POE_DRAW:
+            # Same fallback as PoE power
             total_power = sum(
                 [
                     port.get("powerUsageInWh", 0)
@@ -372,6 +387,21 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 ]
             )
             return total_power
+        elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
+            # Try to get from power module data if available
+            power_modules = self.coordinator.data.get("power_modules", [])
+            device_power = next(
+                (
+                    pm
+                    for pm in power_modules
+                    if pm.get("device_serial") == self._device_serial
+                ),
+                None,
+            )
+            if device_power:
+                power_status = device_power.get("power_status", {})
+                return power_status.get("powerLimit", 0)
+            return 0
         elif self.entity_description.key == MS_SENSOR_CONNECTED_CLIENTS:
             # Sum clients across device ports
             total_clients = sum(
@@ -495,7 +525,10 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         # Set device info to the network hub device
         self._attr_device_info = DeviceInfo(
             identifiers={
-                (DOMAIN, f"{config_entry_id}_{coordinator.network_hub.hub_name}")
+                (
+                    DOMAIN,
+                    f"{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}",
+                )
             },
         )
 
@@ -547,7 +580,7 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                 ]
             )
         elif self.entity_description.key == f"network_{MS_SENSOR_POE_POWER}":
-            # Sum PoE power usage across all ports
+            # Fallback: Sum power across all ports (might be Wh or W depending on API)
             total_power = sum(
                 [
                     port.get("powerUsageInWh", 0)

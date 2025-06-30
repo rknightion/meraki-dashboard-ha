@@ -227,7 +227,7 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
             configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
             via_device=(
                 DOMAIN,
-                f"{self._config_entry_id}_{self._network_hub.hub_name}",
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
             ),
         )
 
@@ -480,7 +480,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
             configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
             via_device=(
                 DOMAIN,
-                f"{self._config_entry_id}_{self._network_hub.hub_name}",
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
             ),
         )
 

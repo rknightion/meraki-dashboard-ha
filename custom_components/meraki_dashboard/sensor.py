@@ -271,7 +271,11 @@ async def _setup_mr_sensors(
             if should_create_entity(device, description.key, coordinator.data):
                 entities.append(
                     MerakiMRDeviceSensor(
-                        device, coordinator, description, config_entry.entry_id
+                        device,
+                        coordinator,
+                        description,
+                        config_entry.entry_id,
+                        network_hub,
                     )
                 )
                 entities_created += 1
@@ -328,7 +332,11 @@ async def _setup_ms_sensors(
             if should_create_entity(device, description.key, coordinator.data):
                 entities.append(
                     MerakiMSDeviceSensor(
-                        device, coordinator, description, config_entry.entry_id
+                        device,
+                        coordinator,
+                        description,
+                        config_entry.entry_id,
+                        network_hub,
                     )
                 )
                 entities_created += 1

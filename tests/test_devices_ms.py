@@ -107,7 +107,7 @@ class TestMerakiMSSensors:
         """Test creating MS device sensors."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         assert sensor.coordinator is mock_ms_coordinator
@@ -129,7 +129,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor native value."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Should return connected port count from mock data
@@ -163,7 +163,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor device info."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         device_info = sensor.device_info
@@ -238,7 +238,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor unique ID generation."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         unique_id = sensor.unique_id
@@ -278,7 +278,7 @@ class TestMerakiMSSensors:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # When device is not found in devices_info, it falls back to ports_status data
@@ -303,7 +303,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor extra state attributes."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         attrs = sensor.extra_state_attributes
@@ -320,7 +320,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor MAC connection in device info."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         device_info = sensor.device_info
@@ -341,7 +341,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor name generation."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         assert sensor.name is not None
@@ -363,7 +363,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor entity registry enabled default."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Should be enabled by default
@@ -390,7 +390,7 @@ class TestMerakiMSSensors:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         assert sensor.available is False
@@ -426,7 +426,7 @@ class TestMerakiMSSensors:
         """Test MS device sensor with ports_status data structure."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Should handle ports_status data structure
@@ -450,7 +450,7 @@ class TestMerakiMSSensors:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Should prioritize devices_info data
@@ -493,7 +493,7 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         assert sensor.native_value is None
@@ -517,7 +517,7 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Should prioritize devices_info data
@@ -539,7 +539,7 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         assert sensor.native_value is None
@@ -596,7 +596,7 @@ class TestMerakiMSEdgeCases:
         """Test MS device sensor PoE power calculation."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_POWER]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Fix: Should return PoE power from devices_info in mock data (poe_power_draw: 25.3)
@@ -608,7 +608,7 @@ class TestMerakiMSEdgeCases:
         """Test MS sensor precision and value formatting."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_POWER]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Check that precision is properly set
@@ -652,7 +652,7 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id"
+            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
         )
 
         # Fix: Should count connected ports (enabled=True and status="Connected")

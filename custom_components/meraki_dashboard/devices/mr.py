@@ -216,12 +216,14 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         coordinator: MerakiSensorCoordinator,
         description: SensorEntityDescription,
         config_entry_id: str,
+        network_hub: Any,
     ) -> None:
         """Initialize the MR device sensor."""
         super().__init__(coordinator)
         self._device = device
         self.entity_description = description
         self._config_entry_id = config_entry_id
+        self._network_hub = network_hub
         self._device_serial = device["serial"]
 
         # Set unique ID
@@ -242,10 +244,10 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             manufacturer="Cisco Meraki",
             model=device_model,
             serial_number=device_serial,
-            configuration_url=f"{self.coordinator.network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
+            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
             via_device=(
                 DOMAIN,
-                f"{self._config_entry_id}_{self.coordinator.network_hub.hub_name}",
+                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
             ),
         )
 
