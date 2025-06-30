@@ -490,29 +490,29 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
     elif device_type == "MR":
         # All MR devices support these wireless metrics
         return {
-            "ssid_count",
-            "enabled_ssids",
-            "open_ssids",
-            "client_count",
-            "channel_utilization_2_4",
-            "channel_utilization_5",
-            "data_rate_2_4",
-            "data_rate_5",
-            "rf_power",
-            "traffic_sent",
-            "traffic_recv",
+            "ssidCount",
+            "enabledSsids",
+            "openSsids",
+            "clientCount",
+            "channelUtilization24",
+            "channelUtilization5",
+            "dataRate24",
+            "dataRate5",
+            "rfPower",
+            "trafficSent",
+            "trafficRecv",
         }
 
     elif device_type == "MS":
         # All MS devices support these switch metrics
         base_capabilities = {
-            "port_count",
-            "connected_ports",
-            "port_traffic_sent",
-            "port_traffic_recv",
-            "port_errors",
-            "port_discards",
-            "connected_clients",
+            "portCount",
+            "connectedPorts",
+            "portTrafficSent",
+            "portTrafficRecv",
+            "portErrors",
+            "portDiscards",
+            "connectedClients",
         }
 
         # Add PoE capabilities for PoE-enabled switches
@@ -520,9 +520,7 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             poe_model in device_model
             for poe_model in ["MS120", "MS125", "MS210", "MS225", "MS250"]
         ):
-            base_capabilities.update(
-                {"poe_power", "poe_ports", "poe_draw", "poe_limit"}
-            )
+            base_capabilities.update({"poePower", "poePorts", "poeDraw", "poeLimit"})
 
         return base_capabilities
 

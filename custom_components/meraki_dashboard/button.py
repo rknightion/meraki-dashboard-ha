@@ -69,7 +69,7 @@ class MerakiUpdateSensorDataButton(ButtonEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry.entry_id}_organization")},
+            identifiers={(DOMAIN, f"{org_hub.organization_id}_org")},
         )
 
     async def async_press(self) -> None:
@@ -134,7 +134,7 @@ class MerakiDiscoverDevicesButton(ButtonEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry.entry_id}_organization")},
+            identifiers={(DOMAIN, f"{org_hub.organization_id}_org")},
         )
 
     async def async_press(self) -> None:

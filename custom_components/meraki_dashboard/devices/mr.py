@@ -381,7 +381,10 @@ class MerakiMRSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         # Set device info to the network hub device
         self._attr_device_info = DeviceInfo(
             identifiers={
-                (DOMAIN, f"{config_entry_id}_{coordinator.network_hub.hub_name}")
+                (
+                    DOMAIN,
+                    f"{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}",
+                )
             },
         )
 

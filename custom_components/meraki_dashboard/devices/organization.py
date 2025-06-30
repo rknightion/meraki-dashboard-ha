@@ -103,7 +103,7 @@ class MerakiHubApiCallsSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property
@@ -176,7 +176,7 @@ class MerakiHubFailedApiCallsSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property
@@ -219,7 +219,7 @@ class MerakiHubDeviceCountSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property
@@ -271,7 +271,7 @@ class MerakiHubNetworkCountSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property
@@ -326,7 +326,9 @@ class MerakiNetworkHubDeviceCountSensor(SensorEntity):
 
         # Set device info to the network hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_{network_hub.hub_name}")},
+            identifiers={
+                (DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")
+            },
         )
 
     @property
@@ -380,7 +382,7 @@ class MerakiHubOfflineDevicesSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property
@@ -485,7 +487,7 @@ class MerakiHubAlertsSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property
@@ -548,7 +550,7 @@ class MerakiHubLicenseExpiringSensor(SensorEntity):
 
         # Set device info to the organization hub device
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{config_entry_id}_organization")},
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
         )
 
     @property

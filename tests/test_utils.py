@@ -704,17 +704,17 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MR33", "MR")
 
         expected_capabilities = {
-            "ssid_count",
-            "enabled_ssids",
-            "open_ssids",
-            "client_count",
-            "channel_utilization_2_4",
-            "channel_utilization_5",
-            "data_rate_2_4",
-            "data_rate_5",
-            "rf_power",
-            "traffic_sent",
-            "traffic_recv",
+            "ssidCount",
+            "enabledSsids",
+            "openSsids",
+            "clientCount",
+            "channelUtilization24",
+            "channelUtilization5",
+            "dataRate24",
+            "dataRate5",
+            "rfPower",
+            "trafficSent",
+            "trafficRecv",
         }
         assert capabilities == expected_capabilities
 
@@ -723,13 +723,13 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MS220-8", "MS")
 
         expected_capabilities = {
-            "port_count",
-            "connected_ports",
-            "port_traffic_sent",
-            "port_traffic_recv",
-            "port_errors",
-            "port_discards",
-            "connected_clients",
+            "portCount",
+            "connectedPorts",
+            "portTrafficSent",
+            "portTrafficRecv",
+            "portErrors",
+            "portDiscards",
+            "connectedClients",
         }
         assert capabilities == expected_capabilities
 
@@ -738,17 +738,17 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MS225-24", "MS")
 
         expected_capabilities = {
-            "port_count",
-            "connected_ports",
-            "port_traffic_sent",
-            "port_traffic_recv",
-            "port_errors",
-            "port_discards",
-            "connected_clients",
-            "poe_power",
-            "poe_ports",
-            "poe_draw",
-            "poe_limit",
+            "portCount",
+            "connectedPorts",
+            "portTrafficSent",
+            "portTrafficRecv",
+            "portErrors",
+            "portDiscards",
+            "connectedClients",
+            "poePower",
+            "poePorts",
+            "poeDraw",
+            "poeLimit",
         }
         assert capabilities == expected_capabilities
 
