@@ -50,21 +50,21 @@ SENSOR_TYPE_MV: Final = "MV"  # Cameras (future)
 # Per-device-type scan interval defaults (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS: Final = {
     SENSOR_TYPE_MT: 60,  # 1 minute for MT sensors
-    SENSOR_TYPE_MR: 300,  # 5 minutes for wireless
-    SENSOR_TYPE_MS: 300,  # 5 minutes for switches
+    SENSOR_TYPE_MR: 60,  # 1 minute for wireless
+    SENSOR_TYPE_MS: 60,  # 1 minute for switches
     SENSOR_TYPE_MV: 300,  # 5 minutes for cameras
 }
 
 # Default scan intervals for UI (in minutes)
 DEFAULT_SCAN_INTERVAL_MINUTES: Final = {
     SENSOR_TYPE_MT: 1,  # 1 minute for MT sensors
-    SENSOR_TYPE_MR: 5,  # 5 minutes for wireless
-    SENSOR_TYPE_MS: 5,  # 5 minutes for switches
+    SENSOR_TYPE_MR: 1,  # 1 minute for wireless
+    SENSOR_TYPE_MS: 1,  # 1 minute for switches
     SENSOR_TYPE_MV: 5,  # 5 minutes for cameras
 }
 
 # Discovery interval defaults
-DEFAULT_DISCOVERY_INTERVAL_MINUTES: Final = 60  # 1 hour for all device types
+DEFAULT_DISCOVERY_INTERVAL_MINUTES: Final = 5  # 5 minutes for all device types
 MIN_SCAN_INTERVAL_MINUTES: Final = 1  # 1 minute minimum
 MIN_DISCOVERY_INTERVAL_MINUTES: Final = 5  # 5 minutes minimum
 
@@ -218,8 +218,8 @@ SEMI_STATIC_DATA_REFRESH_INTERVAL: Final = 1800  # 30 minutes
 SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 30  # 30 minutes
 
 # Dynamic data that changes frequently
-DYNAMIC_DATA_REFRESH_INTERVAL: Final = 300  # 5 minutes
-DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 5  # 5 minutes
+DYNAMIC_DATA_REFRESH_INTERVAL: Final = 60  # 1 minute
+DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 1  # 1 minute
 
 # Data type classifications
 STATIC_DATA_TYPES: Final = [
