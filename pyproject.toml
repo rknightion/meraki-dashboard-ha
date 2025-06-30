@@ -33,8 +33,12 @@ package-mode = false
 python = ">=3.13.2,<3.14"
 
 [tool.poetry.group.dev.dependencies]
+homeassistant = "2025.6.1"
 homeassistant-stubs = "2025.6.1"
 pytest-homeassistant-custom-component = "0.13.252"
+pytest = "^8.0.0"
+pytest-asyncio = "^0.26.0"
+pytest-cov = "^6.0.0"
 ruff = "^0.12.1"
 mypy = "*"
 pre-commit = "^4.2.0"
@@ -77,6 +81,7 @@ warn_unreachable = false
 testpaths = ["tests"]
 norecursedirs = [".git", ".tox", "dist", "build", "*.egg", "venv"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 addopts = [
     "--strict-markers",
     "--strict-config",
@@ -120,7 +125,7 @@ exclude_dirs = ["tests", "scripts"]
 skips = ["B101", "B601"]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 88
 
 [tool.ruff.lint]

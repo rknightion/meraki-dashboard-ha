@@ -631,7 +631,6 @@ class MerakiOrganizationHub:
         try:
             # Get organization alerts (last 24 hours)
             end_time = datetime.now(UTC)
-            start_time = end_time - timedelta(hours=24)
 
             # Fetch alerts
             try:
@@ -663,7 +662,6 @@ class MerakiOrganizationHub:
                         def get_network_events(net_id=network_hub.network_id):
                             return self.dashboard.networks.getNetworkEvents(
                                 net_id,
-                                startingAfter=start_time.isoformat(),
                                 endingBefore=end_time.isoformat(),
                                 perPage=50,  # Limit per network to avoid too many events
                             )

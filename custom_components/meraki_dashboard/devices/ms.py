@@ -278,7 +278,14 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 return device_info.get("poe_power_draw", 0)
             elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION:
                 return device_info.get("port_utilization", 0)
-            # Add other metrics as needed
+            elif self.entity_description.key == MS_SENSOR_PORT_LINK_COUNT:
+                return device_info.get("port_link_count", 0)
+            elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
+                return device_info.get("poe_power_limit", 0)
+            elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
+                return device_info.get("port_errors", 0)
+            elif self.entity_description.key == MS_SENSOR_PORT_DISCARDS:
+                return device_info.get("port_discards", 0)
 
         # Fallback to port-level data if device info not available
         ports_status = self.coordinator.data.get("ports_status", [])
@@ -438,6 +445,27 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 ]
             )
             return total_clients
+        elif self.entity_description.key == MS_SENSOR_PORT_LINK_COUNT:
+            # Count ports that have a link (are connected)
+            return len(
+                [port for port in device_ports if port.get("status") == "Connected"]
+            )
+        elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION:
+            # Calculate overall port utilization as average of all ports
+            utilizations = []
+            for port in device_ports:
+                usage = port.get("usageInKb", {})
+                if usage and isinstance(usage, dict):
+                    sent = usage.get("sent", 0)
+                    recv = usage.get("recv", 0)
+                    # Calculate utilization as percentage (assuming 1Gbps ports)
+                    # Convert from Kb to percentage
+                    port_util = min(100.0, ((sent + recv) / 1000000) * 100)
+                    utilizations.append(port_util)
+
+            if utilizations:
+                return sum(utilizations) / len(utilizations)
+            return 0
 
         return None
 

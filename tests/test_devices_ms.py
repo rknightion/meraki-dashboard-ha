@@ -109,7 +109,11 @@ class TestMerakiMSSensors:
         """Test creating MS device sensors."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         assert sensor.coordinator is mock_ms_coordinator
@@ -131,7 +135,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor native value."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should return connected port count from mock data
@@ -165,7 +173,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor device info."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         device_info = sensor.device_info
@@ -240,7 +252,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor unique ID generation."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         unique_id = sensor.unique_id
@@ -280,7 +296,11 @@ class TestMerakiMSSensors:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # When device is not found in devices_info, it falls back to ports_status data
@@ -305,7 +325,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor extra state attributes."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         attrs = sensor.extra_state_attributes
@@ -322,7 +346,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor MAC connection in device info."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         device_info = sensor.device_info
@@ -343,7 +371,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor name generation."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         assert sensor.name is not None
@@ -365,7 +397,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor entity registry enabled default."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should be enabled by default
@@ -392,7 +428,11 @@ class TestMerakiMSSensors:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         assert sensor.available is False
@@ -428,7 +468,11 @@ class TestMerakiMSSensors:
         """Test MS device sensor with ports_status data structure."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should handle ports_status data structure
@@ -452,7 +496,11 @@ class TestMerakiMSSensors:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should prioritize devices_info data
@@ -495,7 +543,11 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         assert sensor.native_value is None
@@ -519,7 +571,11 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should prioritize devices_info data
@@ -541,7 +597,11 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         assert sensor.native_value is None
@@ -603,31 +663,31 @@ class TestMerakiMSEdgeCases:
                     "device_serial": mock_ms_device["serial"],
                     "portId": "1",
                     "errors": [1, 2, 3],  # List of errors
-                    "discards": [0, 1],   # List of discards
+                    "discards": [0, 1],  # List of discards
                 },
                 {
                     "device_serial": mock_ms_device["serial"],
                     "portId": "2",
-                    "errors": 5,          # Integer (normal case)
-                    "discards": 2,        # Integer (normal case)
+                    "errors": 5,  # Integer (normal case)
+                    "discards": 2,  # Integer (normal case)
                 },
                 {
                     "device_serial": mock_ms_device["serial"],
                     "portId": "3",
-                    "errors": [],         # Empty list
-                    "discards": [],       # Empty list
+                    "errors": [],  # Empty list
+                    "discards": [],  # Empty list
                 },
                 {
                     "device_serial": mock_ms_device["serial"],
                     "portId": "4",
                     "errors": ["2", "3", "1"],  # List with strings (mixed types)
-                    "discards": ["1", "0"],     # List with strings (mixed types)
+                    "discards": ["1", "0"],  # List with strings (mixed types)
                 },
                 {
                     "device_serial": mock_ms_device["serial"],
                     "portId": "5",
-                    "errors": "7",        # String (edge case)
-                    "discards": "3",      # String (edge case)
+                    "errors": "7",  # String (edge case)
+                    "discards": "3",  # String (edge case)
                 },
             ]
         }
@@ -635,7 +695,11 @@ class TestMerakiMSEdgeCases:
         # Test port errors sensor
         errors_description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_ERRORS]
         errors_sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, errors_description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            errors_description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should sum: [1,2,3] + 5 + [] + ["2","3","1"] + "7" = 6 + 5 + 0 + 6 + 7 = 24
@@ -644,7 +708,11 @@ class TestMerakiMSEdgeCases:
         # Test port discards sensor
         discards_description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_DISCARDS]
         discards_sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, discards_description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            discards_description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Should sum: [0,1] + 2 + [] + ["1","0"] + "3" = 1 + 2 + 0 + 1 + 3 = 7
@@ -656,7 +724,11 @@ class TestMerakiMSEdgeCases:
         """Test MS device sensor PoE power calculation."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_POWER]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Fix: Should return PoE power from devices_info in mock data (poe_power_draw: 25.3)
@@ -668,7 +740,11 @@ class TestMerakiMSEdgeCases:
         """Test MS sensor precision and value formatting."""
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_POWER]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Check that precision is properly set
@@ -712,7 +788,11 @@ class TestMerakiMSEdgeCases:
 
         description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_CONNECTED_PORTS]
         sensor = MerakiMSDeviceSensor(
-            mock_ms_device, mock_ms_coordinator, description, "test_entry_id", mock_ms_coordinator.network_hub
+            mock_ms_device,
+            mock_ms_coordinator,
+            description,
+            "test_entry_id",
+            mock_ms_coordinator.network_hub,
         )
 
         # Fix: Should count connected ports (enabled=True and status="Connected")

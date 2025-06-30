@@ -121,6 +121,17 @@ jobs:
         run: poetry install --no-interaction
 
       - name: Run tests with coverage
+        env:
+          # Disable Home Assistant analytics and other optional features that might cause issues in CI
+          PYTHONPATH: ${{ github.workspace }}
+          # Ensure UTF-8 encoding for tests
+          PYTHONIOENCODING: utf-8
+          # Set timezone to avoid any timezone-related test issues
+          TZ: UTC
+          # Disable Home Assistant analytics
+          HA_DISABLE_ANALYTICS: true
+          # Set Home Assistant configuration directory
+          HOMEASSISTANT_CONFIG_DIR: /tmp/homeassistant
         run: |
           poetry run python -m pytest tests/ \
             --cov=custom_components.meraki_dashboard \

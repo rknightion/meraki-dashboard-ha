@@ -568,6 +568,8 @@ class MerakiNetworkHub:
 
                         if clients and isinstance(clients, list):
                             device_info["clientCount"] = len(clients)
+                        else:
+                            device_info["clientCount"] = 0
 
                         # Get connection stats separately if available
                         try:
@@ -601,34 +603,42 @@ class MerakiNetworkHub:
 
                     except Exception as client_err:
                         _LOGGER.debug(
-                            "Could not get connection stats for %s: %s",
+                            "Could not get client count for %s: %s",
                             device_serial,
                             client_err,
                         )
 
-                    # Get traffic statistics from device status
+                    # Get traffic data - try device status first, then usage history
                     try:
-                        # Try to get traffic from device status first (more reliable)
+                        # Try to get traffic from device status first
+                        device_status = await self.hass.async_add_executor_job(
+                            self.dashboard.wireless.getDeviceWirelessStatus,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        traffic_found = False
                         if device_status:
                             # Look for traffic data in device status
-                            traffic_data = device_status.get("traffic", {})
-                            if traffic_data:
-                                device_info["trafficSent"] = traffic_data.get("sent", 0)
-                                device_info["trafficRecv"] = traffic_data.get(
-                                    "received", 0
-                                )
-                            else:
-                                # Fallback: Try to get from basic service sets
-                                total_sent = 0
-                                total_recv = 0
-                                for bss in device_status.get("basicServiceSets", []):
-                                    bss_traffic = bss.get("traffic", {})
-                                    total_sent += bss_traffic.get("sent", 0)
-                                    total_recv += bss_traffic.get("received", 0)
+                            basic_service_sets = device_status.get(
+                                "basicServiceSets", []
+                            )
+                            total_sent = 0
+                            total_recv = 0
+
+                            for bss in basic_service_sets:
+                                performance = bss.get("performance", {})
+                                if isinstance(performance, dict):
+                                    total_sent += performance.get("trafficSent", 0)
+                                    total_recv += performance.get("trafficReceived", 0)
+
+                            if total_sent > 0 or total_recv > 0:
                                 device_info["trafficSent"] = total_sent
                                 device_info["trafficRecv"] = total_recv
-                        else:
-                            # Final fallback: Get usage history if device status unavailable
+                                traffic_found = True
+
+                        if not traffic_found:
+                            # Fallback: Get usage history if device status unavailable
                             traffic_end_time = datetime.now(UTC)
                             traffic_start_time = traffic_end_time - timedelta(hours=1)
 
@@ -748,6 +758,7 @@ class MerakiNetworkHub:
             all_ports_status = []
             all_power_modules = []
             all_port_configs = []
+            devices_info = []  # Add device-level aggregated info
 
             for device in switch_devices:
                 try:
@@ -756,6 +767,21 @@ class MerakiNetworkHub:
                         continue
 
                     device_name = get_device_display_name(device)
+                    device_info = {
+                        "serial": device_serial,
+                        "name": device_name,
+                        "model": device.get("model"),
+                        "port_count": 0,
+                        "connected_ports": 0,
+                        "connected_clients": 0,
+                        "poe_ports": 0,
+                        "poe_power_draw": 0,
+                        "poe_power_limit": 0,
+                        "port_errors": 0,
+                        "port_discards": 0,
+                        "port_utilization": 0,
+                        "port_link_count": 0,
+                    }
 
                     # Get port status
                     try:
@@ -820,6 +846,16 @@ class MerakiNetworkHub:
                                     "power_status": power_status,
                                 }
                                 all_power_modules.append(power_info)
+
+                                # Extract PoE power limit for device info
+                                if isinstance(power_status, list) and power_status:
+                                    device_info["poe_power_limit"] = power_status[
+                                        0
+                                    ].get("powerLimit", 0)
+                                elif isinstance(power_status, dict):
+                                    device_info["poe_power_limit"] = power_status.get(
+                                        "powerLimit", 0
+                                    )
                         else:
                             _LOGGER.debug(
                                 "Power module status method not available for switch %s",
@@ -875,6 +911,62 @@ class MerakiNetworkHub:
                             stats_err,
                         )
 
+                    # Update device-level aggregated info from port data
+                    if ports_status:
+                        device_info["port_count"] = len(ports_status)
+                        device_info["connected_ports"] = sum(
+                            1
+                            for port in ports_status
+                            if port.get("enabled", False)
+                            and port.get("status") == "Connected"
+                        )
+                        device_info["connected_clients"] = sum(
+                            port.get("clientCount", 0) for port in ports_status
+                        )
+                        device_info["poe_ports"] = sum(
+                            1
+                            for port in ports_status
+                            if port.get("powerUsageInWh") is not None
+                            and port.get("powerUsageInWh") > 0
+                        )
+                        # Sum PoE power (API returns in deciwatts, convert to watts)
+                        device_info["poe_power_draw"] = (
+                            sum(
+                                port.get("powerUsageInWh", 0)
+                                for port in ports_status
+                                if port.get("powerUsageInWh") is not None
+                            )
+                            / 10
+                        )
+                        device_info["port_errors"] = sum(
+                            port.get("errors", 0) for port in ports_status
+                        )
+                        device_info["port_discards"] = sum(
+                            port.get("discards", 0) for port in ports_status
+                        )
+                        device_info["port_link_count"] = sum(
+                            1
+                            for port in ports_status
+                            if port.get("status") == "Connected"
+                        )
+
+                        # Calculate average port utilization
+                        utilizations = []
+                        for port in ports_status:
+                            usage = port.get("usageInKb", {})
+                            if usage and isinstance(usage, dict):
+                                sent = usage.get("sent", 0)
+                                recv = usage.get("recv", 0)
+                                # Convert from Kb to percentage (assuming 1Gbps ports)
+                                port_util = min(100.0, ((sent + recv) / 1000000) * 100)
+                                utilizations.append(port_util)
+
+                        device_info["port_utilization"] = (
+                            sum(utilizations) / len(utilizations) if utilizations else 0
+                        )
+
+                    devices_info.append(device_info)
+
                 except Exception as device_err:
                     _LOGGER.debug(
                         "Error getting switch info for device %s: %s",
@@ -885,6 +977,7 @@ class MerakiNetworkHub:
 
             self.switch_data = {
                 "devices": switch_devices,
+                "devices_info": devices_info,  # Add aggregated device info
                 "ports_status": all_ports_status,
                 "port_configs": all_port_configs,
                 "power_modules": all_power_modules,

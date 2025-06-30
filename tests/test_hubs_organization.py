@@ -449,9 +449,7 @@ class TestMerakiOrganizationHub:
                 "deviceSerial": "device1",
             }
         ]
-        mock_dashboard_api.networks.getNetworkEvents.return_value = (
-            mock_events
-        )
+        mock_dashboard_api.networks.getNetworkEvents.return_value = mock_events
 
         # Set up mock network hubs for the new implementation
         mock_network_hub = Mock()

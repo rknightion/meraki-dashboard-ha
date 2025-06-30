@@ -110,7 +110,11 @@ class TestMerakiMRSensors:
         """Test creating MR device sensors."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         assert sensor.coordinator is mock_mr_coordinator
@@ -131,7 +135,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor native value."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         # Should return client count from mock data
@@ -165,7 +173,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor device info."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         device_info = sensor.device_info
@@ -246,7 +258,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor unique ID generation."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         unique_id = sensor.unique_id
@@ -284,7 +300,11 @@ class TestMerakiMRSensors:
 
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         # With None value, the sensor should return 0 (the default fallback)
@@ -308,7 +328,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor extra state attributes."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         attrs = sensor.extra_state_attributes
@@ -324,7 +348,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor MAC connection in device info."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         device_info = sensor.device_info
@@ -345,7 +373,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor name generation."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         assert sensor.name is not None
@@ -367,7 +399,11 @@ class TestMerakiMRSensors:
         """Test MR device sensor entity registry enabled default."""
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         # Should be enabled by default
@@ -394,7 +430,11 @@ class TestMerakiMRSensors:
 
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         assert sensor.available is False
@@ -438,7 +478,11 @@ class TestMerakiMREdgeCases:
 
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
-            mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
+            mock_mr_device,
+            mock_mr_coordinator,
+            description,
+            "test_entry_id",
+            mock_mr_coordinator.network_hub,
         )
 
         # With None value, the sensor should return 0 (the default fallback)

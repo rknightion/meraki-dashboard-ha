@@ -716,9 +716,9 @@ class TestDeviceCapabilityFilter:
             "connectionFailures",
             "rfPower",
             "rfPower24",  # 2.4GHz band RF power
-            "rfPower5",   # 5GHz band RF power
+            "rfPower5",  # 5GHz band RF power
             "radioChannel24",  # 2.4GHz radio channel
-            "radioChannel5",   # 5GHz radio channel
+            "radioChannel5",  # 5GHz radio channel
             "trafficSent",
             "trafficRecv",
         }
