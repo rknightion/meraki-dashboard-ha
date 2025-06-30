@@ -31,3 +31,8 @@ alwaysApply: true
 3. Mock external API calls in tests
 4. Test both success and failure scenarios
 5. Run tests and linting before committing
+
+## Documentation
+1. Documentation should live inside the `docs/` folder as this is rendered to a github static site for docs
+2. Do not put any documentation into the repository root only into docs/ folder
+3. Prefer updating existing documentation rather than adding new docs files

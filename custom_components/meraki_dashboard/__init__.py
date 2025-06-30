@@ -22,6 +22,7 @@ from .const import (
 )
 from .coordinator import MerakiSensorCoordinator
 from .hubs import MerakiOrganizationHub
+from .utils import get_performance_metrics, performance_monitor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ _setup_logging()
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 
+@performance_monitor("integration_setup")
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Meraki Dashboard from a config entry.
 
@@ -176,10 +178,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Set up platforms
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+        # Log performance metrics for debugging
+        perf_metrics = get_performance_metrics()
         _LOGGER.info(
-            "Successfully set up Meraki Dashboard integration with %d network hubs and %d coordinators",
+            "Successfully set up Meraki Dashboard integration with %d network hubs and %d coordinators. "
+            "Performance: %d API calls (%.2fms avg), %d errors",
             len(network_hubs),
             coordinator_count,
+            perf_metrics["api_calls"],
+            perf_metrics["avg_duration"],
+            perf_metrics["api_errors"],
         )
 
         return True

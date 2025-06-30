@@ -248,8 +248,11 @@ class TestMerakiMTEnergySensor:
         )
 
         device_info = energy_sensor.device_info
-        assert device_info["identifiers"] == {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        assert device_info["identifiers"] == {(DOMAIN, "test_entry_Q2XX-XXXX-XXXX")}
         assert device_info["name"] == "Conference Room Sensor"
+        assert device_info["manufacturer"] == "Cisco Meraki"
+        assert device_info["model"] == "MT11"
+        assert device_info["serial_number"] == "Q2XX-XXXX-XXXX"
 
     def test_energy_sensor_native_value_no_power_readings(
         self, mock_coordinator, mock_device_info, mock_network_hub
@@ -1113,7 +1116,7 @@ class TestSensorDeviceInfo:
 
         device_info = sensor.device_info
 
-        assert device_info["identifiers"] == {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        assert device_info["identifiers"] == {(DOMAIN, "test_entry_Q2XX-XXXX-XXXX")}
         assert device_info["name"] == "Conference Room Sensor"
         assert device_info["manufacturer"] == "Cisco Meraki"
         assert device_info["model"] == "MT11"

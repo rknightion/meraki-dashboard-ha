@@ -219,7 +219,7 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         device_model = self._device.get("model", "Unknown")
 
         device_info = DeviceInfo(
-            identifiers={(DOMAIN, device_serial)},
+            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
             name=device_name,
             manufacturer="Cisco Meraki",
             model=device_model,
@@ -472,7 +472,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         device_model = self._device.get("model", "Unknown")
 
         return DeviceInfo(
-            identifiers={(DOMAIN, device_serial)},
+            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
             name=device_name,
             manufacturer="Cisco Meraki",
             model=device_model,

@@ -23,7 +23,12 @@ from ..const import (
     SENSOR_TYPE_MT,
 )
 from ..events import MerakiEventHandler
-from ..utils import sanitize_device_attributes
+from ..utils import (
+    cache_api_response,
+    get_cached_api_response,
+    performance_monitor,
+    sanitize_device_attributes,
+)
 
 if TYPE_CHECKING:
     from .organization import MerakiOrganizationHub
@@ -221,6 +226,7 @@ class MerakiNetworkHub:
 
         return True
 
+    @performance_monitor("device_discovery")
     async def _async_discover_devices(self, _now: datetime | None = None) -> None:
         """Discover devices of our type in this network."""
         # Check if discovery is needed to avoid redundant API calls
@@ -241,40 +247,55 @@ class MerakiNetworkHub:
                 self.network_name,
             )
 
-            # Get all devices in the network
-            api_start_time = self.hass.loop.time()
-            all_devices = await self.hass.async_add_executor_job(
-                self.dashboard.networks.getNetworkDevices, self.network_id
-            )
-            api_duration = self.hass.loop.time() - api_start_time
-            self.organization_hub.total_api_calls += 1
-            self.organization_hub._track_api_call_duration(api_duration)
+            # Check cache first for device discovery
+            cache_key = f"devices_{self.network_id}_{self.device_type}"
+            cached_devices = get_cached_api_response(cache_key)
 
-            # Filter devices by type
-            type_devices = [
-                device
-                for device in all_devices
-                if device.get("model", "").startswith(self.device_type)
-            ]
+            if cached_devices is not None:
+                _LOGGER.debug(
+                    "Using cached device list for %s (found %d devices)",
+                    self.hub_name,
+                    len(cached_devices),
+                )
+                processed_devices = cached_devices
+            else:
+                # Get all devices in the network
+                api_start_time = self.hass.loop.time()
+                all_devices = await self.hass.async_add_executor_job(
+                    self.dashboard.networks.getNetworkDevices, self.network_id
+                )
+                api_duration = self.hass.loop.time() - api_start_time
+                self.organization_hub.total_api_calls += 1
+                self.organization_hub._track_api_call_duration(api_duration)
 
-            # Apply device selection filter if configured
-            if self._selected_devices:
+                # Filter devices by type
                 type_devices = [
                     device
-                    for device in type_devices
-                    if device.get("serial") in self._selected_devices
+                    for device in all_devices
+                    if device.get("model", "").startswith(self.device_type)
                 ]
 
-            # Process and sanitize devices
-            processed_devices = []
-            for device in type_devices:
-                # Add network information
-                device["network_id"] = self.network_id
-                device["network_name"] = self.network_name
+                # Apply device selection filter if configured
+                if self._selected_devices:
+                    type_devices = [
+                        device
+                        for device in type_devices
+                        if device.get("serial") in self._selected_devices
+                    ]
 
-                # Sanitize device attributes
-                device = sanitize_device_attributes(device)
-                processed_devices.append(device)
+                # Process and sanitize devices
+                processed_devices = []
+                for device in type_devices:
+                    # Add network information
+                    device["network_id"] = self.network_id
+                    device["network_name"] = self.network_name
+
+                    # Sanitize device attributes
+                    device = sanitize_device_attributes(device)
+                    processed_devices.append(device)
+
+                # Cache the processed devices for 10 minutes
+                cache_api_response(cache_key, processed_devices, ttl_seconds=600)
 
             # Update device list
             previous_count = len(self.devices)
@@ -316,6 +337,7 @@ class MerakiNetworkHub:
         finally:
             self._discovery_in_progress = False
 
+    @performance_monitor("wireless_data_setup")
     async def _async_setup_wireless_data(self) -> None:
         """Set up wireless data for MR devices (SSIDs, device stats, radio settings, etc.)."""
         if self.device_type != SENSOR_TYPE_MR:
@@ -323,6 +345,18 @@ class MerakiNetworkHub:
 
         try:
             if self.dashboard is None:
+                return
+
+            # Check cache first for wireless data
+            cache_key = f"wireless_data_{self.network_id}"
+            cached_data = get_cached_api_response(cache_key)
+
+            if cached_data is not None:
+                _LOGGER.debug(
+                    "Using cached wireless data for network %s",
+                    self.network_name,
+                )
+                self.wireless_data = cached_data
                 return
 
             # Get wireless SSIDs for this network
@@ -407,20 +441,31 @@ class MerakiNetworkHub:
                         )
                         self.organization_hub.total_api_calls += 1
 
-                        device_info["radioSettings"] = radio_settings
+                        # Handle case where radio_settings might be a string or empty
+                        if radio_settings and isinstance(radio_settings, list):
+                            device_info["radioSettings"] = radio_settings
 
-                        # Extract RF power from radio settings
-                        for radio in radio_settings:
-                            band = radio.get("band")
-                            power = radio.get("txPower", 0)
-                            if band == "2.4":
-                                device_info["rfPower"] = max(
-                                    device_info["rfPower"], power
-                                )
-                            elif band == "5":
-                                device_info["rfPower"] = max(
-                                    device_info["rfPower"], power
-                                )
+                            # Extract RF power from radio settings
+                            for radio in radio_settings:
+                                if isinstance(radio, dict):
+                                    band = radio.get("band")
+                                    power = radio.get("txPower", 0)
+                                    if band == "2.4":
+                                        device_info["rf_power_2_4"] = power
+                                        device_info["rfPower"] = max(
+                                            device_info["rfPower"], power
+                                        )
+                                    elif band == "5":
+                                        device_info["rf_power_5"] = power
+                                        device_info["rfPower"] = max(
+                                            device_info["rfPower"], power
+                                        )
+                        else:
+                            _LOGGER.debug(
+                                "Radio settings for %s returned unexpected format: %s",
+                                device_serial,
+                                type(radio_settings),
+                            )
 
                     except Exception as radio_err:
                         _LOGGER.debug(
@@ -431,13 +476,22 @@ class MerakiNetworkHub:
 
                     # Get client count and connection statistics
                     try:
+                        # Get connection stats for the last hour with timespan parameter
+                        # Create a wrapper function to handle the parameters correctly
+                        def get_connection_stats(serial: str):
+                            if self.dashboard is None:
+                                return None
+                            return self.dashboard.wireless.getDeviceWirelessConnectionStats(
+                                serial,
+                                timespan=3600,  # 1 hour in seconds
+                            )
+
                         clients = await self.hass.async_add_executor_job(
-                            self.dashboard.wireless.getDeviceWirelessConnectionStats,
-                            device_serial,
+                            get_connection_stats, device_serial
                         )
                         self.organization_hub.total_api_calls += 1
 
-                        if clients:
+                        if clients and isinstance(clients, dict):
                             device_info["clientCount"] = len(clients.get("clients", []))
                             device_info["connectionSuccessRate"] = clients.get(
                                 "connectionSuccessRate", 0
@@ -456,20 +510,27 @@ class MerakiNetworkHub:
                     # Get traffic statistics
                     try:
                         # Get device traffic over the last hour
-                        from datetime import timedelta
+                        traffic_end_time = datetime.now(UTC)
+                        traffic_start_time = traffic_end_time - timedelta(hours=1)
 
-                        end_time = datetime.now(UTC)
-                        start_time = end_time - timedelta(hours=1)
+                        # Create a wrapper function to handle the parameters correctly
+                        def get_wireless_usage_history(start_time: str, end_time: str):
+                            if self.dashboard is None:
+                                return None
+                            return (
+                                self.dashboard.wireless.getNetworkWirelessUsageHistory(
+                                    self.network_id,
+                                    t0=start_time,
+                                    t1=end_time,
+                                    resolution=3600,  # 1 hour resolution
+                                    perPage=1000,
+                                )
+                            )
 
                         traffic_analysis = await self.hass.async_add_executor_job(
-                            self.dashboard.wireless.getNetworkWirelessUsageHistory,
-                            self.network_id,
-                            **{
-                                "t0": start_time.isoformat(),
-                                "t1": end_time.isoformat(),
-                                "resolution": 3600,  # 1 hour resolution
-                                "perPage": 1000,
-                            },
+                            get_wireless_usage_history,
+                            traffic_start_time.isoformat(),
+                            traffic_end_time.isoformat(),
                         )
                         self.organization_hub.total_api_calls += 1
 
@@ -477,10 +538,11 @@ class MerakiNetworkHub:
                         total_sent = 0
                         total_recv = 0
 
-                        for entry in traffic_analysis:
-                            if entry.get("serial") == device_serial:
-                                total_sent += entry.get("sent", 0)
-                                total_recv += entry.get("received", 0)
+                        if traffic_analysis and isinstance(traffic_analysis, list):
+                            for entry in traffic_analysis:
+                                if entry.get("serial") == device_serial:
+                                    total_sent += entry.get("sent", 0)
+                                    total_recv += entry.get("received", 0)
 
                         device_info["trafficSent"] = total_sent
                         device_info["trafficRecv"] = total_recv
@@ -510,6 +572,9 @@ class MerakiNetworkHub:
                 "last_updated": datetime.now(UTC).isoformat(),
             }
 
+            # Cache the wireless data for 5 minutes
+            cache_api_response(cache_key, self.wireless_data, ttl_seconds=300)
+
             _LOGGER.debug(
                 "Retrieved %d SSIDs and %d wireless devices for network %s",
                 len(ssids),
@@ -521,6 +586,7 @@ class MerakiNetworkHub:
             _LOGGER.error("Error getting wireless data for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
 
+    @performance_monitor("switch_data_setup")
     async def _async_setup_switch_data(self) -> None:
         """Set up switch data for MS devices (ports, status, power modules, configuration, etc.)."""
         if self.device_type != SENSOR_TYPE_MS:
@@ -528,6 +594,18 @@ class MerakiNetworkHub:
 
         try:
             if self.dashboard is None:
+                return
+
+            # Check cache first for switch data
+            cache_key = f"switch_data_{self.network_id}"
+            cached_data = get_cached_api_response(cache_key)
+
+            if cached_data is not None:
+                _LOGGER.debug(
+                    "Using cached switch data for network %s",
+                    self.network_name,
+                )
+                self.switch_data = cached_data
                 return
 
             # Get switch devices in this network
@@ -606,7 +684,7 @@ class MerakiNetworkHub:
                     # Get power module status (for PoE switches)
                     try:
                         power_status = await self.hass.async_add_executor_job(
-                            self.dashboard.switch.getDeviceSwitchPowerStatus,
+                            self.dashboard.switch.getDeviceSwitchPowerModulesStatuses,
                             device_serial,
                         )
                         self.organization_hub.total_api_calls += 1
@@ -628,42 +706,37 @@ class MerakiNetworkHub:
 
                     # Get port statistics for error/discard counters
                     try:
-                        for port_status in ports_status:
-                            port_id = port_status.get("portId")
-                            if port_id:
-                                port_stats = await self.hass.async_add_executor_job(
-                                    self.dashboard.switch.getDeviceSwitchPortStatuses,
-                                    device_serial,
-                                )
-                                self.organization_hub.total_api_calls += 1
+                        # Get port statistics once per device, not per port
+                        port_stats = await self.hass.async_add_executor_job(
+                            self.dashboard.switch.getDeviceSwitchPortsStatuses,
+                            device_serial,
+                        )
+                        self.organization_hub.total_api_calls += 1
 
-                                # Find matching port and add stats
-                                for stat_port in port_stats:
-                                    if stat_port.get("portId") == port_id:
-                                        # Find the corresponding port in all_ports_status and update it
-                                        for port in all_ports_status:
-                                            if (
-                                                port.get("device_serial")
-                                                == device_serial
-                                                and port.get("portId") == port_id
-                                            ):
-                                                port.update(
-                                                    {
-                                                        "packets_sent": stat_port.get(
-                                                            "packetsTotal", {}
-                                                        ).get("sent", 0),
-                                                        "packets_recv": stat_port.get(
-                                                            "packetsTotal", {}
-                                                        ).get("recv", 0),
-                                                        "errors": stat_port.get(
-                                                            "errors", 0
-                                                        ),
-                                                        "discards": stat_port.get(
-                                                            "discards", 0
-                                                        ),
-                                                    }
-                                                )
-                                                break
+                        # Update all ports for this device with statistics
+                        for stat_port in port_stats:
+                            stat_port_id = stat_port.get("portId")
+                            if stat_port_id:
+                                # Find the corresponding port in all_ports_status and update it
+                                for port in all_ports_status:
+                                    if (
+                                        port.get("device_serial") == device_serial
+                                        and port.get("portId") == stat_port_id
+                                    ):
+                                        port.update(
+                                            {
+                                                "packets_sent": stat_port.get(
+                                                    "packetsTotal", {}
+                                                ).get("sent", 0),
+                                                "packets_recv": stat_port.get(
+                                                    "packetsTotal", {}
+                                                ).get("recv", 0),
+                                                "errors": stat_port.get("errors", 0),
+                                                "discards": stat_port.get(
+                                                    "discards", 0
+                                                ),
+                                            }
+                                        )
                                         break
 
                     except Exception as stats_err:
@@ -691,6 +764,9 @@ class MerakiNetworkHub:
                 "last_updated": datetime.now(UTC).isoformat(),
             }
 
+            # Cache the switch data for 5 minutes
+            cache_api_response(cache_key, self.switch_data, ttl_seconds=300)
+
             _LOGGER.debug(
                 "Retrieved %d switch devices with %d ports, %d power modules for network %s",
                 len(switch_devices),
@@ -703,6 +779,7 @@ class MerakiNetworkHub:
             _LOGGER.error("Error getting switch data for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
 
+    @performance_monitor("sensor_data_fetch")
     async def async_get_sensor_data(self) -> dict[str, dict[str, Any]]:
         """Get sensor data for all devices in this hub (MT devices only).
 
@@ -724,7 +801,7 @@ class MerakiNetworkHub:
 
         try:
             _LOGGER.debug(
-                "Fetching sensor data for %d devices in %s: %s",
+                "Fetching fresh sensor data for %d devices in %s: %s",
                 len(serials),
                 self.hub_name,
                 serials,
@@ -741,7 +818,7 @@ class MerakiNetworkHub:
                     org_id, serials=device_serials
                 )
 
-            # Get sensor readings
+            # Get sensor readings - ALWAYS fresh, no caching for actual sensor data
             all_readings = await self.hass.async_add_executor_job(
                 get_sensor_readings_with_serials,
                 self.organization_id,
@@ -752,7 +829,7 @@ class MerakiNetworkHub:
 
             api_duration = round((self.hass.loop.time() - start_time) * 1000, 2)
             _LOGGER.debug(
-                "API call completed in %sms for %s, received %d readings",
+                "API call completed in %sms for %s, received %d fresh readings",
                 api_duration,
                 self.hub_name,
                 len(all_readings) if all_readings else 0,

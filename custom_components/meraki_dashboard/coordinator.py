@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
+from .utils import performance_monitor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Get the duration of the last update in seconds."""
         return self._last_update_duration
 
+    @performance_monitor("coordinator_update")
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Meraki Dashboard API.
 

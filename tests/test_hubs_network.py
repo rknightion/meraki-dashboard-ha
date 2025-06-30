@@ -53,6 +53,10 @@ def mock_config_entry():
 @pytest.fixture
 def network_hub(mock_organization_hub, mock_config_entry):
     """Create network hub fixture."""
+    # Clear API cache before each test to prevent interference
+    from custom_components.meraki_dashboard.utils import clear_api_cache
+    clear_api_cache()
+
     return MerakiNetworkHub(
         organization_hub=mock_organization_hub,
         network_id="test_network_id",
@@ -412,6 +416,10 @@ class TestMerakiNetworkHub:
     ):
         """Test wireless data setup with API error."""
         from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.utils import clear_api_cache
+
+        # Clear cache to ensure clean test state
+        clear_api_cache()
 
         hub = MerakiNetworkHub(
             organization_hub=mock_organization_hub,
@@ -477,6 +485,10 @@ class TestMerakiNetworkHub:
     ):
         """Test switch data setup with API error."""
         from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.utils import clear_api_cache
+
+        # Clear cache to ensure clean test state
+        clear_api_cache()
 
         hub = MerakiNetworkHub(
             organization_hub=mock_organization_hub,

@@ -27,7 +27,7 @@ from .const import (
     SENSOR_TYPE_MT,
 )
 from .coordinator import MerakiSensorCoordinator
-from .utils import sanitize_device_name
+from .utils import sanitize_device_name, should_create_entity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -112,24 +112,34 @@ async def async_setup_entry(
 
             _LOGGER.debug("Creating binary sensors for MT device: %s", device_serial)
 
-            # Create binary sensors for applicable metrics
+            # Create binary sensors for applicable metrics that the device supports
+            entities_created_for_device = 0
             for metric in MT_BINARY_SENSOR_METRICS:
                 if metric in MT_BINARY_SENSOR_DESCRIPTIONS:
-                    description = MT_BINARY_SENSOR_DESCRIPTIONS[metric]
-                    entities.append(
-                        MerakiMTBinarySensor(
-                            coordinator,
-                            device,
-                            description,
-                            config_entry.entry_id,
-                            network_hub,
+                    if should_create_entity(device, metric, coordinator.data):
+                        description = MT_BINARY_SENSOR_DESCRIPTIONS[metric]
+                        entities.append(
+                            MerakiMTBinarySensor(
+                                coordinator,
+                                device,
+                                description,
+                                config_entry.entry_id,
+                                network_hub,
+                            )
                         )
-                    )
-                    _LOGGER.debug(
-                        "Created %s binary sensor for device %s",
-                        metric,
-                        device_serial,
-                    )
+                        entities_created_for_device += 1
+                        _LOGGER.debug(
+                            "Created %s binary sensor for device %s",
+                            metric,
+                            device_serial,
+                        )
+
+            if entities_created_for_device == 0:
+                _LOGGER.debug(
+                    "No binary sensors created for device %s (model: %s) - no supported metrics found",
+                    device_serial,
+                    device.get("model", "Unknown"),
+                )
 
     _LOGGER.debug("Created %d binary sensor entities", len(entities))
     async_add_entities(entities, True)
