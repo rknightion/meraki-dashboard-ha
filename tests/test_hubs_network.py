@@ -55,6 +55,7 @@ def network_hub(mock_organization_hub, mock_config_entry):
     """Create network hub fixture."""
     # Clear API cache before each test to prevent interference
     from custom_components.meraki_dashboard.utils import clear_api_cache
+
     clear_api_cache()
 
     return MerakiNetworkHub(
@@ -416,6 +417,7 @@ class TestMerakiNetworkHub:
     ):
         """Test wireless data setup with API error."""
         from meraki.exceptions import APIError
+
         from custom_components.meraki_dashboard.utils import clear_api_cache
 
         # Clear cache to ensure clean test state
@@ -485,6 +487,7 @@ class TestMerakiNetworkHub:
     ):
         """Test switch data setup with API error."""
         from meraki.exceptions import APIError
+
         from custom_components.meraki_dashboard.utils import clear_api_cache
 
         # Clear cache to ensure clean test state
@@ -697,7 +700,7 @@ class TestNetworkHubEdgeCases:
             "async_add_executor_job",
             side_effect=lambda func, *args: mock_sensor_readings(*args),
         ):
-            result = await network_hub.async_get_sensor_data()
+            await network_hub.async_get_sensor_data()
 
         # Should call event handler
         network_hub.event_handler.track_sensor_data.assert_called_once()

@@ -1,9 +1,8 @@
 """Test utility functions for Meraki Dashboard integration."""
 
 import asyncio
-import time
-from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -132,7 +131,9 @@ class TestSanitizeDeviceNameForEntityId:
     def test_string_with_spaces(self):
         """Test sanitization of strings with spaces."""
         assert sanitize_device_name_for_entity_id("Test Device") == "test_device"
-        assert sanitize_device_name_for_entity_id("Multiple Spaces") == "multiple_spaces"
+        assert (
+            sanitize_device_name_for_entity_id("Multiple Spaces") == "multiple_spaces"
+        )
 
     def test_string_with_special_chars(self):
         """Test sanitization of strings with special characters."""
@@ -250,7 +251,7 @@ class TestSanitizeDeviceAttributes:
         # The sanitize_attribute_value function is applied to the entire tags list
         # so it becomes a string representation which may not be what we want
         # This test documents the current behavior
-        assert isinstance(result["tags"], (list, str))
+        assert isinstance(result["tags"], list | str)
 
     def test_device_with_empty_tags(self):
         """Test sanitization of device with empty tags."""
@@ -465,10 +466,14 @@ class TestApiCaching:
         test_data = {"key": "value"}
 
         # Cache with very short TTL and mock datetime to control expiration
-        with patch("custom_components.meraki_dashboard.utils.datetime") as mock_datetime:
+        with patch(
+            "custom_components.meraki_dashboard.utils.datetime"
+        ) as mock_datetime:
             # Set initial time
             mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
-            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
 
             cache_api_response("test_key", test_data, ttl_seconds=1)
 
@@ -503,10 +508,14 @@ class TestApiCaching:
     def test_cleanup_expired_cache(self):
         """Test cleanup of expired cache entries."""
         # Add data with different expiration times using datetime mocking
-        with patch("custom_components.meraki_dashboard.utils.datetime") as mock_datetime:
+        with patch(
+            "custom_components.meraki_dashboard.utils.datetime"
+        ) as mock_datetime:
             # Set initial time for caching
             mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
-            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
 
             cache_api_response("fresh_key", "fresh_value", ttl_seconds=300)
             cache_api_response("expired_key", "expired_value", ttl_seconds=1)
@@ -636,37 +645,37 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT11 devices."""
         capabilities = create_device_capability_filter("MT11", "MT")
 
-        expected_capabilities = {"temperature", "humidity"}
+        expected_capabilities = {
+            "temperature"
+        }  # MT11 is probe sensor - temperature only
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt12(self):
         """Test capability filter for MT12 devices."""
         capabilities = create_device_capability_filter("MT12", "MT")
 
-        expected_capabilities = {
-            "temperature", "humidity", "co2", "tvoc", "pm25", "indoor_air_quality"
-        }
+        expected_capabilities = {"water"}  # MT12 is water detection sensor only
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt14(self):
         """Test capability filter for MT14 devices."""
         capabilities = create_device_capability_filter("MT14", "MT")
 
-        expected_capabilities = {"temperature", "humidity", "noise"}
+        expected_capabilities = {"temperature", "humidity", "pm25", "tvoc", "noise"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt20(self):
         """Test capability filter for MT20 devices."""
         capabilities = create_device_capability_filter("MT20", "MT")
 
-        expected_capabilities = {"temperature", "humidity", "button"}
+        expected_capabilities = {"temperature", "humidity", "button", "door", "battery"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt30(self):
         """Test capability filter for MT30 devices."""
         capabilities = create_device_capability_filter("MT30", "MT")
 
-        expected_capabilities = {"temperature", "water"}
+        expected_capabilities = {"button"}  # MT30 is smart automation button only
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt40(self):
@@ -674,9 +683,13 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MT40", "MT")
 
         expected_capabilities = {
-            "temperature", "humidity", "real_power", "apparent_power",
-            "current", "voltage", "frequency", "power_factor"
-        }
+            "real_power",
+            "apparent_power",
+            "current",
+            "voltage",
+            "frequency",
+            "power_factor",
+        }  # MT40 is smart power controller - power monitoring only, NO temperature/humidity
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_unknown_mt(self):
@@ -691,10 +704,17 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MR33", "MR")
 
         expected_capabilities = {
-            "ssid_count", "enabled_ssids", "open_ssids", "client_count",
-            "channel_utilization_2_4", "channel_utilization_5",
-            "data_rate_2_4", "data_rate_5", "rf_power",
-            "traffic_sent", "traffic_recv",
+            "ssid_count",
+            "enabled_ssids",
+            "open_ssids",
+            "client_count",
+            "channel_utilization_2_4",
+            "channel_utilization_5",
+            "data_rate_2_4",
+            "data_rate_5",
+            "rf_power",
+            "traffic_sent",
+            "traffic_recv",
         }
         assert capabilities == expected_capabilities
 
@@ -703,8 +723,13 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MS220-8", "MS")
 
         expected_capabilities = {
-            "port_count", "connected_ports", "port_traffic_sent", "port_traffic_recv",
-            "port_errors", "port_discards", "connected_clients",
+            "port_count",
+            "connected_ports",
+            "port_traffic_sent",
+            "port_traffic_recv",
+            "port_errors",
+            "port_discards",
+            "connected_clients",
         }
         assert capabilities == expected_capabilities
 
@@ -713,9 +738,17 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MS225-24", "MS")
 
         expected_capabilities = {
-            "port_count", "connected_ports", "port_traffic_sent", "port_traffic_recv",
-            "port_errors", "port_discards", "connected_clients",
-            "poe_power", "poe_ports", "poe_draw", "poe_limit"
+            "port_count",
+            "connected_ports",
+            "port_traffic_sent",
+            "port_traffic_recv",
+            "port_errors",
+            "port_discards",
+            "connected_clients",
+            "poe_power",
+            "poe_ports",
+            "poe_draw",
+            "poe_limit",
         }
         assert capabilities == expected_capabilities
 
@@ -732,10 +765,7 @@ class TestShouldCreateEntity:
 
     def test_should_create_entity_with_capabilities(self):
         """Test entity creation with device capabilities."""
-        device = {
-            "model": "MT11",
-            "serial": "Q2XX-XXXX-XXXX"
-        }
+        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX"}
 
         # MT11 should support temperature
         assert should_create_entity(device, "temperature") is True
@@ -745,21 +775,19 @@ class TestShouldCreateEntity:
 
     def test_should_create_entity_with_coordinator_data(self):
         """Test entity creation with coordinator data."""
-        device = {
-            "model": "MT11",
-            "serial": "Q2XX-XXXX-XXXX"
-        }
+        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX"}
 
         coordinator_data = {
             "Q2XX-XXXX-XXXX": {
                 "temperature": {"celsius": 20.5},
-                "humidity": {"relativePercentage": 45}
+                "humidity": {"relativePercentage": 45},
             }
         }
 
         # Should create entity if device has capability and data exists
         assert should_create_entity(device, "temperature", coordinator_data) is True
-        assert should_create_entity(device, "humidity", coordinator_data) is True
+        # MT11 doesn't support humidity (probe sensor - temperature only)
+        assert should_create_entity(device, "humidity", coordinator_data) is False
 
         # Should not create entity if no data exists even with capability
         assert should_create_entity(device, "tvoc", coordinator_data) is False
@@ -767,16 +795,17 @@ class TestShouldCreateEntity:
     def test_should_create_entity_no_coordinator_data(self):
         """Test entity creation without coordinator data."""
         device = {
-            "model": "MT30",  # MT30 supports water detection
-            "serial": "Q2XX-XXXX-XXXX"
+            "model": "MT30",  # MT30 is smart automation button only
+            "serial": "Q2XX-XXXX-XXXX",
         }
 
         # Should create entity based on capability alone
-        assert should_create_entity(device, "water") is True
-        assert should_create_entity(device, "temperature") is True
+        assert should_create_entity(device, "button") is True
 
-        # Should not create unsupported entities
-        assert should_create_entity(device, "humidity") is False  # MT30 doesn't support humidity
+        # Should not create unsupported entities (MT30 is button only)
+        assert should_create_entity(device, "water") is False
+        assert should_create_entity(device, "temperature") is False
+        assert should_create_entity(device, "humidity") is False
 
     def test_should_create_entity_missing_device_info(self):
         """Test entity creation with missing device information."""
@@ -787,16 +816,9 @@ class TestShouldCreateEntity:
 
     def test_should_create_entity_power_special_case(self):
         """Test entity creation for power entities (special case)."""
-        device = {
-            "model": "MT40",
-            "serial": "Q2XX-XXXX-XXXX"
-        }
+        device = {"model": "MT40", "serial": "Q2XX-XXXX-XXXX"}
 
-        coordinator_data = {
-            "Q2XX-XXXX-XXXX": {
-                "real_power": {"watts": 5.2}
-            }
-        }
+        coordinator_data = {"Q2XX-XXXX-XXXX": {"real_power": {"watts": 5.2}}}
 
         # MT40 supports real_power and has data
         assert should_create_entity(device, "real_power", coordinator_data) is True
@@ -808,13 +830,12 @@ class TestShouldCreateEntity:
     def test_should_create_entity_binary_sensors(self):
         """Test entity creation for binary sensors."""
         device = {
-            "model": "MT30",  # MT30 supports water detection
-            "serial": "Q2XX-XXXX-XXXX"
+            "model": "MT12",  # MT12 supports water detection
+            "serial": "Q2XX-XXXX-XXXX",
         }
 
-        # MT30 supports water detection
+        # MT12 supports water detection
         assert should_create_entity(device, "water") is True
-        assert should_create_entity(device, "temperature") is True
 
         # MT11 doesn't support water detection
         device["model"] = "MT11"

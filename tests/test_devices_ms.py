@@ -613,7 +613,7 @@ class TestMerakiMSEdgeCases:
 
         # Check that precision is properly set
         assert description.suggested_display_precision is not None
-        assert isinstance(sensor.native_value, (int, float))
+        assert isinstance(sensor.native_value, int | float)
 
     async def test_ms_sensor_data_fallback_mechanisms(
         self, hass, mock_ms_coordinator, mock_ms_device
