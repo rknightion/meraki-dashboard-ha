@@ -620,6 +620,9 @@ def should_create_entity(
 ) -> bool:
     """Determine if an entity should be created for a device.
 
+    This function balances between accuracy (using actual readings) and availability
+    (ensuring entities are created even during temporary outages).
+
     Args:
         device: Device information
         entity_key: Entity key to check
@@ -628,26 +631,68 @@ def should_create_entity(
     Returns:
         True if entity should be created
     """
+    device_serial = device.get("serial", "")
+    device_model = device.get("model", "")
+
     # Get device capabilities using the new dynamic discovery system
     supported_metrics = get_device_capabilities(device, coordinator_data)
 
-    # If we have coordinator data with actual readings, be more strict
-    if coordinator_data:
-        device_serial = device.get("serial", "")
-        if device_serial in coordinator_data:
-            device_data = coordinator_data[device_serial]
-            readings = device_data.get("readings", [])
+    # If entity_key is not supported by the device model, don't create it
+    if entity_key not in supported_metrics:
+        return False
 
-            # For devices with actual readings, only create entities for metrics that have data
-            if readings:
-                actual_metrics = {
-                    reading.get("metric")
-                    for reading in readings
-                    if reading.get("metric")
-                }
-                return entity_key in actual_metrics
+    # If we have coordinator data with actual readings, check if we have strong evidence
+    if coordinator_data and device_serial in coordinator_data:
+        device_data = coordinator_data[device_serial]
+        readings = device_data.get("readings", [])
 
-    # Fallback to capability-based check
+        # If we have substantial readings data (multiple metrics), be more selective
+        if readings and len(readings) >= 3:
+            actual_metrics = {
+                reading.get("metric") for reading in readings if reading.get("metric")
+            }
+
+            # Only exclude if we have strong evidence this metric is not supported
+            # (device is reporting other metrics but not this one)
+            if actual_metrics and entity_key not in actual_metrics:
+                # Check if this might be a temporary issue by looking at the device model
+                # For critical metrics like temperature/humidity, be more forgiving
+                critical_metrics = {"temperature", "humidity", "battery", "real_power"}
+                if entity_key in critical_metrics and entity_key in supported_metrics:
+                    _LOGGER.debug(
+                        "Creating entity for %s (%s) even though no recent data - critical metric %s supported by model",
+                        device_serial,
+                        device_model,
+                        entity_key,
+                    )
+                    return True
+                else:
+                    _LOGGER.debug(
+                        "Skipping entity for %s (%s) - device reports %d metrics but not %s",
+                        device_serial,
+                        device_model,
+                        len(actual_metrics),
+                        entity_key,
+                    )
+                    return False
+
+            # If the device is reporting this metric, definitely create it
+            if entity_key in actual_metrics:
+                return True
+
+        # If we have limited readings (< 3), be more permissive
+        # This handles cases where device is just starting up or has connectivity issues
+        elif readings and len(readings) < 3:
+            _LOGGER.debug(
+                "Creating entity for %s (%s) - limited readings (%d), using capability-based decision for %s",
+                device_serial,
+                device_model,
+                len(readings),
+                entity_key,
+            )
+            return True
+
+    # Fallback to capability-based check (no readings, or readings unavailable)
     return entity_key in supported_metrics
 
 
