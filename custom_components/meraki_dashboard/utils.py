@@ -518,9 +518,9 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
         # Add PoE capabilities for PoE-enabled switches
         if any(
             poe_model in device_model
-            for poe_model in ["MS120", "MS125", "MS210", "MS225", "MS250"]
+            for poe_model in ["MS120", "MS125", "MS210", "MS220", "MS225", "MS250"]
         ):
-            base_capabilities.update({"poePower", "poePorts", "poeDraw", "poeLimit"})
+            base_capabilities.update({"poePower", "poePorts", "poeLimit"})
 
         return base_capabilities
 

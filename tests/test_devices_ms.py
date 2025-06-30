@@ -228,8 +228,8 @@ class TestMerakiMSSensors:
         for sensor_key in data_rate_sensors:
             if sensor_key in MS_DEVICE_SENSOR_DESCRIPTIONS:
                 desc = MS_DEVICE_SENSOR_DESCRIPTIONS[sensor_key]
-                # Must use "B/s" for DATA_RATE device class, not "Bps"
-                assert desc.native_unit_of_measurement == "B/s"
+                # Must use "KB/s" for traffic sensors (more user-friendly than B/s)
+                assert desc.native_unit_of_measurement == "KB/s"
                 assert desc.device_class == SensorDeviceClass.DATA_RATE
 
     async def test_ms_device_sensor_unique_id_generation(

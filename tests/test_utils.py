@@ -730,6 +730,9 @@ class TestDeviceCapabilityFilter:
             "portErrors",
             "portDiscards",
             "connectedClients",
+            "poePower",
+            "poePorts",
+            "poeLimit",
         }
         assert capabilities == expected_capabilities
 
@@ -747,7 +750,6 @@ class TestDeviceCapabilityFilter:
             "connectedClients",
             "poePower",
             "poePorts",
-            "poeDraw",
             "poeLimit",
         }
         assert capabilities == expected_capabilities

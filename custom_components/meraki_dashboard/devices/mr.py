@@ -275,15 +275,15 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         # Return the appropriate metric value
         if self.entity_description.key == MR_SENSOR_CLIENT_COUNT:
-            return device_info.get("client_count", 0)
+            return device_info.get("clientCount", 0) or 0
         elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_2_4:
-            return device_info.get("channel_utilization_2_4", 0)
+            return device_info.get("channelUtilization24", 0) or 0
         elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_5:
-            return device_info.get("channel_utilization_5", 0)
+            return device_info.get("channelUtilization5", 0) or 0
         elif self.entity_description.key == MR_SENSOR_DATA_RATE_2_4:
-            return device_info.get("data_rate_2_4", 0)
+            return device_info.get("dataRate24", 0) or 0
         elif self.entity_description.key == MR_SENSOR_DATA_RATE_5:
-            return device_info.get("data_rate_5", 0)
+            return device_info.get("dataRate5", 0) or 0
         elif self.entity_description.key == MR_SENSOR_SSID_COUNT:
             # Count SSIDs available on this device (same as network for now)
             ssids = self.coordinator.data.get("ssids", [])
@@ -303,32 +303,38 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 ]
             )
         elif self.entity_description.key == MR_SENSOR_CONNECTION_SUCCESS_RATE:
-            # Placeholder for connection success rate - would require API call to get stats
-            return device_info.get("connectionSuccessRate", 95.0)  # Default good value
+            return device_info.get("connectionSuccessRate", 0) or 0
         elif self.entity_description.key == MR_SENSOR_CONNECTION_FAILURES:
-            # Placeholder for connection failures - would require API call to get stats
-            return device_info.get("connectionFailures", 0)
+            return device_info.get("connectionFailures", 0) or 0
         elif self.entity_description.key == MR_SENSOR_TRAFFIC_SENT:
-            # Traffic sent in Mbps
-            return device_info.get("trafficSent", 0.0)
+            # Traffic sent in Mbps - convert from bytes if needed
+            traffic_sent = device_info.get("trafficSent", 0) or 0
+            # If traffic is in bytes, convert to Mbps
+            if traffic_sent > 1000000:  # Likely in bytes
+                return traffic_sent / 1000000  # Convert to Mbps
+            return traffic_sent
         elif self.entity_description.key == MR_SENSOR_TRAFFIC_RECV:
-            # Traffic received in Mbps
-            return device_info.get("trafficReceived", 0.0)
+            # Traffic received in Mbps - convert from bytes if needed
+            traffic_recv = device_info.get("trafficRecv", 0) or 0
+            # If traffic is in bytes, convert to Mbps
+            if traffic_recv > 1000000:  # Likely in bytes
+                return traffic_recv / 1000000  # Convert to Mbps
+            return traffic_recv
         elif self.entity_description.key == MR_SENSOR_RF_POWER:
-            # RF power in dBm
-            return device_info.get("rfPower", -20)  # Default reasonable power level
+            # RF power in dBm - use the highest power from either band
+            return device_info.get("rfPower", 0) or 0
         elif self.entity_description.key == MR_SENSOR_RF_POWER_2_4:
             # RF power for 2.4GHz band
-            return device_info.get("rf_power_2_4", 0)
+            return device_info.get("rf_power_2_4", 0) or 0
         elif self.entity_description.key == MR_SENSOR_RF_POWER_5:
             # RF power for 5GHz band
-            return device_info.get("rf_power_5", 0)
+            return device_info.get("rf_power_5", 0) or 0
         elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_2_4:
             # Channel for 2.4GHz band
-            return device_info.get("radio_channel_2_4", 0)
+            return device_info.get("radioChannel24", 0) or 0
         elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_5:
             # Channel for 5GHz band
-            return device_info.get("radio_channel_5", 0)
+            return device_info.get("radioChannel5", 0) or 0
 
         return None
 

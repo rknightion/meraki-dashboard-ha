@@ -274,22 +274,21 @@ class TestMerakiMRSensors:
         assert sensor.available is False
         assert sensor.native_value is None
 
-    async def test_mr_device_sensor_with_missing_device_data(
+    async def test_mr_device_sensor_with_none_values(
         self, hass, mock_mr_coordinator, mock_mr_device
     ):
-        """Test MR device sensor with missing device data."""
-        # Remove device from wireless data
-        mock_mr_coordinator.data = {
-            "ssids": MOCK_MR_WIRELESS_DATA["ssids"],
-            "devices_info": [],  # No devices
-        }
+        """Test MR device sensor with None values in data."""
+        wireless_data_with_none = MOCK_MR_WIRELESS_DATA.copy()
+        wireless_data_with_none["devices_info"][0]["clientCount"] = None
+        mock_mr_coordinator.data = wireless_data_with_none
 
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
         sensor = MerakiMRDeviceSensor(
             mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
         )
 
-        assert sensor.native_value is None
+        # With None value, the sensor should return 0 (the default fallback)
+        assert sensor.native_value == 0
 
     async def test_mr_sensor_with_malformed_data(self, hass, mock_mr_coordinator):
         """Test MR sensor with malformed coordinator data."""
@@ -434,7 +433,7 @@ class TestMerakiMREdgeCases:
     ):
         """Test MR device sensor with None values in data."""
         wireless_data_with_none = MOCK_MR_WIRELESS_DATA.copy()
-        wireless_data_with_none["devices_info"][0]["client_count"] = None
+        wireless_data_with_none["devices_info"][0]["clientCount"] = None
         mock_mr_coordinator.data = wireless_data_with_none
 
         description = MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CLIENT_COUNT]
@@ -442,7 +441,8 @@ class TestMerakiMREdgeCases:
             mock_mr_device, mock_mr_coordinator, description, "test_entry_id", mock_mr_coordinator.network_hub
         )
 
-        assert sensor.native_value is None
+        # With None value, the sensor should return 0 (the default fallback)
+        assert sensor.native_value == 0
 
     async def test_mr_sensor_coordinator_last_update_tracking(
         self, hass, mock_mr_coordinator

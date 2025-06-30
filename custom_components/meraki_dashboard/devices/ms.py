@@ -24,7 +24,6 @@ from ..const import (
     DOMAIN,
     MS_SENSOR_CONNECTED_CLIENTS,
     MS_SENSOR_CONNECTED_PORTS,
-    MS_SENSOR_POE_DRAW,
     MS_SENSOR_POE_LIMIT,
     MS_SENSOR_POE_PORTS,
     MS_SENSOR_POE_POWER,
@@ -86,7 +85,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:upload",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="B/s",
+        native_unit_of_measurement="KB/s",
         suggested_display_precision=0,
     ),
     MS_SENSOR_PORT_TRAFFIC_RECV: SensorEntityDescription(
@@ -95,7 +94,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:download",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="B/s",
+        native_unit_of_measurement="KB/s",
         suggested_display_precision=0,
     ),
     MS_SENSOR_POE_POWER: SensorEntityDescription(
@@ -136,15 +135,6 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         name="Port Link Count",
         icon="mdi:ethernet-cable",
         state_class=SensorStateClass.MEASUREMENT,
-    ),
-    MS_SENSOR_POE_DRAW: SensorEntityDescription(
-        key=MS_SENSOR_POE_DRAW,
-        name="PoE Power Draw",
-        icon="mdi:power-plug",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfPower.WATT,
-        suggested_display_precision=1,
     ),
     MS_SENSOR_POE_LIMIT: SensorEntityDescription(
         key=MS_SENSOR_POE_LIMIT,
@@ -346,7 +336,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 return min(100.0, (avg_kb / 1000000) * 100)
             return 0
         elif self.entity_description.key == MS_SENSOR_PORT_TRAFFIC_SENT:
-            # Sum traffic sent across device ports in bytes per second
+            # Sum traffic sent across device ports in KB per second (more user-friendly)
             total_kb = sum(
                 [
                     port.get("usageInKb", {}).get("sent", 0)
@@ -354,9 +344,9 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     if port.get("usageInKb")
                 ]
             )
-            return total_kb * 1024  # Convert KB to bytes
+            return total_kb  # Return KB directly instead of converting to bytes
         elif self.entity_description.key == MS_SENSOR_PORT_TRAFFIC_RECV:
-            # Sum traffic received across device ports in bytes per second
+            # Sum traffic received across device ports in KB per second (more user-friendly)
             total_kb = sum(
                 [
                     port.get("usageInKb", {}).get("recv", 0)
@@ -364,10 +354,10 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     if port.get("usageInKb")
                 ]
             )
-            return total_kb * 1024  # Convert KB to bytes
+            return total_kb  # Return KB directly instead of converting to bytes
         elif self.entity_description.key == MS_SENSOR_POE_POWER:
-            # Fallback: Convert energy (Wh) to estimated power (W) if that's what API provides
-            # Note: powerUsageInWh might actually be instantaneous power despite the name
+            # Handle POE power calculation - API field name is misleading
+            # powerUsageInWh might actually be instantaneous power in watts
             total_power = sum(
                 [
                     port.get("powerUsageInWh", 0)
@@ -375,20 +365,10 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     if port.get("powerUsageInWh") is not None
                 ]
             )
-            # The API field name suggests Wh but might actually be W - use as-is for now
-            return total_power
-        elif self.entity_description.key == MS_SENSOR_POE_DRAW:
-            # Same fallback as PoE power
-            total_power = sum(
-                [
-                    port.get("powerUsageInWh", 0)
-                    for port in device_ports
-                    if port.get("powerUsageInWh") is not None
-                ]
-            )
-            return total_power
+            # Always divide by 1000 to convert from milliwatts to watts (safer approach)
+            return total_power / 1000
         elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
-            # Try to get from power module data if available
+            # Only get from power module data via API - no hardcoded values
             power_modules = self.coordinator.data.get("power_modules", [])
             device_power = next(
                 (
@@ -400,8 +380,35 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             )
             if device_power:
                 power_status = device_power.get("power_status", {})
-                return power_status.get("powerLimit", 0)
+                # Handle different power status formats
+                if isinstance(power_status, list) and power_status:
+                    # If it's a list, take the first power module
+                    return power_status[0].get("powerLimit", 0)
+                elif isinstance(power_status, dict):
+                    return power_status.get("powerLimit", 0)
+
+            # Return 0 if no API data available - no hardcoded fallbacks
             return 0
+        elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
+            # Sum port errors across device ports
+            total_errors = sum(
+                [
+                    port.get("errors", 0)
+                    for port in device_ports
+                    if port.get("errors") is not None
+                ]
+            )
+            return total_errors
+        elif self.entity_description.key == MS_SENSOR_PORT_DISCARDS:
+            # Sum port discards across device ports
+            total_discards = sum(
+                [
+                    port.get("discards", 0)
+                    for port in device_ports
+                    if port.get("discards") is not None
+                ]
+            )
+            return total_discards
         elif self.entity_description.key == MS_SENSOR_CONNECTED_CLIENTS:
             # Sum clients across device ports
             total_clients = sum(
@@ -580,7 +587,7 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                 ]
             )
         elif self.entity_description.key == f"network_{MS_SENSOR_POE_POWER}":
-            # Fallback: Sum power across all ports (might be Wh or W depending on API)
+            # Fallback: Sum power across all ports and convert from milliwatts to watts
             total_power = sum(
                 [
                     port.get("powerUsageInWh", 0)
@@ -588,7 +595,8 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                     if port.get("powerUsageInWh") is not None
                 ]
             )
-            return total_power
+            # Always divide by 1000 to convert from milliwatts to watts
+            return total_power / 1000
         elif self.entity_description.key == f"network_{MS_SENSOR_CONNECTED_CLIENTS}":
             # Sum clients across all ports
             total_clients = sum(

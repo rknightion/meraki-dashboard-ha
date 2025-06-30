@@ -153,7 +153,6 @@ MS_SENSOR_POWER_MODULE_STATUS: Final = "powerModuleStatus"
 MS_SENSOR_PORT_ERRORS: Final = "portErrors"
 MS_SENSOR_PORT_DISCARDS: Final = "portDiscards"
 MS_SENSOR_PORT_LINK_COUNT: Final = "portLinkCount"
-MS_SENSOR_POE_DRAW: Final = "poeDraw"
 MS_SENSOR_POE_LIMIT: Final = "poeLimit"
 MS_SENSOR_PORT_UTILIZATION: Final = "portUtilization"  # Overall port utilization
 
