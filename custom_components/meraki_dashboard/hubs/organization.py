@@ -658,14 +658,18 @@ class MerakiOrganizationHub:
                 # Get events from each network since there's no organization-level events endpoint
                 for network_hub in self.network_hubs.values():
                     try:
+                        # Create a partial function with the parameters
+                        # Use default parameter to capture loop variable value
+                        def get_network_events(net_id=network_hub.network_id):
+                            return self.dashboard.networks.getNetworkEvents(
+                                net_id,
+                                startingAfter=start_time.isoformat(),
+                                endingBefore=end_time.isoformat(),
+                                perPage=50,  # Limit per network to avoid too many events
+                            )
+
                         network_events = await self.hass.async_add_executor_job(
-                            self.dashboard.networks.getNetworkEvents,
-                            network_hub.network_id,
-                            **{
-                                "startingAfter": start_time.isoformat(),
-                                "endingBefore": end_time.isoformat(),
-                                "perPage": 50,  # Limit per network to avoid too many events
-                            },
+                            get_network_events
                         )
                         self.total_api_calls += 1
 

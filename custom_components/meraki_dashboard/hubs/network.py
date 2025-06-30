@@ -416,16 +416,52 @@ class MerakiNetworkHub:
                                 "basicServiceSets", []
                             )
                             for bss in basic_service_sets:
-                                if bss.get("band") == "2.4":
-                                    device_info["channelUtilization24"] = bss.get(
-                                        "channelUtilization", {}
-                                    ).get("total", 0)
-                                    device_info["dataRate24"] = bss.get("channel", 0)
-                                elif bss.get("band") == "5":
-                                    device_info["channelUtilization5"] = bss.get(
-                                        "channelUtilization", {}
-                                    ).get("total", 0)
-                                    device_info["dataRate5"] = bss.get("channel", 0)
+                                band = bss.get("band", "")
+                                if band == "2.4":
+                                    # Channel utilization as percentage
+                                    channel_util = bss.get("channelUtilization", {})
+                                    if isinstance(channel_util, dict):
+                                        device_info["channelUtilization24"] = (
+                                            channel_util.get("total", 0)
+                                        )
+                                    else:
+                                        device_info["channelUtilization24"] = (
+                                            channel_util or 0
+                                        )
+
+                                    # Radio channel number
+                                    device_info["radioChannel24"] = bss.get(
+                                        "channel", 0
+                                    )
+
+                                    # Data rate from performance data
+                                    performance = bss.get("performance", {})
+                                    if isinstance(performance, dict):
+                                        device_info["dataRate24"] = performance.get(
+                                            "avgDataRateMbps", 0
+                                        )
+
+                                elif band == "5":
+                                    # Channel utilization as percentage
+                                    channel_util = bss.get("channelUtilization", {})
+                                    if isinstance(channel_util, dict):
+                                        device_info["channelUtilization5"] = (
+                                            channel_util.get("total", 0)
+                                        )
+                                    else:
+                                        device_info["channelUtilization5"] = (
+                                            channel_util or 0
+                                        )
+
+                                    # Radio channel number
+                                    device_info["radioChannel5"] = bss.get("channel", 0)
+
+                                    # Data rate from performance data
+                                    performance = bss.get("performance", {})
+                                    if isinstance(performance, dict):
+                                        device_info["dataRate5"] = performance.get(
+                                            "avgDataRateMbps", 0
+                                        )
 
                     except Exception as status_err:
                         _LOGGER.debug(
@@ -516,28 +552,51 @@ class MerakiNetworkHub:
 
                     # Get client count and connection statistics
                     try:
-                        # Get connection stats for the last hour with timespan parameter
-                        # Create a wrapper function to handle the parameters correctly
-                        def get_connection_stats(serial: str):
+                        # Get current client count from device clients endpoint
+                        def get_device_clients(serial: str):
                             if self.dashboard is None:
                                 return None
-                            return self.dashboard.wireless.getDeviceWirelessConnectionStats(
+                            return self.dashboard.devices.getDeviceClients(
                                 serial,
                                 timespan=3600,  # 1 hour in seconds
                             )
 
                         clients = await self.hass.async_add_executor_job(
-                            get_connection_stats, device_serial
+                            get_device_clients, device_serial
                         )
                         self.organization_hub.total_api_calls += 1
 
-                        if clients and isinstance(clients, dict):
-                            device_info["clientCount"] = len(clients.get("clients", []))
-                            device_info["connectionSuccessRate"] = clients.get(
-                                "connectionSuccessRate", 0
+                        if clients and isinstance(clients, list):
+                            device_info["clientCount"] = len(clients)
+
+                        # Get connection stats separately if available
+                        try:
+
+                            def get_connection_stats(serial: str):
+                                if self.dashboard is None:
+                                    return None
+                                return self.dashboard.wireless.getDeviceWirelessConnectionStats(
+                                    serial,
+                                    timespan=3600,  # 1 hour in seconds
+                                )
+
+                            connection_stats = await self.hass.async_add_executor_job(
+                                get_connection_stats, device_serial
                             )
-                            device_info["connectionFailures"] = clients.get(
-                                "connectionFailures", 0
+                            self.organization_hub.total_api_calls += 1
+
+                            if connection_stats and isinstance(connection_stats, dict):
+                                device_info["connectionSuccessRate"] = (
+                                    connection_stats.get("connectionSuccessRate", 0)
+                                )
+                                device_info["connectionFailures"] = (
+                                    connection_stats.get("connectionFailures", 0)
+                                )
+                        except Exception as conn_err:
+                            _LOGGER.debug(
+                                "Could not get connection stats for %s: %s",
+                                device_serial,
+                                conn_err,
                             )
 
                     except Exception as client_err:
@@ -547,49 +606,65 @@ class MerakiNetworkHub:
                             client_err,
                         )
 
-                    # Get traffic statistics
+                    # Get traffic statistics from device status
                     try:
-                        # Get device traffic over the last hour
-                        traffic_end_time = datetime.now(UTC)
-                        traffic_start_time = traffic_end_time - timedelta(hours=1)
+                        # Try to get traffic from device status first (more reliable)
+                        if device_status:
+                            # Look for traffic data in device status
+                            traffic_data = device_status.get("traffic", {})
+                            if traffic_data:
+                                device_info["trafficSent"] = traffic_data.get("sent", 0)
+                                device_info["trafficRecv"] = traffic_data.get(
+                                    "received", 0
+                                )
+                            else:
+                                # Fallback: Try to get from basic service sets
+                                total_sent = 0
+                                total_recv = 0
+                                for bss in device_status.get("basicServiceSets", []):
+                                    bss_traffic = bss.get("traffic", {})
+                                    total_sent += bss_traffic.get("sent", 0)
+                                    total_recv += bss_traffic.get("received", 0)
+                                device_info["trafficSent"] = total_sent
+                                device_info["trafficRecv"] = total_recv
+                        else:
+                            # Final fallback: Get usage history if device status unavailable
+                            traffic_end_time = datetime.now(UTC)
+                            traffic_start_time = traffic_end_time - timedelta(hours=1)
 
-                        # Create a wrapper function to handle the parameters correctly
-                        # Note: API requires either device serial or client specification
-                        def get_wireless_usage_history(
-                            start_time: str, end_time: str, serial: str
-                        ):
-                            if self.dashboard is None:
-                                return None
-                            return (
-                                self.dashboard.wireless.getNetworkWirelessUsageHistory(
+                            def get_wireless_usage_history(
+                                start_time: str, end_time: str, serial: str
+                            ):
+                                if self.dashboard is None:
+                                    return None
+                                return self.dashboard.wireless.getNetworkWirelessUsageHistory(
                                     self.network_id,
                                     t0=start_time,
                                     t1=end_time,
                                     resolution=3600,  # 1 hour resolution
                                     perPage=1000,
-                                    deviceSerial=serial,  # Specify device serial
+                                    deviceSerial=serial,
                                 )
+
+                            traffic_analysis = await self.hass.async_add_executor_job(
+                                get_wireless_usage_history,
+                                traffic_start_time.isoformat(),
+                                traffic_end_time.isoformat(),
+                                device_serial,
                             )
+                            self.organization_hub.total_api_calls += 1
 
-                        traffic_analysis = await self.hass.async_add_executor_job(
-                            get_wireless_usage_history,
-                            traffic_start_time.isoformat(),
-                            traffic_end_time.isoformat(),
-                            device_serial,
-                        )
-                        self.organization_hub.total_api_calls += 1
+                            # Process traffic data for this specific device
+                            total_sent = 0
+                            total_recv = 0
 
-                        # Process traffic data for this specific device
-                        total_sent = 0
-                        total_recv = 0
+                            if traffic_analysis and isinstance(traffic_analysis, list):
+                                for entry in traffic_analysis:
+                                    total_sent += entry.get("sent", 0)
+                                    total_recv += entry.get("received", 0)
 
-                        if traffic_analysis and isinstance(traffic_analysis, list):
-                            for entry in traffic_analysis:
-                                total_sent += entry.get("sent", 0)
-                                total_recv += entry.get("received", 0)
-
-                        device_info["trafficSent"] = total_sent
-                        device_info["trafficRecv"] = total_recv
+                            device_info["trafficSent"] = total_sent
+                            device_info["trafficRecv"] = total_recv
 
                     except Exception as traffic_err:
                         _LOGGER.debug(

@@ -12,6 +12,8 @@ from custom_components.meraki_dashboard.const import (
     MS_SENSOR_CONNECTED_PORTS,
     MS_SENSOR_POE_POWER,
     MS_SENSOR_PORT_COUNT,
+    MS_SENSOR_PORT_DISCARDS,
+    MS_SENSOR_PORT_ERRORS,
     MS_SENSOR_PORT_TRAFFIC_RECV,
     MS_SENSOR_PORT_TRAFFIC_SENT,
     SENSOR_TYPE_MS,
@@ -589,6 +591,64 @@ class TestMerakiMSEdgeCases:
 
         # Fix: Should count all entries in ports_status list, not just valid ones
         assert sensor.native_value == 3
+
+    async def test_ms_device_sensor_port_errors_list_handling(
+        self, hass, mock_ms_coordinator, mock_ms_device
+    ):
+        """Test MS device sensor port errors handling when API returns lists."""
+        # Mock data where errors/discards are lists instead of integers
+        mock_ms_coordinator.data = {
+            "ports_status": [
+                {
+                    "device_serial": mock_ms_device["serial"],
+                    "portId": "1",
+                    "errors": [1, 2, 3],  # List of errors
+                    "discards": [0, 1],   # List of discards
+                },
+                {
+                    "device_serial": mock_ms_device["serial"],
+                    "portId": "2",
+                    "errors": 5,          # Integer (normal case)
+                    "discards": 2,        # Integer (normal case)
+                },
+                {
+                    "device_serial": mock_ms_device["serial"],
+                    "portId": "3",
+                    "errors": [],         # Empty list
+                    "discards": [],       # Empty list
+                },
+                {
+                    "device_serial": mock_ms_device["serial"],
+                    "portId": "4",
+                    "errors": ["2", "3", "1"],  # List with strings (mixed types)
+                    "discards": ["1", "0"],     # List with strings (mixed types)
+                },
+                {
+                    "device_serial": mock_ms_device["serial"],
+                    "portId": "5",
+                    "errors": "7",        # String (edge case)
+                    "discards": "3",      # String (edge case)
+                },
+            ]
+        }
+
+        # Test port errors sensor
+        errors_description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_ERRORS]
+        errors_sensor = MerakiMSDeviceSensor(
+            mock_ms_device, mock_ms_coordinator, errors_description, "test_entry_id", mock_ms_coordinator.network_hub
+        )
+
+        # Should sum: [1,2,3] + 5 + [] + ["2","3","1"] + "7" = 6 + 5 + 0 + 6 + 7 = 24
+        assert errors_sensor.native_value == 24
+
+        # Test port discards sensor
+        discards_description = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_DISCARDS]
+        discards_sensor = MerakiMSDeviceSensor(
+            mock_ms_device, mock_ms_coordinator, discards_description, "test_entry_id", mock_ms_coordinator.network_hub
+        )
+
+        # Should sum: [0,1] + 2 + [] + ["1","0"] + "3" = 1 + 2 + 0 + 1 + 3 = 7
+        assert discards_sensor.native_value == 7
 
     async def test_ms_device_sensor_power_calculation(
         self, hass, mock_ms_coordinator, mock_ms_device

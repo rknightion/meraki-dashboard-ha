@@ -498,7 +498,13 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             "channelUtilization5",
             "dataRate24",
             "dataRate5",
+            "connectionSuccessRate",
+            "connectionFailures",
             "rfPower",
+            "rfPower24",  # 2.4GHz band RF power
+            "rfPower5",  # 5GHz band RF power
+            "radioChannel24",  # 2.4GHz radio channel
+            "radioChannel5",  # 5GHz radio channel
             "trafficSent",
             "trafficRecv",
         }
@@ -512,6 +518,11 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             "portTrafficRecv",
             "portErrors",
             "portDiscards",
+            "portLinkCount",
+            "portUtilization",
+            "portUtilizationSent",
+            "portUtilizationRecv",
+            "powerModuleStatus",
             "connectedClients",
         }
 

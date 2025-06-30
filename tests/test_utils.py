@@ -712,7 +712,13 @@ class TestDeviceCapabilityFilter:
             "channelUtilization5",
             "dataRate24",
             "dataRate5",
+            "connectionSuccessRate",
+            "connectionFailures",
             "rfPower",
+            "rfPower24",  # 2.4GHz band RF power
+            "rfPower5",   # 5GHz band RF power
+            "radioChannel24",  # 2.4GHz radio channel
+            "radioChannel5",   # 5GHz radio channel
             "trafficSent",
             "trafficRecv",
         }
@@ -729,6 +735,11 @@ class TestDeviceCapabilityFilter:
             "portTrafficRecv",
             "portErrors",
             "portDiscards",
+            "portLinkCount",
+            "portUtilization",
+            "portUtilizationSent",
+            "portUtilizationRecv",
+            "powerModuleStatus",
             "connectedClients",
             "poePower",
             "poePorts",
@@ -747,6 +758,11 @@ class TestDeviceCapabilityFilter:
             "portTrafficRecv",
             "portErrors",
             "portDiscards",
+            "portLinkCount",
+            "portUtilization",
+            "portUtilizationSent",
+            "portUtilizationRecv",
+            "powerModuleStatus",
             "connectedClients",
             "poePower",
             "poePorts",

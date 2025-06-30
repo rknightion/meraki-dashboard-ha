@@ -365,8 +365,9 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     if port.get("powerUsageInWh") is not None
                 ]
             )
-            # Always divide by 1000 to convert from milliwatts to watts (safer approach)
-            return total_power / 1000
+            # API returns values in deciwatts (dW), divide by 10 to get watts
+            # Based on user feedback: 300W should be 30W, so divide by 10
+            return total_power / 10
         elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
             # Only get from power module data via API - no hardcoded values
             power_modules = self.coordinator.data.get("power_modules", [])
@@ -391,23 +392,41 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             return 0
         elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
             # Sum port errors across device ports
-            total_errors = sum(
-                [
-                    port.get("errors", 0)
-                    for port in device_ports
-                    if port.get("errors") is not None
-                ]
-            )
+            total_errors = 0
+            for port in device_ports:
+                errors = port.get("errors")
+                if errors is not None:
+                    # Handle case where errors might be a list or an integer
+                    if isinstance(errors, list):
+                        # Convert all items to int, handling strings and other types
+                        total_errors += (
+                            sum(int(x) for x in errors if str(x).isdigit())
+                            if errors
+                            else 0
+                        )
+                    else:
+                        # Convert to int, handling strings
+                        total_errors += int(errors) if str(errors).isdigit() else 0
             return total_errors
         elif self.entity_description.key == MS_SENSOR_PORT_DISCARDS:
             # Sum port discards across device ports
-            total_discards = sum(
-                [
-                    port.get("discards", 0)
-                    for port in device_ports
-                    if port.get("discards") is not None
-                ]
-            )
+            total_discards = 0
+            for port in device_ports:
+                discards = port.get("discards")
+                if discards is not None:
+                    # Handle case where discards might be a list or an integer
+                    if isinstance(discards, list):
+                        # Convert all items to int, handling strings and other types
+                        total_discards += (
+                            sum(int(x) for x in discards if str(x).isdigit())
+                            if discards
+                            else 0
+                        )
+                    else:
+                        # Convert to int, handling strings
+                        total_discards += (
+                            int(discards) if str(discards).isdigit() else 0
+                        )
             return total_discards
         elif self.entity_description.key == MS_SENSOR_CONNECTED_CLIENTS:
             # Sum clients across device ports
@@ -587,7 +606,7 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                 ]
             )
         elif self.entity_description.key == f"network_{MS_SENSOR_POE_POWER}":
-            # Fallback: Sum power across all ports and convert from milliwatts to watts
+            # Fallback: Sum power across all ports and convert from deciwatts to watts
             total_power = sum(
                 [
                     port.get("powerUsageInWh", 0)
@@ -595,8 +614,8 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
                     if port.get("powerUsageInWh") is not None
                 ]
             )
-            # Always divide by 1000 to convert from milliwatts to watts
-            return total_power / 1000
+            # API returns values in deciwatts (dW), divide by 10 to get watts
+            return total_power / 10
         elif self.entity_description.key == f"network_{MS_SENSOR_CONNECTED_CLIENTS}":
             # Sum clients across all ports
             total_clients = sum(

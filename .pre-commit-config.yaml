@@ -48,6 +48,24 @@ repos:
         -   custom_components/
         exclude: tests/
 
+  # Python test suite - Run full test suite to catch potential errors
+-   repo: local
+    hooks:
+    -   id: pytest
+        name: Run Python test suite
+        entry: poetry run python -m pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        args:
+        -   tests/
+        -   --cov=custom_components.meraki_dashboard
+        -   --cov-report=term-missing
+        -   --cov-fail-under=10
+        -   -v
+        -   --tb=short
+        stages: [pre-commit]
+
   # General file checks
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0 # Keep updated
