@@ -6,6 +6,7 @@ from .mt import MerakiMTEnergySensor, MerakiMTSensor
 from .organization import (
     MerakiHubAlertsSensor,
     MerakiHubApiCallsSensor,
+    MerakiHubBluetoothClientsCountSensor,
     MerakiHubClientsCountSensor,
     MerakiHubClientsUsageAverageTotalSensor,
     MerakiHubClientsUsageOverallDownstreamSensor,
@@ -28,6 +29,7 @@ __all__ = [
     "MerakiMSDeviceSensor",
     "MerakiHubAlertsSensor",
     "MerakiHubApiCallsSensor",
+    "MerakiHubBluetoothClientsCountSensor",
     "MerakiHubClientsCountSensor",
     "MerakiHubClientsUsageAverageTotalSensor",
     "MerakiHubClientsUsageOverallDownstreamSensor",

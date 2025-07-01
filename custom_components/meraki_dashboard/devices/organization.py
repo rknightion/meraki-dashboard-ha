@@ -112,6 +112,14 @@ ORG_HUB_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         native_unit_of_measurement="KB",
         suggested_display_precision=2,
     ),
+    "bluetooth_clients_total_count": SensorEntityDescription(
+        key="bluetooth_clients_total_count",
+        name="Total Bluetooth Clients",
+        icon="mdi:bluetooth",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement="clients",
+    ),
 }
 
 # Network hub sensor descriptions
@@ -832,7 +840,7 @@ class MerakiHubClientsUsageOverallUpstreamSensor(MerakiHubClientsUsageSensor):
 
 
 class MerakiHubClientsUsageAverageTotalSensor(MerakiHubClientsUsageSensor):
-    """Sensor for tracking average total client usage."""
+    """Sensor for tracking average client usage from an organization hub (24-hour timespan)."""
 
     def __init__(
         self,
@@ -840,11 +848,65 @@ class MerakiHubClientsUsageAverageTotalSensor(MerakiHubClientsUsageSensor):
         description: SensorEntityDescription,
         config_entry_id: str,
     ) -> None:
-        """Initialize the sensor."""
+        """Initialize the average client usage sensor."""
         super().__init__(
             organization_hub,
             description,
             config_entry_id,
             "clients_usage_average_total",
-            "Average data usage per client in the last 24 hours (upstream + downstream)",
+            "average client usage (24-hour)",
         )
+
+
+class MerakiHubBluetoothClientsCountSensor(SensorEntity):
+    """Sensor for tracking total Bluetooth client count from an organization hub."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the Bluetooth clients count sensor."""
+        self._organization_hub = organization_hub
+        self.entity_description = description
+        self._config_entry_id = config_entry_id
+
+        # Set unique ID
+        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
+
+        # Set device info to the organization hub device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the total number of Bluetooth clients."""
+        return self._organization_hub.bluetooth_clients_total_count
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return True
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attrs = {
+            "organization_id": self._organization_hub.organization_id,
+            "organization_name": self._organization_hub.organization_name,
+            "network_count": len(self._organization_hub.networks),
+        }
+
+        # Add data freshness information
+        bluetooth_age = self._organization_hub.last_bluetooth_clients_update_age_minutes
+        if bluetooth_age is not None:
+            attrs["data_age_minutes"] = bluetooth_age
+            attrs["data_status"] = (
+                "fresh" if bluetooth_age < 8 else "stale"
+            )  # 8 min = 5min + buffer
+
+        return attrs

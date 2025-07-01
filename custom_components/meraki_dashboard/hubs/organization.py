@@ -146,6 +146,9 @@ class MerakiOrganizationHub:
         self.clients_usage_overall_upstream = 0.0  # Upstream usage in KB
         self.clients_usage_average_total = 0.0  # Average usage per client in KB
 
+        # Bluetooth clients data - total count across all networks
+        self.bluetooth_clients_total_count = 0
+
         # Organization data update timer
         self._organization_data_unsub: Callable[[], None] | None = None
 
@@ -154,6 +157,7 @@ class MerakiOrganizationHub:
         self._last_device_status_update: datetime | None = None
         self._last_alerts_update: datetime | None = None
         self._last_clients_update: datetime | None = None
+        self._last_bluetooth_clients_update: datetime | None = None
 
         # Tiered refresh unsubscribe handlers
         self._static_data_unsub: Callable[[], None] | None = None
@@ -196,6 +200,16 @@ class MerakiOrganizationHub:
         if not self._last_clients_update:
             return None
         return int((datetime.now(UTC) - self._last_clients_update).total_seconds() / 60)
+
+    @property
+    def last_bluetooth_clients_update_age_minutes(self) -> int | None:
+        """Get the age of the last Bluetooth clients update in minutes."""
+        if not self._last_bluetooth_clients_update:
+            return None
+        return int(
+            (datetime.now(UTC) - self._last_bluetooth_clients_update).total_seconds()
+            / 60
+        )
 
     def _track_api_call_duration(self, duration: float) -> None:
         """Track API call duration for performance monitoring."""
@@ -310,14 +324,19 @@ class MerakiOrganizationHub:
 
             # Dynamic data (alerts, events, clients overview) - configurable interval (default: every 5 minutes)
             async def _update_dynamic_data(_now: datetime | None = None) -> None:
+                """Update dynamic data (clients overview) - refreshes every 5 minutes."""
+                _LOGGER.debug("Updating dynamic organization data")
                 await self._fetch_alerts_data()
                 self._last_alerts_update = datetime.now(UTC)
 
                 await self._fetch_clients_overview()
                 self._last_clients_update = datetime.now(UTC)
 
+                await self._fetch_bluetooth_clients_overview()
+                self._last_bluetooth_clients_update = datetime.now(UTC)
+
                 _LOGGER.debug(
-                    "Updated dynamic organization data (alerts/events/clients)"
+                    "Updated dynamic organization data (alerts/events/clients/bluetooth)"
                 )
 
             self._dynamic_data_unsub = async_track_time_interval(
@@ -338,6 +357,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_clients_overview()
             self._last_clients_update = datetime.now(UTC)
+
+            await self._fetch_bluetooth_clients_overview()
+            self._last_bluetooth_clients_update = datetime.now(UTC)
 
             # Track setup completion time
             self._last_setup_time = datetime.now(UTC)
@@ -477,6 +499,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_clients_overview()
             self._last_clients_update = datetime.now(UTC)
+
+            await self._fetch_bluetooth_clients_overview()
+            self._last_bluetooth_clients_update = datetime.now(UTC)
 
             _LOGGER.debug("Manual organization data update completed")
 
@@ -820,6 +845,93 @@ class MerakiOrganizationHub:
             self.clients_usage_overall_downstream = 0.0
             self.clients_usage_overall_upstream = 0.0
             self.clients_usage_average_total = 0.0
+
+    async def _fetch_bluetooth_clients_overview(self) -> None:
+        """Fetch Bluetooth clients data from all networks in the organization.
+
+        This method iterates through all networks and fetches Bluetooth client counts,
+        then aggregates them into a total count for the organization.
+        """
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            start_time = datetime.now(UTC)
+            total_bluetooth_clients = 0
+
+            # Iterate through all networks to get Bluetooth clients
+            for network in self.networks:
+                network_id = network.get("id")
+                if not network_id:
+                    continue
+
+                try:
+                    # Get Bluetooth clients for this network
+                    def get_network_bluetooth_clients(net_id: str):
+                        assert self.dashboard is not None  # Type guard  # nosec B101
+                        return self.dashboard.networks.getNetworkBluetoothClients(
+                            net_id
+                        )
+
+                    bluetooth_clients = await self.hass.async_add_executor_job(
+                        get_network_bluetooth_clients, network_id
+                    )
+                    self.total_api_calls += 1
+
+                    # Count the Bluetooth clients for this network
+                    if bluetooth_clients and isinstance(bluetooth_clients, list):
+                        network_bluetooth_count = len(bluetooth_clients)
+                        total_bluetooth_clients += network_bluetooth_count
+
+                        _LOGGER.debug(
+                            "Network %s (%s) has %d Bluetooth clients",
+                            network.get("name", "Unknown"),
+                            network_id,
+                            network_bluetooth_count,
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "No Bluetooth clients data for network %s (%s)",
+                            network.get("name", "Unknown"),
+                            network_id,
+                        )
+
+                except Exception as network_err:
+                    # Log network-specific errors but continue with other networks
+                    _LOGGER.debug(
+                        "Could not fetch Bluetooth clients for network %s (%s): %s",
+                        network.get("name", "Unknown"),
+                        network_id,
+                        network_err,
+                    )
+                    continue
+
+            # Update the total count
+            self.bluetooth_clients_total_count = total_bluetooth_clients
+
+            # Track API call duration for performance monitoring
+            duration = (datetime.now(UTC) - start_time).total_seconds()
+            self._track_api_call_duration(duration)
+
+            _LOGGER.debug(
+                "Fetched Bluetooth clients overview: %d total clients across %d networks",
+                self.bluetooth_clients_total_count,
+                len(self.networks),
+            )
+
+        except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            _LOGGER.warning(
+                "Could not fetch Bluetooth clients overview data: %s",
+                err,
+                exc_info=True,
+            )
+
+            # Set fallback value on error
+            self.bluetooth_clients_total_count = 0
 
     async def _fetch_device_statuses(self) -> None:
         """Fetch device status information across the organization."""

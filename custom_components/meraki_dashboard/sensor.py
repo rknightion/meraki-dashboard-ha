@@ -19,6 +19,7 @@ from .const import (
 from .devices import (
     MerakiHubAlertsSensor,
     MerakiHubApiCallsSensor,
+    MerakiHubBluetoothClientsCountSensor,
     MerakiHubClientsCountSensor,
     MerakiHubClientsUsageAverageTotalSensor,
     MerakiHubClientsUsageOverallDownstreamSensor,
@@ -144,6 +145,12 @@ async def async_setup_entry(
         elif description.key == "clients_usage_average_total":
             entities.append(
                 MerakiHubClientsUsageAverageTotalSensor(
+                    organization_hub, description, config_entry.entry_id
+                )
+            )
+        elif description.key == "bluetooth_clients_total_count":
+            entities.append(
+                MerakiHubBluetoothClientsCountSensor(
                     organization_hub, description, config_entry.entry_id
                 )
             )
