@@ -5,10 +5,11 @@
 ### General Instructions:
 1. **Test First**: Run existing tests before starting each task to ensure baseline functionality
 2. **Incremental Changes**: Implement changes incrementally, testing after each major modification
-3. **Backward Compatibility**: Ensure all existing functionality continues to work
+3. **Backward Compatibility**: Ensure all existing functionality continues to work and Home Assistant device names or entity IDs remain unchanged
 4. **Documentation**: Update docstrings and comments for modified code
 5. **Type Safety**: Add or improve type hints for all new code
 6. **Error Handling**: Maintain or improve existing error handling patterns
+7. Consume the .mdc files in the `.cursor/rules` folder for general project instructions and guidance.
 
 ### Phase Execution Order:
 - Complete all Phase 1 tasks before moving to Phase 2
@@ -25,8 +26,9 @@
 
 ### Task Management:
 - Remove completed tasks from their section and move to the "COMPLETED TASKS" section
-- Mark any issues or blockers encountered during task execution
+- Mark any issues or blockers encountered during task execution in this file
 - Maintain this file as a living document of refactoring progress
+- Ensure this file is updated with status and instructions for future sessions
 
 ---
 
@@ -38,7 +40,7 @@
 
 **Objective**: Create shared base classes to reduce code duplication across device types.
 
-**Files to modify**: 
+**Files to modify**:
 - Create: `custom_components/meraki_dashboard/entities/base.py`
 - Modify: `devices/mt.py`, `devices/mr.py`, `devices/ms.py`, `devices/organization.py`
 
@@ -50,11 +52,11 @@
        def __init__(self, hub, description, entry_id):
            # Common initialization logic
            # Include: _attr_device_info, _attr_unique_id patterns
-   
+
    class MerakiSensorEntityBase(MerakiEntityBase, SensorEntity):
        """Base class for Meraki sensor entities."""
        # Common sensor patterns
-   
+
    class MerakiCoordinatorEntityBase(CoordinatorEntity, MerakiEntityBase):
        """Base class for coordinator-based entities."""
    ```
@@ -69,7 +71,7 @@
 4. Ensure all tests pass after refactoring
 5. Update `__init__.py` imports in entities module
 
-**Success Criteria**: 
+**Success Criteria**:
 - All entity classes inherit from appropriate base classes
 - Code duplication reduced by >50% in entity initialization
 - No functionality changes, all tests pass
@@ -89,14 +91,14 @@
    ```python
    class EntityFactory:
        _registry = {}
-       
+
        @classmethod
        def register(cls, entity_type: str):
            def decorator(func):
                cls._registry[entity_type] = func
                return func
            return decorator
-       
+
        @classmethod
        def create_entity(cls, entity_type: str, *args, **kwargs):
            if entity_type not in cls._registry:
@@ -144,20 +146,20 @@
    ```python
    from dataclasses import dataclass
    from typing import Final
-   
+
    @dataclass(frozen=True)
    class MerakiDeviceTypes:
        MT: str = "MT"
-       MR: str = "MR" 
+       MR: str = "MR"
        MS: str = "MS"
        MV: str = "MV"
-   
+
    @dataclass(frozen=True)
    class ApiConfiguration:
        DEFAULT_BASE_URL: str = "https://api.meraki.com/api/v1"
        USER_AGENT: str = "MerakiDashboardHomeAssistant/0.1.0 rknightion"
        REGIONAL_BASE_URLS: dict = field(default_factory=lambda: {...})
-   
+
    @dataclass(frozen=True)
    class ScanIntervals:
        DEFAULT_SCAN: int = 60
@@ -197,16 +199,16 @@
    ```python
    from functools import wraps
    from typing import Callable, TypeVar, Any
-   
+
    class MerakiApiError(Exception):
        """Base exception for Meraki API errors."""
-   
+
    class MerakiConnectionError(MerakiApiError):
        """Connection-related errors."""
-   
+
    class MerakiAuthenticationError(MerakiApiError):
        """Authentication errors."""
-   
+
    def handle_api_errors(
        default_return=None,
        log_errors=True,
@@ -257,23 +259,23 @@
    ```python
    from dataclasses import dataclass
    from typing import Dict, Any
-   
+
    @dataclass
    class HubConfigurationSet:
        scan_intervals: Dict[str, int]
        discovery_intervals: Dict[str, int]
        auto_discovery: Dict[str, bool]
-       
+
        def get_scan_interval(self, hub_id: str, default: int) -> int:
            return self.scan_intervals.get(hub_id, default)
-   
+
    class HubConfigurationManager:
        def __init__(self, current_options: Dict[str, Any]):
            self.current_options = current_options
-       
+
        def build_schema_dict(self, hubs_info: Dict) -> Dict:
            # Extract complex schema building logic
-       
+
        def process_user_input(self, user_input: Dict, hubs_info: Dict) -> HubConfigurationSet:
            # Extract form processing logic
    ```
@@ -308,16 +310,16 @@
    ```python
    from abc import ABC, abstractmethod
    from typing import Dict, Any, List
-   
+
    class DataTransformer(ABC):
        @abstractmethod
        def transform(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
            """Transform raw API data to internal format."""
-   
+
    class MTSensorDataTransformer(DataTransformer):
        def transform(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
            # Extract MT-specific transformation logic
-   
+
    class MRWirelessDataTransformer(DataTransformer):
        def transform(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
            # Extract MR-specific transformation logic
@@ -351,20 +353,20 @@
 1. Create specific type definitions:
    ```python
    from typing import TypedDict, Protocol
-   
+
    class MerakiDeviceData(TypedDict):
        serial: str
        name: str
        model: str
        networkId: str
        # ... other required fields
-   
+
    class SensorReading(TypedDict):
        ts: str
        metric: str
        value: float
        # ... other fields
-   
+
    class ApiResponse(Protocol):
        def get(self, key: str, default=None): ...
    ```
@@ -409,21 +411,21 @@
                "model": "MT20",
                "networkId": "N_123456789"
            }
-       
+
        def with_serial(self, serial: str) -> "MerakiDeviceBuilder":
            self._data["serial"] = serial
            return self
-       
+
        def with_model(self, model: str) -> "MerakiDeviceBuilder":
            self._data["model"] = model
            return self
-       
+
        def build(self) -> Dict[str, Any]:
            return self._data.copy()
-   
+
    class SensorDataBuilder:
        # Similar pattern for sensor readings
-   
+
    class HubBuilder:
        # Similar pattern for hub creation
    ```
@@ -433,9 +435,9 @@
    class IntegrationTestHelper:
        def __init__(self, hass: HomeAssistant):
            self.hass = hass
-       
+
        async def setup_meraki_integration(
-           self, 
+           self,
            devices: List[Dict] = None,
            organization_id: str = "test_org"
        ) -> ConfigEntry:
@@ -468,20 +470,20 @@
 1. Create event service architecture:
    ```python
    from abc import ABC, abstractmethod
-   
+
    class EventPublisher(ABC):
        @abstractmethod
        async def publish_event(self, event_type: str, data: Dict[str, Any]) -> None:
            """Publish an event to subscribers."""
-   
+
    class MerakiEventService(EventPublisher):
        def __init__(self, hass: HomeAssistant):
            self.hass = hass
            self._subscribers = defaultdict(list)
-       
+
        def subscribe(self, event_type: str, callback: Callable) -> None:
            self._subscribers[event_type].append(callback)
-       
+
        async def publish_event(self, event_type: str, data: Dict[str, Any]) -> None:
            # Publish to Home Assistant event bus and internal subscribers
    ```
@@ -518,7 +520,7 @@
        def __init__(self, domain: str):
            self.domain = domain
            self._info = {}
-       
+
        def for_organization(self, org_id: str, name: str) -> "DeviceInfoBuilder":
            self._info.update({
                "identifiers": {(self.domain, f"{org_id}_org")},
@@ -527,20 +529,20 @@
                "model": "Organization"
            })
            return self
-       
+
        def for_network_hub(self, network_id: str, device_type: str, name: str) -> "DeviceInfoBuilder":
            # Network hub device info
-       
+
        def for_device(self, device_data: Dict, via_device_id: str = None) -> "DeviceInfoBuilder":
            # Individual device info
-       
+
        def build(self) -> Dict[str, Any]:
            return self._info.copy()
    ```
 
 2. Replace device info construction in:
    - Organization hub registration
-   - Network hub registration  
+   - Network hub registration
    - Individual device entity registration
 
 3. Ensure consistent device hierarchy and relationships
@@ -569,7 +571,7 @@
    import asyncio
    from functools import wraps
    from typing import Callable, List, Type
-   
+
    class RetryConfig:
        def __init__(
            self,
@@ -580,7 +582,7 @@
            self.max_attempts = max_attempts
            self.backoff_factor = backoff_factor
            self.exceptions = exceptions or [Exception]
-   
+
    def retry_on_api_error(config: RetryConfig = None):
        def decorator(func: Callable):
            @wraps(func)
@@ -621,23 +623,23 @@
    ```python
    from pydantic import BaseModel, validator
    from typing import Dict, Optional
-   
+
    class ScanIntervalConfig(BaseModel):
        default: int = 60
        mt_devices: int = 600  # 10 minutes for MT
        mr_devices: int = 300  # 5 minutes for MR
-       
+
        @validator('*')
        def validate_positive(cls, v):
            if v < 60:
                raise ValueError('Scan interval must be at least 60 seconds')
            return v
-   
+
    class HubConfig(BaseModel):
        scan_interval: int
        discovery_interval: int
        auto_discovery: bool = True
-   
+
    class IntegrationConfig(BaseModel):
        api_key: str
        organization_id: str
