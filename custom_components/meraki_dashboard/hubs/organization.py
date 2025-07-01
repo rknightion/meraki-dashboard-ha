@@ -139,6 +139,13 @@ class MerakiOrganizationHub:
         self.active_alerts_count = 0
         self.device_statuses: list[dict[str, Any]] = []
 
+        # Clients overview data (1-hour timespan)
+        self.clients_total_count = 0
+        self.clients_usage_overall_total = 0.0  # Total usage in KB
+        self.clients_usage_overall_downstream = 0.0  # Downstream usage in KB
+        self.clients_usage_overall_upstream = 0.0  # Upstream usage in KB
+        self.clients_usage_average_total = 0.0  # Average usage per client in KB
+
         # Organization data update timer
         self._organization_data_unsub: Callable[[], None] | None = None
 
@@ -146,6 +153,7 @@ class MerakiOrganizationHub:
         self._last_license_update: datetime | None = None
         self._last_device_status_update: datetime | None = None
         self._last_alerts_update: datetime | None = None
+        self._last_clients_update: datetime | None = None
 
         # Tiered refresh unsubscribe handlers
         self._static_data_unsub: Callable[[], None] | None = None
@@ -181,6 +189,13 @@ class MerakiOrganizationHub:
         if not self._last_alerts_update:
             return None
         return int((datetime.now(UTC) - self._last_alerts_update).total_seconds() / 60)
+
+    @property
+    def last_clients_update_age_minutes(self) -> int | None:
+        """Get the age of the last clients update in minutes."""
+        if not self._last_clients_update:
+            return None
+        return int((datetime.now(UTC) - self._last_clients_update).total_seconds() / 60)
 
     def _track_api_call_duration(self, duration: float) -> None:
         """Track API call duration for performance monitoring."""
@@ -293,11 +308,17 @@ class MerakiOrganizationHub:
                 timedelta(seconds=semi_static_interval),
             )
 
-            # Dynamic data (alerts, events) - configurable interval (default: every 5 minutes)
+            # Dynamic data (alerts, events, clients overview) - configurable interval (default: every 5 minutes)
             async def _update_dynamic_data(_now: datetime | None = None) -> None:
                 await self._fetch_alerts_data()
                 self._last_alerts_update = datetime.now(UTC)
-                _LOGGER.debug("Updated dynamic organization data (alerts/events)")
+
+                await self._fetch_clients_overview()
+                self._last_clients_update = datetime.now(UTC)
+
+                _LOGGER.debug(
+                    "Updated dynamic organization data (alerts/events/clients)"
+                )
 
             self._dynamic_data_unsub = async_track_time_interval(
                 self.hass,
@@ -314,6 +335,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_alerts_data()
             self._last_alerts_update = datetime.now(UTC)
+
+            await self._fetch_clients_overview()
+            self._last_clients_update = datetime.now(UTC)
 
             # Track setup completion time
             self._last_setup_time = datetime.now(UTC)
@@ -450,6 +474,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_alerts_data()
             self._last_alerts_update = datetime.now(UTC)
+
+            await self._fetch_clients_overview()
+            self._last_clients_update = datetime.now(UTC)
 
             _LOGGER.debug("Manual organization data update completed")
 
@@ -699,6 +726,100 @@ class MerakiOrganizationHub:
             # Set fallback values
             self.active_alerts_count = 0
             self.recent_alerts = []
+
+    async def _fetch_clients_overview(self) -> None:
+        """Fetch clients overview data for the organization using default timespan (1 day)."""
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            start_time = datetime.now(UTC)
+
+            # Get clients overview with default timespan (1 day)
+            # This provides aggregate client counts and usage data
+            def get_clients_overview():
+                return self.dashboard.organizations.getOrganizationClientsOverview(
+                    self.organization_id
+                    # Using default timespan (1 day) - no timespan parameter
+                )
+
+            clients_overview = await self.hass.async_add_executor_job(
+                get_clients_overview
+            )
+            self.total_api_calls += 1
+
+            # Track API call duration for performance monitoring
+            duration = (datetime.now(UTC) - start_time).total_seconds()
+            self._track_api_call_duration(duration)
+
+            # Process the clients overview response
+            if clients_overview and isinstance(clients_overview, dict):
+                # Extract counts data
+                counts = clients_overview.get("counts", {})
+                self.clients_total_count = counts.get("total", 0)
+
+                # Extract usage data
+                usage = clients_overview.get("usage", {})
+
+                # Overall usage totals (organization-wide)
+                overall = usage.get("overall", {})
+                if isinstance(overall, dict):
+                    # Standard format with breakdown by direction
+                    self.clients_usage_overall_total = overall.get("total", 0.0)
+                    self.clients_usage_overall_downstream = overall.get(
+                        "downstream", 0.0
+                    )
+                    self.clients_usage_overall_upstream = overall.get("upstream", 0.0)
+                elif isinstance(overall, int | float):
+                    # Some API responses return overall as a single float value
+                    self.clients_usage_overall_total = float(overall)
+                    self.clients_usage_overall_downstream = 0.0
+                    self.clients_usage_overall_upstream = 0.0
+                else:
+                    # Fallback for unexpected types
+                    self.clients_usage_overall_total = 0.0
+                    self.clients_usage_overall_downstream = 0.0
+                    self.clients_usage_overall_upstream = 0.0
+
+                # Average usage per client (API returns single value, not breakdown by direction)
+                average = usage.get("average", 0.0)
+                if isinstance(average, int | float):
+                    # API returns average as a single float value
+                    self.clients_usage_average_total = float(average)
+                else:
+                    # Fallback for unexpected types
+                    self.clients_usage_average_total = 0.0
+
+                _LOGGER.debug(
+                    "Fetched clients overview: %d total clients, %.2f KB total usage (24-hour)",
+                    self.clients_total_count,
+                    self.clients_usage_overall_total,
+                )
+
+            else:
+                # Set fallback values if no data received
+                self.clients_total_count = 0
+                self.clients_usage_overall_total = 0.0
+                self.clients_usage_overall_downstream = 0.0
+                self.clients_usage_overall_upstream = 0.0
+                self.clients_usage_average_total = 0.0
+                _LOGGER.debug("No clients overview data received")
+
+        except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            _LOGGER.warning(
+                "Could not fetch clients overview data: %s", err, exc_info=True
+            )
+
+            # Set fallback values on error
+            self.clients_total_count = 0
+            self.clients_usage_overall_total = 0.0
+            self.clients_usage_overall_downstream = 0.0
+            self.clients_usage_overall_upstream = 0.0
+            self.clients_usage_average_total = 0.0
 
     async def _fetch_device_statuses(self) -> None:
         """Fetch device status information across the organization."""

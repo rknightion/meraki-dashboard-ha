@@ -611,6 +611,7 @@ class TestMerakiOrganizationHub:
         organization_hub._fetch_license_data = AsyncMock()
         organization_hub._fetch_alerts_data = AsyncMock()
         organization_hub._fetch_device_statuses = AsyncMock()
+        organization_hub._fetch_clients_overview = AsyncMock()
 
         # Perform manual update
         await organization_hub.async_update_organization_data()
@@ -619,21 +620,25 @@ class TestMerakiOrganizationHub:
         organization_hub._fetch_license_data.assert_called_once()
         organization_hub._fetch_alerts_data.assert_called_once()
         organization_hub._fetch_device_statuses.assert_called_once()
+        organization_hub._fetch_clients_overview.assert_called_once()
 
         # Verify last update times are set
         assert organization_hub._last_license_update is not None
         assert organization_hub._last_device_status_update is not None
         assert organization_hub._last_alerts_update is not None
+        assert organization_hub._last_clients_update is not None
 
         # Verify diagnostic properties work
         assert organization_hub.last_license_update_age_minutes is not None
         assert organization_hub.last_device_status_update_age_minutes is not None
         assert organization_hub.last_alerts_update_age_minutes is not None
+        assert organization_hub.last_clients_update_age_minutes is not None
 
         # All should be very recent (0 minutes)
         assert organization_hub.last_license_update_age_minutes == 0
         assert organization_hub.last_device_status_update_age_minutes == 0
         assert organization_hub.last_alerts_update_age_minutes == 0
+        assert organization_hub.last_clients_update_age_minutes == 0
 
     async def test_tiered_refresh_diagnostic_properties_none(self, organization_hub):
         """Test diagnostic properties when no updates have occurred."""
@@ -641,6 +646,218 @@ class TestMerakiOrganizationHub:
         assert organization_hub.last_license_update_age_minutes is None
         assert organization_hub.last_device_status_update_age_minutes is None
         assert organization_hub.last_alerts_update_age_minutes is None
+        assert organization_hub.last_clients_update_age_minutes is None
+
+    async def test_fetch_clients_overview_success(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test successful clients overview data fetching."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock clients overview response
+        mock_clients_overview = {
+            "counts": {"total": 25},
+            "usage": {
+                "overall": {
+                    "total": 1024000.5,
+                    "downstream": 800000.2,
+                    "upstream": 224000.3,
+                },
+                "average": 40960.02,  # API returns single float value
+            },
+        }
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
+            mock_clients_overview
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Verify API call was made with correct parameters
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.assert_called_once_with(
+            organization_hub.organization_id
+            # No timespan parameter - using default (1 day)
+        )
+
+        # Verify data was processed correctly
+        assert organization_hub.clients_total_count == 25
+        assert organization_hub.clients_usage_overall_total == 1024000.5
+        assert organization_hub.clients_usage_overall_downstream == 800000.2
+        assert organization_hub.clients_usage_overall_upstream == 224000.3
+        assert organization_hub.clients_usage_average_total == 40960.02
+
+    async def test_fetch_clients_overview_api_error(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test clients overview data fetching with API error."""
+        organization_hub.dashboard = mock_dashboard_api
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.side_effect = (
+            create_mock_api_error("Clients overview API error", 403)
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Should handle error gracefully and set fallback values
+        assert organization_hub.clients_total_count == 0
+        assert organization_hub.clients_usage_overall_total == 0.0
+        assert organization_hub.clients_usage_overall_downstream == 0.0
+        assert organization_hub.clients_usage_overall_upstream == 0.0
+        assert organization_hub.clients_usage_average_total == 0.0
+        assert organization_hub.failed_api_calls == 1
+        assert organization_hub.last_api_call_error is not None
+
+    async def test_fetch_clients_overview_no_data(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test clients overview data fetching with no data returned."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock empty clients overview response
+        mock_clients_overview = {}
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
+            mock_clients_overview
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Should handle empty response correctly
+        assert organization_hub.clients_total_count == 0
+        assert organization_hub.clients_usage_overall_total == 0.0
+        assert organization_hub.clients_usage_overall_downstream == 0.0
+        assert organization_hub.clients_usage_overall_upstream == 0.0
+        assert organization_hub.clients_usage_average_total == 0.0
+
+    async def test_fetch_clients_overview_partial_data(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test clients overview data fetching with partial data."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock partial clients overview response (missing some fields)
+        mock_clients_overview = {
+            "counts": {"total": 10},
+            "usage": {
+                "overall": {
+                    "total": 500000.0
+                    # Missing downstream and upstream
+                },
+                "average": 15000.0,  # API returns single float value
+            },
+        }
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
+            mock_clients_overview
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Should handle partial data correctly with defaults for missing fields
+        assert organization_hub.clients_total_count == 10
+        assert organization_hub.clients_usage_overall_total == 500000.0
+        assert organization_hub.clients_usage_overall_downstream == 0.0  # Default
+        assert organization_hub.clients_usage_overall_upstream == 0.0  # Default
+        assert organization_hub.clients_usage_average_total == 15000.0
+
+    async def test_clients_overview_update_age_tracking(self, organization_hub):
+        """Test that clients overview update age is tracked correctly."""
+        # Initially should be None
+        assert organization_hub.last_clients_update_age_minutes is None
+
+        # Set a mock update time 5 minutes ago
+        five_minutes_ago = datetime.now(UTC) - timedelta(minutes=5)
+        organization_hub._last_clients_update = five_minutes_ago
+
+        # Should return approximately 5 minutes
+        age = organization_hub.last_clients_update_age_minutes
+        assert age is not None
+        assert 4 <= age <= 6  # Allow for small timing variations
+
+    async def test_fetch_clients_overview_float_usage_data(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test clients overview data fetching when API returns usage as float values."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock clients overview response with float values instead of dicts
+        mock_clients_overview = {
+            "counts": {"total": 15},
+            "usage": {
+                "overall": 750000.0,  # Float instead of dict
+                "average": 50000.0,  # Float instead of dict
+            },
+        }
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
+            mock_clients_overview
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Should handle float values correctly
+        assert organization_hub.clients_total_count == 15
+        assert organization_hub.clients_usage_overall_total == 750000.0
+        assert (
+            organization_hub.clients_usage_overall_downstream == 0.0
+        )  # Should default to 0
+        assert (
+            organization_hub.clients_usage_overall_upstream == 0.0
+        )  # Should default to 0
+        assert organization_hub.clients_usage_average_total == 50000.0
+
+    async def test_fetch_clients_overview_mixed_usage_data(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test clients overview data fetching with mixed data types."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock clients overview response with mixed data types
+        mock_clients_overview = {
+            "counts": {"total": 20},
+            "usage": {
+                "overall": {
+                    "total": 1000000.0,
+                    "downstream": 600000.0,
+                    "upstream": 400000.0,
+                },
+                "average": 50000.0,  # Float for average, dict for overall
+            },
+        }
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
+            mock_clients_overview
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Should handle mixed types correctly
+        assert organization_hub.clients_total_count == 20
+        assert organization_hub.clients_usage_overall_total == 1000000.0
+        assert organization_hub.clients_usage_overall_downstream == 600000.0
+        assert organization_hub.clients_usage_overall_upstream == 400000.0
+        assert organization_hub.clients_usage_average_total == 50000.0
+
+    async def test_fetch_clients_overview_invalid_usage_types(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test clients overview data fetching with invalid usage data types."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock clients overview response with invalid data types
+        mock_clients_overview = {
+            "counts": {"total": 5},
+            "usage": {
+                "overall": "invalid_string",  # Invalid type
+                "average": None,  # Invalid type
+            },
+        }
+        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
+            mock_clients_overview
+        )
+
+        await organization_hub._fetch_clients_overview()
+
+        # Should handle invalid types gracefully with fallback values
+        assert organization_hub.clients_total_count == 5
+        assert organization_hub.clients_usage_overall_total == 0.0
+        assert organization_hub.clients_usage_overall_downstream == 0.0
+        assert organization_hub.clients_usage_overall_upstream == 0.0
+        assert organization_hub.clients_usage_average_total == 0.0
 
 
 class TestLoggingConfiguration:

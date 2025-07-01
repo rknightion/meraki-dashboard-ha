@@ -19,6 +19,11 @@ from .const import (
 from .devices import (
     MerakiHubAlertsSensor,
     MerakiHubApiCallsSensor,
+    MerakiHubClientsCountSensor,
+    MerakiHubClientsUsageAverageTotalSensor,
+    MerakiHubClientsUsageOverallDownstreamSensor,
+    MerakiHubClientsUsageOverallTotalSensor,
+    MerakiHubClientsUsageOverallUpstreamSensor,
     MerakiHubDeviceCountSensor,
     MerakiHubFailedApiCallsSensor,
     MerakiHubLicenseExpiringSensor,
@@ -109,6 +114,36 @@ async def async_setup_entry(
         elif description.key == "license_expiring":
             entities.append(
                 MerakiHubLicenseExpiringSensor(
+                    organization_hub, description, config_entry.entry_id
+                )
+            )
+        elif description.key == "clients_total_count":
+            entities.append(
+                MerakiHubClientsCountSensor(
+                    organization_hub, description, config_entry.entry_id
+                )
+            )
+        elif description.key == "clients_usage_overall_total":
+            entities.append(
+                MerakiHubClientsUsageOverallTotalSensor(
+                    organization_hub, description, config_entry.entry_id
+                )
+            )
+        elif description.key == "clients_usage_overall_downstream":
+            entities.append(
+                MerakiHubClientsUsageOverallDownstreamSensor(
+                    organization_hub, description, config_entry.entry_id
+                )
+            )
+        elif description.key == "clients_usage_overall_upstream":
+            entities.append(
+                MerakiHubClientsUsageOverallUpstreamSensor(
+                    organization_hub, description, config_entry.entry_id
+                )
+            )
+        elif description.key == "clients_usage_average_total":
+            entities.append(
+                MerakiHubClientsUsageAverageTotalSensor(
                     organization_hub, description, config_entry.entry_id
                 )
             )

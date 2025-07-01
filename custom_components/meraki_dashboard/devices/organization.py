@@ -68,6 +68,50 @@ ORG_HUB_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    "clients_total_count": SensorEntityDescription(
+        key="clients_total_count",
+        name="Total Clients (24h)",
+        icon="mdi:account-group",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement="clients",
+    ),
+    "clients_usage_overall_total": SensorEntityDescription(
+        key="clients_usage_overall_total",
+        name="Total Client Usage (24h)",
+        icon="mdi:chart-line",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement="KB",
+        suggested_display_precision=1,
+    ),
+    "clients_usage_overall_downstream": SensorEntityDescription(
+        key="clients_usage_overall_downstream",
+        name="Total Client Downstream (24h)",
+        icon="mdi:download",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement="KB",
+        suggested_display_precision=1,
+    ),
+    "clients_usage_overall_upstream": SensorEntityDescription(
+        key="clients_usage_overall_upstream",
+        name="Total Client Upstream (24h)",
+        icon="mdi:upload",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement="KB",
+        suggested_display_precision=1,
+    ),
+    "clients_usage_average_total": SensorEntityDescription(
+        key="clients_usage_average_total",
+        name="Average Client Usage (24h)",
+        icon="mdi:chart-bell-curve",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement="KB",
+        suggested_display_precision=2,
+    ),
 }
 
 # Network hub sensor descriptions
@@ -589,3 +633,218 @@ class MerakiHubLicenseExpiringSensor(SensorEntity):
             attrs["warning"] = f"{expiring_count} license(s) expiring within 90 days"
 
         return attrs
+
+
+class MerakiHubClientsCountSensor(SensorEntity):
+    """Sensor for tracking total client count from an organization hub (24-hour timespan)."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the clients count sensor."""
+        self._organization_hub = organization_hub
+        self.entity_description = description
+        self._config_entry_id = config_entry_id
+
+        # Set unique ID
+        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
+
+        # Set device info to the organization hub device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
+        )
+
+    @property
+    def native_value(self) -> int:
+        """Return the client count."""
+        return getattr(self._organization_hub, "clients_total_count", 0)
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return True
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attrs = {
+            "organization_id": self._organization_hub.organization_id,
+            "organization_name": self._organization_hub.organization_name,
+            "timespan": "24 hours",
+            "description": "Total number of clients with data usage in the last 24 hours",
+        }
+
+        # Add clients update age information
+        clients_age = self._organization_hub.last_clients_update_age_minutes
+        if clients_age is not None:
+            attrs["data_age_minutes"] = clients_age
+            attrs["data_status"] = (
+                "fresh" if clients_age < 8 else "stale"
+            )  # 8 min = 5min + buffer
+
+        return attrs
+
+
+class MerakiHubClientsUsageSensor(SensorEntity):
+    """Base sensor for tracking client usage data from an organization hub (24-hour timespan)."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+        attribute_name: str,
+        description_text: str,
+    ) -> None:
+        """Initialize the clients usage sensor."""
+        self._organization_hub = organization_hub
+        self.entity_description = description
+        self._config_entry_id = config_entry_id
+        self._attribute_name = attribute_name
+        self._description_text = description_text
+
+        # Set unique ID
+        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
+
+        # Set device info to the organization hub device
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
+        )
+
+    @property
+    def native_value(self) -> float:
+        """Return the usage value."""
+        return getattr(self._organization_hub, self._attribute_name, 0.0)
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return True
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attrs = {
+            "organization_id": self._organization_hub.organization_id,
+            "organization_name": self._organization_hub.organization_name,
+            "timespan": "24 hours",
+            "description": self._description_text,
+            "unit": "KB",
+        }
+
+        # Add all usage metrics for context
+        attrs["total_clients"] = getattr(
+            self._organization_hub, "clients_total_count", 0
+        )
+        attrs["overall_total_usage"] = getattr(
+            self._organization_hub, "clients_usage_overall_total", 0.0
+        )
+        attrs["overall_downstream"] = getattr(
+            self._organization_hub, "clients_usage_overall_downstream", 0.0
+        )
+        attrs["overall_upstream"] = getattr(
+            self._organization_hub, "clients_usage_overall_upstream", 0.0
+        )
+        attrs["average_total_usage"] = getattr(
+            self._organization_hub, "clients_usage_average_total", 0.0
+        )
+        attrs["average_downstream"] = getattr(
+            self._organization_hub, "clients_usage_average_downstream", 0.0
+        )
+        attrs["average_upstream"] = getattr(
+            self._organization_hub, "clients_usage_average_upstream", 0.0
+        )
+
+        # Add clients update age information
+        clients_age = self._organization_hub.last_clients_update_age_minutes
+        if clients_age is not None:
+            attrs["data_age_minutes"] = clients_age
+            attrs["data_status"] = (
+                "fresh" if clients_age < 8 else "stale"
+            )  # 8 min = 5min + buffer
+
+        return attrs
+
+
+# Specific sensor classes for each usage metric
+class MerakiHubClientsUsageOverallTotalSensor(MerakiHubClientsUsageSensor):
+    """Sensor for tracking total overall client usage."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            organization_hub,
+            description,
+            config_entry_id,
+            "clients_usage_overall_total",
+            "Total data usage by all clients in the last 24 hours (upstream + downstream)",
+        )
+
+
+class MerakiHubClientsUsageOverallDownstreamSensor(MerakiHubClientsUsageSensor):
+    """Sensor for tracking total downstream client usage."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            organization_hub,
+            description,
+            config_entry_id,
+            "clients_usage_overall_downstream",
+            "Total downstream data usage by all clients in the last 24 hours",
+        )
+
+
+class MerakiHubClientsUsageOverallUpstreamSensor(MerakiHubClientsUsageSensor):
+    """Sensor for tracking total upstream client usage."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            organization_hub,
+            description,
+            config_entry_id,
+            "clients_usage_overall_upstream",
+            "Total upstream data usage by all clients in the last 24 hours",
+        )
+
+
+class MerakiHubClientsUsageAverageTotalSensor(MerakiHubClientsUsageSensor):
+    """Sensor for tracking average total client usage."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            organization_hub,
+            description,
+            config_entry_id,
+            "clients_usage_average_total",
+            "Average data usage per client in the last 24 hours (upstream + downstream)",
+        )
