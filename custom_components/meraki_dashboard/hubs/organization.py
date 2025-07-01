@@ -675,9 +675,25 @@ class MerakiOrganizationHub:
                         if network_events:
                             # Add network context to events
                             for event in network_events:
-                                event["source_network_id"] = network_hub.network_id
-                                event["source_network_name"] = network_hub.network_name
-                            all_events.extend(network_events)
+                                # Ensure event is a dictionary before assignment
+                                if isinstance(event, dict):
+                                    event["source_network_id"] = network_hub.network_id
+                                    event["source_network_name"] = (
+                                        network_hub.network_name
+                                    )
+                                else:
+                                    # Only log when debug is explicitly enabled to avoid spam
+                                    if _LOGGER.isEnabledFor(logging.DEBUG):
+                                        _LOGGER.debug(
+                                            "Skipping non-dict event from network %s: %s",
+                                            network_hub.network_name,
+                                            type(event),
+                                        )
+                            # Only add valid dict events to the list
+                            valid_events = [
+                                e for e in network_events if isinstance(e, dict)
+                            ]
+                            all_events.extend(valid_events)
 
                     except Exception as network_event_err:
                         _LOGGER.debug(

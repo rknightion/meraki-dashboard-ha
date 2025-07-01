@@ -33,6 +33,8 @@ class MerakiEventHandler:
         """Initialize the event handler."""
         self.hass = hass
         self._previous_states: dict[str, dict[str, Any]] = {}
+        # Track devices we've already logged as not found to reduce spam
+        self._logged_missing_devices: set[str] = set()
 
     def track_sensor_data(
         self,
@@ -69,10 +71,15 @@ class MerakiEventHandler:
                     break
 
         if not device_entry:
-            _LOGGER.debug(
-                "Device %s not found in registry, skipping event processing",
-                device_serial,
-            )
+            # Only log once per device to reduce spam, and only at debug level
+            if device_serial not in self._logged_missing_devices:
+                self._logged_missing_devices.add(device_serial)
+                if _LOGGER.isEnabledFor(logging.DEBUG):
+                    _LOGGER.debug(
+                        "Device %s not found in registry, skipping event processing "
+                        "(this message will only appear once per device)",
+                        device_serial,
+                    )
             return
 
         device_id = device_entry.id

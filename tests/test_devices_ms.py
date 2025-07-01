@@ -242,8 +242,8 @@ class TestMerakiMSSensors:
         for sensor_key in data_rate_sensors:
             if sensor_key in MS_DEVICE_SENSOR_DESCRIPTIONS:
                 desc = MS_DEVICE_SENSOR_DESCRIPTIONS[sensor_key]
-                # Must use "KB/s" for traffic sensors (more user-friendly than B/s)
-                assert desc.native_unit_of_measurement == "KB/s"
+                # Must use "kB/s" for traffic sensors (valid Home Assistant unit)
+                assert desc.native_unit_of_measurement == "kB/s"
                 assert desc.device_class == SensorDeviceClass.DATA_RATE
 
     async def test_ms_device_sensor_unique_id_generation(

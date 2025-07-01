@@ -679,42 +679,13 @@ class MerakiNetworkHub:
 
                         # If no traffic found, try alternative API endpoints
                         if not traffic_found:
-                            try:
-                                # Get latency and loss stats which sometimes includes traffic
-                                def get_latency_stats(serial: str):
-                                    if self.dashboard is None:
-                                        return None
-                                    return self.dashboard.devices.getDeviceLossAndLatencyHistory(
-                                        serial,
-                                        timespan=3600,  # 1 hour
-                                    )
-
-                                latency_stats = await self.hass.async_add_executor_job(
-                                    get_latency_stats, device_serial
-                                )
-                                self.organization_hub.total_api_calls += 1
-
-                                if latency_stats and isinstance(latency_stats, list):
-                                    for entry in latency_stats:
-                                        if isinstance(entry, dict):
-                                            # Some devices include traffic data in latency stats
-                                            sent = entry.get("sent", 0)
-                                            recv = entry.get("received", 0)
-                                            if sent > 0 or recv > 0:
-                                                device_info["trafficSent"] = max(
-                                                    device_info["trafficSent"], sent
-                                                )
-                                                device_info["trafficRecv"] = max(
-                                                    device_info["trafficRecv"], recv
-                                                )
-                                                traffic_found = True
-
-                            except Exception as latency_err:
-                                _LOGGER.debug(
-                                    "Could not get latency stats for %s: %s",
-                                    device_serial,
-                                    latency_err,
-                                )
+                            # Note: getDeviceLossAndLatencyHistory is only available for MX, MG, and Z devices,
+                            # not for MR (wireless) devices, so we skip this API call for wireless devices
+                            _LOGGER.debug(
+                                "Traffic data not found in device status for %s, "
+                                "skipping latency stats (not available for MR devices)",
+                                device_serial,
+                            )
 
                         if not traffic_found:
                             # Fallback: Get usage history if device status unavailable

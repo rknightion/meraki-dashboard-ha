@@ -85,7 +85,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:upload",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="KB/s",
+        native_unit_of_measurement="kB/s",
         suggested_display_precision=0,
     ),
     MS_SENSOR_PORT_TRAFFIC_RECV: SensorEntityDescription(
@@ -94,7 +94,7 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:download",
         device_class=SensorDeviceClass.DATA_RATE,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="KB/s",
+        native_unit_of_measurement="kB/s",
         suggested_display_precision=0,
     ),
     MS_SENSOR_POE_POWER: SensorEntityDescription(
