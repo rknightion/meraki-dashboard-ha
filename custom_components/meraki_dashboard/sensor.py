@@ -310,7 +310,10 @@ async def _setup_mr_sensors(
         # Create sensors for each wireless metric that the device supports
         entities_created = 0
         for description in MR_SENSOR_DESCRIPTIONS.values():
-            if should_create_entity(device, description.key, coordinator.data):
+            # Always create memory usage sensors for MR devices (available via organization API)
+            if description.key == "memoryUsage" or should_create_entity(
+                device, description.key, coordinator.data
+            ):
                 entities.append(
                     MerakiMRDeviceSensor(
                         device,
@@ -371,7 +374,10 @@ async def _setup_ms_sensors(
         # Create sensors for each switch metric that the device supports
         entities_created = 0
         for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
-            if should_create_entity(device, description.key, coordinator.data):
+            # Always create memory usage sensors for MS devices (available via organization API)
+            if description.key == "memoryUsage" or should_create_entity(
+                device, description.key, coordinator.data
+            ):
                 entities.append(
                     MerakiMSDeviceSensor(
                         device,

@@ -24,6 +24,7 @@ from ..const import (
     DOMAIN,
     MS_SENSOR_CONNECTED_CLIENTS,
     MS_SENSOR_CONNECTED_PORTS,
+    MS_SENSOR_MEMORY_USAGE,
     MS_SENSOR_POE_LIMIT,
     MS_SENSOR_POE_PORTS,
     MS_SENSOR_POE_POWER,
@@ -149,6 +150,14 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key=MS_SENSOR_PORT_UTILIZATION,
         name="Overall Port Utilization",
         icon="mdi:speedometer",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    MS_SENSOR_MEMORY_USAGE: SensorEntityDescription(
+        key=MS_SENSOR_MEMORY_USAGE,
+        name="Memory Usage",
+        icon="mdi:memory",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=1,
@@ -295,11 +304,55 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             elif self.entity_description.key == MS_SENSOR_PORT_LINK_COUNT:
                 return device_info.get("port_link_count", 0)
             elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
-                return device_info.get("poe_power_limit", 0)
+                # Only get from power module data via API - no hardcoded values
+                power_modules = self.coordinator.data.get("power_modules", [])
+                device_power = next(
+                    (
+                        pm
+                        for pm in power_modules
+                        if pm.get("device_serial") == self._device_serial
+                    ),
+                    None,
+                )
+                if device_power:
+                    power_status = device_power.get("power_status", {})
+                    # Handle different power status formats
+                    if isinstance(power_status, list) and power_status:
+                        # If it's a list, take the first power module
+                        return power_status[0].get("powerLimit", 0)
+                    elif isinstance(power_status, dict):
+                        return power_status.get("powerLimit", 0)
+
+                # Return 0 if no API data available - no hardcoded fallbacks
+                return 0
             elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
                 return device_info.get("port_errors", 0)
             elif self.entity_description.key == MS_SENSOR_PORT_DISCARDS:
                 return device_info.get("port_discards", 0)
+            elif self.entity_description.key == MS_SENSOR_MEMORY_USAGE:
+                # Get memory usage from organization hub memory data
+                if hasattr(self.coordinator.network_hub, "organization_hub"):
+                    memory_data = self.coordinator.network_hub.organization_hub.device_memory_usage.get(
+                        self._device_serial, {}
+                    )
+                    if memory_data:
+                        usage_percent = memory_data.get("memory_usage_percent", 0)
+                        _LOGGER.debug(
+                            "MS device %s memory usage: %s%%",
+                            self._device_serial,
+                            usage_percent,
+                        )
+                        return usage_percent
+                    else:
+                        _LOGGER.debug(
+                            "No memory data found for MS device %s", self._device_serial
+                        )
+                else:
+                    _LOGGER.debug(
+                        "No organization_hub found for MS device %s",
+                        self._device_serial,
+                    )
+                return 0
 
         # Fallback to port-level data if device info not available
         ports_status = self.coordinator.data.get("ports_status", [])
@@ -389,28 +442,6 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             # API returns values in deciwatts (dW), divide by 10 to get watts
             # Based on user feedback: 300W should be 30W, so divide by 10
             return total_power / 10
-        elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
-            # Only get from power module data via API - no hardcoded values
-            power_modules = self.coordinator.data.get("power_modules", [])
-            device_power = next(
-                (
-                    pm
-                    for pm in power_modules
-                    if pm.get("device_serial") == self._device_serial
-                ),
-                None,
-            )
-            if device_power:
-                power_status = device_power.get("power_status", {})
-                # Handle different power status formats
-                if isinstance(power_status, list) and power_status:
-                    # If it's a list, take the first power module
-                    return power_status[0].get("powerLimit", 0)
-                elif isinstance(power_status, dict):
-                    return power_status.get("powerLimit", 0)
-
-            # Return 0 if no API data available - no hardcoded fallbacks
-            return 0
         elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
             # Sum port errors across device ports
             total_errors = 0
@@ -563,6 +594,20 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     "power_draw": power_status.get("powerDraw"),
                     "power_limit": power_status.get("powerLimit"),
                 }
+
+            # Add memory usage information if available
+            if hasattr(self.coordinator.network_hub, "organization_hub"):
+                memory_data = self.coordinator.network_hub.organization_hub.device_memory_usage.get(
+                    self._device_serial, {}
+                )
+                if memory_data:
+                    attrs["memory_usage"] = {
+                        "used_kb": memory_data.get("memory_used_kb", 0),
+                        "free_kb": memory_data.get("memory_free_kb", 0),
+                        "total_kb": memory_data.get("memory_total_kb", 0),
+                        "usage_percent": memory_data.get("memory_usage_percent", 0),
+                        "last_update": memory_data.get("last_interval_end"),
+                    }
 
         # Add network configuration details from device status
         if self._device_serial:

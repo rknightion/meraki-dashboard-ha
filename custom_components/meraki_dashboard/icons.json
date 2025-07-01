@@ -78,6 +78,9 @@
       },
       "bluetooth_clients_total_count": {
         "default": "mdi:bluetooth"
+      },
+      "memory_usage": {
+        "default": "mdi:memory"
       }
     },
     "binary_sensor": {

@@ -140,6 +140,7 @@ MR_SENSOR_RADIO_CHANNEL_2_4: Final = "radioChannel24"  # 2.4GHz channel
 MR_SENSOR_RADIO_CHANNEL_5: Final = "radioChannel5"  # 5GHz channel
 MR_SENSOR_CHANNEL_WIDTH_5: Final = "channelWidth5"  # 5GHz channel width
 MR_SENSOR_RF_PROFILE_ID: Final = "rfProfileId"  # RF profile ID
+MR_SENSOR_MEMORY_USAGE: Final = "memoryUsage"  # Memory usage percentage
 
 # MS (switch) sensor metrics for network monitoring
 MS_SENSOR_PORT_COUNT: Final = "portCount"
@@ -157,6 +158,7 @@ MS_SENSOR_PORT_DISCARDS: Final = "portDiscards"
 MS_SENSOR_PORT_LINK_COUNT: Final = "portLinkCount"
 MS_SENSOR_POE_LIMIT: Final = "poeLimit"
 MS_SENSOR_PORT_UTILIZATION: Final = "portUtilization"  # Overall port utilization
+MS_SENSOR_MEMORY_USAGE: Final = "memoryUsage"  # Memory usage percentage
 
 # Organization-level monitoring metrics
 ORG_SENSOR_DEVICE_STATUS: Final = "deviceStatus"

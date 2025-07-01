@@ -31,6 +31,7 @@ from ..const import (
     MR_SENSOR_DATA_RATE_2_4,
     MR_SENSOR_DATA_RATE_5,
     MR_SENSOR_ENABLED_SSIDS,
+    MR_SENSOR_MEMORY_USAGE,
     MR_SENSOR_OPEN_SSIDS,
     MR_SENSOR_RADIO_CHANNEL_2_4,
     MR_SENSOR_RADIO_CHANNEL_5,
@@ -191,6 +192,14 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         name="RF Profile ID",
         icon="mdi:cog",
         state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_MEMORY_USAGE: SensorEntityDescription(
+        key=MR_SENSOR_MEMORY_USAGE,
+        name="Memory Usage",
+        icon="mdi:memory",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
     ),
 }
 
@@ -369,6 +378,29 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             return device_info.get("channelWidth5", 0) or 0
         elif self.entity_description.key == MR_SENSOR_RF_PROFILE_ID:
             return device_info.get("rfProfileId", 0) or 0
+        elif self.entity_description.key == MR_SENSOR_MEMORY_USAGE:
+            # Get memory usage from organization hub memory data
+            if hasattr(self.coordinator.network_hub, "organization_hub"):
+                memory_data = self.coordinator.network_hub.organization_hub.device_memory_usage.get(
+                    self._device_serial, {}
+                )
+                if memory_data:
+                    usage_percent = memory_data.get("memory_usage_percent", 0)
+                    _LOGGER.debug(
+                        "MR device %s memory usage: %s%%",
+                        self._device_serial,
+                        usage_percent,
+                    )
+                    return usage_percent
+                else:
+                    _LOGGER.debug(
+                        "No memory data found for MR device %s", self._device_serial
+                    )
+            else:
+                _LOGGER.debug(
+                    "No organization_hub found for MR device %s", self._device_serial
+                )
+            return 0
 
         return None
 
@@ -392,6 +424,20 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             timestamp = self.coordinator.data.get("last_updated")
             if timestamp:
                 attrs[ATTR_LAST_REPORTED_AT] = timestamp
+
+            # Add memory usage information if available
+            if hasattr(self.coordinator.network_hub, "organization_hub"):
+                memory_data = self.coordinator.network_hub.organization_hub.device_memory_usage.get(
+                    self._device_serial, {}
+                )
+                if memory_data:
+                    attrs["memory_usage"] = {
+                        "used_kb": memory_data.get("memory_used_kb", 0),
+                        "free_kb": memory_data.get("memory_free_kb", 0),
+                        "total_kb": memory_data.get("memory_total_kb", 0),
+                        "usage_percent": memory_data.get("memory_usage_percent", 0),
+                        "last_update": memory_data.get("last_interval_end"),
+                    }
 
         # Add network configuration details from device status
         if self._device_serial:

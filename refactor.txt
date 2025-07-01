@@ -1,0 +1,674 @@
+# Meraki Dashboard Integration Refactoring Tasks
+
+## Task Execution Guidelines for LLMs
+
+### General Instructions:
+1. **Test First**: Run existing tests before starting each task to ensure baseline functionality
+2. **Incremental Changes**: Implement changes incrementally, testing after each major modification
+3. **Backward Compatibility**: Ensure all existing functionality continues to work
+4. **Documentation**: Update docstrings and comments for modified code
+5. **Type Safety**: Add or improve type hints for all new code
+6. **Error Handling**: Maintain or improve existing error handling patterns
+
+### Phase Execution Order:
+- Complete all Phase 1 tasks before moving to Phase 2
+- Each task within a phase can be done independently
+- Run full test suite after completing each phase
+- Verify integration functionality after each task
+
+### Success Validation:
+- All existing tests must pass
+- Integration setup and normal operations must work unchanged
+- New code must have appropriate test coverage
+- Type checking (mypy) should pass without errors
+- No new linting issues should be introduced
+
+### Task Management:
+- Remove completed tasks from their section and move to the "COMPLETED TASKS" section
+- Mark any issues or blockers encountered during task execution
+- Maintain this file as a living document of refactoring progress
+
+---
+
+# PENDING TASKS
+
+## Phase 1: High Impact, Low Risk Refactoring
+
+### Task 1.1: Extract Common Entity Base Classes
+
+**Objective**: Create shared base classes to reduce code duplication across device types.
+
+**Files to modify**: 
+- Create: `custom_components/meraki_dashboard/entities/base.py`
+- Modify: `devices/mt.py`, `devices/mr.py`, `devices/ms.py`, `devices/organization.py`
+
+**Detailed Instructions**:
+1. Create `entities/base.py` with these classes:
+   ```python
+   class MerakiEntityBase(Entity):
+       """Base class for all Meraki entities."""
+       def __init__(self, hub, description, entry_id):
+           # Common initialization logic
+           # Include: _attr_device_info, _attr_unique_id patterns
+   
+   class MerakiSensorEntityBase(MerakiEntityBase, SensorEntity):
+       """Base class for Meraki sensor entities."""
+       # Common sensor patterns
+   
+   class MerakiCoordinatorEntityBase(CoordinatorEntity, MerakiEntityBase):
+       """Base class for coordinator-based entities."""
+   ```
+
+2. Identify common patterns in existing entity classes:
+   - Device info construction
+   - Unique ID generation
+   - Attribute handling
+   - Error handling patterns
+
+3. Refactor existing entity classes to inherit from base classes
+4. Ensure all tests pass after refactoring
+5. Update `__init__.py` imports in entities module
+
+**Success Criteria**: 
+- All entity classes inherit from appropriate base classes
+- Code duplication reduced by >50% in entity initialization
+- No functionality changes, all tests pass
+
+---
+
+### Task 1.2: Implement Factory Pattern for Entity Creation
+
+**Objective**: Replace large conditional blocks in `sensor.py` with a clean factory pattern.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/entities/factory.py`
+- Modify: `sensor.py`, `binary_sensor.py`, `button.py`
+
+**Detailed Instructions**:
+1. Create entity factory with decorator-based registration:
+   ```python
+   class EntityFactory:
+       _registry = {}
+       
+       @classmethod
+       def register(cls, entity_type: str):
+           def decorator(func):
+               cls._registry[entity_type] = func
+               return func
+           return decorator
+       
+       @classmethod
+       def create_entity(cls, entity_type: str, *args, **kwargs):
+           if entity_type not in cls._registry:
+               raise ValueError(f"Unknown entity type: {entity_type}")
+           return cls._registry[entity_type](*args, **kwargs)
+   ```
+
+2. Convert existing entity creation logic in `sensor.py` (lines 86-150):
+   ```python
+   @EntityFactory.register("api_calls")
+   def create_api_calls_sensor(hub, description, entry_id):
+       return MerakiHubApiCallsSensor(hub, description, entry_id)
+   ```
+
+3. Replace the large if/elif chain with:
+   ```python
+   try:
+       entity = EntityFactory.create_entity(description.key, hub, description, entry_id)
+       entities.append(entity)
+   except ValueError:
+       _LOGGER.warning("Unknown sensor type: %s", description.key)
+   ```
+
+4. Apply same pattern to `binary_sensor.py` and `button.py`
+5. Update tests to verify factory functionality
+
+**Success Criteria**:
+- All conditional entity creation replaced with factory pattern
+- Easy to add new entity types
+- Comprehensive error handling for unknown types
+- All existing tests pass
+
+---
+
+### Task 1.3: Configuration Constants Consolidation
+
+**Objective**: Group related constants into structured dataclasses for better organization and type safety.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/config/constants.py`
+- Modify: `const.py`, all files importing constants
+
+**Detailed Instructions**:
+1. Create structured configuration classes:
+   ```python
+   from dataclasses import dataclass
+   from typing import Final
+   
+   @dataclass(frozen=True)
+   class MerakiDeviceTypes:
+       MT: str = "MT"
+       MR: str = "MR" 
+       MS: str = "MS"
+       MV: str = "MV"
+   
+   @dataclass(frozen=True)
+   class ApiConfiguration:
+       DEFAULT_BASE_URL: str = "https://api.meraki.com/api/v1"
+       USER_AGENT: str = "MerakiDashboardHomeAssistant/0.1.0 rknightion"
+       REGIONAL_BASE_URLS: dict = field(default_factory=lambda: {...})
+   
+   @dataclass(frozen=True)
+   class ScanIntervals:
+       DEFAULT_SCAN: int = 60
+       MIN_SCAN: int = 60
+       DEFAULT_DISCOVERY: int = 3600
+       MIN_DISCOVERY: int = 300
+   ```
+
+2. Group related constants by functionality:
+   - Device configuration
+   - API settings
+   - Scan intervals
+   - Sensor types and mappings
+
+3. Update all imports across the codebase to use new structure
+4. Ensure backward compatibility during transition
+5. Update type hints to use new dataclass types
+
+**Success Criteria**:
+- Constants logically grouped into dataclasses
+- Type safety improved with frozen dataclasses
+- All imports updated, no broken references
+- Tests verify constant accessibility
+
+---
+
+### Task 1.4: Centralized Error Handling Decorator
+
+**Objective**: Create reusable error handling patterns to reduce code duplication and improve consistency.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/utils/error_handling.py`
+- Modify: `coordinator.py`, `hubs/organization.py`, `hubs/network.py`
+
+**Detailed Instructions**:
+1. Create error handling infrastructure:
+   ```python
+   from functools import wraps
+   from typing import Callable, TypeVar, Any
+   
+   class MerakiApiError(Exception):
+       """Base exception for Meraki API errors."""
+   
+   class MerakiConnectionError(MerakiApiError):
+       """Connection-related errors."""
+   
+   class MerakiAuthenticationError(MerakiApiError):
+       """Authentication errors."""
+   
+   def handle_api_errors(
+       default_return=None,
+       log_errors=True,
+       reraise_on=None
+   ):
+       def decorator(func):
+           @wraps(func)
+           async def wrapper(*args, **kwargs):
+               try:
+                   return await func(*args, **kwargs)
+               except APIError as err:
+                   # Convert to appropriate MerakiApiError
+                   # Log if requested
+                   # Return default or reraise
+           return wrapper
+       return decorator
+   ```
+
+2. Apply decorator to common error-prone operations:
+   - API calls in coordinators
+   - Hub setup operations
+   - Data fetch operations
+
+3. Standardize error logging and handling patterns
+4. Create error recovery strategies where appropriate
+5. Update existing try/catch blocks to use decorator
+
+**Success Criteria**:
+- Consistent error handling across all API operations
+- Reduced code duplication in error handling
+- Improved error logging and user feedback
+- All existing error scenarios still properly handled
+
+---
+
+## Phase 2: Medium Impact Refactoring
+
+### Task 2.1: Hub Configuration Abstraction
+
+**Objective**: Simplify complex hub configuration management in config flow.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/config/hub_config.py`
+- Modify: `config_flow.py` (lines 500-800)
+
+**Detailed Instructions**:
+1. Create hub configuration management class:
+   ```python
+   from dataclasses import dataclass
+   from typing import Dict, Any
+   
+   @dataclass
+   class HubConfigurationSet:
+       scan_intervals: Dict[str, int]
+       discovery_intervals: Dict[str, int]
+       auto_discovery: Dict[str, bool]
+       
+       def get_scan_interval(self, hub_id: str, default: int) -> int:
+           return self.scan_intervals.get(hub_id, default)
+   
+   class HubConfigurationManager:
+       def __init__(self, current_options: Dict[str, Any]):
+           self.current_options = current_options
+       
+       def build_schema_dict(self, hubs_info: Dict) -> Dict:
+           # Extract complex schema building logic
+       
+       def process_user_input(self, user_input: Dict, hubs_info: Dict) -> HubConfigurationSet:
+           # Extract form processing logic
+   ```
+
+2. Refactor `MerakiDashboardOptionsFlow.async_step_init()`:
+   - Extract schema building to `HubConfigurationManager`
+   - Extract form processing logic
+   - Simplify the main flow method
+
+3. Add validation and error handling for hub configurations
+4. Create unit tests for configuration management
+5. Ensure all existing configuration options work identically
+
+**Success Criteria**:
+- Options flow method reduced from 300+ lines to <100 lines
+- Hub configuration logic is testable in isolation
+- All existing configuration scenarios work unchanged
+- Code is more readable and maintainable
+
+---
+
+### Task 2.2: Data Transformation Layer
+
+**Objective**: Centralize API data processing and transformation logic.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/data/transformers.py`
+- Modify: `hubs/network.py`, `devices/mt.py`, `devices/mr.py`, `devices/ms.py`
+
+**Detailed Instructions**:
+1. Create data transformation infrastructure:
+   ```python
+   from abc import ABC, abstractmethod
+   from typing import Dict, Any, List
+   
+   class DataTransformer(ABC):
+       @abstractmethod
+       def transform(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+           """Transform raw API data to internal format."""
+   
+   class MTSensorDataTransformer(DataTransformer):
+       def transform(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+           # Extract MT-specific transformation logic
+   
+   class MRWirelessDataTransformer(DataTransformer):
+       def transform(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+           # Extract MR-specific transformation logic
+   ```
+
+2. Identify data transformation patterns in existing code:
+   - API response parsing
+   - Unit conversions
+   - Data validation and sanitization
+   - State calculations
+
+3. Extract transformation logic from entity classes and hubs
+4. Create transformer registry for different data types
+5. Add comprehensive tests for transformations
+
+**Success Criteria**:
+- All API data transformation centralized
+- Entity classes focus on presentation, not data processing
+- Transformations are testable in isolation
+- Easy to modify data processing without affecting entities
+
+---
+
+### Task 2.3: Enhanced Type Hints
+
+**Objective**: Replace `Any` types with specific type hints for better IDE support and LLM understanding.
+
+**Files to modify**: `coordinator.py`, `hubs/organization.py`, `hubs/network.py`, `utils.py`
+
+**Detailed Instructions**:
+1. Create specific type definitions:
+   ```python
+   from typing import TypedDict, Protocol
+   
+   class MerakiDeviceData(TypedDict):
+       serial: str
+       name: str
+       model: str
+       networkId: str
+       # ... other required fields
+   
+   class SensorReading(TypedDict):
+       ts: str
+       metric: str
+       value: float
+       # ... other fields
+   
+   class ApiResponse(Protocol):
+       def get(self, key: str, default=None): ...
+   ```
+
+2. Update coordinator types:
+   - Replace `dict[str, Any]` with specific TypedDict types
+   - Add return type annotations for all methods
+   - Specify generic types for DataUpdateCoordinator
+
+3. Update hub classes:
+   - Add type hints for API response processing
+   - Specify device and sensor data types
+   - Add Protocol types for dependencies
+
+4. Run mypy to verify type correctness
+5. Update docstrings to match new type information
+
+**Success Criteria**:
+- <10% of type hints use `Any`
+- mypy passes with strict mode
+- IDE provides better autocompletion
+- Code is more self-documenting
+
+---
+
+### Task 2.4: Test Utilities Enhancement
+
+**Objective**: Improve test data creation and setup for easier LLM test generation.
+
+**Files to modify**:
+- Create: `tests/builders/`
+- Modify: existing test files to use builders
+
+**Detailed Instructions**:
+1. Create test data builders:
+   ```python
+   class MerakiDeviceBuilder:
+       def __init__(self):
+           self._data = {
+               "serial": "Q2XX-XXXX-XXXX",
+               "name": "Test Device",
+               "model": "MT20",
+               "networkId": "N_123456789"
+           }
+       
+       def with_serial(self, serial: str) -> "MerakiDeviceBuilder":
+           self._data["serial"] = serial
+           return self
+       
+       def with_model(self, model: str) -> "MerakiDeviceBuilder":
+           self._data["model"] = model
+           return self
+       
+       def build(self) -> Dict[str, Any]:
+           return self._data.copy()
+   
+   class SensorDataBuilder:
+       # Similar pattern for sensor readings
+   
+   class HubBuilder:
+       # Similar pattern for hub creation
+   ```
+
+2. Create integration test helpers:
+   ```python
+   class IntegrationTestHelper:
+       def __init__(self, hass: HomeAssistant):
+           self.hass = hass
+       
+       async def setup_meraki_integration(
+           self, 
+           devices: List[Dict] = None,
+           organization_id: str = "test_org"
+       ) -> ConfigEntry:
+           # Simplified integration setup
+   ```
+
+3. Refactor existing tests to use builders
+4. Create common test scenarios as reusable fixtures
+5. Add test utilities documentation
+
+**Success Criteria**:
+- Test setup code reduced by >40%
+- Easy to create test variations
+- Tests are more readable and maintainable
+- LLMs can easily generate new tests using builders
+
+---
+
+## Phase 3: Polish and Advanced Improvements
+
+### Task 3.1: Event System Separation
+
+**Objective**: Extract event handling into a dedicated service for better separation of concerns.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/services/event_service.py`
+- Modify: `events.py`, `hubs/network.py`, entity classes
+
+**Detailed Instructions**:
+1. Create event service architecture:
+   ```python
+   from abc import ABC, abstractmethod
+   
+   class EventPublisher(ABC):
+       @abstractmethod
+       async def publish_event(self, event_type: str, data: Dict[str, Any]) -> None:
+           """Publish an event to subscribers."""
+   
+   class MerakiEventService(EventPublisher):
+       def __init__(self, hass: HomeAssistant):
+           self.hass = hass
+           self._subscribers = defaultdict(list)
+       
+       def subscribe(self, event_type: str, callback: Callable) -> None:
+           self._subscribers[event_type].append(callback)
+       
+       async def publish_event(self, event_type: str, data: Dict[str, Any]) -> None:
+           # Publish to Home Assistant event bus and internal subscribers
+   ```
+
+2. Extract event handling from sensor entities:
+   - Move event detection logic to service
+   - Create event subscription patterns
+   - Maintain backward compatibility with Home Assistant events
+
+3. Update network hubs to use event service
+4. Create event filtering and throttling capabilities
+5. Add comprehensive event service tests
+
+**Success Criteria**:
+- Event logic separated from sensor business logic
+- Easy to add new event types
+- Event service is independently testable
+- All existing event functionality preserved
+
+---
+
+### Task 3.2: Device Info Builders
+
+**Objective**: Standardize device information construction across all entity types.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/utils/device_info.py`
+- Modify: All entity classes, `__init__.py`
+
+**Detailed Instructions**:
+1. Create device info builder utilities:
+   ```python
+   class DeviceInfoBuilder:
+       def __init__(self, domain: str):
+           self.domain = domain
+           self._info = {}
+       
+       def for_organization(self, org_id: str, name: str) -> "DeviceInfoBuilder":
+           self._info.update({
+               "identifiers": {(self.domain, f"{org_id}_org")},
+               "manufacturer": "Cisco Meraki",
+               "name": name,
+               "model": "Organization"
+           })
+           return self
+       
+       def for_network_hub(self, network_id: str, device_type: str, name: str) -> "DeviceInfoBuilder":
+           # Network hub device info
+       
+       def for_device(self, device_data: Dict, via_device_id: str = None) -> "DeviceInfoBuilder":
+           # Individual device info
+       
+       def build(self) -> Dict[str, Any]:
+           return self._info.copy()
+   ```
+
+2. Replace device info construction in:
+   - Organization hub registration
+   - Network hub registration  
+   - Individual device entity registration
+
+3. Ensure consistent device hierarchy and relationships
+4. Add device info validation
+5. Update tests to use device info builders
+
+**Success Criteria**:
+- Consistent device info structure across all entities
+- Easy to modify device information patterns
+- Reduced code duplication in device registration
+- Device relationships properly maintained
+
+---
+
+### Task 3.3: Retry Logic Standardization
+
+**Objective**: Implement consistent retry mechanisms across all API operations.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/utils/retry.py`
+- Modify: `coordinator.py`, `hubs/organization.py`, `hubs/network.py`
+
+**Detailed Instructions**:
+1. Create retry framework:
+   ```python
+   import asyncio
+   from functools import wraps
+   from typing import Callable, List, Type
+   
+   class RetryConfig:
+       def __init__(
+           self,
+           max_attempts: int = 3,
+           backoff_factor: float = 1.5,
+           exceptions: List[Type[Exception]] = None
+       ):
+           self.max_attempts = max_attempts
+           self.backoff_factor = backoff_factor
+           self.exceptions = exceptions or [Exception]
+   
+   def retry_on_api_error(config: RetryConfig = None):
+       def decorator(func: Callable):
+           @wraps(func)
+           async def wrapper(*args, **kwargs):
+               # Implement exponential backoff retry logic
+           return wrapper
+       return decorator
+   ```
+
+2. Apply retry logic to:
+   - API calls in coordinators
+   - Initial setup operations
+   - Data refresh operations
+   - Discovery operations
+
+3. Configure different retry strategies for different operation types
+4. Add retry metrics and logging
+5. Ensure retry logic doesn't interfere with Home Assistant's built-in mechanisms
+
+**Success Criteria**:
+- Consistent retry behavior across all API operations
+- Configurable retry strategies per operation type
+- Improved reliability under network issues
+- Retry metrics available for debugging
+
+---
+
+### Task 3.4: Configuration Schema Validation
+
+**Objective**: Implement robust configuration validation using Pydantic or dataclasses.
+
+**Files to modify**:
+- Create: `custom_components/meraki_dashboard/config/schemas.py`
+- Modify: `config_flow.py`, configuration validation logic
+
+**Detailed Instructions**:
+1. Create configuration schemas:
+   ```python
+   from pydantic import BaseModel, validator
+   from typing import Dict, Optional
+   
+   class ScanIntervalConfig(BaseModel):
+       default: int = 60
+       mt_devices: int = 600  # 10 minutes for MT
+       mr_devices: int = 300  # 5 minutes for MR
+       
+       @validator('*')
+       def validate_positive(cls, v):
+           if v < 60:
+               raise ValueError('Scan interval must be at least 60 seconds')
+           return v
+   
+   class HubConfig(BaseModel):
+       scan_interval: int
+       discovery_interval: int
+       auto_discovery: bool = True
+   
+   class IntegrationConfig(BaseModel):
+       api_key: str
+       organization_id: str
+       base_url: str = "https://api.meraki.com/api/v1"
+       scan_intervals: ScanIntervalConfig = ScanIntervalConfig()
+       hub_configs: Dict[str, HubConfig] = {}
+   ```
+
+2. Add validation to config flow:
+   - Validate user input against schemas
+   - Provide clear error messages
+   - Handle schema evolution for upgrades
+
+3. Add configuration migration logic for schema changes
+4. Create configuration validation tests
+5. Ensure backward compatibility with existing configurations
+
+**Success Criteria**:
+- All configuration validated against schemas
+- Clear error messages for invalid configurations
+- Configuration evolution handled gracefully
+- Type safety for all configuration access
+
+---
+
+# COMPLETED TASKS
+
+(Tasks will be moved here upon completion)
+
+---
+
+# NOTES AND BLOCKERS
+
+(Record any issues, blockers, or important notes encountered during refactoring)

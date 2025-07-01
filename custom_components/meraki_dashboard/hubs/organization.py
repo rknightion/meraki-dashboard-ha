@@ -149,6 +149,9 @@ class MerakiOrganizationHub:
         # Bluetooth clients data - total count across all networks
         self.bluetooth_clients_total_count = 0
 
+        # Device memory usage data
+        self.device_memory_usage: dict[str, dict[str, Any]] = {}
+
         # Organization data update timer
         self._organization_data_unsub: Callable[[], None] | None = None
 
@@ -158,6 +161,7 @@ class MerakiOrganizationHub:
         self._last_alerts_update: datetime | None = None
         self._last_clients_update: datetime | None = None
         self._last_bluetooth_clients_update: datetime | None = None
+        self._last_memory_usage_update: datetime | None = None
 
         # Tiered refresh unsubscribe handlers
         self._static_data_unsub: Callable[[], None] | None = None
@@ -209,6 +213,15 @@ class MerakiOrganizationHub:
         return int(
             (datetime.now(UTC) - self._last_bluetooth_clients_update).total_seconds()
             / 60
+        )
+
+    @property
+    def last_memory_usage_update_age_minutes(self) -> int | None:
+        """Get the age of the last memory usage update in minutes."""
+        if not self._last_memory_usage_update:
+            return None
+        return int(
+            (datetime.now(UTC) - self._last_memory_usage_update).total_seconds() / 60
         )
 
     def _track_api_call_duration(self, duration: float) -> None:
@@ -310,11 +323,17 @@ class MerakiOrganizationHub:
                 timedelta(seconds=static_interval),
             )
 
-            # Semi-static data (device statuses) - configurable interval (default: every 30 minutes)
+            # Semi-static data (device statuses, memory usage) - configurable interval (default: every 30 minutes)
             async def _update_semi_static_data(_now: datetime | None = None) -> None:
                 await self._fetch_device_statuses()
                 self._last_device_status_update = datetime.now(UTC)
-                _LOGGER.debug("Updated semi-static organization data (device statuses)")
+
+                await self._fetch_memory_usage()
+                self._last_memory_usage_update = datetime.now(UTC)
+
+                _LOGGER.debug(
+                    "Updated semi-static organization data (device statuses, memory usage)"
+                )
 
             self._semi_static_data_unsub = async_track_time_interval(
                 self.hass,
@@ -360,6 +379,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_bluetooth_clients_overview()
             self._last_bluetooth_clients_update = datetime.now(UTC)
+
+            await self._fetch_memory_usage()
+            self._last_memory_usage_update = datetime.now(UTC)
 
             # Track setup completion time
             self._last_setup_time = datetime.now(UTC)
@@ -502,6 +524,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_bluetooth_clients_overview()
             self._last_bluetooth_clients_update = datetime.now(UTC)
+
+            await self._fetch_memory_usage()
+            self._last_memory_usage_update = datetime.now(UTC)
 
             _LOGGER.debug("Manual organization data update completed")
 
@@ -952,6 +977,193 @@ class MerakiOrganizationHub:
 
         except Exception as err:
             _LOGGER.warning("Could not fetch device statuses: %s", err)
+
+    async def _fetch_memory_usage(self) -> None:
+        """Fetch memory usage data for MR and MS devices across the organization.
+
+        Uses the getOrganizationDevicesSystemMemoryUsageHistoryByInterval API endpoint
+        to get the most recent memory usage data for all MR and MS devices.
+        """
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            # Get memory usage history by interval for all devices in the organization
+            # The API returns intervals in reverse chronological order (most recent first)
+            # We only need the most recent interval for current state
+            _LOGGER.debug("Fetching memory usage data from API...")
+
+            # Check if the method exists on the dashboard
+            if not hasattr(
+                self.dashboard.organizations,
+                "getOrganizationDevicesSystemMemoryUsageHistoryByInterval",
+            ):
+                _LOGGER.error(
+                    "API method getOrganizationDevicesSystemMemoryUsageHistoryByInterval not found on dashboard.organizations"
+                )
+
+                # List available methods that might be related to memory or system
+                available_methods = [
+                    method
+                    for method in dir(self.dashboard.organizations)
+                    if "memory" in method.lower()
+                    or "system" in method.lower()
+                    or "device" in method.lower()
+                ]
+                _LOGGER.debug(
+                    "Available memory/system/device methods: %s", available_methods
+                )
+
+                self.device_memory_usage = {}
+                return
+
+            try:
+                memory_data = await self.hass.async_add_executor_job(
+                    self.dashboard.organizations.getOrganizationDevicesSystemMemoryUsageHistoryByInterval,
+                    self.organization_id,
+                )
+                self.total_api_calls += 1
+            except Exception as api_err:
+                _LOGGER.error("Error calling memory usage API: %s", api_err)
+                self.device_memory_usage = {}
+                return
+
+            # Log the raw API response for debugging
+            if memory_data:
+                _LOGGER.debug("API response type: %s", type(memory_data))
+                if isinstance(memory_data, list):
+                    _LOGGER.debug("API returned %d device records", len(memory_data))
+                    _LOGGER.debug(
+                        "Raw API response sample: %s",
+                        memory_data[:2] if len(memory_data) > 1 else memory_data,
+                    )
+                elif isinstance(memory_data, dict):
+                    _LOGGER.debug(
+                        "API returned dict with keys: %s", list(memory_data.keys())
+                    )
+                    _LOGGER.debug("Raw API response: %s", memory_data)
+                else:
+                    _LOGGER.debug("Raw API response: %s", memory_data)
+            else:
+                _LOGGER.debug("API returned no data or None")
+
+            # Process the memory usage data
+            processed_memory_data = {}
+
+            # Handle different API response structures
+            device_list = []
+            if memory_data:
+                if isinstance(memory_data, list):
+                    device_list = memory_data
+                elif isinstance(memory_data, dict):
+                    # Check if it's a paginated response with data in a sub-key
+                    if "data" in memory_data:
+                        device_list = memory_data["data"]
+                    elif "devices" in memory_data:
+                        device_list = memory_data["devices"]
+                    else:
+                        # Try to extract any list values from the dict
+                        for value in memory_data.values():
+                            if isinstance(value, list):
+                                device_list = value
+                                break
+
+            _LOGGER.debug("Processing %d device records", len(device_list))
+
+            if device_list:
+                for device_data in device_list:
+                    device_serial = device_data.get("serial")
+                    device_model = device_data.get("model", "")
+
+                    _LOGGER.debug(
+                        "Processing device: serial=%s, model=%s",
+                        device_serial,
+                        device_model,
+                    )
+
+                    # Only process MR and MS devices
+                    if not device_serial:
+                        _LOGGER.debug("Skipping device with no serial")
+                        continue
+
+                    if not (
+                        device_model.startswith("MR") or device_model.startswith("MS")
+                    ):
+                        _LOGGER.debug(
+                            "Skipping device %s with model %s (not MR/MS)",
+                            device_serial,
+                            device_model,
+                        )
+                        continue
+
+                    intervals = device_data.get("intervals", [])
+                    if not intervals:
+                        _LOGGER.debug("Device %s has no intervals data", device_serial)
+                        continue
+
+                    # Get the most recent interval (first in the list)
+                    latest_interval = intervals[0]
+                    memory_info = latest_interval.get("memory", {})
+
+                    used_info = memory_info.get("used", {})
+                    free_info = memory_info.get("free", {})
+
+                    # Extract memory values (in kB from API)
+                    used_kb = used_info.get("median", 0)
+                    free_kb = free_info.get("median", 0)
+
+                    # Calculate percentage from the used percentages if available
+                    percentages = used_info.get("percentages", {})
+                    usage_percentage = percentages.get("maximum", 0)
+
+                    # If no percentage is provided, calculate it from used/free values
+                    if not usage_percentage and (used_kb > 0 or free_kb > 0):
+                        total_memory = used_kb + free_kb
+                        if total_memory > 0:
+                            usage_percentage = round((used_kb / total_memory) * 100, 1)
+
+                    # Store processed memory data
+                    processed_memory_data[device_serial] = {
+                        "serial": device_serial,
+                        "model": device_model,
+                        "name": device_data.get("name", "Unknown"),
+                        "network": device_data.get("network", {}),
+                        "memory_usage_percent": usage_percentage,
+                        "memory_used_kb": used_kb,
+                        "memory_free_kb": free_kb,
+                        "memory_total_kb": used_kb + free_kb,
+                        "last_interval_start": latest_interval.get("startTs"),
+                        "last_interval_end": latest_interval.get("endTs"),
+                        "raw_data": device_data,  # Store raw data for debugging
+                    }
+
+                    _LOGGER.debug(
+                        "Successfully processed memory data for device %s: %s%% usage",
+                        device_serial,
+                        usage_percentage,
+                    )
+            else:
+                _LOGGER.debug("No memory data returned from API or invalid format")
+
+            self.device_memory_usage = processed_memory_data
+            self._last_memory_usage_update = datetime.now(UTC)
+
+            _LOGGER.debug(
+                "Fetched memory usage data for %d devices",
+                len(processed_memory_data),
+            )
+
+        except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            _LOGGER.warning(
+                "Could not fetch device memory usage data: %s", err, exc_info=True
+            )
+
+            # Set fallback on error
+            self.device_memory_usage = {}
 
     async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:
         """Check if a network has devices of a specific type.
