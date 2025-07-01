@@ -425,72 +425,77 @@ class TestMerakiOrganizationHub:
     async def test_fetch_alerts_data_success(
         self, organization_hub, mock_dashboard_api
     ):
-        """Test successful alerts data fetching."""
+        """Test successful alerts overview data fetching."""
         organization_hub.dashboard = mock_dashboard_api
 
-        # Mock alert profiles call (this sets active_alerts_count to 0 and recent_alerts to [])
-        mock_dashboard_api.organizations.getOrganizationAlertsProfiles.return_value = [
-            {
-                "id": "alert1",
-                "type": "gatewayDown",
-                "alertCondition": {"bit_rate_bps": 1000000},
-                "recipients": {"emails": ["test@example.com"]},
-                "networkTags": ["tag1"],
-            }
-        ]
-
-        # Mock events call which actually populates the alerts
-        mock_events = [
-            {
-                "eventType": "device_went_offline",
-                "eventDescription": "Device went offline",
-                "timestamp": "2023-01-01T12:00:00Z",
-                "networkId": "network1",
-                "deviceSerial": "device1",
-            }
-        ]
-        mock_dashboard_api.networks.getNetworkEvents.return_value = mock_events
-
-        # Set up mock network hubs for the new implementation
-        mock_network_hub = Mock()
-        mock_network_hub.network_id = "network1"
-        mock_network_hub.network_name = "Test Network"
-        organization_hub.network_hubs = {"network1": mock_network_hub}
-
-        # Mock async_add_executor_job to handle keyword arguments
-        original_async_add_executor_job = organization_hub.hass.async_add_executor_job
-
-        async def mock_async_add_executor_job(func, *args, **kwargs):
-            # Call the function directly since we're in test mode
-            if func == mock_dashboard_api.organizations.getOrganizationAlertsProfiles:
-                return func(*args)
-            elif func == mock_dashboard_api.networks.getNetworkEvents:
-                return func(*args)
-            else:
-                return await original_async_add_executor_job(func, *args, **kwargs)
-
-        organization_hub.hass.async_add_executor_job = mock_async_add_executor_job
+        # Mock the new alerts overview by network API call
+        mock_alerts_overview = {
+            "items": [
+                {
+                    "networkId": "L_123456789",
+                    "networkName": "Main Office",
+                    "alertCount": 5,
+                    "severityCounts": [
+                        {"type": "warning", "count": 3},
+                        {"type": "critical", "count": 2},
+                    ],
+                },
+                {
+                    "networkId": "L_987654321",
+                    "networkName": "Branch Office",
+                    "alertCount": 2,
+                    "severityCounts": [{"type": "informational", "count": 2}],
+                },
+            ],
+            "meta": {"counts": {"items": 2}},
+        }
+        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.return_value = mock_alerts_overview
 
         await organization_hub._fetch_alerts_data()
 
-        # The implementation sets these based on events, not alert profiles
-        assert len(organization_hub.recent_alerts) == 1
-        assert organization_hub.active_alerts_count == 1
+        # Verify the new implementation correctly processes alerts overview
+        assert organization_hub.active_alerts_count == 7  # 5 + 2 = 7 total alerts
+        assert len(organization_hub.recent_alerts) == 2  # 2 networks with alerts
+
+        # Check the structure of recent_alerts (now network summaries)
+        network_alert = organization_hub.recent_alerts[0]
+        assert network_alert["network_id"] == "L_123456789"
+        assert network_alert["network_name"] == "Main Office"
+        assert network_alert["alert_count"] == 5
+        assert len(network_alert["severity_counts"]) == 2
 
     async def test_fetch_alerts_data_api_error(
         self, organization_hub, mock_dashboard_api
     ):
-        """Test alerts data fetching with API error."""
+        """Test alerts overview data fetching with API error."""
         organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationAlertsProfiles.side_effect = (
-            create_mock_api_error("Alerts API error", 403)
+        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.side_effect = create_mock_api_error(
+            "Alerts overview API error", 403
         )
 
         await organization_hub._fetch_alerts_data()
 
-        # Should handle error gracefully
+        # Should handle error gracefully and increment failed API calls
         assert organization_hub.recent_alerts == []
         assert organization_hub.active_alerts_count == 0
+        assert organization_hub.failed_api_calls == 1
+        assert organization_hub.last_api_call_error is not None
+
+    async def test_fetch_alerts_data_no_alerts(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test alerts overview data fetching with no active alerts."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock empty alerts overview response
+        mock_alerts_overview = {"items": [], "meta": {"counts": {"items": 0}}}
+        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.return_value = mock_alerts_overview
+
+        await organization_hub._fetch_alerts_data()
+
+        # Should handle empty response correctly
+        assert organization_hub.active_alerts_count == 0
+        assert organization_hub.recent_alerts == []
 
     async def test_fetch_device_statuses_success(
         self, organization_hub, mock_dashboard_api

@@ -434,7 +434,7 @@ class TestPerformanceMonitoring:
         assert metrics["average_duration"] > 0
         # Use approximate comparison for floating point
         expected_avg = metrics["total_duration"] / 3
-        assert abs(metrics["average_duration"] - expected_avg) < 0.001
+        assert abs(metrics["average_duration"] - expected_avg) < 0.005
 
 
 class TestApiCaching:

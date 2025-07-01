@@ -56,8 +56,8 @@ ORG_HUB_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     ),
     "alerts_count": SensorEntityDescription(
         key="alerts_count",
-        name="Active Alerts",
-        icon="mdi:alert-circle",
+        name="Network Alerts",
+        icon="mdi:alert-network",
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
@@ -467,7 +467,7 @@ class MerakiHubOfflineDevicesSensor(SensorEntity):
 
 
 class MerakiHubAlertsSensor(SensorEntity):
-    """Sensor for tracking active alerts from an organization hub."""
+    """Sensor for tracking network alerts overview from an organization hub."""
 
     _attr_has_entity_name = True
 
@@ -477,7 +477,7 @@ class MerakiHubAlertsSensor(SensorEntity):
         description: SensorEntityDescription,
         config_entry_id: str,
     ) -> None:
-        """Initialize the alerts sensor."""
+        """Initialize the network alerts overview sensor."""
         self._organization_hub = organization_hub
         self.entity_description = description
         self._config_entry_id = config_entry_id
@@ -492,7 +492,7 @@ class MerakiHubAlertsSensor(SensorEntity):
 
     @property
     def native_value(self) -> int:
-        """Return the number of active alerts."""
+        """Return the total number of network alerts across all networks."""
         return getattr(self._organization_hub, "active_alerts_count", 0)
 
     @property
@@ -508,19 +508,26 @@ class MerakiHubAlertsSensor(SensorEntity):
             "organization_name": self._organization_hub.organization_name,
         }
 
-        # Add recent alerts if available
+        # Add network-level alert summaries if available
         recent_alerts = getattr(self._organization_hub, "recent_alerts", [])
         if recent_alerts:
-            attrs["recent_alerts"] = recent_alerts[:5]  # Limit to 5 most recent
+            attrs["network_alerts"] = recent_alerts  # Network-level alert summaries
 
-        # Add alert summary by type
-        alert_types: dict[str, int] = {}
-        for alert in recent_alerts:
-            alert_type = alert.get("eventType", "unknown")
-            alert_types[alert_type] = alert_types.get(alert_type, 0) + 1
+            # Calculate total alerts by severity across all networks
+            severity_totals: dict[str, int] = {}
+            for network_alert in recent_alerts:
+                for severity_count in network_alert.get("severity_counts", []):
+                    severity_type = severity_count.get("type", "unknown")
+                    count = severity_count.get("count", 0)
+                    severity_totals[severity_type] = (
+                        severity_totals.get(severity_type, 0) + count
+                    )
 
-        if alert_types:
-            attrs["alert_types"] = alert_types
+            if severity_totals:
+                attrs["severity_totals"] = severity_totals
+
+            # Add count of networks with alerts
+            attrs["networks_with_alerts"] = len(recent_alerts)
 
         attrs["last_updated"] = (
             getattr(self._organization_hub, "last_api_call_error", None) is None

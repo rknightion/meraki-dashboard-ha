@@ -18,7 +18,6 @@ from ..const import (
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
     DEVICE_TYPE_MAPPINGS,
-    DOMAIN,
     DYNAMIC_DATA_REFRESH_INTERVAL,
     SEMI_STATIC_DATA_REFRESH_INTERVAL,
     SENSOR_TYPE_MR,
@@ -622,142 +621,84 @@ class MerakiOrganizationHub:
             _LOGGER.warning("Could not fetch license data: %s", err)
 
     async def _fetch_alerts_data(self) -> None:
-        """Fetch alerts and events for the organization."""
+        """Fetch alerts overview by network for the organization."""
         if not self.dashboard:
             return
 
         assert self.dashboard is not None  # Type guard  # nosec B101
 
         try:
-            # Get organization alerts (last 24 hours)
-            end_time = datetime.now(UTC)
+            start_time = datetime.now(UTC)
 
-            # Fetch alerts
-            try:
-                await self.hass.async_add_executor_job(
-                    self.dashboard.organizations.getOrganizationAlertsProfiles,
+            # Get alerts overview by network using the new API endpoint
+            # This replaces the old alert profiles and events approach
+            def get_alerts_overview():
+                return self.dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork(
                     self.organization_id,
+                    dismissed=False,  # Only get non-dismissed alerts
                 )
-                self.total_api_calls += 1
 
-                # Process alerts - this is alert configuration, not active alerts
-                # For active alerts, we'd need to check device status or events
+            alerts_overview = await self.hass.async_add_executor_job(
+                get_alerts_overview
+            )
+            self.total_api_calls += 1
+
+            # Track API call duration for performance monitoring
+            duration = (datetime.now(UTC) - start_time).total_seconds()
+            self._track_api_call_duration(duration)
+
+            # Process the alerts overview response
+            if (
+                alerts_overview
+                and isinstance(alerts_overview, dict)
+                and "items" in alerts_overview
+            ):
+                # Calculate total active alerts across all networks
+                total_alerts = 0
+                network_alerts = []
+
+                for network_alert in alerts_overview["items"]:
+                    alert_count = network_alert.get("alertCount", 0)
+                    total_alerts += alert_count
+
+                    if alert_count > 0:
+                        network_alerts.append(
+                            {
+                                "network_id": network_alert.get("networkId"),
+                                "network_name": network_alert.get("networkName"),
+                                "alert_count": alert_count,
+                                "severity_counts": network_alert.get(
+                                    "severityCounts", []
+                                ),
+                            }
+                        )
+
+                self.active_alerts_count = total_alerts
+                self.recent_alerts = (
+                    network_alerts  # Store network-level alert summaries
+                )
+
+                _LOGGER.debug(
+                    "Fetched alerts overview: %d total alerts across %d networks",
+                    total_alerts,
+                    len(network_alerts),
+                )
+
+            else:
                 self.active_alerts_count = 0
                 self.recent_alerts = []
-
-            except Exception:
-                # If alerts endpoint doesn't work, try events instead
-                # This is expected for some organizations without alert profiles
-                _LOGGER.debug("Alert profiles endpoint not available, will try events")
-
-            # Try to get network events for each network as an alternative
-            try:
-                all_events = []
-
-                # Get events from each network since there's no organization-level events endpoint
-                for network_hub in self.network_hubs.values():
-                    try:
-                        # Create a partial function with the parameters
-                        # Use default parameter to capture loop variable value
-                        def get_network_events(net_id=network_hub.network_id):
-                            return self.dashboard.networks.getNetworkEvents(
-                                net_id,
-                                endingBefore=end_time.isoformat(),
-                                perPage=50,  # Limit per network to avoid too many events
-                                productType="wireless",  # Required parameter
-                            )
-
-                        network_events = await self.hass.async_add_executor_job(
-                            get_network_events
-                        )
-                        self.total_api_calls += 1
-
-                        if network_events:
-                            # Add network context to events
-                            for event in network_events:
-                                # Ensure event is a dictionary before assignment
-                                if isinstance(event, dict):
-                                    event["source_network_id"] = network_hub.network_id
-                                    event["source_network_name"] = (
-                                        network_hub.network_name
-                                    )
-                                else:
-                                    # Only log when debug is explicitly enabled to avoid spam
-                                    if _LOGGER.isEnabledFor(logging.DEBUG):
-                                        _LOGGER.debug(
-                                            "Skipping non-dict event from network %s: %s",
-                                            network_hub.network_name,
-                                            type(event),
-                                        )
-                            # Only add valid dict events to the list
-                            valid_events = [
-                                e for e in network_events if isinstance(e, dict)
-                            ]
-                            all_events.extend(valid_events)
-
-                    except Exception as network_event_err:
-                        _LOGGER.debug(
-                            "Could not fetch events for network %s: %s",
-                            network_hub.network_name,
-                            network_event_err,
-                        )
-                        continue
-
-                # Process aggregated events and emit HA events
-                if all_events:
-                    await self._process_organization_events(all_events)
-
-                    # Count alert-type events
-                    alert_events = [
-                        e
-                        for e in all_events
-                        if e.get("eventType", "").lower()
-                        in [
-                            "device_went_offline",
-                            "device_came_online",
-                            "device_alert",
-                            "sensor_alert",
-                            "gateway_alert",
-                            "ap_down",
-                            "ap_up",
-                            "switch_down",
-                            "switch_up",
-                        ]
-                    ]
-                    self.active_alerts_count = len(alert_events)
-                    self.recent_alerts = alert_events[:5]  # Keep last 5 for attributes
-                else:
-                    self.active_alerts_count = 0
-                    self.recent_alerts = []
-
-            except Exception as event_err:
-                _LOGGER.debug("Could not fetch network events: %s", event_err)
+                _LOGGER.debug("No alerts overview data received")
 
         except Exception as err:
-            _LOGGER.warning("Could not fetch alerts data: %s", err)
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            _LOGGER.warning(
+                "Could not fetch alerts overview data: %s", err, exc_info=True
+            )
 
-    async def _process_organization_events(self, events: list[dict[str, Any]]) -> None:
-        """Process organization events and emit Home Assistant events."""
-        for event in events:
-            # Emit HA event for each Meraki event
-            event_data = {
-                "organization_id": self.organization_id,
-                "organization_name": self.organization_name,
-                "event_type": event.get("eventType"),
-                "event_description": event.get("eventDescription"),
-                "timestamp": event.get("timestamp"),
-                "network_id": event.get("networkId"),
-                "device_serial": event.get("deviceSerial"),
-                "device_name": event.get("deviceName"),
-                "client_id": event.get("clientId"),
-                "client_description": event.get("clientDescription"),
-            }
-
-            # Remove None values
-            event_data = {k: v for k, v in event_data.items() if v is not None}
-
-            # Emit HA event
-            self.hass.bus.async_fire(f"{DOMAIN}_organization_event", event_data)
+            # Set fallback values
+            self.active_alerts_count = 0
+            self.recent_alerts = []
 
     async def _fetch_device_statuses(self) -> None:
         """Fetch device status information across the organization."""
