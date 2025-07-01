@@ -39,7 +39,7 @@ from ..const import (
     MS_SENSOR_POWER_MODULE_STATUS,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils import get_device_display_name
+from ..utils import get_device_display_name, get_device_status_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -226,9 +226,23 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_serial = self._device.get("serial")
+        device_serial = self._device.get("serial", "")
         device_name = get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
+
+        # Get device status information for network details
+        device_status = None
+        if device_serial:
+            device_status = get_device_status_info(
+                self._network_hub.organization_hub, device_serial
+            )
+
+        # Determine configuration URL - use lanIp if available
+        config_url = f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list"
+        if device_status and device_status.get("lanIp"):
+            lan_ip = device_status.get("lanIp")
+            # Create URL to access device directly via its IP
+            config_url = f"http://{lan_ip}"
 
         device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
@@ -236,7 +250,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             manufacturer="Cisco Meraki",
             model=device_model,
             serial_number=device_serial,
-            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
+            configuration_url=config_url,
             via_device=(
                 DOMAIN,
                 f"{self._network_hub.network_id}_{self._network_hub.device_type}",
@@ -549,6 +563,28 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     "power_draw": power_status.get("powerDraw"),
                     "power_limit": power_status.get("powerLimit"),
                 }
+
+        # Add network configuration details from device status
+        if self._device_serial:
+            device_status = get_device_status_info(
+                self.coordinator.network_hub.organization_hub, self._device_serial
+            )
+            if device_status:
+                # Add network configuration details
+                if device_status.get("lanIp"):
+                    attrs["lan_ip"] = device_status.get("lanIp")
+
+                if device_status.get("gateway"):
+                    attrs["gateway"] = device_status.get("gateway")
+
+                if device_status.get("ipType"):
+                    attrs["ip_type"] = device_status.get("ipType")
+
+                if device_status.get("primaryDns"):
+                    attrs["primary_dns"] = device_status.get("primaryDns")
+
+                if device_status.get("secondaryDns"):
+                    attrs["secondary_dns"] = device_status.get("secondaryDns")
 
         return attrs
 

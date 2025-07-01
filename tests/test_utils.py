@@ -14,6 +14,7 @@ from custom_components.meraki_dashboard.utils import (
     clear_api_cache,
     create_device_capability_filter,
     get_cached_api_response,
+    get_device_status_info,
     get_performance_metrics,
     performance_monitor,
     reset_performance_metrics,
@@ -877,3 +878,103 @@ class TestShouldCreateEntity:
 
         # None entity key
         assert should_create_entity(device, None) is False
+
+
+class TestGetDeviceStatusInfo:
+    """Test the get_device_status_info function."""
+
+    def test_get_device_status_info_success(self):
+        """Test successful device status lookup."""
+        # Mock organization hub with device statuses
+        mock_org_hub = MagicMock()
+        mock_org_hub.device_statuses = [
+            {
+                "serial": "Q2HP-K4VW-87YT",
+                "name": "OfficeSW",
+                "lanIp": "10.0.100.13",
+                "gateway": "10.0.100.254",
+                "ipType": "static",
+                "primaryDns": "10.0.100.254",
+                "secondaryDns": "1.1.1.1",
+            },
+            {
+                "serial": "Q3AB-US5S-CTQZ",
+                "name": "GarageAP",
+                "lanIp": "10.0.100.15",
+                "gateway": "10.0.100.254",
+                "ipType": "static",
+                "primaryDns": "10.0.100.254",
+                "secondaryDns": "1.1.1.1",
+            },
+        ]
+
+        # Test finding existing device
+        result = get_device_status_info(mock_org_hub, "Q2HP-K4VW-87YT")
+        assert result is not None
+        assert result["serial"] == "Q2HP-K4VW-87YT"
+        assert result["name"] == "OfficeSW"
+        assert result["lanIp"] == "10.0.100.13"
+        assert result["gateway"] == "10.0.100.254"
+        assert result["ipType"] == "static"
+        assert result["primaryDns"] == "10.0.100.254"
+        assert result["secondaryDns"] == "1.1.1.1"
+
+    def test_get_device_status_info_not_found(self):
+        """Test device status lookup when device not found."""
+        mock_org_hub = MagicMock()
+        mock_org_hub.device_statuses = [
+            {
+                "serial": "Q2HP-K4VW-87YT",
+                "name": "OfficeSW",
+                "lanIp": "10.0.100.13",
+            }
+        ]
+
+        # Test finding non-existent device
+        result = get_device_status_info(mock_org_hub, "NONEXISTENT")
+        assert result is None
+
+    def test_get_device_status_info_no_org_hub(self):
+        """Test device status lookup with no organization hub."""
+        result = get_device_status_info(None, "Q2HP-K4VW-87YT")
+        assert result is None
+
+    def test_get_device_status_info_no_device_statuses_attr(self):
+        """Test device status lookup with org hub that has no device_statuses attribute."""
+        mock_org_hub = MagicMock()
+        # Remove device_statuses attribute
+        del mock_org_hub.device_statuses
+
+        result = get_device_status_info(mock_org_hub, "Q2HP-K4VW-87YT")
+        assert result is None
+
+    def test_get_device_status_info_empty_device_statuses(self):
+        """Test device status lookup with empty device statuses."""
+        mock_org_hub = MagicMock()
+        mock_org_hub.device_statuses = []
+
+        result = get_device_status_info(mock_org_hub, "Q2HP-K4VW-87YT")
+        assert result is None
+
+    def test_get_device_status_info_null_values(self):
+        """Test device status lookup with null values in device status."""
+        mock_org_hub = MagicMock()
+        mock_org_hub.device_statuses = [
+            {
+                "serial": "Q2HP-K4VW-87YT",
+                "name": "OfficeSW",
+                "lanIp": None,
+                "gateway": "10.0.100.254",
+                "ipType": "static",
+                "primaryDns": None,
+                "secondaryDns": "1.1.1.1",
+            }
+        ]
+
+        result = get_device_status_info(mock_org_hub, "Q2HP-K4VW-87YT")
+        assert result is not None
+        assert result["serial"] == "Q2HP-K4VW-87YT"
+        assert result["lanIp"] is None
+        assert result["primaryDns"] is None
+        assert result["gateway"] == "10.0.100.254"
+        assert result["secondaryDns"] == "1.1.1.1"

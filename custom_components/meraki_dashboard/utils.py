@@ -707,6 +707,33 @@ def should_create_entity(
     return entity_key in supported_metrics
 
 
+def get_device_status_info(
+    organization_hub: Any, device_serial: str
+) -> dict[str, Any] | None:
+    """Get device status information from organization hub by serial number.
+
+    Args:
+        organization_hub: The organization hub instance
+        device_serial: Device serial number to look up
+
+    Returns:
+        Device status information dict if found, None otherwise
+    """
+    if not organization_hub or not hasattr(organization_hub, "device_statuses"):
+        return None
+
+    device_statuses = getattr(organization_hub, "device_statuses", [])
+    if not device_statuses:
+        return None
+
+    # Find the device status by serial number
+    for device_status in device_statuses:
+        if device_status.get("serial") == device_serial:
+            return device_status
+
+    return None
+
+
 # Validation schemas
 DEVICE_SCHEMA = vol.Schema(
     {
