@@ -14,6 +14,8 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 from meraki.exceptions import APIError
 
+from . import utils
+from .config import HubConfigurationManager
 from .const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
@@ -34,7 +36,6 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
-    DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
     DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES,
     MIN_DISCOVERY_INTERVAL_MINUTES,
@@ -45,7 +46,6 @@ from .const import (
     STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     USER_AGENT,
 )
-from .utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -327,7 +327,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Create device selector
         device_options = []
         for device in self._available_devices:
-            device_name = sanitize_device_name(
+            device_name = utils.sanitize_device_name(
                 device.get("name")
                 or f"{device.get('model', 'MT')} {device['serial'][-4:]}"
             )
@@ -510,99 +510,38 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
-            # Get current options first
             current_options = dict(self.config_entry.options or {})
+            hub_config_manager = HubConfigurationManager(current_options)
 
-            # Convert minutes back to seconds for storage
-            options = dict(user_input)
+            # Get hub information for processing
+            hubs_info = await self._get_available_hubs()
 
-            # Process hub-specific intervals and settings
-            hub_scan_intervals = {}
-            hub_discovery_intervals = {}
-            hub_auto_discovery = {}
+            # Process user input using the hub configuration manager
+            hub_config_set = hub_config_manager.process_user_input(
+                user_input, hubs_info
+            )
 
-            # Rebuild the hub display to key mapping for processing
-            hubs_info_for_processing = await self._get_available_hubs()
-            hub_display_to_key = {}
-            for hub_key, hub_info in hubs_info_for_processing.items():
-                hub_display_name = (
-                    f"{hub_info['network_name']} ({hub_info['device_type']})"
+            # Remove hub-specific keys from user input as they're processed separately
+            options = {
+                k: v
+                for k, v in user_input.items()
+                if not any(
+                    k.startswith(prefix)
+                    for prefix in [
+                        "scan_interval_",
+                        "discovery_interval_",
+                        "auto_discovery_",
+                    ]
                 )
-                hub_display_to_key[hub_display_name] = hub_key
+            }
 
-            # Extract hub-specific settings from form data
-            for key, value in list(options.items()):
-                if key.startswith("scan_interval_"):
-                    hub_display_name = key.replace("scan_interval_", "")
-                    # Convert display name back to hub_key
-                    hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
-                    hub_scan_intervals[hub_key] = value * 60  # Convert to seconds
-                    del options[key]
-                elif key.startswith("discovery_interval_"):
-                    hub_display_name = key.replace("discovery_interval_", "")
-                    # Convert display name back to hub_key
-                    hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
-                    hub_discovery_intervals[hub_key] = value * 60  # Convert to seconds
-                    del options[key]
-                elif key.startswith("auto_discovery_"):
-                    hub_display_name = key.replace("auto_discovery_", "")
-                    # Convert display name back to hub_key
-                    hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
-                    hub_auto_discovery[hub_key] = value
-                    del options[key]
+            # Merge hub configuration with other options
+            options = hub_config_manager.merge_with_existing_options(
+                hub_config_set, options
+            )
 
-            # Store hub-specific settings (preserve existing values if no changes)
-            if hub_scan_intervals:
-                options[CONF_HUB_SCAN_INTERVALS] = hub_scan_intervals
-            else:
-                # Preserve existing hub scan intervals
-                existing_hub_scan_intervals = current_options.get(
-                    CONF_HUB_SCAN_INTERVALS, {}
-                )
-                if existing_hub_scan_intervals:
-                    options[CONF_HUB_SCAN_INTERVALS] = existing_hub_scan_intervals
-
-            if hub_discovery_intervals:
-                options[CONF_HUB_DISCOVERY_INTERVALS] = hub_discovery_intervals
-            else:
-                # Preserve existing hub discovery intervals
-                existing_hub_discovery_intervals = current_options.get(
-                    CONF_HUB_DISCOVERY_INTERVALS, {}
-                )
-                if existing_hub_discovery_intervals:
-                    options[CONF_HUB_DISCOVERY_INTERVALS] = (
-                        existing_hub_discovery_intervals
-                    )
-
-            if hub_auto_discovery:
-                options[CONF_HUB_AUTO_DISCOVERY] = hub_auto_discovery
-            else:
-                # Preserve existing hub auto discovery settings
-                existing_hub_auto_discovery = current_options.get(
-                    CONF_HUB_AUTO_DISCOVERY, {}
-                )
-                if existing_hub_auto_discovery:
-                    options[CONF_HUB_AUTO_DISCOVERY] = existing_hub_auto_discovery
-
-            # Convert legacy scan/discovery intervals from minutes to seconds
-            if CONF_SCAN_INTERVAL in options:
-                options[CONF_SCAN_INTERVAL] = options[CONF_SCAN_INTERVAL] * 60
-            if CONF_DISCOVERY_INTERVAL in options:
-                options[CONF_DISCOVERY_INTERVAL] = options[CONF_DISCOVERY_INTERVAL] * 60
-
-            # Convert tiered refresh intervals from minutes to seconds
-            if CONF_STATIC_DATA_INTERVAL in options:
-                options[CONF_STATIC_DATA_INTERVAL] = (
-                    options[CONF_STATIC_DATA_INTERVAL] * 60
-                )
-            if CONF_SEMI_STATIC_DATA_INTERVAL in options:
-                options[CONF_SEMI_STATIC_DATA_INTERVAL] = (
-                    options[CONF_SEMI_STATIC_DATA_INTERVAL] * 60
-                )
-            if CONF_DYNAMIC_DATA_INTERVAL in options:
-                options[CONF_DYNAMIC_DATA_INTERVAL] = (
-                    options[CONF_DYNAMIC_DATA_INTERVAL] * 60
-                )
+            # Convert legacy intervals from minutes to seconds
+            options = hub_config_manager.convert_legacy_intervals_to_seconds(options)
 
             return self.async_create_entry(title="", data=options)
 
@@ -610,175 +549,11 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         hubs_info = await self._get_available_hubs()
         current_options = dict(self.config_entry.options or {})
 
-        schema_dict: dict[vol.Marker, Any] = {}
-
-        # Global auto-discovery setting (only if no hubs are available)
-        if not hubs_info:
-            schema_dict[
-                vol.Optional(
-                    CONF_AUTO_DISCOVERY,
-                    default=current_options.get(CONF_AUTO_DISCOVERY, True),
-                )
-            ] = bool
-
-        # Per-hub scan intervals (in minutes)
-        # Store mapping from display names to hub keys for form processing
-        hub_display_to_key = {}
-
-        if hubs_info:
-            current_hub_scan_intervals = current_options.get(
-                CONF_HUB_SCAN_INTERVALS, {}
-            )
-            current_hub_discovery_intervals = current_options.get(
-                CONF_HUB_DISCOVERY_INTERVALS, {}
-            )
-            current_hub_auto_discovery = current_options.get(
-                CONF_HUB_AUTO_DISCOVERY, {}
-            )
-
-            for hub_key, hub_info in hubs_info.items():
-                # Create a readable name for the hub
-                hub_display_name = (
-                    f"{hub_info['network_name']} ({hub_info['device_type']})"
-                )
-
-                # Store mapping for later processing
-                hub_display_to_key[hub_display_name] = hub_key
-
-                # Auto-discovery toggle for this hub
-                schema_dict[
-                    vol.Optional(
-                        f"auto_discovery_{hub_display_name}",
-                        default=current_hub_auto_discovery.get(hub_key, True),
-                    )
-                ] = bool
-
-                # Scan interval for this hub
-                current_scan_minutes = (
-                    current_hub_scan_intervals.get(
-                        hub_key,
-                        DEVICE_TYPE_SCAN_INTERVALS.get(hub_info["device_type"], 300),
-                    )
-                    // 60
-                )
-
-                schema_dict[
-                    vol.Optional(
-                        f"scan_interval_{hub_display_name}",
-                        default=current_scan_minutes,
-                    )
-                ] = selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_SCAN_INTERVAL_MINUTES,
-                        max=60,
-                        step=1,
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                )
-
-                # Discovery interval for this hub
-                current_discovery_minutes = (
-                    current_hub_discovery_intervals.get(
-                        hub_key, DEFAULT_DISCOVERY_INTERVAL
-                    )
-                    // 60
-                )
-
-                schema_dict[
-                    vol.Optional(
-                        f"discovery_interval_{hub_display_name}",
-                        default=current_discovery_minutes,
-                    )
-                ] = selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
-                        max=1440,
-                        step=1,
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                )
-
-        # Build description placeholders with hub names
-        description_placeholders = {
-            "scan_info": "Scan intervals control how often sensor data is updated (in minutes)",
-            "discovery_info": "Discovery intervals control how often new devices are detected (in minutes)",
-            "tiered_refresh_info": "Tiered refresh intervals control how often different types of organization data are updated",
-        }
-
-        # Add hub-specific descriptions
-        if hubs_info:
-            hub_descriptions = []
-            for _hub_key, hub_info in hubs_info.items():
-                hub_name = f"{hub_info['network_name']} ({hub_info['device_type']})"
-                hub_descriptions.append(
-                    f"• {hub_name}: {hub_info['device_count']} devices"
-                )
-            description_placeholders["hub_info"] = "\n".join(hub_descriptions)
-
-        # Add tiered refresh interval options for organization-level data
-        # These control how often different types of organization data are refreshed
-        current_static_interval = (
-            current_options.get(
-                CONF_STATIC_DATA_INTERVAL, STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
-            )
-            // 60
-        )  # Convert to minutes for display
-
-        current_semi_static_interval = (
-            current_options.get(
-                CONF_SEMI_STATIC_DATA_INTERVAL,
-                SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60,
-            )
-            // 60
-        )  # Convert to minutes for display
-
-        current_dynamic_interval = (
-            current_options.get(
-                CONF_DYNAMIC_DATA_INTERVAL, DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
-            )
-            // 60
-        )  # Convert to minutes for display
-
-        schema_dict[
-            vol.Optional(
-                CONF_STATIC_DATA_INTERVAL,
-                default=current_static_interval,
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=30,  # 30 minutes minimum for static data
-                max=1440,  # 24 hours maximum
-                step=30,  # 30-minute increments
-                mode=selector.NumberSelectorMode.BOX,
-            )
-        )
-
-        schema_dict[
-            vol.Optional(
-                CONF_SEMI_STATIC_DATA_INTERVAL,
-                default=current_semi_static_interval,
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=15,  # 15 minutes minimum for semi-static data
-                max=720,  # 12 hours maximum
-                step=15,  # 15-minute increments
-                mode=selector.NumberSelectorMode.BOX,
-            )
-        )
-
-        schema_dict[
-            vol.Optional(
-                CONF_DYNAMIC_DATA_INTERVAL,
-                default=current_dynamic_interval,
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=1,  # 1 minute minimum for dynamic data
-                max=60,  # 1 hour maximum
-                step=1,  # 1-minute increments
-                mode=selector.NumberSelectorMode.BOX,
-            )
+        # Use HubConfigurationManager to build schema and description placeholders
+        hub_config_manager = HubConfigurationManager(current_options)
+        schema_dict = hub_config_manager.build_schema_dict(hubs_info)
+        description_placeholders = hub_config_manager.build_description_placeholders(
+            hubs_info
         )
 
         return self.async_show_form(

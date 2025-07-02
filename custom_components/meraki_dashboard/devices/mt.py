@@ -28,6 +28,7 @@ from homeassistant.const import (
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
@@ -52,8 +53,8 @@ from ..const import (
     MT_SENSOR_VOLTAGE,
 )
 from ..coordinator import MerakiSensorCoordinator
+from ..data.transformers import transformer_registry
 from ..entities.base import MerakiCoordinatorEntityBase
-from ..utils import get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -204,10 +205,10 @@ class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_info = super().device_info
-        
+
         # Store for _attr_device_info access in tests
         self._attr_device_info = device_info
-        
+
         return device_info
 
     @property
@@ -220,84 +221,11 @@ class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
         if not device_data:
             return None
 
-        readings = device_data.get("readings", [])
-        if not readings:
-            return None
+        # Use transformer to process data consistently
+        transformed_data = transformer_registry.transform("MT", device_data)
 
-        # Find the reading for this metric
-        for reading in readings:
-            metric = reading.get("metric")
-            if metric == self.entity_description.key:
-                # Extract value based on metric type
-                if metric == "temperature":
-                    temp_data = reading.get("temperature", {})
-                    return temp_data.get("celsius")
-                elif metric == "humidity":
-                    humidity_data = reading.get("humidity", {})
-                    return humidity_data.get("relativePercentage")
-                elif metric == "co2":
-                    co2_data = reading.get("co2", {})
-                    return co2_data.get("concentration")
-                elif metric == "battery":
-                    battery_data = reading.get("battery", {})
-                    return battery_data.get("percentage")
-                elif metric == "realPower":
-                    power_data = reading.get("realPower", {})
-                    return power_data.get("draw")
-                elif metric == "apparentPower":
-                    power_data = reading.get("apparentPower", {})
-                    return power_data.get("draw")
-                elif metric == "current":
-                    current_data = reading.get("current", {})
-                    return current_data.get("draw")
-                elif metric == "voltage":
-                    voltage_data = reading.get("voltage", {})
-                    return voltage_data.get("level")
-                elif metric == "frequency":
-                    frequency_data = reading.get("frequency", {})
-                    return frequency_data.get("level")
-                elif metric == "powerFactor":
-                    pf_data = reading.get("powerFactor", {})
-                    return pf_data.get("percentage")
-                elif metric == "pm25":
-                    pm25_data = reading.get("pm25", {})
-                    return pm25_data.get("concentration")
-                elif metric == "tvoc":
-                    tvoc_data = reading.get("tvoc", {})
-                    return tvoc_data.get("concentration")
-                elif metric == "noise":
-                    noise_data = reading.get("noise", {})
-                    # Handle different noise data structures from the API
-                    if isinstance(noise_data, dict):
-                        # Try multiple possible keys for the noise level
-                        noise_value = (
-                            noise_data.get("ambient")
-                            or noise_data.get("level")
-                            or noise_data.get("value")
-                            or noise_data.get("db")
-                        )
-                        # If we got a dict as the noise_value, try to extract from it
-                        if isinstance(noise_value, dict):
-                            noise_value = (
-                                noise_value.get("level")
-                                or noise_value.get("value")
-                                or noise_value.get("db")
-                            )
-                        return noise_value
-                    else:
-                        # If noise_data is already a number, return it directly
-                        return noise_data
-                elif metric == "indoorAirQuality":
-                    iaq_data = reading.get("indoorAirQuality", {})
-                    return iaq_data.get("score")
-                elif metric == "button":
-                    button_data = reading.get("button", {})
-                    return button_data.get("pressType")
-                else:
-                    # Fallback to simple value extraction
-                    return reading.get("value")
-
-        return None
+        # Return the value for our specific metric
+        return transformed_data.get(self.entity_description.key)
 
     @property
     def available(self) -> bool:
@@ -323,10 +251,7 @@ class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
             attrs["mac_address"] = mac_address
 
         # For temperature sensors, also include Fahrenheit value
-        if (
-            self.entity_description.key == "temperature"
-            and self.coordinator.data
-        ):
+        if self.entity_description.key == "temperature" and self.coordinator.data:
             device_data = self.coordinator.data.get(self._device_serial)
             if device_data:
                 readings = device_data.get("readings", [])
@@ -420,7 +345,7 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial", "")
-        device_name = get_device_display_name(self._device)
+        device_name = utils.get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         return DeviceInfo(

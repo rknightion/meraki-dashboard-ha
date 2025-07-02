@@ -4,20 +4,23 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
+from .types import CoordinatorData, MerakiDeviceData
 from .utils import performance_monitor
-from .utils.error_handling import handle_api_errors
+
+if TYPE_CHECKING:
+    from .hubs.network import MerakiNetworkHub
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
     """Coordinator to manage fetching Meraki device data.
 
     This coordinator handles periodic updates of device data for all device types (MT, MR, MS),
@@ -27,8 +30,8 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self,
         hass: HomeAssistant,
-        hub: Any,  # MerakiNetworkHub
-        devices: list[dict[str, Any]],
+        hub: MerakiNetworkHub,
+        devices: list[MerakiDeviceData],
         scan_interval: int,
         config_entry: ConfigEntry,
     ) -> None:
@@ -79,8 +82,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._last_update_duration
 
     @performance_monitor("coordinator_update")
-    @handle_api_errors(default_return={}, log_errors=True, convert_connection_errors=False)
-    async def _async_update_data(self) -> dict[str, Any]:
+    async def _async_update_data(self) -> CoordinatorData:
         """Fetch data from Meraki Dashboard API.
 
         Returns device data appropriate for the hub's device type:

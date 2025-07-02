@@ -6,12 +6,11 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
@@ -21,7 +20,6 @@ from ..const import (
     DOMAIN,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils import get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,7 +61,9 @@ class MerakiSensorEntityBase(MerakiEntityBase, SensorEntity):
         super().__init__(description, config_entry_id)
 
 
-class MerakiCoordinatorEntityBase(CoordinatorEntity[MerakiSensorCoordinator], MerakiEntityBase):
+class MerakiCoordinatorEntityBase(
+    CoordinatorEntity[MerakiSensorCoordinator], MerakiEntityBase
+):
     """Base class for coordinator-based Meraki entities."""
 
     def __init__(
@@ -76,12 +76,12 @@ class MerakiCoordinatorEntityBase(CoordinatorEntity[MerakiSensorCoordinator], Me
     ) -> None:
         """Initialize the coordinator-based Meraki entity."""
         CoordinatorEntity.__init__(self, coordinator)
-        
+
         # Set device info first, before calling MerakiEntityBase.__init__
         self._device = device
         self._device_serial = device.get("serial", "unknown")
         self._network_hub = network_hub
-        
+
         MerakiEntityBase.__init__(self, description, config_entry_id)
 
     def _generate_unique_id(self) -> str:
@@ -92,21 +92,20 @@ class MerakiCoordinatorEntityBase(CoordinatorEntity[MerakiSensorCoordinator], Me
     def available(self) -> bool:
         """Return if entity is available."""
         return (
-            self.coordinator.last_update_success
-            and self.coordinator.data is not None
+            self.coordinator.last_update_success and self.coordinator.data is not None
         )
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_name = get_device_display_name(self._device)
+        device_name = utils.get_device_display_name(self._device)
         network_id = self._device.get("networkId", "unknown")
         device_type = self._get_device_type()
-        
+
         # Get device configuration info
         lan_ip = self._device.get("lanIp")
         mac_address = self._device.get("mac")
-        
+
         # Build device info
         device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{self._config_entry_id}_{self._device_serial}")},
@@ -116,18 +115,24 @@ class MerakiCoordinatorEntityBase(CoordinatorEntity[MerakiSensorCoordinator], Me
             serial_number=self._device_serial,
             via_device=(DOMAIN, f"{self._config_entry_id}_{network_id}_{device_type}"),
         )
-        
+
         # Add configuration URL if available
         if lan_ip:
             device_info["configuration_url"] = f"http://{lan_ip}"
         elif hasattr(self._network_hub, "organization_hub"):
-            base_url = getattr(self._network_hub.organization_hub, "base_url", "https://dashboard.meraki.com")
-            device_info["configuration_url"] = f"{base_url.replace('/api/v1', '')}/manage/usage/list"
-        
+            base_url = getattr(
+                self._network_hub.organization_hub,
+                "base_url",
+                "https://dashboard.meraki.com",
+            )
+            device_info["configuration_url"] = (
+                f"{base_url.replace('/api/v1', '')}/manage/usage/list"
+            )
+
         # Add MAC address connection if available
         if mac_address:
             device_info["connections"] = {("mac", mac_address)}
-        
+
         return device_info
 
     def _get_device_type(self) -> str:
@@ -147,17 +152,19 @@ class MerakiCoordinatorEntityBase(CoordinatorEntity[MerakiSensorCoordinator], Me
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return common device-level extra state attributes."""
         attributes = super().extra_state_attributes.copy()
-        
+
         network_name = getattr(self._network_hub, "network_name", "Unknown Network")
         network_id = self._device.get("networkId", "unknown")
-        
-        attributes.update({
-            ATTR_NETWORK_ID: network_id,
-            ATTR_NETWORK_NAME: network_name,
-            ATTR_SERIAL: self._device_serial,
-            ATTR_MODEL: self._device.get("model", "Unknown"),
-        })
-        
+
+        attributes.update(
+            {
+                ATTR_NETWORK_ID: network_id,
+                ATTR_NETWORK_NAME: network_name,
+                ATTR_SERIAL: self._device_serial,
+                ATTR_MODEL: self._device.get("model", "Unknown"),
+            }
+        )
+
         # Add last reported timestamp if available in coordinator data
         if (
             self.coordinator.data
@@ -169,7 +176,7 @@ class MerakiCoordinatorEntityBase(CoordinatorEntity[MerakiSensorCoordinator], Me
                 last_reading = readings[-1]  # Most recent reading
                 if "ts" in last_reading:
                     attributes[ATTR_LAST_REPORTED_AT] = last_reading["ts"]
-        
+
         return attributes
 
 
@@ -209,27 +216,35 @@ class MerakiHubEntityBase(MerakiSensorEntityBase):
             # Organization hub device info
             organization_name = getattr(self._hub, "organization_name", "Organization")
             organization_id = getattr(self._hub, "organization_id", "unknown")
-            
+
             return DeviceInfo(
                 identifiers={(DOMAIN, f"{self._config_entry_id}_org")},
                 name=f"{organization_name} Organization",
                 manufacturer="Cisco Meraki",
                 model="Organization",
-                configuration_url=getattr(self._hub, "base_url", "https://dashboard.meraki.com").replace("/api/v1", ""),
+                configuration_url=getattr(
+                    self._hub, "base_url", "https://dashboard.meraki.com"
+                ).replace("/api/v1", ""),
             )
         elif hasattr(self._hub, "network_name"):
             # Network hub device info
             network_name = self._hub.network_name
             network_id = getattr(self._hub, "network_id", "unknown")
             device_type = getattr(self._hub, "device_type", "unknown")
-            
+
             return DeviceInfo(
-                identifiers={(DOMAIN, f"{self._config_entry_id}_{network_id}_{device_type}")},
+                identifiers={
+                    (DOMAIN, f"{self._config_entry_id}_{network_id}_{device_type}")
+                },
                 name=f"{network_name} {device_type} Hub",
                 manufacturer="Cisco Meraki",
                 model=f"{device_type} Network Hub",
                 via_device=(DOMAIN, f"{self._config_entry_id}_org"),
-                configuration_url=getattr(self._hub, "organization_hub.base_url", "https://dashboard.meraki.com").replace("/api/v1", ""),
+                configuration_url=getattr(
+                    self._hub,
+                    "organization_hub.base_url",
+                    "https://dashboard.meraki.com",
+                ).replace("/api/v1", ""),
             )
-        
+
         return None

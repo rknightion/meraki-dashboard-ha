@@ -187,7 +187,7 @@ def sanitize_attribute_value(value: Any) -> Any:
     return value
 
 
-def sanitize_device_attributes(device: dict[str, Any]) -> dict[str, Any]:
+def sanitize_device_attributes(device: dict[str, Any]) -> dict[str, str]:
     """Sanitize all device attributes from the API.
 
     This ensures that device names and other string attributes are
@@ -287,7 +287,7 @@ def performance_monitor(func_name: str = ""):
     return decorator
 
 
-def get_performance_metrics() -> dict[str, Any]:
+def get_performance_metrics() -> dict[str, int | float | datetime]:
     """Get current performance metrics.
 
     Returns:
@@ -338,7 +338,9 @@ def reset_performance_metrics() -> None:
     )
 
 
-def cache_api_response(key: str, data: Any, ttl_seconds: int = _CACHE_TTL) -> None:
+def cache_api_response(
+    key: str, data: dict[str, Any], ttl_seconds: int = _CACHE_TTL
+) -> None:
     """Cache API response data with TTL.
 
     Args:
@@ -352,7 +354,7 @@ def cache_api_response(key: str, data: Any, ttl_seconds: int = _CACHE_TTL) -> No
     }
 
 
-def get_cached_api_response(key: str) -> Any | None:
+def get_cached_api_response(key: str) -> dict[str, Any] | None:
     """Get cached API response data if still valid.
 
     Args:

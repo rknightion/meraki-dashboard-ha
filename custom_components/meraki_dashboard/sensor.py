@@ -10,16 +10,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import utils
 from .const import (
     DOMAIN,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-)
-from .entities.factory import (
-    create_device_entity,
-    create_network_entity,
-    create_organization_entity,
 )
 from .devices.mr import MR_NETWORK_SENSOR_DESCRIPTIONS, MR_SENSOR_DESCRIPTIONS
 from .devices.ms import MS_DEVICE_SENSOR_DESCRIPTIONS, MS_NETWORK_SENSOR_DESCRIPTIONS
@@ -28,7 +24,11 @@ from .devices.organization import (
     NETWORK_HUB_SENSOR_DESCRIPTIONS,
     ORG_HUB_SENSOR_DESCRIPTIONS,
 )
-from .utils import should_create_entity
+from .entities.factory import (
+    create_device_entity,
+    create_network_entity,
+    create_organization_entity,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,10 +61,7 @@ async def async_setup_entry(
     for description in ORG_HUB_SENSOR_DESCRIPTIONS.values():
         try:
             entity = create_organization_entity(
-                description.key,
-                organization_hub,
-                description,
-                config_entry.entry_id
+                description.key, organization_hub, description, config_entry.entry_id
             )
             entities.append(entity)
         except ValueError:
@@ -86,7 +83,7 @@ async def async_setup_entry(
                     "network_device_count",
                     network_hub,
                     description,
-                    config_entry.entry_id
+                    config_entry.entry_id,
                 )
                 entities.append(entity)
             except ValueError:
@@ -143,7 +140,7 @@ async def _setup_mt_sensors(
         # Create regular sensors for each metric that the device supports
         entities_created_for_device = 0
         for description in MT_SENSOR_DESCRIPTIONS.values():
-            if should_create_entity(device, description.key, coordinator.data):
+            if utils.should_create_entity(device, description.key, coordinator.data):
                 try:
                     entity = create_device_entity(
                         "mt_sensor",
@@ -156,17 +153,21 @@ async def _setup_mt_sensors(
                     entities.append(entity)
                     entities_created_for_device += 1
                     _LOGGER.debug(
-                        "Created %s sensor for device %s", description.key, device_serial
+                        "Created %s sensor for device %s",
+                        description.key,
+                        device_serial,
                     )
                 except ValueError as e:
-                    _LOGGER.warning("Failed to create MT sensor %s: %s", description.key, e)
+                    _LOGGER.warning(
+                        "Failed to create MT sensor %s: %s", description.key, e
+                    )
 
         # Create energy sensors for power-monitoring devices
         # Check if the device has any power sensors that can be used for energy calculation
         for description in MT_ENERGY_SENSOR_DESCRIPTIONS.values():
             # Extract the base power sensor key from the energy sensor key
             power_sensor_key = description.key.replace("_energy", "")
-            if should_create_entity(device, power_sensor_key, coordinator.data):
+            if utils.should_create_entity(device, power_sensor_key, coordinator.data):
                 try:
                     entity = create_device_entity(
                         "mt_energy_sensor",
@@ -185,7 +186,9 @@ async def _setup_mt_sensors(
                         device_serial,
                     )
                 except ValueError as e:
-                    _LOGGER.warning("Failed to create MT energy sensor %s: %s", description.key, e)
+                    _LOGGER.warning(
+                        "Failed to create MT energy sensor %s: %s", description.key, e
+                    )
 
         if entities_created_for_device == 0:
             _LOGGER.debug(
@@ -234,7 +237,9 @@ async def _setup_mr_sensors(
             )
             entities.append(entity)
         except ValueError as e:
-            _LOGGER.warning("Failed to create MR network sensor %s: %s", description.key, e)
+            _LOGGER.warning(
+                "Failed to create MR network sensor %s: %s", description.key, e
+            )
 
     # Create device-specific sensors for each MR device
     for device in network_hub.devices:
@@ -248,7 +253,7 @@ async def _setup_mr_sensors(
         entities_created = 0
         for description in MR_SENSOR_DESCRIPTIONS.values():
             # Always create memory usage sensors for MR devices (available via organization API)
-            if description.key == "memoryUsage" or should_create_entity(
+            if description.key == "memoryUsage" or utils.should_create_entity(
                 device, description.key, coordinator.data
             ):
                 try:
@@ -263,10 +268,14 @@ async def _setup_mr_sensors(
                     entities.append(entity)
                     entities_created += 1
                     _LOGGER.debug(
-                        "Created %s sensor for MR device %s", description.key, device_serial
+                        "Created %s sensor for MR device %s",
+                        description.key,
+                        device_serial,
                     )
                 except ValueError as e:
-                    _LOGGER.warning("Failed to create MR device sensor %s: %s", description.key, e)
+                    _LOGGER.warning(
+                        "Failed to create MR device sensor %s: %s", description.key, e
+                    )
 
     _LOGGER.debug(
         "Created MR sensors for %d devices (%d total sensors)",
@@ -312,7 +321,9 @@ async def _setup_ms_sensors(
             )
             entities.append(entity)
         except ValueError as e:
-            _LOGGER.warning("Failed to create MS network sensor %s: %s", description.key, e)
+            _LOGGER.warning(
+                "Failed to create MS network sensor %s: %s", description.key, e
+            )
 
     # Create device-specific sensors for each MS device
     for device in network_hub.devices:
@@ -326,7 +337,7 @@ async def _setup_ms_sensors(
         entities_created = 0
         for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
             # Always create memory usage sensors for MS devices (available via organization API)
-            if description.key == "memoryUsage" or should_create_entity(
+            if description.key == "memoryUsage" or utils.should_create_entity(
                 device, description.key, coordinator.data
             ):
                 try:
@@ -341,10 +352,14 @@ async def _setup_ms_sensors(
                     entities.append(entity)
                     entities_created += 1
                     _LOGGER.debug(
-                        "Created %s sensor for MS device %s", description.key, device_serial
+                        "Created %s sensor for MS device %s",
+                        description.key,
+                        device_serial,
                     )
                 except ValueError as e:
-                    _LOGGER.warning("Failed to create MS device sensor %s: %s", description.key, e)
+                    _LOGGER.warning(
+                        "Failed to create MS device sensor %s: %s", description.key, e
+                    )
 
     _LOGGER.debug(
         "Created MS sensors for %d devices (%d total sensors)",

@@ -145,7 +145,6 @@ cython_debug/
 *.sublime-workspace
 
 # Home Assistant
-config/
 home-assistant.log
 home-assistant_v2.db
 home-assistant_v2.db-*

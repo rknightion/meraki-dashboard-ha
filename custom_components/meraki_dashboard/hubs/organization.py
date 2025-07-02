@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import meraki
 from homeassistant.config_entries import ConfigEntry
@@ -26,7 +26,15 @@ from ..const import (
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
 )
-from ..utils.error_handling import handle_api_errors, api_retry
+from ..types import (
+    DeviceStatus,
+    LicenseInfo,
+    MemoryUsageData,
+    MerakiApiClient,
+    NetworkData,
+    OrganizationData,
+)
+from ..utils.error_handling import api_retry, handle_api_errors
 
 if TYPE_CHECKING:
     from .network import MerakiNetworkHub
@@ -117,11 +125,11 @@ class MerakiOrganizationHub:
         self._base_url = config_entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL)
         self.organization_id = organization_id
         self.config_entry = config_entry
-        self.dashboard: meraki.DashboardAPI | None = None
+        self.dashboard: MerakiApiClient | None = None
 
         # Organization metadata
         self.organization_name: str | None = None
-        self.networks: list[dict[str, Any]] = []
+        self.networks: list[NetworkData] = []
 
         # Hub diagnostic metrics with performance tracking
         self.last_api_call_error: str | None = None
@@ -134,11 +142,11 @@ class MerakiOrganizationHub:
         self.network_hubs: dict[str, MerakiNetworkHub] = {}
 
         # Organization-level monitoring data
-        self.licenses_info: dict[str, Any] = {}
+        self.licenses_info: dict[str, LicenseInfo] = {}
         self.licenses_expiring_count = 0
-        self.recent_alerts: list[dict[str, Any]] = []
+        self.recent_alerts: list[dict[str, str]] = []
         self.active_alerts_count = 0
-        self.device_statuses: list[dict[str, Any]] = []
+        self.device_statuses: list[DeviceStatus] = []
 
         # Clients overview data (1-hour timespan)
         self.clients_total_count = 0
@@ -151,7 +159,7 @@ class MerakiOrganizationHub:
         self.bluetooth_clients_total_count = 0
 
         # Device memory usage data
-        self.device_memory_usage: dict[str, dict[str, Any]] = {}
+        self.device_memory_usage: dict[str, MemoryUsageData] = {}
 
         # Organization data update timer
         self._organization_data_unsub: Callable[[], None] | None = None
@@ -498,7 +506,7 @@ class MerakiOrganizationHub:
         return network_hubs
 
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
-    async def async_update_organization_data(self) -> None:
+    async def async_update_organization_data(self) -> OrganizationData:
         """Update organization-level monitoring data.
 
         This method can be called manually to force refresh all organization data.
@@ -508,7 +516,9 @@ class MerakiOrganizationHub:
         - Alerts/events: every 5 minutes
         """
         if not self.dashboard:
-            return
+            return OrganizationData(
+                id=self.organization_id, name=self.organization_name or "Unknown"
+            )
 
         try:
             # Force update all data types
@@ -532,10 +542,17 @@ class MerakiOrganizationHub:
 
             _LOGGER.debug("Manual organization data update completed")
 
+            return OrganizationData(
+                id=self.organization_id, name=self.organization_name or "Unknown"
+            )
+
         except Exception as err:
             self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             _LOGGER.error("Error fetching organization data: %s", err)
+            return OrganizationData(
+                id=self.organization_id, name=self.organization_name or "Unknown"
+            )
 
     @api_retry(max_attempts=2, retry_on=(ConfigEntryNotReady,))
     @handle_api_errors(log_errors=True, convert_connection_errors=False)

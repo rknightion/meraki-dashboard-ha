@@ -15,6 +15,7 @@ from homeassistant.const import PERCENTAGE, UnitOfPower
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
@@ -40,7 +41,7 @@ from ..const import (
     MS_SENSOR_POWER_MODULE_STATUS,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils import get_device_display_name, get_device_status_info
+from ..data.transformers import transformer_registry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -236,13 +237,13 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial", "")
-        device_name = get_device_display_name(self._device)
+        device_name = utils.get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         # Get device status information for network details
         device_status = None
         if device_serial:
-            device_status = get_device_status_info(
+            device_status = utils.get_device_status_info(
                 self._network_hub.organization_hub, device_serial
             )
 
@@ -288,22 +289,11 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 break
 
         if device_info:
-            # Use aggregated device data if available
-            if self.entity_description.key == MS_SENSOR_PORT_COUNT:
-                return device_info.get("port_count", 0)
-            elif self.entity_description.key == MS_SENSOR_CONNECTED_CLIENTS:
-                return device_info.get("connected_clients", 0)
-            elif self.entity_description.key == MS_SENSOR_CONNECTED_PORTS:
-                return device_info.get("connected_ports", 0)
-            elif self.entity_description.key == MS_SENSOR_POE_PORTS:
-                return device_info.get("poe_ports", 0)
-            elif self.entity_description.key == MS_SENSOR_POE_POWER:
-                return device_info.get("poe_power_draw", 0)
-            elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION:
-                return device_info.get("port_utilization", 0)
-            elif self.entity_description.key == MS_SENSOR_PORT_LINK_COUNT:
-                return device_info.get("port_link_count", 0)
-            elif self.entity_description.key == MS_SENSOR_POE_LIMIT:
+            # Use transformer to process aggregated device data
+            transformed_data = transformer_registry.transform("MS", device_info)
+
+            # Handle special cases that need non-device data
+            if self.entity_description.key == MS_SENSOR_POE_LIMIT:
                 # Only get from power module data via API - no hardcoded values
                 power_modules = self.coordinator.data.get("power_modules", [])
                 device_power = next(
@@ -322,13 +312,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                         return power_status[0].get("powerLimit", 0)
                     elif isinstance(power_status, dict):
                         return power_status.get("powerLimit", 0)
-
-                # Return 0 if no API data available - no hardcoded fallbacks
                 return 0
-            elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
-                return device_info.get("port_errors", 0)
-            elif self.entity_description.key == MS_SENSOR_PORT_DISCARDS:
-                return device_info.get("port_discards", 0)
             elif self.entity_description.key == MS_SENSOR_MEMORY_USAGE:
                 # Get memory usage from organization hub memory data
                 if hasattr(self.coordinator.network_hub, "organization_hub"):
@@ -337,22 +321,11 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     )
                     if memory_data:
                         usage_percent = memory_data.get("memory_usage_percent", 0)
-                        _LOGGER.debug(
-                            "MS device %s memory usage: %s%%",
-                            self._device_serial,
-                            usage_percent,
-                        )
                         return usage_percent
-                    else:
-                        _LOGGER.debug(
-                            "No memory data found for MS device %s", self._device_serial
-                        )
-                else:
-                    _LOGGER.debug(
-                        "No organization_hub found for MS device %s",
-                        self._device_serial,
-                    )
                 return 0
+            else:
+                # Use transformed data for standard metrics
+                return transformed_data.get(self.entity_description.key)
 
         # Fallback to port-level data if device info not available
         ports_status = self.coordinator.data.get("ports_status", [])
@@ -365,154 +338,10 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         if not device_ports:
             return None
 
-        # Calculate device-specific metrics from port data
-        if self.entity_description.key == MS_SENSOR_PORT_COUNT:
-            return len(device_ports)
-        elif self.entity_description.key == MS_SENSOR_CONNECTED_PORTS:
-            return len(
-                [
-                    port
-                    for port in device_ports
-                    if port.get("enabled", False) and port.get("status") == "Connected"
-                ]
-            )
-        elif self.entity_description.key == MS_SENSOR_POE_PORTS:
-            return len(
-                [
-                    port
-                    for port in device_ports
-                    if port.get("powerUsageInWh") is not None
-                    and port.get("powerUsageInWh") > 0
-                ]
-            )
-        elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION_SENT:
-            # Calculate average utilization across device ports
-            utilizations = [
-                port.get("usageInKb", {}).get("sent", 0)
-                for port in device_ports
-                if port.get("usageInKb")
-            ]
-            if utilizations:
-                # Convert from Kb to percentage (assuming 1Gbps ports)
-                avg_kb = sum(utilizations) / len(utilizations)
-                return min(100.0, (avg_kb / 1000000) * 100)
-            return 0
-        elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION_RECV:
-            # Calculate average utilization across device ports
-            utilizations = [
-                port.get("usageInKb", {}).get("recv", 0)
-                for port in device_ports
-                if port.get("usageInKb")
-            ]
-            if utilizations:
-                # Convert from Kb to percentage (assuming 1Gbps ports)
-                avg_kb = sum(utilizations) / len(utilizations)
-                return min(100.0, (avg_kb / 1000000) * 100)
-            return 0
-        elif self.entity_description.key == MS_SENSOR_PORT_TRAFFIC_SENT:
-            # Sum traffic sent across device ports in KB per second (more user-friendly)
-            total_kb = sum(
-                [
-                    port.get("usageInKb", {}).get("sent", 0)
-                    for port in device_ports
-                    if port.get("usageInKb")
-                ]
-            )
-            return total_kb  # Return KB directly instead of converting to bytes
-        elif self.entity_description.key == MS_SENSOR_PORT_TRAFFIC_RECV:
-            # Sum traffic received across device ports in KB per second (more user-friendly)
-            total_kb = sum(
-                [
-                    port.get("usageInKb", {}).get("recv", 0)
-                    for port in device_ports
-                    if port.get("usageInKb")
-                ]
-            )
-            return total_kb  # Return KB directly instead of converting to bytes
-        elif self.entity_description.key == MS_SENSOR_POE_POWER:
-            # Handle POE power calculation - API field name is misleading
-            # powerUsageInWh might actually be instantaneous power in watts
-            total_power = sum(
-                [
-                    port.get("powerUsageInWh", 0)
-                    for port in device_ports
-                    if port.get("powerUsageInWh") is not None
-                ]
-            )
-            # API returns values in deciwatts (dW), divide by 10 to get watts
-            # Based on user feedback: 300W should be 30W, so divide by 10
-            return total_power / 10
-        elif self.entity_description.key == MS_SENSOR_PORT_ERRORS:
-            # Sum port errors across device ports
-            total_errors = 0
-            for port in device_ports:
-                errors = port.get("errors")
-                if errors is not None:
-                    # Handle case where errors might be a list or an integer
-                    if isinstance(errors, list):
-                        # Convert all items to int, handling strings and other types
-                        total_errors += (
-                            sum(int(x) for x in errors if str(x).isdigit())
-                            if errors
-                            else 0
-                        )
-                    else:
-                        # Convert to int, handling strings
-                        total_errors += int(errors) if str(errors).isdigit() else 0
-            return total_errors
-        elif self.entity_description.key == MS_SENSOR_PORT_DISCARDS:
-            # Sum port discards across device ports
-            total_discards = 0
-            for port in device_ports:
-                discards = port.get("discards")
-                if discards is not None:
-                    # Handle case where discards might be a list or an integer
-                    if isinstance(discards, list):
-                        # Convert all items to int, handling strings and other types
-                        total_discards += (
-                            sum(int(x) for x in discards if str(x).isdigit())
-                            if discards
-                            else 0
-                        )
-                    else:
-                        # Convert to int, handling strings
-                        total_discards += (
-                            int(discards) if str(discards).isdigit() else 0
-                        )
-            return total_discards
-        elif self.entity_description.key == MS_SENSOR_CONNECTED_CLIENTS:
-            # Sum clients across device ports
-            total_clients = sum(
-                [
-                    port.get("clientCount", 0)
-                    for port in device_ports
-                    if port.get("clientCount") is not None
-                ]
-            )
-            return total_clients
-        elif self.entity_description.key == MS_SENSOR_PORT_LINK_COUNT:
-            # Count ports that have a link (are connected)
-            return len(
-                [port for port in device_ports if port.get("status") == "Connected"]
-            )
-        elif self.entity_description.key == MS_SENSOR_PORT_UTILIZATION:
-            # Calculate overall port utilization as average of all ports
-            utilizations = []
-            for port in device_ports:
-                usage = port.get("usageInKb", {})
-                if usage and isinstance(usage, dict):
-                    sent = usage.get("sent", 0)
-                    recv = usage.get("recv", 0)
-                    # Calculate utilization as percentage (assuming 1Gbps ports)
-                    # Convert from Kb to percentage
-                    port_util = min(100.0, ((sent + recv) / 1000000) * 100)
-                    utilizations.append(port_util)
-
-            if utilizations:
-                return sum(utilizations) / len(utilizations)
-            return 0
-
-        return None
+        # Create temporary device data and transform it
+        temp_device_data = {"serial": self._device_serial, "ports_status": device_ports}
+        transformed_data = transformer_registry.transform("MS", temp_device_data)
+        return transformed_data.get(self.entity_description.key)
 
     @property
     def available(self) -> bool:
@@ -611,7 +440,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         # Add network configuration details from device status
         if self._device_serial:
-            device_status = get_device_status_info(
+            device_status = utils.get_device_status_info(
                 self.coordinator.network_hub.organization_hub, self._device_serial
             )
             if device_status:

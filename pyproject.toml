@@ -33,7 +33,6 @@ package-mode = false
 python = ">=3.13.2,<3.14"
 
 [tool.poetry.group.dev.dependencies]
-homeassistant = "2025.6.1"
 homeassistant-stubs = "2025.6.1"
 pytest-homeassistant-custom-component = "0.13.252"
 pytest = "^8.0.0"

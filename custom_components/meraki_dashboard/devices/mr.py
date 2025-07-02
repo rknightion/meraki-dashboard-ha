@@ -15,6 +15,7 @@ from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
@@ -44,7 +45,7 @@ from ..const import (
     MR_SENSOR_TRAFFIC_SENT,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils import get_device_display_name, get_device_status_info
+from ..data.transformers import transformer_registry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -260,13 +261,13 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
         device_serial = self._device.get("serial", "")
-        device_name = get_device_display_name(self._device)
+        device_name = utils.get_device_display_name(self._device)
         device_model = self._device.get("model", "Unknown")
 
         # Get device status information for network details
         device_status = None
         if device_serial:
-            device_status = get_device_status_info(
+            device_status = utils.get_device_status_info(
                 self._network_hub.organization_hub, device_serial
             )
 
@@ -312,18 +313,11 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         if not device_info:
             return None
 
-        # Return the appropriate metric value
-        if self.entity_description.key == MR_SENSOR_CLIENT_COUNT:
-            return device_info.get("clientCount", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_2_4:
-            return device_info.get("channelUtilization24", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_5:
-            return device_info.get("channelUtilization5", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_DATA_RATE_2_4:
-            return device_info.get("dataRate24", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_DATA_RATE_5:
-            return device_info.get("dataRate5", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_SSID_COUNT:
+        # Use transformer to process data consistently
+        transformed_data = transformer_registry.transform("MR", device_info)
+
+        # Handle special cases that need network-level data
+        if self.entity_description.key == MR_SENSOR_SSID_COUNT:
             # Count SSIDs available on this device (same as network for now)
             ssids = self.coordinator.data.get("ssids", [])
             return len(ssids)
@@ -341,43 +335,6 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                     if ssid.get("authMode") in ["open", "8021x-radius"]
                 ]
             )
-        elif self.entity_description.key == MR_SENSOR_CONNECTION_SUCCESS_RATE:
-            return device_info.get("connectionSuccessRate", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_CONNECTION_FAILURES:
-            return device_info.get("connectionFailures", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_TRAFFIC_SENT:
-            # Traffic sent in Mbps - convert from bytes if needed
-            traffic_sent = device_info.get("trafficSent", 0) or 0
-            # If traffic is in bytes, convert to Mbps
-            if traffic_sent > 1000000:  # Likely in bytes
-                return traffic_sent / 1000000  # Convert to Mbps
-            return traffic_sent
-        elif self.entity_description.key == MR_SENSOR_TRAFFIC_RECV:
-            # Traffic received in Mbps - convert from bytes if needed
-            traffic_recv = device_info.get("trafficRecv", 0) or 0
-            # If traffic is in bytes, convert to Mbps
-            if traffic_recv > 1000000:  # Likely in bytes
-                return traffic_recv / 1000000  # Convert to Mbps
-            return traffic_recv
-        elif self.entity_description.key == MR_SENSOR_RF_POWER:
-            # RF power in dBm - use the highest power from either band
-            return device_info.get("rfPower", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_RF_POWER_2_4:
-            # RF power for 2.4GHz band
-            return device_info.get("rf_power_2_4", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_RF_POWER_5:
-            # RF power for 5GHz band
-            return device_info.get("rf_power_5", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_2_4:
-            # Channel for 2.4GHz band
-            return device_info.get("radioChannel24", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_RADIO_CHANNEL_5:
-            # Channel for 5GHz band
-            return device_info.get("radioChannel5", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_CHANNEL_WIDTH_5:
-            return device_info.get("channelWidth5", 0) or 0
-        elif self.entity_description.key == MR_SENSOR_RF_PROFILE_ID:
-            return device_info.get("rfProfileId", 0) or 0
         elif self.entity_description.key == MR_SENSOR_MEMORY_USAGE:
             # Get memory usage from organization hub memory data
             if hasattr(self.coordinator.network_hub, "organization_hub"):
@@ -386,23 +343,11 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 )
                 if memory_data:
                     usage_percent = memory_data.get("memory_usage_percent", 0)
-                    _LOGGER.debug(
-                        "MR device %s memory usage: %s%%",
-                        self._device_serial,
-                        usage_percent,
-                    )
                     return usage_percent
-                else:
-                    _LOGGER.debug(
-                        "No memory data found for MR device %s", self._device_serial
-                    )
-            else:
-                _LOGGER.debug(
-                    "No organization_hub found for MR device %s", self._device_serial
-                )
             return 0
-
-        return None
+        else:
+            # Use transformed data for all other metrics
+            return transformed_data.get(self.entity_description.key)
 
     @property
     def available(self) -> bool:
@@ -441,7 +386,7 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         # Add network configuration details from device status
         if self._device_serial:
-            device_status = get_device_status_info(
+            device_status = utils.get_device_status_info(
                 self.coordinator.network_hub.organization_hub, self._device_serial
             )
             if device_status:

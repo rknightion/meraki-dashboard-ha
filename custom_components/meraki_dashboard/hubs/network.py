@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.event import async_track_time_interval
 
+from .. import utils
 from ..const import (
     CONF_AUTO_DISCOVERY,
     CONF_DISCOVERY_INTERVAL,
@@ -23,14 +24,16 @@ from ..const import (
     SENSOR_TYPE_MT,
 )
 from ..events import MerakiEventHandler
-from ..utils import (
-    cache_api_response,
-    get_cached_api_response,
-    get_device_display_name,
-    performance_monitor,
-    sanitize_device_attributes,
+from ..types import (
+    MerakiDeviceData,
+    MTDeviceData,
+    SwitchStats,
+    WirelessStats,
 )
-from ..utils.error_handling import handle_api_errors, api_retry
+
+# Import for backward compatibility with tests
+from ..utils import performance_monitor
+from ..utils.error_handling import handle_api_errors
 
 if TYPE_CHECKING:
     from .organization import MerakiOrganizationHub
@@ -92,14 +95,14 @@ class MerakiNetworkHub:
         self.hub_name = f"{network_name}_{device_type}"
 
         # Device management
-        self.devices: list[dict[str, Any]] = []
+        self.devices: list[MerakiDeviceData] = []
         self._selected_devices: set[str] = set()
         self._last_discovery_time: datetime | None = None
         self._discovery_in_progress = False
 
         # Device type specific data storage
-        self.wireless_data: dict[str, Any] = {}  # For MR devices
-        self.switch_data: dict[str, Any] = {}  # For MS devices
+        self.wireless_data: dict[str, WirelessStats] = {}  # For MR devices
+        self.switch_data: dict[str, SwitchStats] = {}  # For MS devices
 
         # Periodic discovery timer
         self._discovery_unsub: Callable[[], None] | None = None
@@ -251,7 +254,7 @@ class MerakiNetworkHub:
 
             # Check cache first for device discovery
             cache_key = f"devices_{self.network_id}_{self.device_type}"
-            cached_devices = get_cached_api_response(cache_key)
+            cached_devices = utils.get_cached_api_response(cache_key)
 
             if cached_devices is not None:
                 _LOGGER.debug(
@@ -293,11 +296,11 @@ class MerakiNetworkHub:
                     device["network_name"] = self.network_name
 
                     # Sanitize device attributes
-                    device = sanitize_device_attributes(device)
+                    device = utils.sanitize_device_attributes(device)
                     processed_devices.append(device)
 
                 # Cache the processed devices for 10 minutes
-                cache_api_response(cache_key, processed_devices, ttl_seconds=600)
+                utils.cache_api_response(cache_key, processed_devices, ttl_seconds=600)
 
             # Update device list
             previous_count = len(self.devices)
@@ -352,7 +355,7 @@ class MerakiNetworkHub:
 
             # Check cache first for wireless data
             cache_key = f"wireless_data_{self.network_id}"
-            cached_data = get_cached_api_response(cache_key)
+            cached_data = utils.get_cached_api_response(cache_key)
 
             if cached_data is not None:
                 _LOGGER.debug(
@@ -388,7 +391,7 @@ class MerakiNetworkHub:
 
                     device_info = {
                         "serial": device_serial,
-                        "name": get_device_display_name(device),
+                        "name": utils.get_device_display_name(device),
                         "model": device.get("model"),
                         "clientCount": 0,
                         "channelUtilization24": 0,
@@ -754,7 +757,7 @@ class MerakiNetworkHub:
             }
 
             # Cache the wireless data for 5 minutes
-            cache_api_response(cache_key, self.wireless_data, ttl_seconds=300)
+            utils.cache_api_response(cache_key, self.wireless_data, ttl_seconds=300)
 
             _LOGGER.debug(
                 "Retrieved %d SSIDs and %d wireless devices for network %s",
@@ -780,7 +783,7 @@ class MerakiNetworkHub:
 
             # Check cache first for switch data
             cache_key = f"switch_data_{self.network_id}"
-            cached_data = get_cached_api_response(cache_key)
+            cached_data = utils.get_cached_api_response(cache_key)
 
             if cached_data is not None:
                 _LOGGER.debug(
@@ -819,7 +822,7 @@ class MerakiNetworkHub:
                     if not device_serial:
                         continue
 
-                    device_name = get_device_display_name(device)
+                    device_name = utils.get_device_display_name(device)
                     device_info = {
                         "serial": device_serial,
                         "name": device_name,
@@ -1063,7 +1066,7 @@ class MerakiNetworkHub:
             }
 
             # Cache the switch data for 5 minutes
-            cache_api_response(cache_key, self.switch_data, ttl_seconds=300)
+            utils.cache_api_response(cache_key, self.switch_data, ttl_seconds=300)
 
             _LOGGER.debug(
                 "Retrieved %d switch devices with %d ports, %d power modules for network %s",
@@ -1078,8 +1081,10 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
 
     @performance_monitor("sensor_data_fetch")
-    @handle_api_errors(default_return={}, log_errors=True, convert_connection_errors=False)
-    async def async_get_sensor_data(self) -> dict[str, dict[str, Any]]:
+    @handle_api_errors(
+        default_return={}, log_errors=True, convert_connection_errors=False
+    )
+    async def async_get_sensor_data(self) -> dict[str, MTDeviceData]:
         """Get sensor data for all devices in this hub (MT devices only).
 
         Returns:
