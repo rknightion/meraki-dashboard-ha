@@ -52,6 +52,7 @@ from ..const import (
     MT_SENSOR_VOLTAGE,
 )
 from ..coordinator import MerakiSensorCoordinator
+from ..entities.base import MerakiCoordinatorEntityBase
 from ..utils import get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
@@ -181,14 +182,12 @@ MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
 }
 
 
-class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
+class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
     """Representation of a Meraki MT sensor.
 
     Each instance represents a single metric from a Meraki MT device,
     such as temperature, humidity, etc.
     """
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -199,46 +198,16 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         network_hub: Any,
     ) -> None:
         """Initialize the MT sensor."""
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._device = device
-        self._config_entry_id = config_entry_id
-        self._network_hub = network_hub
-
-        # Generate unique ID
-        self._attr_unique_id = f"{config_entry_id}_{device['serial']}_{description.key}"
-
-        # Store device serial for data lookup
-        self._device_serial = device["serial"]
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_serial = self._device.get("serial", "")
-        device_name = get_device_display_name(self._device)
-        device_model = self._device.get("model", "Unknown")
-
-        device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
-            name=device_name,
-            manufacturer="Cisco Meraki",
-            model=device_model,
-            serial_number=device_serial,
-            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
-            via_device=(
-                DOMAIN,
-                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
-            ),
-        )
-
-        # Add MAC address connection if available
-        mac_address = self._device.get("mac")
-        if mac_address and isinstance(mac_address, str):
-            device_info["connections"] = {("mac", mac_address)}
-
+        device_info = super().device_info
+        
         # Store for _attr_device_info access in tests
         self._attr_device_info = device_info
-
+        
         return device_info
 
     @property
@@ -333,58 +302,41 @@ class MerakiMTSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        if not self.coordinator.last_update_success:
+        if not super().available:
             return False
 
-        if not self.coordinator.data:
-            return False
-
+        # MT-specific availability check: we need actual readings
         device_data = self.coordinator.data.get(self._device_serial)
         if not device_data:
             return False
 
-        # Check if we have recent readings
         readings = device_data.get("readings", [])
         return len(readings) > 0
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
-        attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
-            ATTR_SERIAL: self._device_serial,
-            ATTR_MODEL: self._device.get("model"),
-        }
+        attrs = super().extra_state_attributes.copy()
 
         # Add MAC address if available
         if mac_address := self._device.get("mac"):
             attrs["mac_address"] = mac_address
 
-        if self.coordinator.data:
+        # For temperature sensors, also include Fahrenheit value
+        if (
+            self.entity_description.key == "temperature"
+            and self.coordinator.data
+        ):
             device_data = self.coordinator.data.get(self._device_serial)
             if device_data:
                 readings = device_data.get("readings", [])
-
-                # Add timestamp if available
-                if readings:
-                    # Use the timestamp from the first reading or device data
-                    for reading in readings:
-                        if reading.get("metric") == self.entity_description.key:
-                            timestamp = reading.get("ts") or device_data.get("ts")
-                            if timestamp:
-                                attrs[ATTR_LAST_REPORTED_AT] = timestamp
-                            break
-
-                # For temperature sensors, also include Fahrenheit value
-                if self.entity_description.key == "temperature":
-                    for reading in readings:
-                        if reading.get("metric") == "temperature":
-                            temp_data = reading.get("temperature", {})
-                            fahrenheit = temp_data.get("fahrenheit")
-                            if fahrenheit is not None:
-                                attrs["temperature_fahrenheit"] = fahrenheit
-                            break
+                for reading in readings:
+                    if reading.get("metric") == "temperature":
+                        temp_data = reading.get("temperature", {})
+                        fahrenheit = temp_data.get("fahrenheit")
+                        if fahrenheit is not None:
+                            attrs["temperature_fahrenheit"] = fahrenheit
+                        break
 
         return attrs
 

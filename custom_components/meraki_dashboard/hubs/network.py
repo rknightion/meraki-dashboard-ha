@@ -30,6 +30,7 @@ from ..utils import (
     performance_monitor,
     sanitize_device_attributes,
 )
+from ..utils.error_handling import handle_api_errors, api_retry
 
 if TYPE_CHECKING:
     from .organization import MerakiOrganizationHub
@@ -339,6 +340,7 @@ class MerakiNetworkHub:
             self._discovery_in_progress = False
 
     @performance_monitor("wireless_data_setup")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _async_setup_wireless_data(self) -> None:
         """Set up wireless data for MR devices (SSIDs, device stats, radio settings, etc.)."""
         if self.device_type != SENSOR_TYPE_MR:
@@ -766,6 +768,7 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
 
     @performance_monitor("switch_data_setup")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _async_setup_switch_data(self) -> None:
         """Set up switch data for MS devices (ports, status, power modules, configuration, etc.)."""
         if self.device_type != SENSOR_TYPE_MS:
@@ -1075,6 +1078,7 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
 
     @performance_monitor("sensor_data_fetch")
+    @handle_api_errors(default_return={}, log_errors=True, convert_connection_errors=False)
     async def async_get_sensor_data(self) -> dict[str, dict[str, Any]]:
         """Get sensor data for all devices in this hub (MT devices only).
 

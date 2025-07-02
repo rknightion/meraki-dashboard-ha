@@ -16,27 +16,10 @@ from .const import (
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
 )
-from .devices import (
-    MerakiHubAlertsSensor,
-    MerakiHubApiCallsSensor,
-    MerakiHubBluetoothClientsCountSensor,
-    MerakiHubClientsCountSensor,
-    MerakiHubClientsUsageAverageTotalSensor,
-    MerakiHubClientsUsageOverallDownstreamSensor,
-    MerakiHubClientsUsageOverallTotalSensor,
-    MerakiHubClientsUsageOverallUpstreamSensor,
-    MerakiHubDeviceCountSensor,
-    MerakiHubFailedApiCallsSensor,
-    MerakiHubLicenseExpiringSensor,
-    MerakiHubNetworkCountSensor,
-    MerakiHubOfflineDevicesSensor,
-    MerakiMRDeviceSensor,
-    MerakiMRSensor,
-    MerakiMSDeviceSensor,
-    MerakiMSSensor,
-    MerakiMTEnergySensor,
-    MerakiMTSensor,
-    MerakiNetworkHubDeviceCountSensor,
+from .entities.factory import (
+    create_device_entity,
+    create_network_entity,
+    create_organization_entity,
 )
 from .devices.mr import MR_NETWORK_SENSOR_DESCRIPTIONS, MR_SENSOR_DESCRIPTIONS
 from .devices.ms import MS_DEVICE_SENSOR_DESCRIPTIONS, MS_NETWORK_SENSOR_DESCRIPTIONS
@@ -76,84 +59,16 @@ async def async_setup_entry(
     # Create organization-level sensors
     _LOGGER.debug("Creating organization hub sensors")
     for description in ORG_HUB_SENSOR_DESCRIPTIONS.values():
-        if description.key == "api_calls":
-            entities.append(
-                MerakiHubApiCallsSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
+        try:
+            entity = create_organization_entity(
+                description.key,
+                organization_hub,
+                description,
+                config_entry.entry_id
             )
-        elif description.key == "failed_api_calls":
-            entities.append(
-                MerakiHubFailedApiCallsSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "device_count":
-            entities.append(
-                MerakiHubDeviceCountSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "network_count":
-            entities.append(
-                MerakiHubNetworkCountSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "offline_devices":
-            entities.append(
-                MerakiHubOfflineDevicesSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "alerts_count":
-            entities.append(
-                MerakiHubAlertsSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "license_expiring":
-            entities.append(
-                MerakiHubLicenseExpiringSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "clients_total_count":
-            entities.append(
-                MerakiHubClientsCountSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "clients_usage_overall_total":
-            entities.append(
-                MerakiHubClientsUsageOverallTotalSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "clients_usage_overall_downstream":
-            entities.append(
-                MerakiHubClientsUsageOverallDownstreamSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "clients_usage_overall_upstream":
-            entities.append(
-                MerakiHubClientsUsageOverallUpstreamSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "clients_usage_average_total":
-            entities.append(
-                MerakiHubClientsUsageAverageTotalSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
-        elif description.key == "bluetooth_clients_total_count":
-            entities.append(
-                MerakiHubBluetoothClientsCountSensor(
-                    organization_hub, description, config_entry.entry_id
-                )
-            )
+            entities.append(entity)
+        except ValueError:
+            _LOGGER.warning("Unknown organization sensor type: %s", description.key)
 
     # Process each network hub
     network_hubs = domain_data["network_hubs"]
@@ -166,11 +81,16 @@ async def async_setup_entry(
 
         # Create network hub device count sensor
         for description in NETWORK_HUB_SENSOR_DESCRIPTIONS.values():
-            entities.append(
-                MerakiNetworkHubDeviceCountSensor(
-                    network_hub, description, config_entry.entry_id
+            try:
+                entity = create_network_entity(
+                    "network_device_count",
+                    network_hub,
+                    description,
+                    config_entry.entry_id
                 )
-            )
+                entities.append(entity)
+            except ValueError:
+                _LOGGER.warning("Unknown network sensor type: network_device_count")
 
         # Create MT device sensors
         if network_hub.device_type == SENSOR_TYPE_MT:
@@ -224,19 +144,22 @@ async def _setup_mt_sensors(
         entities_created_for_device = 0
         for description in MT_SENSOR_DESCRIPTIONS.values():
             if should_create_entity(device, description.key, coordinator.data):
-                entities.append(
-                    MerakiMTSensor(
+                try:
+                    entity = create_device_entity(
+                        "mt_sensor",
                         coordinator,
                         device,
                         description,
                         config_entry.entry_id,
                         network_hub,
                     )
-                )
-                entities_created_for_device += 1
-                _LOGGER.debug(
-                    "Created %s sensor for device %s", description.key, device_serial
-                )
+                    entities.append(entity)
+                    entities_created_for_device += 1
+                    _LOGGER.debug(
+                        "Created %s sensor for device %s", description.key, device_serial
+                    )
+                except ValueError as e:
+                    _LOGGER.warning("Failed to create MT sensor %s: %s", description.key, e)
 
         # Create energy sensors for power-monitoring devices
         # Check if the device has any power sensors that can be used for energy calculation
@@ -244,22 +167,25 @@ async def _setup_mt_sensors(
             # Extract the base power sensor key from the energy sensor key
             power_sensor_key = description.key.replace("_energy", "")
             if should_create_entity(device, power_sensor_key, coordinator.data):
-                entities.append(
-                    MerakiMTEnergySensor(
+                try:
+                    entity = create_device_entity(
+                        "mt_energy_sensor",
                         coordinator,
                         device,
                         description,
                         config_entry.entry_id,
                         network_hub,
-                        power_sensor_key,
+                        power_sensor_key=power_sensor_key,
                     )
-                )
-                entities_created_for_device += 1
-                _LOGGER.debug(
-                    "Created %s energy sensor for device %s",
-                    description.key,
-                    device_serial,
-                )
+                    entities.append(entity)
+                    entities_created_for_device += 1
+                    _LOGGER.debug(
+                        "Created %s energy sensor for device %s",
+                        description.key,
+                        device_serial,
+                    )
+                except ValueError as e:
+                    _LOGGER.warning("Failed to create MT energy sensor %s: %s", description.key, e)
 
         if entities_created_for_device == 0:
             _LOGGER.debug(
@@ -297,7 +223,18 @@ async def _setup_mr_sensors(
 
     # Create network-level sensors
     for description in MR_NETWORK_SENSOR_DESCRIPTIONS.values():
-        entities.append(MerakiMRSensor(coordinator, description, config_entry.entry_id))
+        try:
+            entity = create_device_entity(
+                "mr_sensor",
+                coordinator,
+                {},  # Network-level sensors don't have a specific device
+                description,
+                config_entry.entry_id,
+                network_hub,
+            )
+            entities.append(entity)
+        except ValueError as e:
+            _LOGGER.warning("Failed to create MR network sensor %s: %s", description.key, e)
 
     # Create device-specific sensors for each MR device
     for device in network_hub.devices:
@@ -314,19 +251,22 @@ async def _setup_mr_sensors(
             if description.key == "memoryUsage" or should_create_entity(
                 device, description.key, coordinator.data
             ):
-                entities.append(
-                    MerakiMRDeviceSensor(
-                        device,
+                try:
+                    entity = create_device_entity(
+                        "mr_device_sensor",
                         coordinator,
+                        device,
                         description,
                         config_entry.entry_id,
                         network_hub,
                     )
-                )
-                entities_created += 1
-                _LOGGER.debug(
-                    "Created %s sensor for MR device %s", description.key, device_serial
-                )
+                    entities.append(entity)
+                    entities_created += 1
+                    _LOGGER.debug(
+                        "Created %s sensor for MR device %s", description.key, device_serial
+                    )
+                except ValueError as e:
+                    _LOGGER.warning("Failed to create MR device sensor %s: %s", description.key, e)
 
     _LOGGER.debug(
         "Created MR sensors for %d devices (%d total sensors)",
@@ -361,7 +301,18 @@ async def _setup_ms_sensors(
 
     # Create network-level sensors (aggregated across all switches)
     for description in MS_NETWORK_SENSOR_DESCRIPTIONS.values():
-        entities.append(MerakiMSSensor(coordinator, description, config_entry.entry_id))
+        try:
+            entity = create_device_entity(
+                "ms_sensor",
+                coordinator,
+                {},  # Network-level sensors don't have a specific device
+                description,
+                config_entry.entry_id,
+                network_hub,
+            )
+            entities.append(entity)
+        except ValueError as e:
+            _LOGGER.warning("Failed to create MS network sensor %s: %s", description.key, e)
 
     # Create device-specific sensors for each MS device
     for device in network_hub.devices:
@@ -378,19 +329,22 @@ async def _setup_ms_sensors(
             if description.key == "memoryUsage" or should_create_entity(
                 device, description.key, coordinator.data
             ):
-                entities.append(
-                    MerakiMSDeviceSensor(
-                        device,
+                try:
+                    entity = create_device_entity(
+                        "ms_device_sensor",
                         coordinator,
+                        device,
                         description,
                         config_entry.entry_id,
                         network_hub,
                     )
-                )
-                entities_created += 1
-                _LOGGER.debug(
-                    "Created %s sensor for MS device %s", description.key, device_serial
-                )
+                    entities.append(entity)
+                    entities_created += 1
+                    _LOGGER.debug(
+                        "Created %s sensor for MS device %s", description.key, device_serial
+                    )
+                except ValueError as e:
+                    _LOGGER.warning("Failed to create MS device sensor %s: %s", description.key, e)
 
     _LOGGER.debug(
         "Created MS sensors for %d devices (%d total sensors)",

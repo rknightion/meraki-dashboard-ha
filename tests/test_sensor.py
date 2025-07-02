@@ -14,12 +14,12 @@ from custom_components.meraki_dashboard.const import (
     MT_SENSOR_REAL_POWER,
     MT_SENSOR_TEMPERATURE,
 )
-from custom_components.meraki_dashboard.sensor import (
+from custom_components.meraki_dashboard.devices.mt import (
     MT_SENSOR_DESCRIPTIONS,
     MerakiMTEnergySensor,
     MerakiMTSensor,
-    async_setup_entry,
 )
+from custom_components.meraki_dashboard.sensor import async_setup_entry
 from tests.fixtures.meraki_api import MOCK_PROCESSED_SENSOR_DATA
 
 

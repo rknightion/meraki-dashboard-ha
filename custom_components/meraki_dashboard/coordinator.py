@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import DOMAIN
 from .utils import performance_monitor
+from .utils.error_handling import handle_api_errors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,6 +79,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._last_update_duration
 
     @performance_monitor("coordinator_update")
+    @handle_api_errors(default_return={}, log_errors=True, convert_connection_errors=False)
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Meraki Dashboard API.
 

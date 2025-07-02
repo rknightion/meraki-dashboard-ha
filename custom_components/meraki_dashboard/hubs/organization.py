@@ -26,6 +26,7 @@ from ..const import (
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
 )
+from ..utils.error_handling import handle_api_errors, api_retry
 
 if TYPE_CHECKING:
     from .network import MerakiNetworkHub
@@ -496,6 +497,7 @@ class MerakiOrganizationHub:
 
         return network_hubs
 
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def async_update_organization_data(self) -> None:
         """Update organization-level monitoring data.
 
@@ -535,6 +537,8 @@ class MerakiOrganizationHub:
             self.last_api_call_error = str(err)
             _LOGGER.error("Error fetching organization data: %s", err)
 
+    @api_retry(max_attempts=2, retry_on=(ConfigEntryNotReady,))
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _fetch_license_data(self) -> None:
         """Fetch license information for the organization."""
         if not self.dashboard:
@@ -958,6 +962,8 @@ class MerakiOrganizationHub:
             # Set fallback value on error
             self.bluetooth_clients_total_count = 0
 
+    @api_retry(max_attempts=2)
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _fetch_device_statuses(self) -> None:
         """Fetch device status information across the organization."""
         if not self.dashboard:
