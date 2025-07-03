@@ -32,7 +32,7 @@ class IntegrationTestHelper:
         organization_id: str = "123456",
         api_key: str = "a1b2c3d4e5f6789012345678901234567890abcd",
         selected_networks: list[str] = None,
-        selected_device_types: list[str] = None
+        selected_device_types: list[str] = None,
     ) -> ConfigEntry:
         """Set up a complete Meraki integration with minimal configuration."""
         from custom_components.meraki_dashboard.const import DOMAIN
@@ -65,11 +65,15 @@ class IntegrationTestHelper:
         # Create config entry
         self._config_entry = hub_builder.build_config_entry(self.hass)
         # Add to hass using the proper method
-        self.hass.config_entries._entries[self._config_entry.entry_id] = self._config_entry
+        self.hass.config_entries._entries[self._config_entry.entry_id] = (
+            self._config_entry
+        )
         # Properly initialize domain index if it doesn't exist
         if not hasattr(self.hass.config_entries, "_domain_index"):
             self.hass.config_entries._domain_index = {}
-        self.hass.config_entries._domain_index.setdefault(DOMAIN, []).append(self._config_entry.entry_id)
+        self.hass.config_entries._domain_index.setdefault(DOMAIN, []).append(
+            self._config_entry.entry_id
+        )
 
         # Build mock API
         self._mock_api = hub_builder.build_mock_api()
@@ -87,33 +91,51 @@ class IntegrationTestHelper:
             statuses = []
             for device in devices:
                 status_builder = DeviceStatusBuilder()
-                status = (status_builder
-                         .with_serial(device["serial"])
-                         .with_network_id(device.get("networkId", "N_123456789"))
-                         .with_status(device.get("status", "online"))
-                         .build())
+                status = (
+                    status_builder.with_serial(device["serial"])
+                    .with_network_id(device.get("networkId", "N_123456789"))
+                    .with_status(device.get("status", "online"))
+                    .build()
+                )
                 statuses.append(status)
-            self._mock_api.organizations.getOrganizationDevicesStatuses.return_value = statuses
+            self._mock_api.organizations.getOrganizationDevicesStatuses.return_value = (
+                statuses
+            )
 
         # Set up the integration
         with patch("meraki.DashboardAPI", return_value=self._mock_api):
             # Mock the platform setup functions
-            with patch("custom_components.meraki_dashboard.sensor.async_setup_entry", return_value=True):
-                with patch("custom_components.meraki_dashboard.binary_sensor.async_setup_entry", return_value=True):
-                    with patch("custom_components.meraki_dashboard.button.async_setup_entry", return_value=True):
+            with patch(
+                "custom_components.meraki_dashboard.sensor.async_setup_entry",
+                return_value=True,
+            ):
+                with patch(
+                    "custom_components.meraki_dashboard.binary_sensor.async_setup_entry",
+                    return_value=True,
+                ):
+                    with patch(
+                        "custom_components.meraki_dashboard.button.async_setup_entry",
+                        return_value=True,
+                    ):
                         # Import and call async_setup_entry directly
                         from custom_components.meraki_dashboard import async_setup_entry
+
                         result = await async_setup_entry(self.hass, self._config_entry)
                         # The result indicates if setup was successful
                         if not result:
-                            raise RuntimeError("Failed to set up integration - async_setup_entry returned False")
+                            raise RuntimeError(
+                                "Failed to set up integration - async_setup_entry returned False"
+                            )
                         await self.hass.async_block_till_done()
 
             # The config entry state is managed internally by Home Assistant
             # We don't need to set it manually
 
         # Store references to hubs
-        if DOMAIN in self.hass.data and self._config_entry.entry_id in self.hass.data[DOMAIN]:
+        if (
+            DOMAIN in self.hass.data
+            and self._config_entry.entry_id in self.hass.data[DOMAIN]
+        ):
             entry_data = self.hass.data[DOMAIN][self._config_entry.entry_id]
             self._org_hub = entry_data.get("organization_hub")
             self._network_hubs = entry_data.get("network_hubs", {})
@@ -127,19 +149,31 @@ class IntegrationTestHelper:
 
         # Configure mock API to return this data
         if self._mock_api and hasattr(self._mock_api, "sensor"):
-            if not hasattr(self._mock_api.sensor, "getOrganizationSensorReadingsLatest"):
+            if not hasattr(
+                self._mock_api.sensor, "getOrganizationSensorReadingsLatest"
+            ):
                 self._mock_api.sensor.getOrganizationSensorReadingsLatest = MagicMock()
 
-            current_data = self._mock_api.sensor.getOrganizationSensorReadingsLatest.return_value or []
+            current_data = (
+                self._mock_api.sensor.getOrganizationSensorReadingsLatest.return_value
+                or []
+            )
             current_data.extend(readings)
-            self._mock_api.sensor.getOrganizationSensorReadingsLatest.return_value = current_data
+            self._mock_api.sensor.getOrganizationSensorReadingsLatest.return_value = (
+                current_data
+            )
 
     async def trigger_coordinator_update(self, network_id: str = None) -> None:
         """Trigger a coordinator update for testing."""
         from custom_components.meraki_dashboard.const import DOMAIN
 
-        if DOMAIN in self.hass.data and self._config_entry.entry_id in self.hass.data[DOMAIN]:
-            coordinators = self.hass.data[DOMAIN][self._config_entry.entry_id].get("coordinators", {})
+        if (
+            DOMAIN in self.hass.data
+            and self._config_entry.entry_id in self.hass.data[DOMAIN]
+        ):
+            coordinators = self.hass.data[DOMAIN][self._config_entry.entry_id].get(
+                "coordinators", {}
+            )
 
             if network_id:
                 # Update specific network coordinator
@@ -156,7 +190,7 @@ class IntegrationTestHelper:
         self,
         serial: str = "Q2XX-XXXX-0001",
         network_id: str = "N_123456789",
-        metrics: list[str] = None
+        metrics: list[str] = None,
     ) -> dict[str, Any]:
         """Create an MT device with sensor readings."""
         # Ensure mock API exists
@@ -166,12 +200,13 @@ class IntegrationTestHelper:
 
         # Build device
         device_builder = MerakiDeviceBuilder()
-        device = (device_builder
-                 .with_serial(serial)
-                 .with_network_id(network_id)
-                 .as_mt_device()
-                 .with_name(f"MT Sensor {serial[-4:]}")
-                 .build())
+        device = (
+            device_builder.with_serial(serial)
+            .with_network_id(network_id)
+            .as_mt_device()
+            .with_name(f"MT Sensor {serial[-4:]}")
+            .build()
+        )
 
         # Build sensor readings
         if metrics is None:
@@ -180,12 +215,13 @@ class IntegrationTestHelper:
         sensor_builder = SensorDataBuilder()
         readings = []
         for metric in metrics:
-            reading = (sensor_builder
-                      .with_serial(serial)
-                      .with_network(network_id)
-                      .with_metric(metric)
-                      .with_current_timestamp()
-                      .build())
+            reading = (
+                sensor_builder.with_serial(serial)
+                .with_network(network_id)
+                .with_metric(metric)
+                .with_current_timestamp()
+                .build()
+            )
 
             # Set appropriate values based on metric
             if metric == "temperature":
@@ -205,29 +241,30 @@ class IntegrationTestHelper:
         return device
 
     async def create_mr_device_with_data(
-        self,
-        serial: str = "Q2XX-XXXX-0001",
-        network_id: str = "N_123456789"
+        self, serial: str = "Q2XX-XXXX-0001", network_id: str = "N_123456789"
     ) -> dict[str, Any]:
         """Create an MR device with wireless data."""
         # Build device
         device_builder = MerakiDeviceBuilder()
-        device = (device_builder
-                 .with_serial(serial)
-                 .with_network_id(network_id)
-                 .as_mr_device()
-                 .with_name(f"MR Access Point {serial[-4:]}")
-                 .build())
+        device = (
+            device_builder.with_serial(serial)
+            .with_network_id(network_id)
+            .as_mr_device()
+            .with_name(f"MR Access Point {serial[-4:]}")
+            .build()
+        )
 
         # Mock wireless data
         if hasattr(self._mock_api.wireless, "getNetworkWirelessUsageHistory"):
-            self._mock_api.wireless.getNetworkWirelessUsageHistory.return_value = [{
-                "startTs": "2024-01-01T00:00:00Z",
-                "endTs": "2024-01-01T01:00:00Z",
-                "totalKbps": 5000,
-                "sentKbps": 3000,
-                "receivedKbps": 2000
-            }]
+            self._mock_api.wireless.getNetworkWirelessUsageHistory.return_value = [
+                {
+                    "startTs": "2024-01-01T00:00:00Z",
+                    "endTs": "2024-01-01T01:00:00Z",
+                    "totalKbps": 5000,
+                    "sentKbps": 3000,
+                    "receivedKbps": 2000,
+                }
+            ]
 
         return device
 
@@ -235,34 +272,39 @@ class IntegrationTestHelper:
         self,
         serial: str = "Q2XX-XXXX-0001",
         network_id: str = "N_123456789",
-        port_count: int = 8
+        port_count: int = 8,
     ) -> dict[str, Any]:
         """Create an MS device with switch port data."""
         # Build device
         device_builder = MerakiDeviceBuilder()
-        device = (device_builder
-                 .with_serial(serial)
-                 .with_network_id(network_id)
-                 .as_ms_device()
-                 .with_name(f"MS Switch {serial[-4:]}")
-                 .build())
+        device = (
+            device_builder.with_serial(serial)
+            .with_network_id(network_id)
+            .as_ms_device()
+            .with_name(f"MS Switch {serial[-4:]}")
+            .build()
+        )
 
         # Mock switch port data
         if hasattr(self._mock_api.switch, "getOrganizationSwitchPortsStatusesBySwitch"):
             ports = []
             for i in range(1, port_count + 1):
-                ports.append({
-                    "portId": str(i),
-                    "enabled": True,
-                    "status": "Connected",
-                    "isUplink": i == port_count,  # Last port is uplink
-                    "errors": [],
-                    "warnings": [],
-                    "speed": "1 Gbps",
-                    "duplex": "full",
-                    "usageInKb": {"sent": 1000 * i, "recv": 2000 * i},
-                    "powerUsageInWh": 5.0 * i if i <= 4 else 0  # First 4 ports have PoE
-                })
+                ports.append(
+                    {
+                        "portId": str(i),
+                        "enabled": True,
+                        "status": "Connected",
+                        "isUplink": i == port_count,  # Last port is uplink
+                        "errors": [],
+                        "warnings": [],
+                        "speed": "1 Gbps",
+                        "duplex": "full",
+                        "usageInKb": {"sent": 1000 * i, "recv": 2000 * i},
+                        "powerUsageInWh": 5.0 * i
+                        if i <= 4
+                        else 0,  # First 4 ports have PoE
+                    }
+                )
 
             self._mock_api.switch.getOrganizationSwitchPortsStatusesBySwitch.return_value = {
                 serial: {
@@ -271,7 +313,7 @@ class IntegrationTestHelper:
                     "mac": device["mac"],
                     "network": {"id": network_id, "name": f"Network {network_id}"},
                     "model": device["model"],
-                    "ports": ports
+                    "ports": ports,
                 }
             }
 
@@ -288,7 +330,9 @@ class IntegrationTestHelper:
     async def unload_integration(self) -> bool:
         """Unload the integration."""
         if self._config_entry:
-            result = await self.hass.config_entries.async_unload(self._config_entry.entry_id)
+            result = await self.hass.config_entries.async_unload(
+                self._config_entry.entry_id
+            )
             await self.hass.async_block_till_done()
 
             # Clear cached references to prevent issues on reload
@@ -319,6 +363,8 @@ class IntegrationTestHelper:
         from custom_components.meraki_dashboard import async_unload_entry
         from custom_components.meraki_dashboard.const import DOMAIN
 
-        if self._config_entry and self._config_entry.entry_id in self.hass.data.get(DOMAIN, {}):
+        if self._config_entry and self._config_entry.entry_id in self.hass.data.get(
+            DOMAIN, {}
+        ):
             await async_unload_entry(self.hass, self._config_entry)
             await self.hass.async_block_till_done()

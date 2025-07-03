@@ -352,17 +352,11 @@ MOCK_RADIO_SETTINGS = {
     "Q2ZZ-ZZZZ-ZZZZ": {
         "serial": "Q2ZZ-ZZZZ-ZZZZ",
         "rfProfileId": "1234",
-        "twoFourGhzSettings": {
-            "channel": 11,
-            "targetPower": 17
-        },
-        "fiveGhzSettings": {
-            "channel": 149,
-            "channelWidth": 80,
-            "targetPower": 20
-        }
+        "twoFourGhzSettings": {"channel": 11, "targetPower": 17},
+        "fiveGhzSettings": {"channel": 149, "channelWidth": 80, "targetPower": 20},
     }
 }
+
 
 def get_organization_by_id(org_id: str) -> dict[str, Any] | None:
     """Get organization data by ID."""

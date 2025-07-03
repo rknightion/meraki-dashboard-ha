@@ -12,6 +12,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
+    MR_SENSOR_MEMORY_USAGE,
+    MS_SENSOR_MEMORY_USAGE,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
@@ -135,7 +137,11 @@ async def _setup_mt_sensors(
         if not device_serial:
             continue
 
-        _LOGGER.debug("Creating sensors for MT device: %s", device_serial)
+        _LOGGER.debug(
+            "Creating sensors for MT device: %s (model: %s)",
+            device_serial,
+            device.get("model", "MISSING")
+        )
 
         # Create regular sensors for each metric that the device supports
         entities_created_for_device = 0
@@ -242,6 +248,7 @@ async def _setup_mr_sensors(
             )
 
     # Create device-specific sensors for each MR device
+    entities_created = 0
     for device in network_hub.devices:
         device_serial = device.get("serial")
         if not device_serial:
@@ -250,10 +257,9 @@ async def _setup_mr_sensors(
         _LOGGER.debug("Creating sensors for MR device: %s", device_serial)
 
         # Create sensors for each wireless metric that the device supports
-        entities_created = 0
         for description in MR_SENSOR_DESCRIPTIONS.values():
             # Always create memory usage sensors for MR devices (available via organization API)
-            if description.key == "memoryUsage" or should_create_entity(
+            if description.key == MR_SENSOR_MEMORY_USAGE or should_create_entity(
                 device, description.key, coordinator.data
             ):
                 try:
@@ -337,7 +343,7 @@ async def _setup_ms_sensors(
         entities_created = 0
         for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
             # Always create memory usage sensors for MS devices (available via organization API)
-            if description.key == "memoryUsage" or should_create_entity(
+            if description.key == MS_SENSOR_MEMORY_USAGE or should_create_entity(
                 device, description.key, coordinator.data
             ):
                 try:

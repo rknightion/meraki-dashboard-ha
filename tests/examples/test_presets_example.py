@@ -67,8 +67,8 @@ class TestPresetUsageExamples:
 
         # Verify we get expected device counts and types
         assert len(office_devices) == 4  # MT, MT, MR, MS
-        assert len(retail_devices) == 5   # MT, MT, MT, MR, MV
-        assert len(campus_devices) >= 5   # Multiple buildings
+        assert len(retail_devices) == 5  # MT, MT, MT, MR, MV
+        assert len(campus_devices) >= 5  # Multiple buildings
 
         # Verify device types are included
         device_types = [d["productType"] for d in office_devices]
@@ -90,7 +90,9 @@ class TestPresetUsageExamples:
         assert office_data["metric"] == "temperature"
         assert office_data["serial"] == device_serial
         assert hvac_data["metric"] == "temperature"  # Multi-metric data
-        assert server_data["value"] < office_data["value"]  # Server room cooler (should be around 19.1)
+        assert (
+            server_data["value"] < office_data["value"]
+        )  # Server room cooler (should be around 19.1)
         assert outdoor_data["value"] < office_data["value"]  # Outdoor cooler
 
     def test_error_scenario_presets(self):
@@ -108,7 +110,7 @@ class TestPresetUsageExamples:
         # Check for temperature extremes
         temp_readings = [r for r in extreme_data if r.get("metric") == "temperature"]
         assert any(reading["value"] > 40 for reading in temp_readings)  # High temp
-        assert any(reading["value"] < 0 for reading in temp_readings)   # Low temp
+        assert any(reading["value"] < 0 for reading in temp_readings)  # Low temp
 
         assert len(malformed_data) >= 3
         assert any("value" not in reading["readings"][0] for reading in malformed_data)
@@ -139,8 +141,7 @@ class TestPresetUsageExamples:
 
         # Set up integration with preset devices
         config_entry = await helper.setup_meraki_integration(
-            devices=office_devices,
-            selected_device_types=["MT", "MR", "MS"]
+            devices=office_devices, selected_device_types=["MT", "MR", "MS"]
         )
 
         # Verify integration is set up correctly
@@ -167,10 +168,9 @@ class TestPresetFlexibility:
         office_devices = ScenarioPresets.office_environment()
 
         # Add additional devices from device presets
-        office_devices.extend([
-            DevicePresets.mt_door_sensor(),
-            DevicePresets.mv_camera()
-        ])
+        office_devices.extend(
+            [DevicePresets.mt_door_sensor(), DevicePresets.mv_camera()]
+        )
 
         # Verify combined setup
         assert len(office_devices) == 6  # 4 original + 2 added
@@ -191,14 +191,15 @@ class TestPresetFlexibility:
         for device in devices:
             if device["productType"] == "sensor":
                 series = TimeSeriesPresets.business_hours_pattern(
-                    device["serial"],
-                    days=1
+                    device["serial"], days=1
                 )
                 time_series_data.extend(series)
 
         # Verify we have comprehensive test data
         assert len(time_series_data) >= 24  # At least 1 day of hourly data
-        assert len({reading["serial"] for reading in time_series_data}) >= 2  # Multiple devices
+        assert (
+            len({reading["serial"] for reading in time_series_data}) >= 2
+        )  # Multiple devices
 
     def test_error_scenarios_with_devices(self):
         """Test error scenarios with specific device setups."""
@@ -270,5 +271,7 @@ class TestPresetDocumentation:
         assert len(extreme_readings) >= 3  # Edge cases
 
         # Show how this enables comprehensive testing
-        total_test_scenarios = len(devices) + len(sensor_readings) + len(extreme_readings)
+        total_test_scenarios = (
+            len(devices) + len(sensor_readings) + len(extreme_readings)
+        )
         assert total_test_scenarios >= 35  # Rich test coverage

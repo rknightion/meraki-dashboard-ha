@@ -285,11 +285,30 @@ class MerakiNetworkHub:
                 self.organization_hub._track_api_call_duration(api_duration)
 
                 # Filter devices by type
-                type_devices = [
-                    device
-                    for device in all_devices
-                    if device.get("model", "").startswith(self.device_type)
-                ]
+                type_devices = []
+                for device in all_devices:
+                    model = device.get("model", "")
+                    if model.startswith(self.device_type):
+                        type_devices.append(device)
+                    elif not model and self.device_type == SENSOR_TYPE_MT:
+                        # For MT devices, check productType as fallback when model is missing
+                        product_type = device.get("productType", "").lower()
+                        if product_type == "sensor":
+                            _LOGGER.info(
+                                "Device %s has no model but productType='sensor', including as MT device",
+                                device.get("serial", "unknown")
+                            )
+                            # Set a generic model to avoid "Unknown" in logs
+                            device["model"] = "MT"
+                            type_devices.append(device)
+                    elif not model:
+                        # Log devices with missing models for debugging
+                        _LOGGER.debug(
+                            "Device %s (%s) has no model field, skipping for type %s",
+                            device.get("serial", "unknown"),
+                            device.get("name", "unknown"),
+                            self.device_type
+                        )
 
                 # Apply device selection filter if configured
                 if self._selected_devices:

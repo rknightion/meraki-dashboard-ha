@@ -56,7 +56,9 @@ class TestSanitizeEntityId:
     def test_string_with_numbers(self):
         """Test sanitization of strings with numbers."""
         assert sanitize_entity_id("test123") == "test123"
-        assert sanitize_entity_id("123test") == "device_123test"  # Prepends device_ for IDs starting with numbers
+        assert (
+            sanitize_entity_id("123test") == "device_123test"
+        )  # Prepends device_ for IDs starting with numbers
         assert sanitize_entity_id("test-123") == "test_123"
 
     def test_string_with_underscores(self):
@@ -110,7 +112,9 @@ class TestSanitizeDeviceName:
         """Test sanitization preserves allowed characters."""
         assert sanitize_device_name("Office (Main Floor)") == "Office (Main Floor)"
         assert sanitize_device_name("Test-Device") == "Test-Device"
-        assert sanitize_device_name("Device_123") == "Device 123"  # Underscores converted to spaces
+        assert (
+            sanitize_device_name("Device_123") == "Device 123"
+        )  # Underscores converted to spaces
 
     def test_multiple_spaces(self):
         """Test sanitization of strings with multiple spaces."""
@@ -149,9 +153,15 @@ class TestSanitizeDeviceNameForEntityId:
 
     def test_edge_cases(self):
         """Test edge cases."""
-        assert sanitize_device_name_for_entity_id("") == "unknown_device"  # Empty string becomes "Unknown Device" then "unknown_device"
-        assert sanitize_device_name_for_entity_id("@#$%") == "unknown_device"  # Special chars become "Unknown Device" then "unknown_device"
-        assert sanitize_device_name_for_entity_id("___") == "unknown_device"  # Underscores become "Unknown Device" then "unknown_device"
+        assert (
+            sanitize_device_name_for_entity_id("") == "unknown_device"
+        )  # Empty string becomes "Unknown Device" then "unknown_device"
+        assert (
+            sanitize_device_name_for_entity_id("@#$%") == "unknown_device"
+        )  # Special chars become "Unknown Device" then "unknown_device"
+        assert (
+            sanitize_device_name_for_entity_id("___") == "unknown_device"
+        )  # Underscores become "Unknown Device" then "unknown_device"
 
 
 class TestSanitizeAttributeValue:
@@ -168,7 +178,9 @@ class TestSanitizeAttributeValue:
     def test_string_values(self):
         """Test sanitization of string values."""
         assert sanitize_attribute_value("normal string") == "normal string"
-        assert sanitize_attribute_value("  spaced  ") == "  spaced  "  # Strings preserved as-is
+        assert (
+            sanitize_attribute_value("  spaced  ") == "  spaced  "
+        )  # Strings preserved as-is
 
     def test_control_characters(self):
         """Test control characters are preserved (no sanitization for strings)."""
@@ -183,7 +195,9 @@ class TestSanitizeAttributeValue:
     def test_edge_cases(self):
         """Test edge cases for attribute value sanitization."""
         assert sanitize_attribute_value("") == ""
-        assert sanitize_attribute_value("\x00\x01\x02") == "\x00\x01\x02"  # Control chars preserved
+        assert (
+            sanitize_attribute_value("\x00\x01\x02") == "\x00\x01\x02"
+        )  # Control chars preserved
         assert sanitize_attribute_value("   ") == "   "  # Whitespace preserved
 
 
@@ -351,7 +365,9 @@ class TestSanitizeDeviceAttributes:
         assert "serial" not in result
         assert result["model"] == "MT11"
         assert result["tags"] == "office, conference, sensors"  # String preserved
-        assert result["notes"] == "Primary sensor\x00for conference room"  # Control chars preserved
+        assert (
+            result["notes"] == "Primary sensor\x00for conference room"
+        )  # Control chars preserved
         assert result["address"] == "123 Main St, Floor 2"
         assert result["lan_ip"] == "192.168.1.100"  # camelCase converted to snake_case
         assert result["firmware"] == "wireless-25-14"
@@ -653,24 +669,25 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT11 devices."""
         capabilities = create_device_capability_filter("MT11", "MT")
 
-        expected_capabilities = {
-            "temperature"
-        }  # MT11 is temperature only
+        expected_capabilities = {"temperature"}  # MT11 is temperature only
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt12(self):
         """Test capability filter for MT12 devices."""
         capabilities = create_device_capability_filter("MT12", "MT")
 
-        expected_capabilities = {"temperature", "humidity"}  # MT12 has temp and humidity
+        expected_capabilities = {
+            "temperature",
+            "humidity",
+        }  # MT12 has temp and humidity
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt14(self):
         """Test capability filter for MT14 devices."""
         capabilities = create_device_capability_filter("MT14", "MT")
 
-        # MT14 falls back to default MT sensors
-        expected_capabilities = {"temperature", "humidity", "battery"}
+        # MT14 is a door sensor with environmental monitoring and water detection
+        expected_capabilities = {"temperature", "humidity", "battery", "door", "water"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt20(self):
@@ -710,30 +727,85 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MT99", "MT")
 
         # Unknown MT models get default capabilities
-        assert capabilities == {"temperature", "humidity", "battery"}
+        assert capabilities == {"temperature", "humidity"}
 
     def test_create_device_capability_filter_mr_device(self):
         """Test capability filter for MR devices."""
         capabilities = create_device_capability_filter("MR33", "MR")
 
-        # MR devices have simplified capabilities
-        expected_capabilities = {"usage", "status", "clients", "mesh_status"}
+        # MR devices have full wireless capabilities
+        expected_capabilities = {
+            "client_count",
+            "memory_usage",
+            "ssid_count",
+            "enabled_ssids",
+            "open_ssids",
+            "channel_utilization_2_4",
+            "channel_utilization_5",
+            "data_rate_2_4",
+            "data_rate_5",
+            "connection_success_rate",
+            "connection_failures",
+            "traffic_sent",
+            "traffic_recv",
+            "rf_power",
+            "rf_power_2_4",
+            "rf_power_5",
+            "radio_channel_2_4",
+            "radio_channel_5",
+            "channel_width_5",
+            "rf_profile_id",
+        }
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_ms_device(self):
         """Test capability filter for MS devices."""
         capabilities = create_device_capability_filter("MS220-8", "MS")
 
-        # MS devices have simplified capabilities
-        expected_capabilities = {"port_status", "power_usage", "clients", "uplink_status"}
+        # MS devices have full switch capabilities
+        expected_capabilities = {
+            "port_count",
+            "memory_usage",
+            "connected_ports",
+            "poe_ports",
+            "port_utilization_sent",
+            "port_utilization_recv",
+            "port_traffic_sent",
+            "port_traffic_recv",
+            "poe_power_usage",
+            "connected_clients",
+            "port_errors",
+            "port_discards",
+            "power_module_status",
+            "port_link_count",
+            "poe_power_limit",
+            "port_utilization",
+        }
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_ms_poe_device(self):
         """Test capability filter for PoE-enabled MS devices."""
         capabilities = create_device_capability_filter("MS225-24", "MS")
 
-        # MS devices have same simplified capabilities regardless of PoE
-        expected_capabilities = {"port_status", "power_usage", "clients", "uplink_status"}
+        # MS devices have same capabilities regardless of PoE
+        expected_capabilities = {
+            "port_count",
+            "memory_usage",
+            "connected_ports",
+            "poe_ports",
+            "port_utilization_sent",
+            "port_utilization_recv",
+            "port_traffic_sent",
+            "port_traffic_recv",
+            "poe_power_usage",
+            "connected_clients",
+            "port_errors",
+            "port_discards",
+            "power_module_status",
+            "port_link_count",
+            "poe_power_limit",
+            "port_utilization",
+        }
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_unknown_type(self):

@@ -21,5 +21,5 @@ __all__ = [
     "ScenarioPresets",
     "SensorDataPresets",
     "ErrorScenarioPresets",
-    "TimeSeriesPresets"
+    "TimeSeriesPresets",
 ]

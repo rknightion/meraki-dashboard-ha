@@ -22,12 +22,14 @@ class DevicePresets:
         Returns:
             Device data with temperature, humidity, CO2, TVOC, PM2.5, and noise metrics
         """
-        return (MerakiDeviceBuilder()
-                .as_mt_device()
-                .with_serial("Q2XX-MT20-0001")
-                .with_name("Office Environmental Sensor")
-                .with_model("MT20")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_mt_device()
+            .with_serial("Q2XX-MT20-0001")
+            .with_name("Office Environmental Sensor")
+            .with_model("MT20")
+            .build()
+        )
 
     @staticmethod
     def mt_sensor_basic() -> dict[str, Any]:
@@ -36,12 +38,14 @@ class DevicePresets:
         Returns:
             Device data with minimal sensor configuration
         """
-        return (MerakiDeviceBuilder()
-                .as_mt_device()
-                .with_serial("Q2XX-MT10-0001")
-                .with_name("Basic Temperature Sensor")
-                .with_model("MT10")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_mt_device()
+            .with_serial("Q2XX-MT10-0001")
+            .with_name("Basic Temperature Sensor")
+            .with_model("MT10")
+            .build()
+        )
 
     @staticmethod
     def mt_water_sensor() -> dict[str, Any]:
@@ -50,12 +54,14 @@ class DevicePresets:
         Returns:
             Device data configured for water detection
         """
-        return (MerakiDeviceBuilder()
-                .as_mt_device()
-                .with_serial("Q2XX-MT15-0001")
-                .with_name("Basement Water Sensor")
-                .with_model("MT15")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_mt_device()
+            .with_serial("Q2XX-MT15-0001")
+            .with_name("Basement Water Sensor")
+            .with_model("MT15")
+            .build()
+        )
 
     @staticmethod
     def mt_door_sensor() -> dict[str, Any]:
@@ -64,12 +70,14 @@ class DevicePresets:
         Returns:
             Device data configured for door/window monitoring
         """
-        return (MerakiDeviceBuilder()
-                .as_mt_device()
-                .with_serial("Q2XX-MT12-0001")
-                .with_name("Conference Room Door Sensor")
-                .with_model("MT12")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_mt_device()
+            .with_serial("Q2XX-MT12-0001")
+            .with_name("Conference Room Door Sensor")
+            .with_model("MT12")
+            .build()
+        )
 
     @staticmethod
     def mr_access_point() -> dict[str, Any]:
@@ -78,12 +86,14 @@ class DevicePresets:
         Returns:
             Device data for wireless access point
         """
-        return (MerakiDeviceBuilder()
-                .as_mr_device()
-                .with_serial("Q2XX-MR46-0001")
-                .with_name("Office WiFi AP")
-                .with_model("MR46")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_mr_device()
+            .with_serial("Q2XX-MR46-0001")
+            .with_name("Office WiFi AP")
+            .with_model("MR46")
+            .build()
+        )
 
     @staticmethod
     def ms_switch() -> dict[str, Any]:
@@ -92,12 +102,14 @@ class DevicePresets:
         Returns:
             Device data for network switch
         """
-        return (MerakiDeviceBuilder()
-                .as_ms_device()
-                .with_serial("Q2XX-MS225-0001")
-                .with_name("Main Network Switch")
-                .with_model("MS225-24")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_ms_device()
+            .with_serial("Q2XX-MS225-0001")
+            .with_name("Main Network Switch")
+            .with_model("MS225-24")
+            .build()
+        )
 
     @staticmethod
     def mv_camera() -> dict[str, Any]:
@@ -106,12 +118,14 @@ class DevicePresets:
         Returns:
             Device data for security camera
         """
-        return (MerakiDeviceBuilder()
-                .as_mv_device()
-                .with_serial("Q2XX-MV72-0001")
-                .with_name("Lobby Security Camera")
-                .with_model("MV72")
-                .build())
+        return (
+            MerakiDeviceBuilder()
+            .as_mv_device()
+            .with_serial("Q2XX-MV72-0001")
+            .with_name("Lobby Security Camera")
+            .with_model("MV72")
+            .build()
+        )
 
 
 class ScenarioPresets:
@@ -132,34 +146,39 @@ class ScenarioPresets:
         """
         return [
             # Environmental monitoring
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT20-OFF1")
-             .with_name("Office Temperature Sensor")
-             .with_model("MT20")
-             .build()),
-
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT15-OFF2")
-             .with_name("Server Room Water Sensor")
-             .with_model("MT15")
-             .build()),
-
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT20-OFF1")
+                .with_name("Office Temperature Sensor")
+                .with_model("MT20")
+                .build()
+            ),
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT15-OFF2")
+                .with_name("Server Room Water Sensor")
+                .with_model("MT15")
+                .build()
+            ),
             # Network infrastructure
-            (MerakiDeviceBuilder()
-             .as_mr_device()
-             .with_serial("Q2XX-MR46-OFF1")
-             .with_name("Main Office WiFi")
-             .with_model("MR46")
-             .build()),
-
-            (MerakiDeviceBuilder()
-             .as_ms_device()
-             .with_serial("Q2XX-MS225-OFF1")
-             .with_name("Office Network Switch")
-             .with_model("MS225-24")
-             .build()),
+            (
+                MerakiDeviceBuilder()
+                .as_mr_device()
+                .with_serial("Q2XX-MR46-OFF1")
+                .with_name("Main Office WiFi")
+                .with_model("MR46")
+                .build()
+            ),
+            (
+                MerakiDeviceBuilder()
+                .as_ms_device()
+                .with_serial("Q2XX-MS225-OFF1")
+                .with_name("Office Network Switch")
+                .with_model("MS225-24")
+                .build()
+            ),
         ]
 
     @staticmethod
@@ -177,43 +196,49 @@ class ScenarioPresets:
         """
         return [
             # Entry monitoring
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT12-RET1")
-             .with_name("Front Door Sensor")
-             .with_model("MT12")
-             .build()),
-
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT12-RET2")
-             .with_name("Back Door Sensor")
-             .with_model("MT12")
-             .build()),
-
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT12-RET1")
+                .with_name("Front Door Sensor")
+                .with_model("MT12")
+                .build()
+            ),
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT12-RET2")
+                .with_name("Back Door Sensor")
+                .with_model("MT12")
+                .build()
+            ),
             # Environmental comfort
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT20-RET1")
-             .with_name("Store Climate Sensor")
-             .with_model("MT20")
-             .build()),
-
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT20-RET1")
+                .with_name("Store Climate Sensor")
+                .with_model("MT20")
+                .build()
+            ),
             # Customer WiFi
-            (MerakiDeviceBuilder()
-             .as_mr_device()
-             .with_serial("Q2XX-MR36-RET1")
-             .with_name("Customer WiFi AP")
-             .with_model("MR36")
-             .build()),
-
+            (
+                MerakiDeviceBuilder()
+                .as_mr_device()
+                .with_serial("Q2XX-MR36-RET1")
+                .with_name("Customer WiFi AP")
+                .with_model("MR36")
+                .build()
+            ),
             # Security
-            (MerakiDeviceBuilder()
-             .as_mv_device()
-             .with_serial("Q2XX-MV12W-RET1")
-             .with_name("Store Security Camera")
-             .with_model("MV12W")
-             .build()),
+            (
+                MerakiDeviceBuilder()
+                .as_mv_device()
+                .with_serial("Q2XX-MV12W-RET1")
+                .with_name("Store Security Camera")
+                .with_model("MV12W")
+                .build()
+            ),
         ]
 
     @staticmethod
@@ -232,52 +257,62 @@ class ScenarioPresets:
         devices = []
 
         # Building A - Administrative
-        devices.extend([
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT20-BA01")
-             .with_name("Building A Main Office Sensor")
-             .with_model("MT20")
-             .with_network_id("N_BUILDING_A")
-             .build()),
-
-            (MerakiDeviceBuilder()
-             .as_mr_device()
-             .with_serial("Q2XX-MR46-BA01")
-             .with_name("Building A WiFi AP Floor 1")
-             .with_model("MR46")
-             .with_network_id("N_BUILDING_A")
-             .build()),
-        ])
+        devices.extend(
+            [
+                (
+                    MerakiDeviceBuilder()
+                    .as_mt_device()
+                    .with_serial("Q2XX-MT20-BA01")
+                    .with_name("Building A Main Office Sensor")
+                    .with_model("MT20")
+                    .with_network_id("N_BUILDING_A")
+                    .build()
+                ),
+                (
+                    MerakiDeviceBuilder()
+                    .as_mr_device()
+                    .with_serial("Q2XX-MR46-BA01")
+                    .with_name("Building A WiFi AP Floor 1")
+                    .with_model("MR46")
+                    .with_network_id("N_BUILDING_A")
+                    .build()
+                ),
+            ]
+        )
 
         # Building B - Engineering
-        devices.extend([
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT30-BB01")
-             .with_name("Building B Lab Sensor")
-             .with_model("MT30")
-             .with_network_id("N_BUILDING_B")
-             .build()),
-
-            (MerakiDeviceBuilder()
-             .as_ms_device()
-             .with_serial("Q2XX-MS425-BB01")
-             .with_name("Building B Core Switch")
-             .with_model("MS425-16")
-             .with_network_id("N_BUILDING_B")
-             .build()),
-        ])
+        devices.extend(
+            [
+                (
+                    MerakiDeviceBuilder()
+                    .as_mt_device()
+                    .with_serial("Q2XX-MT30-BB01")
+                    .with_name("Building B Lab Sensor")
+                    .with_model("MT30")
+                    .with_network_id("N_BUILDING_B")
+                    .build()
+                ),
+                (
+                    MerakiDeviceBuilder()
+                    .as_ms_device()
+                    .with_serial("Q2XX-MS425-BB01")
+                    .with_name("Building B Core Switch")
+                    .with_model("MS425-16")
+                    .with_network_id("N_BUILDING_B")
+                    .build()
+                ),
+            ]
+        )
 
         # Campus backbone
         devices.append(
             MerakiDeviceBuilder()
-             .as_ms_device()
-             .with_serial("Q2XX-MS450-CORE")
-             .with_name("Campus Core Switch")
-             .with_model("MS450-12")
-             .with_network_id("N_CAMPUS_CORE")
-             .build()
+            .as_ms_device()
+            .with_serial("Q2XX-MS450-CORE")
+            .with_name("Campus Core Switch")
+            .with_model("MS450-12")
+            .with_network_id("N_CAMPUS_CORE")
+            .build()
         )
 
         return devices
@@ -324,11 +359,13 @@ class SensorDataPresets:
         Returns:
             Sensor data with realistic temperature pattern
         """
-        return (SensorDataBuilder()
-                .as_temperature(22.5)
-                .with_serial(device_serial)
-                .with_timestamp()
-                .build())
+        return (
+            SensorDataBuilder()
+            .as_temperature(22.5)
+            .with_serial(device_serial)
+            .with_timestamp()
+            .build()
+        )
 
     @staticmethod
     def hvac_controlled_environment(device_serial: str) -> dict[str, Any]:
@@ -346,11 +383,13 @@ class SensorDataPresets:
             Sensor data for controlled environment
         """
         # Only return temperature data as the test expects
-        return (SensorDataBuilder()
-                .as_temperature(21.2)
-                .with_serial(device_serial)
-                .with_timestamp()
-                .build())
+        return (
+            SensorDataBuilder()
+            .as_temperature(21.2)
+            .with_serial(device_serial)
+            .with_timestamp()
+            .build()
+        )
 
     @staticmethod
     def server_room_monitoring(device_serial: str) -> dict[str, Any]:
@@ -367,11 +406,13 @@ class SensorDataPresets:
         Returns:
             Sensor data for server room environment
         """
-        return (SensorDataBuilder()
-                .as_temperature(19.1)
-                .with_serial(device_serial)
-                .with_timestamp()
-                .build())
+        return (
+            SensorDataBuilder()
+            .as_temperature(19.1)
+            .with_serial(device_serial)
+            .with_timestamp()
+            .build()
+        )
 
     @staticmethod
     def outdoor_sensor_data(device_serial: str) -> dict[str, Any]:
@@ -388,11 +429,13 @@ class SensorDataPresets:
         Returns:
             Sensor data for outdoor environment
         """
-        return (SensorDataBuilder()
-                .as_temperature(16.8)
-                .with_serial(device_serial)
-                .with_timestamp()
-                .build())
+        return (
+            SensorDataBuilder()
+            .as_temperature(16.8)
+            .with_serial(device_serial)
+            .with_timestamp()
+            .build()
+        )
 
 
 class ErrorScenarioPresets:
@@ -414,28 +457,32 @@ class ErrorScenarioPresets:
 
         return [
             # Recently offline device
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT20-OFF1")
-             .with_name("Recently Offline Sensor")
-             .with_last_seen(base_time - timedelta(minutes=30))
-             .build()),
-
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT20-OFF1")
+                .with_name("Recently Offline Sensor")
+                .with_last_seen(base_time - timedelta(minutes=30))
+                .build()
+            ),
             # Long-term offline device
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT20-OFF2")
-             .with_name("Long Term Offline Sensor")
-             .with_last_seen(base_time - timedelta(days=7))
-             .build()),
-
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT20-OFF2")
+                .with_name("Long Term Offline Sensor")
+                .with_last_seen(base_time - timedelta(days=7))
+                .build()
+            ),
             # Intermittent connectivity device
-            (MerakiDeviceBuilder()
-             .as_mt_device()
-             .with_serial("Q2XX-MT20-INT1")
-             .with_name("Intermittent Sensor")
-             .with_last_seen(base_time - timedelta(hours=2))
-             .build()),
+            (
+                MerakiDeviceBuilder()
+                .as_mt_device()
+                .with_serial("Q2XX-MT20-INT1")
+                .with_name("Intermittent Sensor")
+                .with_last_seen(base_time - timedelta(hours=2))
+                .build()
+            ),
         ]
 
     @staticmethod
@@ -453,40 +500,47 @@ class ErrorScenarioPresets:
         """
         return [
             # High temperature alarm
-            (SensorDataBuilder()
-             .as_temperature(45.0)  # High temperature
-             .with_serial("Q2XX-MT20-HOT1")
-             .build()),
-
+            (
+                SensorDataBuilder()
+                .as_temperature(45.0)  # High temperature
+                .with_serial("Q2XX-MT20-HOT1")
+                .build()
+            ),
             # Low temperature alarm
-            (SensorDataBuilder()
-             .as_temperature(-5.0)  # Freezing temperature
-             .with_serial("Q2XX-MT20-COLD1")
-             .build()),
-
+            (
+                SensorDataBuilder()
+                .as_temperature(-5.0)  # Freezing temperature
+                .with_serial("Q2XX-MT20-COLD1")
+                .build()
+            ),
             # High humidity
-            (SensorDataBuilder()
-             .as_humidity(95.0)     # High humidity
-             .with_serial("Q2XX-MT20-HUM1")
-             .build()),
-
+            (
+                SensorDataBuilder()
+                .as_humidity(95.0)  # High humidity
+                .with_serial("Q2XX-MT20-HUM1")
+                .build()
+            ),
             # Low humidity
-            (SensorDataBuilder()
-             .as_humidity(15.0)     # Low humidity
-             .with_serial("Q2XX-MT20-HUM2")
-             .build()),
-
+            (
+                SensorDataBuilder()
+                .as_humidity(15.0)  # Low humidity
+                .with_serial("Q2XX-MT20-HUM2")
+                .build()
+            ),
             # High CO2 levels
-            (SensorDataBuilder()
-             .as_co2(1200)         # High CO2
-             .with_serial("Q2XX-MT20-CO2H1")
-             .build()),
-
+            (
+                SensorDataBuilder()
+                .as_co2(1200)  # High CO2
+                .with_serial("Q2XX-MT20-CO2H1")
+                .build()
+            ),
             # Low battery warning
-            (SensorDataBuilder()
-             .as_battery_level(15)  # Low battery
-             .with_serial("Q2XX-MT20-LOWBAT")
-             .build()),
+            (
+                SensorDataBuilder()
+                .as_battery_level(15)  # Low battery
+                .with_serial("Q2XX-MT20-LOWBAT")
+                .build()
+            ),
         ]
 
     @staticmethod
@@ -509,11 +563,10 @@ class ErrorScenarioPresets:
                     {
                         "metric": "temperature",
                         # Missing 'value' field
-                        "ts": "2024-01-01T12:00:00Z"
+                        "ts": "2024-01-01T12:00:00Z",
                     }
-                ]
+                ],
             },
-
             # Invalid data type for temperature
             {
                 "serial": "Q2XX-MT20-INV1",
@@ -521,11 +574,10 @@ class ErrorScenarioPresets:
                     {
                         "metric": "temperature",
                         "value": "not_a_number",  # Invalid type
-                        "ts": "2024-01-01T12:00:00Z"
+                        "ts": "2024-01-01T12:00:00Z",
                     }
-                ]
+                ],
             },
-
             # Out of range humidity value
             {
                 "serial": "Q2XX-MT20-RANGE1",
@@ -533,9 +585,9 @@ class ErrorScenarioPresets:
                     {
                         "metric": "humidity",
                         "value": 150.0,  # Invalid range (>100%)
-                        "ts": "2024-01-01T12:00:00Z"
+                        "ts": "2024-01-01T12:00:00Z",
                     }
-                ]
+                ],
             },
         ]
 
@@ -545,8 +597,7 @@ class TimeSeriesPresets:
 
     @staticmethod
     def business_hours_pattern(
-        device_serial: str,
-        days: int = 7
+        device_serial: str, days: int = 7
     ) -> list[dict[str, Any]]:
         """Generate realistic business hours temperature pattern.
 
@@ -582,19 +633,20 @@ class TimeSeriesPresets:
                     # After hours - cooler
                     temp = 19.0 + abs(12 - hour) * 0.2
 
-                reading = (SensorDataBuilder()
-                          .as_temperature(temp)
-                          .with_serial(device_serial)
-                          .with_timestamp(timestamp)
-                          .build())
+                reading = (
+                    SensorDataBuilder()
+                    .as_temperature(temp)
+                    .with_serial(device_serial)
+                    .with_timestamp(timestamp)
+                    .build()
+                )
                 readings.append(reading)
 
         return readings
 
     @staticmethod
     def seasonal_variation(
-        device_serial: str,
-        season: str = "winter"
+        device_serial: str, season: str = "winter"
     ) -> dict[str, Any]:
         """Generate sensor data with seasonal characteristics.
 
@@ -620,9 +672,11 @@ class TimeSeriesPresets:
 
         config = season_config.get(season, season_config["spring"])
 
-        return (SensorDataBuilder()
-                .as_temperature(config["temp_base"])
-                .as_humidity(config["humidity_base"])
-                .with_serial(device_serial)
-                .with_timestamp()
-                .build())
+        return (
+            SensorDataBuilder()
+            .as_temperature(config["temp_base"])
+            .as_humidity(config["humidity_base"])
+            .with_serial(device_serial)
+            .with_timestamp()
+            .build()
+        )

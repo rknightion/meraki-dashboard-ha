@@ -338,6 +338,92 @@ def _register_mt_entities():
             network_hub,
         )
 
+    # Power Factor sensor
+    @EntityFactory.register(DeviceType.MT, MetricType.POWER_FACTOR)
+    def create_mt_power_factor(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["powerFactor"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Real Power sensor
+    @EntityFactory.register(DeviceType.MT, MetricType.REAL_POWER)
+    def create_mt_real_power(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["realPower"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Voltage sensor
+    @EntityFactory.register(DeviceType.MT, MetricType.VOLTAGE)
+    def create_mt_voltage(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["voltage"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Current sensor
+    @EntityFactory.register(DeviceType.MT, MetricType.CURRENT)
+    def create_mt_current(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["current"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Frequency sensor
+    @EntityFactory.register(DeviceType.MT, MetricType.FREQUENCY)
+    def create_mt_frequency(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["frequency"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Apparent Power sensor
+    @EntityFactory.register(DeviceType.MT, MetricType.APPARENT_POWER)
+    def create_mt_apparent_power(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["apparentPower"],
+            config_entry_id,
+            network_hub,
+        )
+
 
 def _register_mr_entities():
     """Register MR (Wireless) sensor entities."""
@@ -358,18 +444,282 @@ def _register_mr_entities():
 
     @EntityFactory.register(DeviceType.MR, MetricType.MEMORY_USAGE)
     def create_mr_memory_usage(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_MEMORY_USAGE
         from ..devices.mr import MerakiMRDeviceSensor
         from ..sensor import MR_SENSOR_DESCRIPTIONS
 
         return MerakiMRDeviceSensor(
             device,
             coordinator,
-            MR_SENSOR_DESCRIPTIONS["memoryUsage"],
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_MEMORY_USAGE],
             config_entry_id,
             network_hub,
         )
 
-    # Add more MR sensors as needed...
+    # SSID sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.SSID_COUNT)
+    def create_mr_ssid_count(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_SSID_COUNT
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_SSID_COUNT],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.ENABLED_SSIDS)
+    def create_mr_enabled_ssids(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_ENABLED_SSIDS
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_ENABLED_SSIDS],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.OPEN_SSIDS)
+    def create_mr_open_ssids(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_OPEN_SSIDS
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_OPEN_SSIDS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Channel utilization sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.CHANNEL_UTILIZATION_2_4)
+    def create_mr_channel_util_24(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_2_4
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_2_4],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.CHANNEL_UTILIZATION_5)
+    def create_mr_channel_util_5(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Data rate sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.DATA_RATE_2_4)
+    def create_mr_data_rate_24(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_DATA_RATE_2_4
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_DATA_RATE_2_4],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.DATA_RATE_5)
+    def create_mr_data_rate_5(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_DATA_RATE_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_DATA_RATE_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Connection sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.CONNECTION_SUCCESS_RATE)
+    def create_mr_conn_success(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_CONNECTION_SUCCESS_RATE
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_SUCCESS_RATE],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.CONNECTION_FAILURES)
+    def create_mr_conn_failures(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_CONNECTION_FAILURES
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_FAILURES],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Traffic sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.TRAFFIC_SENT)
+    def create_mr_traffic_sent(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_TRAFFIC_SENT
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_TRAFFIC_SENT],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.TRAFFIC_RECV)
+    def create_mr_traffic_recv(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_TRAFFIC_RECV
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_TRAFFIC_RECV],
+            config_entry_id,
+            network_hub,
+        )
+
+    # RF Power sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.RF_POWER)
+    def create_mr_rf_power(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_RF_POWER
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_RF_POWER],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.RF_POWER_2_4)
+    def create_mr_rf_power_24(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_RF_POWER_2_4
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_RF_POWER_2_4],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.RF_POWER_5)
+    def create_mr_rf_power_5(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_RF_POWER_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_RF_POWER_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Radio channel sensors
+    @EntityFactory.register(DeviceType.MR, MetricType.RADIO_CHANNEL_2_4)
+    def create_mr_radio_chan_24(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_RADIO_CHANNEL_2_4
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_RADIO_CHANNEL_2_4],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.RADIO_CHANNEL_5)
+    def create_mr_radio_chan_5(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_RADIO_CHANNEL_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_RADIO_CHANNEL_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.CHANNEL_WIDTH_5)
+    def create_mr_channel_width_5(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_WIDTH_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_WIDTH_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(DeviceType.MR, MetricType.RF_PROFILE_ID)
+    def create_mr_rf_profile(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_RF_PROFILE_ID
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_RF_PROFILE_ID],
+            config_entry_id,
+            network_hub,
+        )
 
 
 def _register_ms_entities():
@@ -391,18 +741,233 @@ def _register_ms_entities():
 
     @EntityFactory.register(DeviceType.MS, MetricType.MEMORY_USAGE)
     def create_ms_memory_usage(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MS_SENSOR_MEMORY_USAGE
         from ..devices.ms import MerakiMSDeviceSensor
         from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
 
         return MerakiMSDeviceSensor(
             device,
             coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["memoryUsage"],
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_MEMORY_USAGE],
             config_entry_id,
             network_hub,
         )
 
-    # Add more MS sensors as needed...
+    # Connected Ports sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.CONNECTED_PORTS)
+    def create_ms_connected_ports(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["connected_ports"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # PoE Ports sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.POE_PORTS)
+    def create_ms_poe_ports(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["poe_ports"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Utilization Sent sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_UTILIZATION_SENT)
+    def create_ms_port_utilization_sent(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization_sent"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Utilization Received sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_UTILIZATION_RECV)
+    def create_ms_port_utilization_recv(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization_recv"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Traffic Sent sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_TRAFFIC_SENT)
+    def create_ms_port_traffic_sent(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_traffic_sent"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Traffic Received sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_TRAFFIC_RECV)
+    def create_ms_port_traffic_recv(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_traffic_recv"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # PoE Power sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.POE_POWER)
+    def create_ms_poe_power(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MS_SENSOR_POE_POWER
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_POWER],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Connected Clients sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.CONNECTED_CLIENTS)
+    def create_ms_connected_clients(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["connected_clients"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Errors sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_ERRORS)
+    def create_ms_port_errors(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_errors"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Discards sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_DISCARDS)
+    def create_ms_port_discards(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_discards"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Power Module Status sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.POWER_MODULE_STATUS)
+    def create_ms_power_module_status(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["power_module_status"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Link Count sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_LINK_COUNT)
+    def create_ms_port_link_count(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_link_count"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # PoE Limit sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.POE_LIMIT)
+    def create_ms_poe_limit(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MS_SENSOR_POE_LIMIT
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_LIMIT],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Utilization sensor
+    @EntityFactory.register(DeviceType.MS, MetricType.PORT_UTILIZATION)
+    def create_ms_port_utilization(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization"],
+            config_entry_id,
+            network_hub,
+        )
 
 
 def _register_organization_entities():

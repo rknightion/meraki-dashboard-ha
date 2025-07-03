@@ -1,4 +1,5 @@
 """Test data transformers for Meraki Dashboard integration."""
+
 from __future__ import annotations
 
 from custom_components.meraki_dashboard.data.transformers import (
@@ -46,7 +47,10 @@ class TestSafeExtractor:
         """Test nested value extraction."""
         data = {"level1": {"level2": {"value": 42}}}
         assert SafeExtractor.get_nested_value(data, "level1", "level2", "value") == 42
-        assert SafeExtractor.get_nested_value(data, "missing", "key", default="default") == "default"
+        assert (
+            SafeExtractor.get_nested_value(data, "missing", "key", default="default")
+            == "default"
+        )
         assert SafeExtractor.get_nested_value({}, "key", default=None) is None
 
     def test_safe_float(self):
@@ -80,14 +84,9 @@ class TestMTSensorDataTransformer:
         """Test temperature data transformation."""
         transformer = MTSensorDataTransformer()
         raw_data = {
-            "readings": [
-                {
-                    "metric": "temperature",
-                    "temperature": {"celsius": 23.5}
-                }
-            ],
+            "readings": [{"metric": "temperature", "temperature": {"celsius": 23.5}}],
             "ts": "2023-01-01T00:00:00Z",
-            "serial": "Q2XX-XXXX-XXXX"
+            "serial": "Q2XX-XXXX-XXXX",
         }
 
         result = transformer.transform(raw_data)
@@ -102,7 +101,7 @@ class TestMTSensorDataTransformer:
             "readings": [
                 {"metric": "temperature", "temperature": {"celsius": 23.5}},
                 {"metric": "humidity", "humidity": {"relativePercentage": 65.0}},
-                {"metric": "co2", "co2": {"concentration": 400}}
+                {"metric": "co2", "co2": {"concentration": 400}},
             ]
         }
 
@@ -117,7 +116,7 @@ class TestMTSensorDataTransformer:
         raw_data = {
             "readings": [
                 {"metric": "realPower", "realPower": {"value": 1.5, "unit": "kW"}},
-                {"metric": "voltage", "voltage": {"value": 120}}
+                {"metric": "voltage", "voltage": {"value": 120}},
             ]
         }
 
@@ -137,7 +136,7 @@ class TestMRWirelessDataTransformer:
             "name": "Test AP",
             "model": "MR46",
             "networkId": "N_123456789",
-            "clientCount": 15
+            "clientCount": 15,
         }
 
         result = transformer.transform(raw_data)
@@ -151,17 +150,13 @@ class TestMRWirelessDataTransformer:
         transformer = MRWirelessDataTransformer()
         raw_data = {
             "basicServiceSets": [
-                {
-                    "band": "2.4",
-                    "channel": 6,
-                    "channelUtilization": {"total": 25.0}
-                },
+                {"band": "2.4", "channel": 6, "channelUtilization": {"total": 25.0}},
                 {
                     "band": "5",
                     "channel": 36,
                     "channelWidth": 80,
-                    "channelUtilization": {"total": 15.0}
-                }
+                    "channelUtilization": {"total": 15.0},
+                },
             ]
         }
 
@@ -177,12 +172,12 @@ class TestMRWirelessDataTransformer:
         transformer = MRWirelessDataTransformer()
         raw_data = {
             "trafficSent": 5000000,  # 5MB (should be converted to Mbps)
-            "trafficRecv": 500       # 500 bytes (should remain as-is)
+            "trafficRecv": 500,  # 500 bytes (should remain as-is)
         }
 
         result = transformer.transform(raw_data)
         assert result["traffic_sent"] == 40.0  # 5MB converted to Mbps
-        assert result["traffic_recv"] == 500   # Small value remains unchanged
+        assert result["traffic_recv"] == 500  # Small value remains unchanged
 
 
 class TestMSSwitchDataTransformer:
@@ -195,7 +190,7 @@ class TestMSSwitchDataTransformer:
             "port_count": 24,
             "connected_ports": 18,
             "poe_ports": 12,
-            "poe_power": 150.5
+            "poe_power": 150.5,
         }
 
         result = transformer.transform(raw_data)
@@ -208,7 +203,7 @@ class TestMSSwitchDataTransformer:
             "port_count": 24,
             "connected_ports": 18,
             "poe_ports": 12,
-            "poe_power": 150.5
+            "poe_power": 150.5,
         }
         assert result == expected
 
@@ -225,7 +220,7 @@ class TestMSSwitchDataTransformer:
                     "clientCount": 2,
                     "usageInKb": {"sent": 1000, "recv": 2000},
                     "errors": 0,
-                    "discards": 1
+                    "discards": 1,
                 },
                 {
                     "enabled": True,
@@ -234,9 +229,9 @@ class TestMSSwitchDataTransformer:
                     "clientCount": 1,
                     "usageInKb": {"sent": 500, "recv": 1500},
                     "errors": 2,
-                    "discards": 0
-                }
-            ]
+                    "discards": 0,
+                },
+            ],
         }
 
         result = transformer.transform(raw_data)
@@ -263,9 +258,7 @@ class TestTransformerRegistry:
     def test_transform_with_registry(self):
         """Test transformation using registry."""
         test_data = {
-            "readings": [
-                {"metric": "temperature", "temperature": {"celsius": 22.0}}
-            ]
+            "readings": [{"metric": "temperature", "temperature": {"celsius": 22.0}}]
         }
 
         result = transformer_registry.transform_device_data("MT", test_data)
@@ -280,6 +273,7 @@ class TestTransformerRegistry:
 
     def test_register_custom_transformer(self):
         """Test registering custom transformer."""
+
         class CustomTransformer:
             def transform(self, raw_data):
                 return {"custom": True}

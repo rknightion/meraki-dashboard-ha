@@ -15,7 +15,7 @@ class SensorDataBuilder:
             "value": 22.5,
             "serial": "Q2XX-XXXX-XXXX",
             "networkId": "N_123456789",
-            "networkName": "Test Network"
+            "networkName": "Test Network",
         }
 
     def with_timestamp(self, timestamp=None) -> "SensorDataBuilder":
@@ -48,7 +48,9 @@ class SensorDataBuilder:
         self._data["serial"] = serial
         return self
 
-    def with_network(self, network_id: str, network_name: str = "Test Network") -> "SensorDataBuilder":
+    def with_network(
+        self, network_id: str, network_name: str = "Test Network"
+    ) -> "SensorDataBuilder":
         """Set the network information."""
         self._data["networkId"] = network_id
         self._data["networkName"] = network_name
@@ -158,7 +160,9 @@ class SensorDataBuilder:
         """Build and return the sensor data."""
         return self._data.copy()
 
-    def build_many(self, metrics: list[str], base_value: float = 20.0) -> list[dict[str, Any]]:
+    def build_many(
+        self, metrics: list[str], base_value: float = 20.0
+    ) -> list[dict[str, Any]]:
         """Build multiple sensor readings for different metrics."""
         readings = []
         for i, metric in enumerate(metrics):
@@ -168,7 +172,9 @@ class SensorDataBuilder:
             readings.append(reading)
         return readings
 
-    def build_time_series(self, count: int, interval_minutes: int = 5) -> list[dict[str, Any]]:
+    def build_time_series(
+        self, count: int, interval_minutes: int = 5
+    ) -> list[dict[str, Any]]:
         """Build a time series of sensor readings."""
         readings = []
         base_time = datetime.now(UTC)

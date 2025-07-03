@@ -215,7 +215,8 @@ class TestMerakiDashboardConfigFlow:
             {
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL // 60,  # Convert to minutes
                 CONF_AUTO_DISCOVERY: True,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,  # Convert to minutes
+                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL
+                // 60,  # Convert to minutes
             }
         )
 
@@ -345,7 +346,8 @@ class TestMerakiDashboardConfigFlow:
             {
                 CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL // 60,  # Convert to minutes
                 CONF_AUTO_DISCOVERY: True,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,  # Convert to minutes
+                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL
+                // 60,  # Convert to minutes
             }
         )
 

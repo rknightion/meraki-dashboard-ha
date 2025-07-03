@@ -40,13 +40,12 @@ async def test_mt_sensor_creation_with_builders(hass: HomeAssistant):
     device = await helper.create_mt_device_with_sensors(
         serial="Q2XX-TEST-0001",
         network_id="N_123456789",
-        metrics=["temperature", "humidity", "co2", "battery"]
+        metrics=["temperature", "humidity", "co2", "battery"],
     )
 
     # Set up integration with the device
     await helper.setup_meraki_integration(
-        devices=[device],
-        selected_device_types=["MT"]
+        devices=[device], selected_device_types=["MT"]
     )
 
     # Trigger coordinator update
@@ -60,6 +59,7 @@ async def test_mt_sensor_creation_with_builders(hass: HomeAssistant):
 
     # Verify network hubs and coordinators were created
     from custom_components.meraki_dashboard.const import DOMAIN
+
     integration_data = hass.data[DOMAIN][helper._config_entry.entry_id]
     assert len(integration_data["network_hubs"]) > 0
     assert len(integration_data["coordinators"]) > 0
@@ -76,20 +76,22 @@ async def test_multiple_devices_with_builders(hass: HomeAssistant):
 
     # Create 3 MT devices
     for i in range(3):
-        device = (device_builder
-                 .with_serial(f"Q2XX-TEST-{i:04d}")
-                 .with_name(f"Sensor {i+1}")
-                 .as_mt_device()
-                 .build())
+        device = (
+            device_builder.with_serial(f"Q2XX-TEST-{i:04d}")
+            .with_name(f"Sensor {i + 1}")
+            .as_mt_device()
+            .build()
+        )
         devices.append(device)
 
     # Create 2 MR devices
     for i in range(2):
-        device = (device_builder
-                 .with_serial(f"Q2YY-TEST-{i:04d}")
-                 .with_name(f"Access Point {i+1}")
-                 .as_mr_device()
-                 .build())
+        device = (
+            device_builder.with_serial(f"Q2YY-TEST-{i:04d}")
+            .with_name(f"Access Point {i + 1}")
+            .as_mr_device()
+            .build()
+        )
         devices.append(device)
 
     # Set up integration
@@ -100,6 +102,7 @@ async def test_multiple_devices_with_builders(hass: HomeAssistant):
 
     # Verify network hubs were created
     from custom_components.meraki_dashboard.const import DOMAIN
+
     integration_data = hass.data[DOMAIN][helper._config_entry.entry_id]
     assert len(integration_data["network_hubs"]) > 0
 
@@ -111,10 +114,7 @@ async def test_sensor_data_variations_with_builders(hass: HomeAssistant):
 
     # Create device
     device_builder = MerakiDeviceBuilder()
-    device = (device_builder
-             .with_serial("Q2XX-EDGE-0001")
-             .as_mt_device()
-             .build())
+    device = device_builder.with_serial("Q2XX-EDGE-0001").as_mt_device().build()
 
     # Create sensor data with edge cases
     sensor_builder = SensorDataBuilder()
@@ -123,16 +123,14 @@ async def test_sensor_data_variations_with_builders(hass: HomeAssistant):
     normal_temp = sensor_builder.as_temperature(22.5).build()
 
     # Extreme temperature
-    extreme_temp = (sensor_builder
-                   .as_temperature(50.0)
-                   .with_serial(device["serial"])
-                   .build())
+    extreme_temp = (
+        sensor_builder.as_temperature(50.0).with_serial(device["serial"]).build()
+    )
 
     # Zero humidity
-    zero_humidity = (sensor_builder
-                    .as_humidity(0.0)
-                    .with_serial(device["serial"])
-                    .build())
+    zero_humidity = (
+        sensor_builder.as_humidity(0.0).with_serial(device["serial"]).build()
+    )
 
     # Add all sensor data
     helper.add_sensor_data(device["serial"], [normal_temp, extreme_temp, zero_humidity])
@@ -154,10 +152,11 @@ async def test_time_series_data_with_builders(hass: HomeAssistant):
 
     # Create time series data for the last hour (12 readings, 5 minutes apart)
     sensor_builder = SensorDataBuilder()
-    time_series = (sensor_builder
-                  .as_temperature(20.0)
-                  .with_serial(device["serial"])
-                  .build_time_series(count=12, interval_minutes=5))
+    time_series = (
+        sensor_builder.as_temperature(20.0)
+        .with_serial(device["serial"])
+        .build_time_series(count=12, interval_minutes=5)
+    )
 
     helper.add_sensor_data(device["serial"], time_series)
 

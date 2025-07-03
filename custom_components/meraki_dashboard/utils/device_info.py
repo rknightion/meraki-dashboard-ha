@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
-from ..const import DOMAIN
+from ..const import DOMAIN, MR_SENSOR_MEMORY_USAGE, MS_SENSOR_MEMORY_USAGE
 
 if TYPE_CHECKING:
     from ..types import MerakiDeviceData
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class DeviceInfoBuilder:
@@ -110,7 +113,28 @@ class DeviceInfoBuilder:
         """
         device_serial = device_data.get("serial", "")
         device_name = device_data.get("name", device_serial)
-        device_model = device_data.get("model", "Unknown")
+        device_model = device_data.get("model", "")
+
+        # Handle missing model - try to infer from other fields
+        if not device_model:
+            # Check productType as fallback
+            product_type = str(device_data.get("productType", "")).lower()
+            if product_type == "sensor" and device_type == "MT":
+                device_model = "MT"
+                _LOGGER.debug(
+                    "Device %s has no model, using generic 'MT' based on productType='sensor'",
+                    device_serial
+                )
+            elif device_type:
+                # Use device type as last resort
+                device_model = device_type
+                _LOGGER.debug(
+                    "Device %s has no model, using device type '%s' as fallback",
+                    device_serial,
+                    device_type
+                )
+            else:
+                device_model = "Unknown"
 
         self._info = {
             "identifiers": {(self.domain, f"{config_entry_id}_{device_serial}")},
@@ -337,21 +361,31 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
     """
     if device_type == "MT":
         # MT (Environmental) sensors have model-specific capabilities
+        # These keys must match the API metric names, not the sensor description keys
         if device_model in ["MT10", "MT12"]:
             # Temperature and humidity only
             return {"temperature", "humidity"}
         elif device_model == "MT11":
             # Temperature only
             return {"temperature"}
+        elif device_model == "MT13":
+            # Motion sensor with environmental monitoring
+            return {"temperature", "humidity", "battery", "motion"}
+        elif device_model == "MT14":
+            # Door sensor with environmental monitoring and water detection
+            return {"temperature", "humidity", "battery", "door", "water"}
+        elif device_model == "MT15":
+            # Water detection sensor with environmental monitoring
+            return {"temperature", "humidity", "water", "battery"}
         elif device_model == "MT20":
-            # Full environmental monitoring
+            # Full environmental monitoring - using API metric names
             return {
                 "temperature",
                 "humidity",
                 "co2",
                 "tvoc",
                 "pm25",
-                "noise",
+                "noise",  # API uses "noise.ambient.level" but we check for "noise" prefix
                 "indoorAirQuality",
             }
         elif device_model == "MT30":
@@ -361,16 +395,54 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             # Water detection sensor
             return {"water", "temperature"}
         else:
-            # Default MT sensors
-            return {"temperature", "humidity", "battery"}
+            # Default MT sensors - only basic environmental
+            return {"temperature", "humidity"}
 
     elif device_type == "MR":
         # MR (Wireless) devices all have similar metrics
-        return {"usage", "status", "clients", "mesh_status"}
+        return {
+            "client_count",
+            "memory_usage",
+            "ssid_count",
+            "enabled_ssids",
+            "open_ssids",
+            "channel_utilization_2_4",
+            "channel_utilization_5",
+            "data_rate_2_4",
+            "data_rate_5",
+            "connection_success_rate",
+            "connection_failures",
+            "traffic_sent",
+            "traffic_recv",
+            "rf_power",
+            "rf_power_2_4",
+            "rf_power_5",
+            "radio_channel_2_4",
+            "radio_channel_5",
+            "channel_width_5",
+            "rf_profile_id",
+        }
 
     elif device_type == "MS":
         # MS (Switch) devices all have similar metrics
-        return {"port_status", "power_usage", "clients", "uplink_status"}
+        return {
+            "port_count",
+            "memory_usage",
+            "connected_ports",
+            "poe_ports",
+            "port_utilization_sent",
+            "port_utilization_recv",
+            "port_traffic_sent",
+            "port_traffic_recv",
+            "poe_power_usage",
+            "connected_clients",
+            "port_errors",
+            "port_discards",
+            "power_module_status",
+            "port_link_count",
+            "poe_power_limit",
+            "port_utilization",
+        }
 
     elif device_type == "MV":
         # MV (Camera) devices
@@ -398,8 +470,16 @@ def discover_device_capabilities_from_readings(
 
     # Handle various response formats
     if isinstance(sensor_readings, dict):
+        # Check if this is the coordinator data format (serial -> data mapping)
+        if device_serial in sensor_readings:
+            device_data = sensor_readings[device_serial]
+            if isinstance(device_data, dict) and "readings" in device_data:
+                readings = device_data.get("readings", [])
+                for reading in readings:
+                    if metric := reading.get("metric"):
+                        capabilities.add(metric)
         # Single device reading
-        if sensor_readings.get("serial") == device_serial:
+        elif sensor_readings.get("serial") == device_serial:
             if readings := sensor_readings.get("readings", []):
                 for reading in readings:
                     if metric := reading.get("metric"):
@@ -432,7 +512,18 @@ def get_device_capabilities(
     """
     device_serial = device.get("serial", "")
     device_model = device.get("model", "")
-    device_type = device.get("productType", "").upper()
+
+    # Determine device type from model prefix
+    if device_model.startswith("MT"):
+        device_type = "MT"
+    elif device_model.startswith("MR"):
+        device_type = "MR"
+    elif device_model.startswith("MS"):
+        device_type = "MS"
+    elif device_model.startswith("MV"):
+        device_type = "MV"
+    else:
+        device_type = device.get("productType", "").upper()
 
     # Try dynamic discovery first if we have coordinator data
     if coordinator_data and device_serial:
@@ -459,7 +550,7 @@ def should_create_entity(
 
     Args:
         device: Device information
-        metric_key: The metric/sensor key to check
+        metric_key: The metric/sensor key to check (from sensor description)
         coordinator_data: Current coordinator data (optional)
         always_create: Override capability checking
 
@@ -469,12 +560,56 @@ def should_create_entity(
     if always_create:
         return True
 
-    # Get device capabilities
+    # Special case: always create memory usage sensors for MR/MS devices
+    if metric_key in ["memory_usage", MR_SENSOR_MEMORY_USAGE, MS_SENSOR_MEMORY_USAGE]:
+        device_model = device.get("model", "")
+        # Check if device model starts with MR or MS
+        if device_model.startswith("MR") or device_model.startswith("MS"):
+            return True
+
+    # Get device type from model
+    device_model = device.get("model", "")
+    if device_model.startswith("MR"):
+        # For MR devices, allow all standard metrics
+        return True  # Allow all MR sensors to be created
+    elif device_model.startswith("MS"):
+        # For MS devices, allow all standard metrics
+        return True  # Allow all MS sensors to be created
+
+    # For MT devices, we need to check capabilities more carefully
+    # The metric_key comes from sensor descriptions which use EntityType values
+    # These need to be mapped to the API metric names for capability checking
+    if device_model.startswith("MT"):
+        # Get device capabilities
+        capabilities = get_device_capabilities(device, coordinator_data)
+
+        # If we have discovered capabilities from actual data, use them
+        if capabilities:
+            # Handle special cases where sensor keys don't exactly match API metrics
+            if metric_key == "noise" and any("noise" in cap for cap in capabilities):
+                return True
+            # Check if the metric key matches any capability
+            return metric_key in capabilities
+
+        # Fall back to model-based capabilities
+        model_capabilities = create_device_capability_filter(device_model, "MT")
+
+        # Handle noise sensor special case (API uses "noise.ambient.level")
+        if metric_key == "noise" and "noise" in model_capabilities:
+            return True
+
+        return metric_key in model_capabilities
+
+    # For other device types without specific handling
     capabilities = get_device_capabilities(device, coordinator_data)
 
-    # If no capabilities detected, be permissive
+    # If no capabilities detected, only allow basic sensors based on device type
     if not capabilities:
-        return True
+        # For devices with no model information, be permissive to avoid missing entities
+        if not device_model:
+            return True
+        # For unknown device types, don't create any entities
+        return False
 
     # Check if this metric is in the device's capabilities
     return metric_key in capabilities

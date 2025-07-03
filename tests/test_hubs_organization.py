@@ -902,9 +902,9 @@ class TestLoggingConfiguration:
         with patch("logging.getLogger") as mock_get_logger:
             mock_component_logger = Mock()
             mock_component_logger.getEffectiveLevel.return_value = logging.INFO
-            
+
             mock_get_logger.return_value = mock_component_logger
-            
+
             _configure_third_party_logging()
 
             # Should only call getLogger once to get component level

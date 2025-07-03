@@ -54,8 +54,7 @@ class TestIntegrationSetupWithBuilders:
 
         # Set up integration
         config_entry = await helper.setup_meraki_integration(
-            devices=devices,
-            selected_device_types=["MT", "MR", "MS"]
+            devices=devices, selected_device_types=["MT", "MR", "MS"]
         )
 
         # Verify integration is set up correctly
@@ -104,8 +103,12 @@ class TestIntegrationSetupWithBuilders:
             mock_api = MagicMock()
             mock_api.organizations = MagicMock()
             mock_api.organizations.getOrganization.side_effect = APIError(
-                {"message": "Internal Server Error", "status": 500, "tags": ["organizations"]},
-                mock_response
+                {
+                    "message": "Internal Server Error",
+                    "status": 500,
+                    "tags": ["organizations"],
+                },
+                mock_response,
             )
             # Set up other required mocks
             mock_api.organizations.getOrganizationNetworks.return_value = []
@@ -116,7 +119,9 @@ class TestIntegrationSetupWithBuilders:
         # Patch the DashboardAPI constructor
         with patch("meraki.DashboardAPI", side_effect=mock_dashboard_init):
             # Setup should complete but org hub setup will fail
-            config_entry = await helper.setup_meraki_integration(organization_id="123456")
+            config_entry = await helper.setup_meraki_integration(
+                organization_id="123456"
+            )
             # The integration should still be created, but with errors logged
             assert config_entry is not None
 
@@ -173,13 +178,12 @@ class TestEntityCreationWithBuilders:
         # Create MT device with sensor data
         device = await helper.create_mt_device_with_sensors(
             serial="MT-SENSOR-001",
-            metrics=["temperature", "humidity", "co2", "battery"]
+            metrics=["temperature", "humidity", "co2", "battery"],
         )
 
         # Set up integration
         await helper.setup_meraki_integration(
-            devices=[device],
-            selected_device_types=["MT"]
+            devices=[device], selected_device_types=["MT"]
         )
 
         # Trigger data update
@@ -202,7 +206,10 @@ class TestEntityCreationWithBuilders:
 
         # Add binary sensor data
         sensor_data = [
-            SensorDataBuilder().as_water_detection(True).with_serial(device["serial"]).build(),
+            SensorDataBuilder()
+            .as_water_detection(True)
+            .with_serial(device["serial"])
+            .build(),
             SensorDataBuilder().as_door(True).with_serial(device["serial"]).build(),
         ]
         helper.add_sensor_data(device["serial"], sensor_data)
@@ -216,7 +223,9 @@ class TestEntityCreationWithBuilders:
 
         # Verify the binary sensor data was added
         mock_api = helper.get_mock_api()
-        assert mock_api.sensor.getOrganizationSensorReadingsLatest.return_value is not None
+        assert (
+            mock_api.sensor.getOrganizationSensorReadingsLatest.return_value is not None
+        )
 
     @pytest.mark.asyncio
     async def test_button_entities_created(self, hass: HomeAssistant):
@@ -244,20 +253,24 @@ class TestDataFlowWithBuilders:
 
         # Create device with initial data
         device = MerakiDeviceBuilder().as_mt_device().build()
-        initial_reading = (SensorDataBuilder()
-                          .as_temperature(20.0)
-                          .with_serial(device["serial"])
-                          .build())
+        initial_reading = (
+            SensorDataBuilder()
+            .as_temperature(20.0)
+            .with_serial(device["serial"])
+            .build()
+        )
 
         helper.add_sensor_data(device["serial"], [initial_reading])
         await helper.setup_meraki_integration(devices=[device])
 
         # Update sensor data
-        new_reading = (SensorDataBuilder()
-                      .as_temperature(25.0)
-                      .with_serial(device["serial"])
-                      .with_current_timestamp()
-                      .build())
+        new_reading = (
+            SensorDataBuilder()
+            .as_temperature(25.0)
+            .with_serial(device["serial"])
+            .with_current_timestamp()
+            .build()
+        )
 
         # Configure mock to return new data
         mock_api = helper.get_mock_api()
@@ -276,10 +289,12 @@ class TestDataFlowWithBuilders:
 
         # Create device with time series data
         device = MerakiDeviceBuilder().as_mt_device().build()
-        time_series = (SensorDataBuilder()
-                      .as_temperature(20.0)
-                      .with_serial(device["serial"])
-                      .build_time_series(count=5, interval_minutes=10))
+        time_series = (
+            SensorDataBuilder()
+            .as_temperature(20.0)
+            .with_serial(device["serial"])
+            .build_time_series(count=5, interval_minutes=10)
+        )
 
         helper.add_sensor_data(device["serial"], time_series)
         await helper.setup_meraki_integration(devices=[device])
@@ -302,7 +317,9 @@ class TestErrorHandlingWithBuilders:
 
         # Simulate connection loss
         mock_api = helper.get_mock_api()
-        mock_api.sensor.getOrganizationSensorReadingsLatest.side_effect = ConnectionError()
+        mock_api.sensor.getOrganizationSensorReadingsLatest.side_effect = (
+            ConnectionError()
+        )
 
         # Trigger update - should handle error gracefully
         await helper.trigger_coordinator_update()
@@ -329,7 +346,9 @@ class TestErrorHandlingWithBuilders:
         }
 
         mock_api = helper.get_mock_api()
-        mock_api.sensor.getOrganizationSensorReadingsLatest.return_value = [malformed_data]
+        mock_api.sensor.getOrganizationSensorReadingsLatest.return_value = [
+            malformed_data
+        ]
 
         # Should handle malformed data gracefully
         await helper.trigger_coordinator_update()

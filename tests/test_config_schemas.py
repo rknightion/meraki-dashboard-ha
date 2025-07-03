@@ -160,7 +160,9 @@ class TestOrganizationIDConfig:
 
     def test_invalid_org_id_characters(self):
         """Test organization ID with invalid characters."""
-        with pytest.raises(ConfigurationError, match="must contain only letters, numbers, and hyphens"):
+        with pytest.raises(
+            ConfigurationError, match="must contain only letters, numbers, and hyphens"
+        ):
             OrganizationIDConfig("test_org@123")
 
     def test_org_id_not_string(self):
@@ -184,7 +186,9 @@ class TestDeviceSerialConfig:
 
     def test_invalid_characters_in_serial(self):
         """Test device serial with invalid characters."""
-        with pytest.raises(ConfigurationError, match="uppercase letters, digits, and hyphens"):
+        with pytest.raises(
+            ConfigurationError, match="uppercase letters, digits, and hyphens"
+        ):
             DeviceSerialConfig("q2ab-1234-5678")
 
     def test_device_serial_not_string(self):
@@ -210,7 +214,9 @@ class TestTieredRefreshConfig:
     def test_invalid_interval_relationship(self):
         """Test invalid interval relationships."""
         # Dynamic >= semi-static
-        with pytest.raises(ConfigurationError, match="Dynamic interval.*must be less than"):
+        with pytest.raises(
+            ConfigurationError, match="Dynamic interval.*must be less than"
+        ):
             TieredRefreshConfig(
                 static_interval=7200,
                 semi_static_interval=3600,
@@ -218,7 +224,9 @@ class TestTieredRefreshConfig:
             )
 
         # Semi-static >= static
-        with pytest.raises(ConfigurationError, match="Semi-static interval.*must be less than"):
+        with pytest.raises(
+            ConfigurationError, match="Semi-static interval.*must be less than"
+        ):
             TieredRefreshConfig(
                 static_interval=7200,
                 semi_static_interval=7200,
@@ -394,7 +402,9 @@ class TestConfigMigration:
             "api_key": "a1b2c3d4e5f6789012345678901234567890abcd",
             "organization_id": "654321",
         }
-        with pytest.raises(ConfigurationError, match="Organization ID cannot be changed"):
+        with pytest.raises(
+            ConfigurationError, match="Organization ID cannot be changed"
+        ):
             validate_config_migration(old_config, new_config)
 
     def test_invalid_new_config(self):
@@ -408,5 +418,7 @@ class TestConfigMigration:
             "organization_id": "123456",
             "scan_interval": "invalid",
         }
-        with pytest.raises(ConfigurationError, match="Invalid configuration after migration"):
+        with pytest.raises(
+            ConfigurationError, match="Invalid configuration after migration"
+        ):
             validate_config_migration(old_config, new_config)

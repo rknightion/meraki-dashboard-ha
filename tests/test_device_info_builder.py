@@ -44,16 +44,13 @@ class TestDeviceInfoBuilder:
     def test_network_hub_device_info(self):
         """Test building network hub device info."""
         builder = DeviceInfoBuilder()
-        device_info = (
-            builder.for_network_hub(
-                "net123",
-                "mt",
-                "Test Network MT Hub",
-                "org123",
-                "https://dashboard.meraki.com",
-            )
-            .build()
-        )
+        device_info = builder.for_network_hub(
+            "net123",
+            "mt",
+            "Test Network MT Hub",
+            "org123",
+            "https://dashboard.meraki.com",
+        ).build()
 
         assert device_info == {
             "identifiers": {(DOMAIN, "net123_mt")},
@@ -87,16 +84,13 @@ class TestDeviceInfoBuilder:
         }
 
         builder = DeviceInfoBuilder()
-        device_info = (
-            builder.for_device(
-                device_data,
-                "config123",
-                "net123",
-                "mt",
-                "https://dashboard.meraki.com",
-            )
-            .build()
-        )
+        device_info = builder.for_device(
+            device_data,
+            "config123",
+            "net123",
+            "mt",
+            "https://dashboard.meraki.com",
+        ).build()
 
         assert device_info == {
             "identifiers": {(DOMAIN, "config123_Q2XX-XXXX-XXXX")},
@@ -118,16 +112,13 @@ class TestDeviceInfoBuilder:
         }
 
         builder = DeviceInfoBuilder()
-        device_info = (
-            builder.for_device(
-                device_data,
-                "config123",
-                "net123",
-                "mt",
-                "https://dashboard.meraki.com",
-            )
-            .build()
-        )
+        device_info = builder.for_device(
+            device_data,
+            "config123",
+            "net123",
+            "mt",
+            "https://dashboard.meraki.com",
+        ).build()
 
         assert device_info["configuration_url"] == (
             "https://dashboard.meraki.com/manage/nodes/new_list/Q2XX-XXXX-XXXX"
@@ -138,14 +129,11 @@ class TestDeviceInfoBuilder:
         device_data = {"serial": "Q2XX-XXXX-XXXX"}
 
         builder = DeviceInfoBuilder()
-        device_info = (
-            builder.for_device(
-                device_data,
-                "config123",
-                via_device_id="custom_via_device",
-            )
-            .build()
-        )
+        device_info = builder.for_device(
+            device_data,
+            "config123",
+            via_device_id="custom_via_device",
+        ).build()
 
         assert device_info["via_device"] == (DOMAIN, "custom_via_device")
 

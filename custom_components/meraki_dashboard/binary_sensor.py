@@ -104,7 +104,11 @@ async def async_setup_entry(
             if not device_serial:
                 continue
 
-            _LOGGER.debug("Creating binary sensors for MT device: %s", device_serial)
+            _LOGGER.debug(
+                "Creating binary sensors for MT device: %s (model: %s)",
+                device_serial,
+                device.get("model", "MISSING")
+            )
 
             # Create binary sensors for applicable metrics that the device supports
             entities_created_for_device = 0

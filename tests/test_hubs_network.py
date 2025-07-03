@@ -730,6 +730,8 @@ class TestNetworkHubEdgeCases:
 
         # Device is no longer sanitized during discovery, it's kept as-is
         assert len(network_hub.devices) == 1
-        assert network_hub.devices[0]["name"] == "MT@Device#1"  # Original name preserved
+        assert (
+            network_hub.devices[0]["name"] == "MT@Device#1"
+        )  # Original name preserved
         assert network_hub.devices[0]["network_id"] == "test_network_id"
         assert network_hub.devices[0]["network_name"] == "Test Network"

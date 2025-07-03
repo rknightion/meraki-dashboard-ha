@@ -23,7 +23,7 @@ class MerakiDeviceBuilder:
             "configurationUpdatedAt": "2024-01-01T00:00:00Z",
             "lat": 37.4180951010362,
             "lng": -122.098531723022,
-            "address": "1600 Pennsylvania Ave, Washington, DC 20500"
+            "address": "1600 Pennsylvania Ave, Washington, DC 20500",
         }
 
     def with_serial(self, serial: str) -> "MerakiDeviceBuilder":
@@ -66,7 +66,9 @@ class MerakiDeviceBuilder:
         self._data["firmware"] = firmware
         return self
 
-    def with_location(self, lat: float, lng: float, address: str = "") -> "MerakiDeviceBuilder":
+    def with_location(
+        self, lat: float, lng: float, address: str = ""
+    ) -> "MerakiDeviceBuilder":
         """Set the device location."""
         self._data["lat"] = lat
         self._data["lng"] = lng
@@ -120,13 +122,15 @@ class MerakiDeviceBuilder:
         """Build and return the device data."""
         return self._data.copy()
 
-    def build_many(self, count: int, serial_prefix: str = "Q2XX-XXXX-") -> list[dict[str, Any]]:
+    def build_many(
+        self, count: int, serial_prefix: str = "Q2XX-XXXX-"
+    ) -> list[dict[str, Any]]:
         """Build multiple devices with sequential serial numbers."""
         devices = []
         for i in range(count):
             device = self._data.copy()
             device["serial"] = f"{serial_prefix}{i:04d}"
-            device["name"] = f"{self._data['name']} {i+1}"
+            device["name"] = f"{self._data['name']} {i + 1}"
             device["mac"] = f"00:11:22:33:44:{i:02X}"
             device["lanIp"] = f"192.168.1.{100 + i}"
             devices.append(device)
@@ -152,7 +156,7 @@ class DeviceStatusBuilder:
             "lanIp": "192.168.1.100",
             "gateway": "192.168.1.1",
             "primaryDns": "8.8.8.8",
-            "secondaryDns": "8.8.4.4"
+            "secondaryDns": "8.8.4.4",
         }
 
     def with_serial(self, serial: str) -> "DeviceStatusBuilder":

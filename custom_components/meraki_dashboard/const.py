@@ -160,7 +160,7 @@ class EventData(StrEnum):
 
 
 # API Configuration
-USER_AGENT: Final = "MerakiDashboardHomeAssistant/1.0.0"
+USER_AGENT: Final = "MerakiDashboardHomeAssistant rknightion"
 DEFAULT_BASE_URL: Final = "https://api.meraki.com/api/v1"
 REGIONAL_BASE_URLS: Final = {
     "Global": "https://api.meraki.com/api/v1",

@@ -74,26 +74,26 @@ class TestEventFilter:
         filter = EventFilter(
             event_types=["button_pressed"],
             device_serials=["ABC123"],
-            sensor_types=[MT_SENSOR_BUTTON]
+            sensor_types=[MT_SENSOR_BUTTON],
         )
 
         # Matches all criteria
-        assert filter.matches("button_pressed", {
-            EVENT_DEVICE_SERIAL: "ABC123",
-            EVENT_SENSOR_TYPE: MT_SENSOR_BUTTON
-        })
+        assert filter.matches(
+            "button_pressed",
+            {EVENT_DEVICE_SERIAL: "ABC123", EVENT_SENSOR_TYPE: MT_SENSOR_BUTTON},
+        )
 
         # Wrong event type
-        assert not filter.matches("door_opened", {
-            EVENT_DEVICE_SERIAL: "ABC123",
-            EVENT_SENSOR_TYPE: MT_SENSOR_BUTTON
-        })
+        assert not filter.matches(
+            "door_opened",
+            {EVENT_DEVICE_SERIAL: "ABC123", EVENT_SENSOR_TYPE: MT_SENSOR_BUTTON},
+        )
 
         # Wrong device serial
-        assert not filter.matches("button_pressed", {
-            EVENT_DEVICE_SERIAL: "XYZ789",
-            EVENT_SENSOR_TYPE: MT_SENSOR_BUTTON
-        })
+        assert not filter.matches(
+            "button_pressed",
+            {EVENT_DEVICE_SERIAL: "XYZ789", EVENT_SENSOR_TYPE: MT_SENSOR_BUTTON},
+        )
 
 
 class TestEventThrottle:
@@ -174,10 +174,9 @@ class TestMerakiEventService:
         event_service.subscribe("button_pressed", subscriber)
 
         # Publish event
-        await event_service.publish_event("button_pressed", {
-            EVENT_DEVICE_SERIAL: "ABC123",
-            EVENT_VALUE: True
-        })
+        await event_service.publish_event(
+            "button_pressed", {EVENT_DEVICE_SERIAL: "ABC123", EVENT_VALUE: True}
+        )
 
         # Check Home Assistant event was fired
         hass.bus.async_fire.assert_called_once_with(
@@ -185,8 +184,8 @@ class TestMerakiEventService:
             {
                 EVENT_DEVICE_SERIAL: "ABC123",
                 EVENT_VALUE: True,
-                EVENT_TYPE: "button_pressed"
-            }
+                EVENT_TYPE: "button_pressed",
+            },
         )
 
         # Check subscriber received event
@@ -205,18 +204,18 @@ class TestMerakiEventService:
         event_service.subscribe("button_pressed", subscriber2)  # No filter
 
         # Publish event for ABC123
-        await event_service.publish_event("button_pressed", {
-            EVENT_DEVICE_SERIAL: "ABC123"
-        })
+        await event_service.publish_event(
+            "button_pressed", {EVENT_DEVICE_SERIAL: "ABC123"}
+        )
 
         # Both should receive
         assert len(subscriber1.events_received) == 1
         assert len(subscriber2.events_received) == 1
 
         # Publish event for different device
-        await event_service.publish_event("button_pressed", {
-            EVENT_DEVICE_SERIAL: "XYZ789"
-        })
+        await event_service.publish_event(
+            "button_pressed", {EVENT_DEVICE_SERIAL: "XYZ789"}
+        )
 
         # Only subscriber2 should receive
         assert len(subscriber1.events_received) == 1  # No new event
@@ -225,19 +224,21 @@ class TestMerakiEventService:
     async def test_event_throttling(self, event_service, hass):
         """Test event throttling."""
         # Publish same event rapidly
-        await event_service.publish_event("button_pressed", {
-            EVENT_DEVICE_SERIAL: "ABC123"
-        })
-        await event_service.publish_event("button_pressed", {
-            EVENT_DEVICE_SERIAL: "ABC123"
-        })
+        await event_service.publish_event(
+            "button_pressed", {EVENT_DEVICE_SERIAL: "ABC123"}
+        )
+        await event_service.publish_event(
+            "button_pressed", {EVENT_DEVICE_SERIAL: "ABC123"}
+        )
 
         # Only first event should be fired
         assert hass.bus.async_fire.call_count == 1
 
     async def test_track_sensor_changes_no_device(self, event_service):
         """Test tracking sensor changes with no device in registry."""
-        with patch("custom_components.meraki_dashboard.services.event_service.dr") as mock_dr:
+        with patch(
+            "custom_components.meraki_dashboard.services.event_service.dr"
+        ) as mock_dr:
             mock_registry = MagicMock()
             mock_registry.async_get_device.return_value = None
             mock_registry.devices.values.return_value = []
@@ -246,7 +247,7 @@ class TestMerakiEventService:
             await event_service.track_sensor_changes(
                 "ABC123",
                 [{"metric": MT_SENSOR_BUTTON, "value": True}],
-                {"domain": "meraki_dashboard"}
+                {"domain": "meraki_dashboard"},
             )
 
             # Should log missing device
@@ -254,7 +255,9 @@ class TestMerakiEventService:
 
     async def test_track_sensor_changes_with_device(self, event_service, hass):
         """Test tracking sensor changes with device in registry."""
-        with patch("custom_components.meraki_dashboard.services.event_service.dr") as mock_dr:
+        with patch(
+            "custom_components.meraki_dashboard.services.event_service.dr"
+        ) as mock_dr:
             mock_device = MagicMock()
             mock_device.id = "device_123"
 
@@ -265,8 +268,14 @@ class TestMerakiEventService:
             # First reading - no previous state
             await event_service.track_sensor_changes(
                 "ABC123",
-                [{"metric": MT_SENSOR_BUTTON, "value": True, "ts": "2024-01-01T00:00:00"}],
-                {"domain": "meraki_dashboard"}
+                [
+                    {
+                        "metric": MT_SENSOR_BUTTON,
+                        "value": True,
+                        "ts": "2024-01-01T00:00:00",
+                    }
+                ],
+                {"domain": "meraki_dashboard"},
             )
 
             # No event should be fired (no previous state)
@@ -275,8 +284,14 @@ class TestMerakiEventService:
             # Second reading - state change
             await event_service.track_sensor_changes(
                 "ABC123",
-                [{"metric": MT_SENSOR_BUTTON, "value": False, "ts": "2024-01-01T00:01:00"}],
-                {"domain": "meraki_dashboard"}
+                [
+                    {
+                        "metric": MT_SENSOR_BUTTON,
+                        "value": False,
+                        "ts": "2024-01-01T00:01:00",
+                    }
+                ],
+                {"domain": "meraki_dashboard"},
             )
 
             # Event should be fired
@@ -290,18 +305,39 @@ class TestMerakiEventService:
     def test_determine_event_type(self, event_service):
         """Test event type determination."""
         # Button events
-        assert event_service._determine_event_type(MT_SENSOR_BUTTON, True) == "button_pressed"
-        assert event_service._determine_event_type(MT_SENSOR_BUTTON, 1) == "button_pressed"
-        assert event_service._determine_event_type(MT_SENSOR_BUTTON, False) == "button_released"
-        assert event_service._determine_event_type(MT_SENSOR_BUTTON, 0) == "button_released"
+        assert (
+            event_service._determine_event_type(MT_SENSOR_BUTTON, True)
+            == "button_pressed"
+        )
+        assert (
+            event_service._determine_event_type(MT_SENSOR_BUTTON, 1) == "button_pressed"
+        )
+        assert (
+            event_service._determine_event_type(MT_SENSOR_BUTTON, False)
+            == "button_released"
+        )
+        assert (
+            event_service._determine_event_type(MT_SENSOR_BUTTON, 0)
+            == "button_released"
+        )
 
         # Door events
-        assert event_service._determine_event_type(MT_SENSOR_DOOR, True) == "door_opened"
-        assert event_service._determine_event_type(MT_SENSOR_DOOR, False) == "door_closed"
+        assert (
+            event_service._determine_event_type(MT_SENSOR_DOOR, True) == "door_opened"
+        )
+        assert (
+            event_service._determine_event_type(MT_SENSOR_DOOR, False) == "door_closed"
+        )
 
         # Water events
-        assert event_service._determine_event_type(MT_SENSOR_WATER, True) == "water_detected"
-        assert event_service._determine_event_type(MT_SENSOR_WATER, False) == "water_cleared"
+        assert (
+            event_service._determine_event_type(MT_SENSOR_WATER, True)
+            == "water_detected"
+        )
+        assert (
+            event_service._determine_event_type(MT_SENSOR_WATER, False)
+            == "water_cleared"
+        )
 
         # Unknown sensor
         assert event_service._determine_event_type("unknown", True) == "state_changed"

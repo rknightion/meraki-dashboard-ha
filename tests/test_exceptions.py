@@ -33,7 +33,7 @@ class TestMerakiError:
             "API call failed",
             device_serial="Q2XX-XXXX-XXXX",
             operation="get_device_info",
-            attempt_count=3
+            attempt_count=3,
         )
 
         assert "API call failed" in str(error)
@@ -48,7 +48,7 @@ class TestMerakiError:
             "Auth failed",
             api_key="secret_key_123",
             password="super_secret",
-            device_serial="Q2XX-XXXX-XXXX"  # Not sensitive
+            device_serial="Q2XX-XXXX-XXXX",  # Not sensitive
         )
 
         error_str = str(error)
@@ -76,11 +76,14 @@ class TestAPIError:
             "API request failed",
             status_code=404,
             request_url="https://api.meraki.com/api/v1/organizations",
-            response_data={"error": "Not found"}
+            response_data={"error": "Not found"},
         )
 
         assert error.status_code == 404
-        assert error.context["request_url"] == "https://api.meraki.com/api/v1/organizations"
+        assert (
+            error.context["request_url"]
+            == "https://api.meraki.com/api/v1/organizations"
+        )
         assert error.context["response_data"] == {"error": "Not found"}
 
 
@@ -90,9 +93,7 @@ class TestConfigurationError:
     def test_configuration_error_creation(self):
         """Test creating configuration error with config details."""
         error = ConfigurationError(
-            "Invalid configuration",
-            config_key="scan_interval",
-            config_value=30
+            "Invalid configuration", config_key="scan_interval", config_value=30
         )
 
         assert error.context["config_key"] == "scan_interval"
@@ -101,9 +102,7 @@ class TestConfigurationError:
     def test_configuration_error_sensitive_value_redaction(self):
         """Test that sensitive config values are redacted."""
         error = ConfigurationError(
-            "Invalid API key",
-            config_key="api_key",
-            config_value="secret_key_123"
+            "Invalid API key", config_key="api_key", config_value="secret_key_123"
         )
 
         assert error.context["config_value"] == "***REDACTED***"
@@ -115,9 +114,7 @@ class TestDeviceError:
     def test_device_error_creation(self):
         """Test creating device error with device context."""
         error = DeviceError(
-            "Device not responding",
-            device_serial="Q2XX-XXXX-XXXX",
-            device_type="MT"
+            "Device not responding", device_serial="Q2XX-XXXX-XXXX", device_type="MT"
         )
 
         assert error.context["device_serial"] == "Q2XX-XXXX-XXXX"
@@ -164,7 +161,7 @@ class TestUtilityFunctions:
                 DeviceError,
                 "Device offline",
                 device_serial="Q2XX-XXXX-XXXX",
-                last_seen="2024-01-01T12:00:00Z"
+                last_seen="2024-01-01T12:00:00Z",
             )
 
         error = exc_info.value

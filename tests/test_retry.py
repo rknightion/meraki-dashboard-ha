@@ -316,6 +316,7 @@ class TestRetryApiCall:
     @pytest.mark.asyncio
     async def test_retry_api_call_async_function(self):
         """Test retry_api_call with async function."""
+
         async def async_func(value: str) -> str:
             return f"async_{value}"
 
@@ -329,6 +330,7 @@ class TestRetryApiCall:
     @pytest.mark.asyncio
     async def test_retry_api_call_sync_function(self):
         """Test retry_api_call with sync function."""
+
         def sync_func(value: str) -> str:
             return f"sync_{value}"
 
