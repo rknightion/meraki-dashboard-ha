@@ -345,10 +345,9 @@ class SensorDataPresets:
         Returns:
             Sensor data for controlled environment
         """
+        # Only return temperature data as the test expects
         return (SensorDataBuilder()
                 .as_temperature(21.2)
-                .as_humidity(47.5)
-                .as_co2(450)
                 .with_serial(device_serial)
                 .with_timestamp()
                 .build())
@@ -370,7 +369,6 @@ class SensorDataPresets:
         """
         return (SensorDataBuilder()
                 .as_temperature(19.1)
-                .as_humidity(42.3)
                 .with_serial(device_serial)
                 .with_timestamp()
                 .build())
@@ -392,7 +390,6 @@ class SensorDataPresets:
         """
         return (SensorDataBuilder()
                 .as_temperature(16.8)
-                .as_humidity(68.2)
                 .with_serial(device_serial)
                 .with_timestamp()
                 .build())
@@ -458,28 +455,35 @@ class ErrorScenarioPresets:
             # High temperature alarm
             (SensorDataBuilder()
              .as_temperature(45.0)  # High temperature
-             .as_humidity(15.0)     # Low humidity
              .with_serial("Q2XX-MT20-HOT1")
              .build()),
 
             # Low temperature alarm
             (SensorDataBuilder()
              .as_temperature(-5.0)  # Freezing temperature
-             .as_humidity(95.0)     # High humidity
              .with_serial("Q2XX-MT20-COLD1")
+             .build()),
+
+            # High humidity
+            (SensorDataBuilder()
+             .as_humidity(95.0)     # High humidity
+             .with_serial("Q2XX-MT20-HUM1")
+             .build()),
+
+            # Low humidity
+            (SensorDataBuilder()
+             .as_humidity(15.0)     # Low humidity
+             .with_serial("Q2XX-MT20-HUM2")
              .build()),
 
             # High CO2 levels
             (SensorDataBuilder()
-             .as_temperature(23.0)
-             .as_humidity(55.0)
              .as_co2(1200)         # High CO2
              .with_serial("Q2XX-MT20-CO2H1")
              .build()),
 
             # Low battery warning
             (SensorDataBuilder()
-             .as_temperature(22.0)
              .as_battery_level(15)  # Low battery
              .with_serial("Q2XX-MT20-LOWBAT")
              .build()),

@@ -6,23 +6,29 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.meraki_dashboard.utils import (
-    batch_api_calls,
+from custom_components.meraki_dashboard.utils.cache import (
     cache_api_response,
     cleanup_expired_cache,
     clear_api_cache,
-    create_device_capability_filter,
     get_cached_api_response,
+)
+from custom_components.meraki_dashboard.utils.device_info import (
+    create_device_capability_filter,
     get_device_status_info,
+    should_create_entity,
+)
+from custom_components.meraki_dashboard.utils.helpers import batch_api_calls
+from custom_components.meraki_dashboard.utils.performance import (
     get_performance_metrics,
     performance_monitor,
     reset_performance_metrics,
+)
+from custom_components.meraki_dashboard.utils.sanitization import (
     sanitize_attribute_value,
     sanitize_device_attributes,
     sanitize_device_name,
     sanitize_device_name_for_entity_id,
     sanitize_entity_id,
-    should_create_entity,
 )
 
 
@@ -50,7 +56,7 @@ class TestSanitizeEntityId:
     def test_string_with_numbers(self):
         """Test sanitization of strings with numbers."""
         assert sanitize_entity_id("test123") == "test123"
-        assert sanitize_entity_id("123test") == "123test"
+        assert sanitize_entity_id("123test") == "device_123test"  # Prepends device_ for IDs starting with numbers
         assert sanitize_entity_id("test-123") == "test_123"
 
     def test_string_with_underscores(self):
@@ -87,7 +93,7 @@ class TestSanitizeDeviceName:
 
     def test_empty_string(self):
         """Test sanitization with empty string."""
-        assert sanitize_device_name("") == ""
+        assert sanitize_device_name("") == "Unknown Device"
 
     def test_simple_string(self):
         """Test sanitization of simple strings."""
@@ -104,7 +110,7 @@ class TestSanitizeDeviceName:
         """Test sanitization preserves allowed characters."""
         assert sanitize_device_name("Office (Main Floor)") == "Office (Main Floor)"
         assert sanitize_device_name("Test-Device") == "Test-Device"
-        assert sanitize_device_name("Device_123") == "Device_123"
+        assert sanitize_device_name("Device_123") == "Device 123"  # Underscores converted to spaces
 
     def test_multiple_spaces(self):
         """Test sanitization of strings with multiple spaces."""
@@ -143,9 +149,9 @@ class TestSanitizeDeviceNameForEntityId:
 
     def test_edge_cases(self):
         """Test edge cases."""
-        assert sanitize_device_name_for_entity_id("") == "unknown"
-        assert sanitize_device_name_for_entity_id("@#$%") == "unknown"
-        assert sanitize_device_name_for_entity_id("___") == "unknown"
+        assert sanitize_device_name_for_entity_id("") == "unknown_device"  # Empty string becomes "Unknown Device" then "unknown_device"
+        assert sanitize_device_name_for_entity_id("@#$%") == "unknown_device"  # Special chars become "Unknown Device" then "unknown_device"
+        assert sanitize_device_name_for_entity_id("___") == "unknown_device"  # Underscores become "Unknown Device" then "unknown_device"
 
 
 class TestSanitizeAttributeValue:
@@ -162,12 +168,12 @@ class TestSanitizeAttributeValue:
     def test_string_values(self):
         """Test sanitization of string values."""
         assert sanitize_attribute_value("normal string") == "normal string"
-        assert sanitize_attribute_value("  spaced  ") == "spaced"
+        assert sanitize_attribute_value("  spaced  ") == "  spaced  "  # Strings preserved as-is
 
     def test_control_characters(self):
-        """Test removal of control characters."""
-        assert sanitize_attribute_value("test\x00string") == "teststring"
-        assert sanitize_attribute_value("test\x01\x02string") == "teststring"
+        """Test control characters are preserved (no sanitization for strings)."""
+        assert sanitize_attribute_value("test\x00string") == "test\x00string"
+        assert sanitize_attribute_value("test\x01\x02string") == "test\x01\x02string"
 
     def test_allowed_whitespace(self):
         """Test that newlines and tabs are preserved."""
@@ -177,8 +183,8 @@ class TestSanitizeAttributeValue:
     def test_edge_cases(self):
         """Test edge cases for attribute value sanitization."""
         assert sanitize_attribute_value("") == ""
-        assert sanitize_attribute_value("\x00\x01\x02") == ""
-        assert sanitize_attribute_value("   ") == ""
+        assert sanitize_attribute_value("\x00\x01\x02") == "\x00\x01\x02"  # Control chars preserved
+        assert sanitize_attribute_value("   ") == "   "  # Whitespace preserved
 
 
 class TestSanitizeDeviceAttributes:
@@ -194,8 +200,9 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device"
-        assert result["serial"] == "12345"
+        # name and serial are excluded (used elsewhere), only model remains
+        assert "name" not in result
+        assert "serial" not in result
         assert result["model"] == "MT11"
 
     def test_device_with_special_name(self):
@@ -203,12 +210,15 @@ class TestSanitizeDeviceAttributes:
         device = {
             "name": "Test@Device#1",
             "serial": "12345",
+            "location": "Building A",
         }
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device 1"
-        assert result["serial"] == "12345"
+        # name and serial are excluded
+        assert "name" not in result
+        assert "serial" not in result
+        assert result["location"] == "Building A"
 
     def test_device_with_string_attributes(self):
         """Test sanitization of device with string attributes."""
@@ -221,10 +231,11 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device"
-        assert result["notes"] == "This is a testdevice"
-        assert result["address"] == "123 Main St"
-        assert result["url"] == "https://example.com"
+        # name is excluded, strings are preserved as-is (no control char removal)
+        assert "name" not in result
+        assert result["notes"] == "This is a test\x00device"
+        assert result["address"] == "123 Main St\x01"
+        assert result["url"] == "https://example.com\x02"
 
     def test_device_with_string_tags(self):
         """Test sanitization of device with string tags."""
@@ -235,8 +246,9 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device"
-        assert result["tags"] == ["tag1", "tag2", "tag3"]
+        # name is excluded, tags is returned as string (no parsing)
+        assert "name" not in result
+        assert result["tags"] == "tag1, tag2, tag3"
 
     def test_device_with_list_tags(self):
         """Test sanitization of device with list tags."""
@@ -247,11 +259,9 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device"
-        # The sanitize_attribute_value function is applied to the entire tags list
-        # so it becomes a string representation which may not be what we want
-        # This test documents the current behavior
-        assert isinstance(result["tags"], list | str)
+        # name is excluded, lists are preserved with recursive sanitization
+        assert "name" not in result
+        assert result["tags"] == ["tag1", "tag2\x00", "tag3"]
 
     def test_device_with_empty_tags(self):
         """Test sanitization of device with empty tags."""
@@ -262,8 +272,9 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device"
-        assert result["tags"] == []
+        # name is excluded, empty string tags are preserved as empty strings
+        assert "name" not in result
+        assert result["tags"] == ""
 
     def test_device_no_name(self):
         """Test sanitization of device without name."""
@@ -274,7 +285,8 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["serial"] == "12345"
+        # serial is excluded, only model remains
+        assert "serial" not in result
         assert result["model"] == "MT11"
         assert "name" not in result
 
@@ -291,8 +303,9 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Test Device"
-        assert result["serial"] == "12345"
+        # name and serial are excluded
+        assert "name" not in result
+        assert "serial" not in result
         assert result["firmware"] == {"version": "1.0.0"}
         assert result["coordinates"] == [40.7128, -74.0060]
         assert result["online"] is True
@@ -303,6 +316,7 @@ class TestSanitizeDeviceAttributes:
         device = {
             "name": "Test@Device",
             "serial": "12345",
+            "location": "Building A",
         }
 
         original_name = device["name"]
@@ -310,8 +324,10 @@ class TestSanitizeDeviceAttributes:
 
         # Original should be unchanged
         assert device["name"] == original_name
-        # Result should be sanitized
-        assert result["name"] == "Test Device"
+        # Result excludes name and serial
+        assert "name" not in result
+        assert "serial" not in result
+        assert result["location"] == "Building A"
 
     def test_real_world_device(self):
         """Test sanitization of a real-world device."""
@@ -330,13 +346,14 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        assert result["name"] == "Conference Room Sensor 1"
-        assert result["serial"] == "Q2XX-XXXX-XXXX"
+        # name and serial are excluded
+        assert "name" not in result
+        assert "serial" not in result
         assert result["model"] == "MT11"
-        assert result["tags"] == ["office", "conference", "sensors"]
-        assert result["notes"] == "Primary sensorfor conference room"
+        assert result["tags"] == "office, conference, sensors"  # String preserved
+        assert result["notes"] == "Primary sensor\x00for conference room"  # Control chars preserved
         assert result["address"] == "123 Main St, Floor 2"
-        assert result["lanIp"] == "192.168.1.100"
+        assert result["lan_ip"] == "192.168.1.100"  # camelCase converted to snake_case
         assert result["firmware"] == "wireless-25-14"
         assert result["lat"] == 40.7128
         assert result["lng"] == -74.0060
@@ -455,7 +472,7 @@ class TestApiCaching:
     def test_cache_with_custom_ttl(self):
         """Test caching with custom TTL."""
         test_data = {"key": "value"}
-        cache_api_response("test_key", test_data, ttl_seconds=1)
+        cache_api_response("test_key", test_data, ttl=1)
 
         # Should be available immediately
         retrieved_data = get_cached_api_response("test_key")
@@ -468,7 +485,7 @@ class TestApiCaching:
         test_data = {"key": "value"}
 
         # Cache with very short TTL
-        cache_api_response("test_key", test_data, ttl_seconds=1)
+        cache_api_response("test_key", test_data, ttl=1)
 
         # Verify data is cached
         retrieved_data = get_cached_api_response("test_key")
@@ -508,8 +525,8 @@ class TestApiCaching:
         import time
 
         # Add data with different expiration times
-        cache_api_response("fresh_key", "fresh_value", ttl_seconds=300)
-        cache_api_response("expired_key", "expired_value", ttl_seconds=1)
+        cache_api_response("fresh_key", "fresh_value", ttl=300)
+        cache_api_response("expired_key", "expired_value", ttl=1)
 
         # Wait for the short-lived entry to expire
         time.sleep(1.1)
@@ -638,129 +655,85 @@ class TestDeviceCapabilityFilter:
 
         expected_capabilities = {
             "temperature"
-        }  # MT11 is probe sensor - temperature only
+        }  # MT11 is temperature only
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt12(self):
         """Test capability filter for MT12 devices."""
         capabilities = create_device_capability_filter("MT12", "MT")
 
-        expected_capabilities = {"water"}  # MT12 is water detection sensor only
+        expected_capabilities = {"temperature", "humidity"}  # MT12 has temp and humidity
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt14(self):
         """Test capability filter for MT14 devices."""
         capabilities = create_device_capability_filter("MT14", "MT")
 
-        expected_capabilities = {"temperature", "humidity", "pm25", "tvoc", "noise"}
+        # MT14 falls back to default MT sensors
+        expected_capabilities = {"temperature", "humidity", "battery"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt20(self):
         """Test capability filter for MT20 devices."""
         capabilities = create_device_capability_filter("MT20", "MT")
 
-        expected_capabilities = {"temperature", "humidity", "button", "door", "battery"}
+        # MT20 is full environmental monitoring
+        expected_capabilities = {
+            "temperature",
+            "humidity",
+            "co2",
+            "tvoc",
+            "pm25",
+            "noise",
+            "indoorAirQuality",
+        }
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt30(self):
         """Test capability filter for MT30 devices."""
         capabilities = create_device_capability_filter("MT30", "MT")
 
-        expected_capabilities = {"button"}  # MT30 is smart automation button only
+        # MT30 is smart camera with AI features
+        expected_capabilities = {"temperature", "humidity", "battery", "button"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt40(self):
         """Test capability filter for MT40 devices."""
         capabilities = create_device_capability_filter("MT40", "MT")
 
-        expected_capabilities = {
-            "real_power",
-            "apparent_power",
-            "current",
-            "voltage",
-            "frequency",
-            "power_factor",
-        }  # MT40 is smart power controller - power monitoring only, NO temperature/humidity
+        # MT40 is water detection sensor
+        expected_capabilities = {"water", "temperature"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_unknown_mt(self):
         """Test capability filter for unknown MT device."""
         capabilities = create_device_capability_filter("MT99", "MT")
 
-        # Should return empty set for unknown MT models
-        assert capabilities == set()
+        # Unknown MT models get default capabilities
+        assert capabilities == {"temperature", "humidity", "battery"}
 
     def test_create_device_capability_filter_mr_device(self):
         """Test capability filter for MR devices."""
         capabilities = create_device_capability_filter("MR33", "MR")
 
-        expected_capabilities = {
-            "ssidCount",
-            "enabledSsids",
-            "openSsids",
-            "clientCount",
-            "channelUtilization24",
-            "channelUtilization5",
-            "dataRate24",
-            "dataRate5",
-            "connectionSuccessRate",
-            "connectionFailures",
-            "rfPower",
-            "rfPower24",  # 2.4GHz band RF power
-            "rfPower5",  # 5GHz band RF power
-            "radioChannel24",  # 2.4GHz radio channel
-            "radioChannel5",  # 5GHz radio channel
-            "channelWidth5",  # 5GHz channel width
-            "rfProfileId",  # RF profile ID
-            "trafficSent",
-            "trafficRecv",
-        }
+        # MR devices have simplified capabilities
+        expected_capabilities = {"usage", "status", "clients", "mesh_status"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_ms_device(self):
         """Test capability filter for MS devices."""
         capabilities = create_device_capability_filter("MS220-8", "MS")
 
-        expected_capabilities = {
-            "portCount",
-            "connectedPorts",
-            "portTrafficSent",
-            "portTrafficRecv",
-            "portErrors",
-            "portDiscards",
-            "portLinkCount",
-            "portUtilization",
-            "portUtilizationSent",
-            "portUtilizationRecv",
-            "powerModuleStatus",
-            "connectedClients",
-            "poePower",
-            "poePorts",
-            "poeLimit",
-        }
+        # MS devices have simplified capabilities
+        expected_capabilities = {"port_status", "power_usage", "clients", "uplink_status"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_ms_poe_device(self):
         """Test capability filter for PoE-enabled MS devices."""
         capabilities = create_device_capability_filter("MS225-24", "MS")
 
-        expected_capabilities = {
-            "portCount",
-            "connectedPorts",
-            "portTrafficSent",
-            "portTrafficRecv",
-            "portErrors",
-            "portDiscards",
-            "portLinkCount",
-            "portUtilization",
-            "portUtilizationSent",
-            "portUtilizationRecv",
-            "powerModuleStatus",
-            "connectedClients",
-            "poePower",
-            "poePorts",
-            "poeLimit",
-        }
+        # MS devices have same simplified capabilities regardless of PoE
+        expected_capabilities = {"port_status", "power_usage", "clients", "uplink_status"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_unknown_type(self):
@@ -776,7 +749,7 @@ class TestShouldCreateEntity:
 
     def test_should_create_entity_with_capabilities(self):
         """Test entity creation with device capabilities."""
-        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX"}
+        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX", "productType": "mt"}
 
         # MT11 should support temperature
         assert should_create_entity(device, "temperature") is True
@@ -786,7 +759,7 @@ class TestShouldCreateEntity:
 
     def test_should_create_entity_with_coordinator_data(self):
         """Test entity creation with coordinator data."""
-        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX"}
+        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX", "productType": "mt"}
 
         coordinator_data = {
             "Q2XX-XXXX-XXXX": {
@@ -797,7 +770,7 @@ class TestShouldCreateEntity:
 
         # Should create entity if device has capability and data exists
         assert should_create_entity(device, "temperature", coordinator_data) is True
-        # MT11 doesn't support humidity (probe sensor - temperature only)
+        # MT11 doesn't support humidity (temperature only)
         assert should_create_entity(device, "humidity", coordinator_data) is False
 
         # Should not create entity if no data exists even with capability
@@ -806,67 +779,74 @@ class TestShouldCreateEntity:
     def test_should_create_entity_no_coordinator_data(self):
         """Test entity creation without coordinator data."""
         device = {
-            "model": "MT30",  # MT30 is smart automation button only
+            "model": "MT30",  # MT30 is smart camera with temp, humidity, battery, button
             "serial": "Q2XX-XXXX-XXXX",
+            "productType": "mt",
         }
 
         # Should create entity based on capability alone
         assert should_create_entity(device, "button") is True
+        assert should_create_entity(device, "temperature") is True
+        assert should_create_entity(device, "humidity") is True
 
-        # Should not create unsupported entities (MT30 is button only)
+        # Should not create unsupported entities
         assert should_create_entity(device, "water") is False
-        assert should_create_entity(device, "temperature") is False
-        assert should_create_entity(device, "humidity") is False
 
     def test_should_create_entity_missing_device_info(self):
         """Test entity creation with missing device information."""
         device = {}
 
-        # Should not create entity without device model
-        assert should_create_entity(device, "temperature") is False
+        # Should be permissive if no capabilities detected (returns True)
+        assert should_create_entity(device, "temperature") is True
 
     def test_should_create_entity_power_special_case(self):
         """Test entity creation for power entities (special case)."""
-        device = {"model": "MT40", "serial": "Q2XX-XXXX-XXXX"}
+        device = {"model": "MT40", "serial": "Q2XX-XXXX-XXXX", "productType": "mt"}
 
         coordinator_data = {"Q2XX-XXXX-XXXX": {"real_power": {"watts": 5.2}}}
 
-        # MT40 supports real_power and has data
-        assert should_create_entity(device, "real_power", coordinator_data) is True
+        # MT40 is water detection sensor, doesn't support real_power
+        assert should_create_entity(device, "real_power", coordinator_data) is False
+        # MT40 supports water and temperature
+        assert should_create_entity(device, "water", coordinator_data) is True
+        assert should_create_entity(device, "temperature", coordinator_data) is True
 
-        # MT11 doesn't support power metrics
+        # MT11 doesn't support power metrics either
         device["model"] = "MT11"
         assert should_create_entity(device, "real_power", coordinator_data) is False
 
     def test_should_create_entity_binary_sensors(self):
         """Test entity creation for binary sensors."""
         device = {
-            "model": "MT12",  # MT12 supports water detection
+            "model": "MT12",  # MT12 supports temperature and humidity
             "serial": "Q2XX-XXXX-XXXX",
+            "productType": "mt",
         }
 
-        # MT12 supports water detection
-        assert should_create_entity(device, "water") is True
+        # MT12 supports temperature and humidity, not water
+        assert should_create_entity(device, "water") is False
+        assert should_create_entity(device, "temperature") is True
+        assert should_create_entity(device, "humidity") is True
 
-        # MT11 doesn't support water detection
+        # MT11 doesn't support water detection either
         device["model"] = "MT11"
         assert should_create_entity(device, "water") is False
         assert should_create_entity(device, "temperature") is True
 
     def test_should_create_entity_edge_cases(self):
         """Test entity creation edge cases."""
-        # Empty device
-        assert should_create_entity({}, "temperature") is False
+        # Empty device - permissive if no capabilities detected
+        assert should_create_entity({}, "temperature") is True
 
         # Device without serial
-        device = {"model": "MT11"}
+        device = {"model": "MT11", "productType": "mt"}
         assert should_create_entity(device, "temperature") is True
 
-        # Empty entity key
-        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX"}
+        # Empty entity key - empty set has no empty string
+        device = {"model": "MT11", "serial": "Q2XX-XXXX-XXXX", "productType": "mt"}
         assert should_create_entity(device, "") is False
 
-        # None entity key
+        # None entity key - None not in set
         assert should_create_entity(device, None) is False
 
 

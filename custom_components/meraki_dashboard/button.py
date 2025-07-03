@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.button import ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_AUTO_DISCOVERY, DOMAIN
@@ -59,9 +60,7 @@ class MerakiUpdateSensorDataButton(MerakiButtonEntity):
         """
         # Create description for this button
         description = ButtonEntityDescription(
-            key="update_sensor_data",
-            name="Update sensor data",
-            icon="mdi:refresh"
+            key="update_sensor_data", name="Update sensor data", icon="mdi:refresh"
         )
 
         # Store org hub reference
@@ -74,11 +73,16 @@ class MerakiUpdateSensorDataButton(MerakiButtonEntity):
         super().__init__(description, config_entry.entry_id, domain_data)
 
         # Override device info to organization level
-        self._attr_device_info = DeviceInfoBuilder().for_organization(
-            org_hub.organization_id,
-            f"{org_hub.organization_name} Organization",
-            org_hub.base_url
-        ).build()
+        self._attr_device_info = cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_organization(
+                org_hub.organization_id,
+                f"{org_hub.organization_name} Organization",
+                org_hub.base_url,
+            )
+            .build(),
+        )
 
     async def async_press(self) -> None:
         """Handle button press to update sensor data."""
@@ -131,9 +135,7 @@ class MerakiDiscoverDevicesButton(MerakiButtonEntity):
         """
         # Create description for this button
         description = ButtonEntityDescription(
-            key="discover_devices",
-            name="Discover devices",
-            icon="mdi:magnify-scan"
+            key="discover_devices", name="Discover devices", icon="mdi:magnify-scan"
         )
 
         # Store org hub reference
@@ -146,11 +148,16 @@ class MerakiDiscoverDevicesButton(MerakiButtonEntity):
         super().__init__(description, config_entry.entry_id, domain_data)
 
         # Override device info to organization level
-        self._attr_device_info = DeviceInfoBuilder().for_organization(
-            org_hub.organization_id,
-            f"{org_hub.organization_name} Organization",
-            org_hub.base_url
-        ).build()
+        self._attr_device_info = cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_organization(
+                org_hub.organization_id,
+                f"{org_hub.organization_name} Organization",
+                org_hub.base_url,
+            )
+            .build(),
+        )
 
     async def async_press(self) -> None:
         """Handle button press to discover devices."""

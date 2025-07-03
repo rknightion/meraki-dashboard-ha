@@ -50,7 +50,9 @@ def handle_api_errors(
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             # Enhanced debug logging for function entry
-            _LOGGER.debug("Starting %s with args=%s, kwargs=%s", func.__name__, args, kwargs)
+            _LOGGER.debug(
+                "Starting %s with args=%s, kwargs=%s", func.__name__, args, kwargs
+            )
 
             try:
                 result = await func(*args, **kwargs)
@@ -63,7 +65,7 @@ def handle_api_errors(
                     func.__name__,
                     str(err),
                     type(err).__name__,
-                    exc_info=True
+                    exc_info=True,
                 )
 
                 # Check if we should reraise this error type
@@ -73,17 +75,31 @@ def handle_api_errors(
                 # Handle specific API error types
                 if isinstance(err, ClientResponseError):
                     return _handle_client_response_error(
-                        err, func.__name__, log_errors, default_return,
-                        convert_auth_errors, convert_connection_errors
+                        err,
+                        func.__name__,
+                        log_errors,
+                        default_return,
+                        convert_auth_errors,
+                        convert_connection_errors,
                     )
-                elif isinstance(err, ClientError | ClientTimeout | asyncio.TimeoutError):
+                elif isinstance(
+                    err, ClientError | ClientTimeout | asyncio.TimeoutError
+                ):
                     return _handle_connection_error(
-                        err, func.__name__, log_errors, default_return, convert_connection_errors
+                        err,
+                        func.__name__,
+                        log_errors,
+                        default_return,
+                        convert_connection_errors,
                     )
                 elif isinstance(err, MerakiApiError):
                     return _handle_meraki_api_error(
-                        err, func.__name__, log_errors, default_return,
-                        convert_auth_errors, convert_connection_errors
+                        err,
+                        func.__name__,
+                        log_errors,
+                        default_return,
+                        convert_auth_errors,
+                        convert_connection_errors,
                     )
                 else:
                     # Wrap unexpected error with enhanced context
@@ -92,19 +108,26 @@ def handle_api_errors(
                         function_name=func.__name__,
                         original_error_type=type(err).__name__,
                         args=str(args),
-                        kwargs=str(kwargs)
+                        kwargs=str(kwargs),
                     )
 
                     # For setup/initialization functions, we should reraise to signal failure
-                    if any(keyword in func.__name__.lower() for keyword in ["setup", "init", "async_setup"]):
-                        raise ConfigEntryNotReady(f"Unexpected error in {func.__name__}: {err}") from enhanced_error
+                    if any(
+                        keyword in func.__name__.lower()
+                        for keyword in ["setup", "init", "async_setup"]
+                    ):
+                        raise ConfigEntryNotReady(
+                            f"Unexpected error in {func.__name__}: {err}"
+                        ) from enhanced_error
 
                     return default_return
 
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             # Enhanced debug logging for function entry
-            _LOGGER.debug("Starting %s with args=%s, kwargs=%s", func.__name__, args, kwargs)
+            _LOGGER.debug(
+                "Starting %s with args=%s, kwargs=%s", func.__name__, args, kwargs
+            )
 
             try:
                 result = func(*args, **kwargs)
@@ -117,7 +140,7 @@ def handle_api_errors(
                     func.__name__,
                     str(err),
                     type(err).__name__,
-                    exc_info=True
+                    exc_info=True,
                 )
 
                 # Check if we should reraise this error type
@@ -127,8 +150,12 @@ def handle_api_errors(
                 # Handle specific API error types (sync version)
                 if isinstance(err, MerakiApiError):
                     return _handle_meraki_api_error(
-                        err, func.__name__, log_errors, default_return,
-                        convert_auth_errors, convert_connection_errors
+                        err,
+                        func.__name__,
+                        log_errors,
+                        default_return,
+                        convert_auth_errors,
+                        convert_connection_errors,
                     )
                 else:
                     # Log unexpected error with enhanced context
@@ -140,8 +167,8 @@ def handle_api_errors(
                             "function_name": func.__name__,
                             "original_error_type": type(err).__name__,
                             "args": str(args),
-                            "kwargs": str(kwargs)
-                        }
+                            "kwargs": str(kwargs),
+                        },
                     )
 
                     return default_return
@@ -175,7 +202,9 @@ def _handle_client_response_error(
     elif err.status == 403:
         # Authorization error
         if log_errors:
-            _LOGGER.error("Authorization failed in %s: Insufficient permissions", func_name)
+            _LOGGER.error(
+                "Authorization failed in %s: Insufficient permissions", func_name
+            )
         if convert_auth_errors:
             raise ConfigEntryAuthFailed("Insufficient API permissions") from err
         raise MerakiAuthenticationError("Insufficient API permissions") from err
@@ -190,21 +219,31 @@ def _handle_client_response_error(
                 pass
 
         if log_errors:
-            _LOGGER.warning("Rate limit exceeded in %s, retry after %s seconds", func_name, retry_after or "unknown")
+            _LOGGER.warning(
+                "Rate limit exceeded in %s, retry after %s seconds",
+                func_name,
+                retry_after or "unknown",
+            )
         raise MerakiRateLimitError("API rate limit exceeded", retry_after) from err
 
     elif err.status >= 500:
         # Server error
         if log_errors:
-            _LOGGER.error("Server error in %s: %s (status %d)", func_name, err.message, err.status)
+            _LOGGER.error(
+                "Server error in %s: %s (status %d)", func_name, err.message, err.status
+            )
         if convert_connection_errors:
-            raise ConfigEntryNotReady(f"Meraki API server error (HTTP {err.status})") from err
+            raise ConfigEntryNotReady(
+                f"Meraki API server error (HTTP {err.status})"
+            ) from err
         raise MerakiApiError(f"Server error: {err.message}", err.status) from err
 
     else:
         # Other client error
         if log_errors:
-            _LOGGER.error("API error in %s: %s (status %d)", func_name, err.message, err.status)
+            _LOGGER.error(
+                "API error in %s: %s (status %d)", func_name, err.message, err.status
+            )
         raise MerakiApiError(f"API error: {err.message}", err.status) from err
 
 
@@ -265,7 +304,10 @@ def api_retry(
     backoff_factor: float = 1.5,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    retry_on: tuple[type[Exception], ...] = (MerakiConnectionError, MerakiRateLimitError),
+    retry_on: tuple[type[Exception], ...] = (
+        MerakiConnectionError,
+        MerakiRateLimitError,
+    ),
 ) -> Callable[[F], F]:
     """Decorator to retry API calls with exponential backoff.
 
@@ -279,6 +321,7 @@ def api_retry(
     Returns:
         Decorated function with retry logic
     """
+
     def decorator(func: F) -> F:
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -299,7 +342,7 @@ def api_retry(
                         break
 
                     # Calculate delay with exponential backoff
-                    delay = min(base_delay * (backoff_factor ** attempt), max_delay)
+                    delay = min(base_delay * (backoff_factor**attempt), max_delay)
 
                     # For rate limit errors, respect the Retry-After header
                     if isinstance(err, MerakiRateLimitError) and err.retry_after:
@@ -307,7 +350,11 @@ def api_retry(
 
                     _LOGGER.debug(
                         "Retrying %s (attempt %d/%d) after %.1f seconds due to: %s",
-                        func.__name__, attempt + 1, max_attempts, delay, err
+                        func.__name__,
+                        attempt + 1,
+                        max_attempts,
+                        delay,
+                        err,
                     )
 
                     await asyncio.sleep(delay)

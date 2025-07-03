@@ -669,14 +669,18 @@ class TransformerRegistry:
             def transform_temperature(value: Any) -> float | None:
                 return float(value) if value is not None else None
         """
+
         def decorator(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
             # Get the global instance
             instance = transformer_registry
             instance._entity_transformers[entity_type] = func
             return func
+
         return decorator
 
-    def register_device_transformer(self, device_type: str, transformer: DataTransformer):
+    def register_device_transformer(
+        self, device_type: str, transformer: DataTransformer
+    ):
         """Register a transformer for a specific device type."""
         self._device_transformers[device_type] = transformer
 
@@ -684,7 +688,9 @@ class TransformerRegistry:
         """Get transformer for a specific device type."""
         return self._device_transformers.get(device_type)
 
-    def transform_device_data(self, device_type: str, raw_data: dict[str, Any]) -> dict[str, Any]:
+    def transform_device_data(
+        self, device_type: str, raw_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Transform complete device data using the appropriate transformer."""
         transformer = self.get_device_transformer(device_type)
         if transformer:
@@ -715,8 +721,7 @@ class TransformerRegistry:
                 return transformer(raw_value)
             except Exception as e:
                 _LOGGER.error(
-                    "Error transforming value for entity type %s: %s",
-                    entity_type, e
+                    "Error transforming value for entity type %s: %s", entity_type, e
                 )
                 return raw_value
         return raw_value
@@ -817,9 +822,9 @@ def transform_noise(value: Any) -> float | None:
     if isinstance(value, dict):
         # Try different field names
         noise_value = (
-            SafeExtractor.safe_float(value.get("ambient")) or
-            SafeExtractor.safe_float(value.get("concentration")) or
-            SafeExtractor.safe_float(value.get("level"))
+            SafeExtractor.safe_float(value.get("ambient"))
+            or SafeExtractor.safe_float(value.get("concentration"))
+            or SafeExtractor.safe_float(value.get("level"))
         )
 
         # Handle nested level structure: {"level": {"level": 42}}
@@ -840,7 +845,9 @@ def transform_real_power(value: Any) -> float | None:
 
     # Handle dict structure with unit conversion
     if isinstance(value, dict):
-        power_value = SafeExtractor.safe_float(value.get("value")) or SafeExtractor.safe_float(value.get("draw"))
+        power_value = SafeExtractor.safe_float(
+            value.get("value")
+        ) or SafeExtractor.safe_float(value.get("draw"))
         unit = value.get("unit", "W")
 
         if unit == "kW":

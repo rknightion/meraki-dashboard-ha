@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -15,7 +15,6 @@ from homeassistant.const import PERCENTAGE, UnitOfPower
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
@@ -42,6 +41,7 @@ from ..const import (
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
 from ..entities.base import MerakiSensorEntity
+from ..utils import get_device_status_info
 from ..utils.device_info import DeviceInfoBuilder
 
 _LOGGER = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         device_status = None
         device_serial = self._device.get("serial", "")
         if device_serial:
-            device_status = utils.get_device_status_info(
+            device_status = get_device_status_info(
                 self._network_hub.organization_hub, device_serial
             )
 
@@ -254,13 +254,18 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         base_url = self._network_hub.organization_hub._base_url.replace("/api/v1", "")
 
         # Build device info using builder
-        return DeviceInfoBuilder().for_device(
-            device_data,
-            self._config_entry_id,
-            self._network_hub.network_id,
-            self._network_hub.device_type,
-            base_url
-        ).build()
+        return cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_device(
+                device_data,
+                self._config_entry_id,
+                self._network_hub.network_id,
+                self._network_hub.device_type,
+                base_url,
+            )
+            .build(),
+        )
 
     @property
     def native_value(self) -> Any:
@@ -278,7 +283,9 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         if device_info:
             # Use transformer to process aggregated device data
-            transformed_data = transformer_registry.transform_device_data("MS", device_info)
+            transformed_data = transformer_registry.transform_device_data(
+                "MS", device_info
+            )
 
             # Handle special cases that need non-device data
             if self.entity_description.key == MS_SENSOR_POE_LIMIT:
@@ -328,13 +335,17 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         # Create temporary device data and transform it
         temp_device_data = {"serial": self._device_serial, "ports_status": device_ports}
-        transformed_data = transformer_registry.transform_device_data("MS", temp_device_data)
+        transformed_data = transformer_registry.transform_device_data(
+            "MS", temp_device_data
+        )
         return transformed_data.get(self.entity_description.key)
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self.coordinator.last_update_success and self.coordinator.data is not None
+        return (
+            self.coordinator.last_update_success and self.coordinator.data is not None
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -428,7 +439,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         # Add network configuration details from device status
         if self._device_serial:
-            device_status = utils.get_device_status_info(
+            device_status = get_device_status_info(
                 self.coordinator.network_hub.organization_hub, self._device_serial
             )
             if device_status:
@@ -472,7 +483,9 @@ class MerakiMSSensor(MerakiSensorEntity):
             "model": f"{coordinator.network_hub.device_type}_Network",
             "networkId": coordinator.network_hub.network_id,
         }
-        super().__init__(coordinator, device, description, config_entry_id, coordinator.network_hub)
+        super().__init__(
+            coordinator, device, description, config_entry_id, coordinator.network_hub
+        )
 
     @property
     def native_value(self) -> Any:

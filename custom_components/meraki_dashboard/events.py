@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.core import HomeAssistant
 
 from .services import MerakiEventService
+from .types import MerakiDeviceData
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,14 +56,18 @@ class MerakiEventHandler:
                 # If we're already in an event loop, create a task
                 asyncio.create_task(
                     self._event_service.track_sensor_changes(
-                        device_serial, sensor_readings, device_info
+                        device_serial,
+                        sensor_readings,
+                        cast(MerakiDeviceData, device_info),
                     )
                 )
             else:
                 # Otherwise run it synchronously
                 loop.run_until_complete(
                     self._event_service.track_sensor_changes(
-                        device_serial, sensor_readings, device_info
+                        device_serial,
+                        sensor_readings,
+                        cast(MerakiDeviceData, device_info),
                     )
                 )
         except RuntimeError:

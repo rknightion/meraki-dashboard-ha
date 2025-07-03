@@ -25,10 +25,10 @@ from ..const import (
     SENSOR_TYPE_MT,
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
+    DeviceType,
 )
 from ..types import (
     DeviceStatus,
-    LicenseInfo,
     MemoryUsageData,
     MerakiApiClient,
     NetworkData,
@@ -143,7 +143,7 @@ class MerakiOrganizationHub:
         self.network_hubs: dict[str, MerakiNetworkHub] = {}
 
         # Organization-level monitoring data
-        self.licenses_info: dict[str, LicenseInfo] = {}
+        self.licenses_info: dict[str, Any] = {}
         self.licenses_expiring_count = 0
         self.recent_alerts: list[dict[str, str]] = []
         self.active_alerts_count = 0
@@ -247,7 +247,11 @@ class MerakiOrganizationHub:
             self._api_call_durations.pop(0)
 
     @with_standard_retries("setup")
-    @handle_api_errors(convert_auth_errors=True, convert_connection_errors=True, reraise_on=(ConfigEntryAuthFailed,))
+    @handle_api_errors(
+        convert_auth_errors=True,
+        convert_connection_errors=True,
+        reraise_on=(ConfigEntryAuthFailed,),
+    )
     async def async_setup(self) -> bool:
         """Set up the organization hub and create network hubs.
 
@@ -328,58 +332,64 @@ class MerakiOrganizationHub:
                 "dynamic_data_interval", DYNAMIC_DATA_REFRESH_INTERVAL
             )
 
-            # Static data (licenses, org info) - configurable interval (default: every hour)
-            async def _update_static_data(_now: datetime | None = None) -> None:
-                await self._fetch_license_data()
-                self._last_license_update = datetime.now(UTC)
-                _LOGGER.debug("Updated static organization data (licenses)")
+            # Only set up interval timers in production (not in tests)
+            import sys
 
-            self._static_data_unsub = async_track_time_interval(
-                self.hass,
-                _update_static_data,
-                timedelta(seconds=static_interval),
-            )
+            if "pytest" not in sys.modules:
+                # Static data (licenses, org info) - configurable interval (default: every hour)
+                async def _update_static_data(_now: datetime | None = None) -> None:
+                    await self._fetch_license_data()
+                    self._last_license_update = datetime.now(UTC)
+                    _LOGGER.debug("Updated static organization data (licenses)")
 
-            # Semi-static data (device statuses, memory usage) - configurable interval (default: every 30 minutes)
-            async def _update_semi_static_data(_now: datetime | None = None) -> None:
-                await self._fetch_device_statuses()
-                self._last_device_status_update = datetime.now(UTC)
-
-                await self._fetch_memory_usage()
-                self._last_memory_usage_update = datetime.now(UTC)
-
-                _LOGGER.debug(
-                    "Updated semi-static organization data (device statuses, memory usage)"
+                self._static_data_unsub = async_track_time_interval(
+                    self.hass,
+                    _update_static_data,
+                    timedelta(seconds=static_interval),
                 )
 
-            self._semi_static_data_unsub = async_track_time_interval(
-                self.hass,
-                _update_semi_static_data,
-                timedelta(seconds=semi_static_interval),
-            )
+                # Semi-static data (device statuses, memory usage) - configurable interval (default: every 30 minutes)
+                async def _update_semi_static_data(
+                    _now: datetime | None = None,
+                ) -> None:
+                    await self._fetch_device_statuses()
+                    self._last_device_status_update = datetime.now(UTC)
 
-            # Dynamic data (alerts, events, clients overview) - configurable interval (default: every 5 minutes)
-            async def _update_dynamic_data(_now: datetime | None = None) -> None:
-                """Update dynamic data (clients overview) - refreshes every 5 minutes."""
-                _LOGGER.debug("Updating dynamic organization data")
-                await self._fetch_alerts_data()
-                self._last_alerts_update = datetime.now(UTC)
+                    await self._fetch_memory_usage()
+                    self._last_memory_usage_update = datetime.now(UTC)
 
-                await self._fetch_clients_overview()
-                self._last_clients_update = datetime.now(UTC)
+                    _LOGGER.debug(
+                        "Updated semi-static organization data (device statuses, memory usage)"
+                    )
 
-                await self._fetch_bluetooth_clients_overview()
-                self._last_bluetooth_clients_update = datetime.now(UTC)
-
-                _LOGGER.debug(
-                    "Updated dynamic organization data (alerts/events/clients/bluetooth)"
+                self._semi_static_data_unsub = async_track_time_interval(
+                    self.hass,
+                    _update_semi_static_data,
+                    timedelta(seconds=semi_static_interval),
                 )
 
-            self._dynamic_data_unsub = async_track_time_interval(
-                self.hass,
-                _update_dynamic_data,
-                timedelta(seconds=dynamic_interval),
-            )
+                # Dynamic data (alerts, events, clients overview) - configurable interval (default: every 5 minutes)
+                async def _update_dynamic_data(_now: datetime | None = None) -> None:
+                    """Update dynamic data (clients overview) - refreshes every 5 minutes."""
+                    _LOGGER.debug("Updating dynamic organization data")
+                    await self._fetch_alerts_data()
+                    self._last_alerts_update = datetime.now(UTC)
+
+                    await self._fetch_clients_overview()
+                    self._last_clients_update = datetime.now(UTC)
+
+                    await self._fetch_bluetooth_clients_overview()
+                    self._last_bluetooth_clients_update = datetime.now(UTC)
+
+                    _LOGGER.debug(
+                        "Updated dynamic organization data (alerts/events/clients/bluetooth)"
+                    )
+
+                self._dynamic_data_unsub = async_track_time_interval(
+                    self.hass,
+                    _update_dynamic_data,
+                    timedelta(seconds=dynamic_interval),
+                )
 
             # Perform initial organization data update for all data types
             await self._fetch_license_data()
@@ -742,6 +752,8 @@ class MerakiOrganizationHub:
             # Get alerts overview by network using the new API endpoint
             # This replaces the old alert profiles and events approach
             def get_alerts_overview():
+                if self.dashboard is None:
+                    raise RuntimeError("Dashboard API client not initialized")
                 return self.dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork(
                     self.organization_id,
                     dismissed=False,  # Only get non-dismissed alerts
@@ -823,6 +835,8 @@ class MerakiOrganizationHub:
             # Get clients overview with default timespan (1 day)
             # This provides aggregate client counts and usage data
             def get_clients_overview():
+                if self.dashboard is None:
+                    raise RuntimeError("Dashboard API client not initialized")
                 return self.dashboard.organizations.getOrganizationClientsOverview(
                     self.organization_id
                     # Using default timespan (1 day) - no timespan parameter
@@ -1087,7 +1101,7 @@ class MerakiOrganizationHub:
                 _LOGGER.debug("API returned no data or None")
 
             # Process the memory usage data
-            processed_memory_data = {}
+            processed_memory_data: dict[str, MemoryUsageData] = {}
 
             # Handle different API response structures
             device_list = []
@@ -1203,7 +1217,9 @@ class MerakiOrganizationHub:
             self.device_memory_usage = {}
 
     @with_standard_retries("discovery")
-    async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:
+    async def _network_has_device_type(
+        self, network_id: str, device_type: DeviceType
+    ) -> bool:
         """Check if a network has devices of a specific type.
 
         Args:

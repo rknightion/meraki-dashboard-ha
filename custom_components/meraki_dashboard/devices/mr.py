@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -13,7 +13,6 @@ from homeassistant.components.sensor import (
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.device_registry import DeviceInfo
 
-from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_NETWORK_ID,
@@ -42,6 +41,7 @@ from ..const import (
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
 from ..entities.base import MerakiSensorEntity
+from ..utils import get_device_status_info
 from ..utils.device_info import DeviceInfoBuilder
 
 _LOGGER = logging.getLogger(__name__)
@@ -250,7 +250,7 @@ class MerakiMRDeviceSensor(MerakiSensorEntity):
         device_status = None
         device_serial = self._device.get("serial", "")
         if device_serial:
-            device_status = utils.get_device_status_info(
+            device_status = get_device_status_info(
                 self._network_hub.organization_hub, device_serial
             )
 
@@ -263,13 +263,18 @@ class MerakiMRDeviceSensor(MerakiSensorEntity):
         base_url = self._network_hub.organization_hub._base_url.replace("/api/v1", "")
 
         # Build device info using builder
-        return DeviceInfoBuilder().for_device(
-            device_data,
-            self._config_entry_id,
-            self._network_hub.network_id,
-            self._network_hub.device_type,
-            base_url
-        ).build()
+        return cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_device(
+                device_data,
+                self._config_entry_id,
+                self._network_hub.network_id,
+                self._network_hub.device_type,
+                base_url,
+            )
+            .build(),
+        )
 
     @property
     def native_value(self) -> Any:
@@ -354,7 +359,7 @@ class MerakiMRDeviceSensor(MerakiSensorEntity):
 
         # Add network configuration details from device status
         if self._device_serial:
-            device_status = utils.get_device_status_info(
+            device_status = get_device_status_info(
                 self.coordinator.network_hub.organization_hub, self._device_serial
             )
             if device_status:
@@ -399,22 +404,31 @@ class MerakiMRSensor(MerakiSensorEntity):
             "model": f"{coordinator.network_hub.device_type}_Network",
             "networkId": coordinator.network_hub.network_id,
         }
-        super().__init__(coordinator, device, description, config_entry_id, coordinator.network_hub)
+        super().__init__(
+            coordinator, device, description, config_entry_id, coordinator.network_hub
+        )
 
         # Set unique ID
         self._attr_unique_id = f"{config_entry_id}_{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}_{description.key}"
 
         # Set device info to the network hub device
         org_id = coordinator.network_hub.organization_hub.organization_id
-        base_url = coordinator.network_hub.organization_hub._base_url.replace("/api/v1", "")
+        base_url = coordinator.network_hub.organization_hub._base_url.replace(
+            "/api/v1", ""
+        )
 
-        self._attr_device_info = DeviceInfoBuilder().for_network_hub(
-            coordinator.network_hub.network_id,
-            coordinator.network_hub.device_type,
-            coordinator.network_hub.hub_name,
-            org_id,
-            base_url
-        ).build()
+        self._attr_device_info = cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_network_hub(
+                coordinator.network_hub.network_id,
+                coordinator.network_hub.device_type,
+                coordinator.network_hub.hub_name,
+                org_id,
+                base_url,
+            )
+            .build(),
+        )
 
     @property
     def native_value(self) -> Any:

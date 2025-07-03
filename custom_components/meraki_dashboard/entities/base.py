@@ -7,7 +7,7 @@ All entities MUST inherit from these base classes - no exceptions.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.components.button import ButtonEntity
@@ -115,13 +115,14 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
             ).replace("/api/v1", "")
 
         # Build device info using builder
-        return DeviceInfoBuilder().for_device(
-            self._device,
-            self._config_entry_id,
-            network_id,
-            device_type,
-            base_url
-        ).build()
+        return cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_device(
+                self._device, self._config_entry_id, network_id, device_type, base_url
+            )
+            .build(),
+        )
 
     def _get_device_type(self) -> str:
         """Get device type from model."""
@@ -298,11 +299,14 @@ class MerakiHubEntity(MerakiEntity):
                 self._hub, "base_url", "https://dashboard.meraki.com"
             ).replace("/api/v1", "")
 
-            return DeviceInfoBuilder().for_organization(
-                organization_id,
-                f"{organization_name} Organization",
-                base_url
-            ).build()
+            return cast(
+                DeviceInfo,
+                DeviceInfoBuilder()
+                .for_organization(
+                    organization_id, f"{organization_name} Organization", base_url
+                )
+                .build(),
+            )
 
         elif hasattr(self._hub, "network_name"):
             # Network hub device info
@@ -321,13 +325,18 @@ class MerakiHubEntity(MerakiEntity):
                 # Get actual org ID if available
                 org_id = getattr(self._hub.organization_hub, "organization_id", org_id)
 
-            return DeviceInfoBuilder().for_network_hub(
-                network_id,
-                device_type,
-                f"{network_name} {device_type.upper()} Hub",
-                org_id,
-                base_url
-            ).build()
+            return cast(
+                DeviceInfo,
+                DeviceInfoBuilder()
+                .for_network_hub(
+                    network_id,
+                    device_type,
+                    f"{network_name} {device_type.upper()} Hub",
+                    org_id,
+                    base_url,
+                )
+                .build(),
+            )
 
         return None
 

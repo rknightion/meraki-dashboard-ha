@@ -29,7 +29,7 @@ class IntegrationTestHelper:
     async def setup_meraki_integration(
         self,
         devices: list[dict[str, Any]] = None,
-        organization_id: str = "test_org",
+        organization_id: str = "123456",
         api_key: str = "a1b2c3d4e5f6789012345678901234567890abcd",
         selected_networks: list[str] = None,
         selected_device_types: list[str] = None
@@ -79,6 +79,10 @@ class IntegrationTestHelper:
             self._devices = devices
             self._mock_api.organizations.getOrganizationDevices.return_value = devices
 
+            # Also set up getNetworkDevices to return devices for the network
+            # This is needed for network hub creation
+            self._mock_api.networks.getNetworkDevices.return_value = devices
+
             # Create device statuses
             statuses = []
             for device in devices:
@@ -93,11 +97,20 @@ class IntegrationTestHelper:
 
         # Set up the integration
         with patch("meraki.DashboardAPI", return_value=self._mock_api):
-            # Import and call async_setup_entry directly
-            from custom_components.meraki_dashboard import async_setup_entry
-            result = await async_setup_entry(self.hass, self._config_entry)
-            # The result indicates if setup was successful
-            await self.hass.async_block_till_done()
+            # Mock the platform setup functions
+            with patch("custom_components.meraki_dashboard.sensor.async_setup_entry", return_value=True):
+                with patch("custom_components.meraki_dashboard.binary_sensor.async_setup_entry", return_value=True):
+                    with patch("custom_components.meraki_dashboard.button.async_setup_entry", return_value=True):
+                        # Import and call async_setup_entry directly
+                        from custom_components.meraki_dashboard import async_setup_entry
+                        result = await async_setup_entry(self.hass, self._config_entry)
+                        # The result indicates if setup was successful
+                        if not result:
+                            raise RuntimeError("Failed to set up integration - async_setup_entry returned False")
+                        await self.hass.async_block_till_done()
+
+            # The config entry state is managed internally by Home Assistant
+            # We don't need to set it manually
 
         # Store references to hubs
         if DOMAIN in self.hass.data and self._config_entry.entry_id in self.hass.data[DOMAIN]:
@@ -277,6 +290,11 @@ class IntegrationTestHelper:
         if self._config_entry:
             result = await self.hass.config_entries.async_unload(self._config_entry.entry_id)
             await self.hass.async_block_till_done()
+
+            # Clear cached references to prevent issues on reload
+            self._org_hub = None
+            self._network_hubs = {}
+
             return result
         return False
 
@@ -295,3 +313,12 @@ class IntegrationTestHelper:
     def get_all_network_hubs(self) -> dict[str, Any]:
         """Get all network hubs."""
         return self._network_hubs
+
+    async def cleanup(self) -> None:
+        """Clean up the integration."""
+        from custom_components.meraki_dashboard import async_unload_entry
+        from custom_components.meraki_dashboard.const import DOMAIN
+
+        if self._config_entry and self._config_entry.entry_id in self.hass.data.get(DOMAIN, {}):
+            await async_unload_entry(self.hass, self._config_entry)
+            await self.hass.async_block_till_done()

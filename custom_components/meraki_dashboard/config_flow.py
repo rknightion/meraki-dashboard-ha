@@ -15,7 +15,6 @@ from homeassistant.exceptions import ConfigValidationError
 from homeassistant.helpers import selector
 from meraki.exceptions import APIError
 
-from . import utils
 from .config import HubConfigurationManager
 from .config.schemas import (
     APIKeyConfig,
@@ -54,6 +53,7 @@ from .const import (
     STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     USER_AGENT,
 )
+from .utils import sanitize_device_name
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -368,7 +368,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Create device selector
         device_options = []
         for device in self._available_devices:
-            device_name = utils.sanitize_device_name(
+            device_name = sanitize_device_name(
                 device.get("name")
                 or f"{device.get('model', 'MT')} {device['serial'][-4:]}"
             )
@@ -587,8 +587,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             # Validate the updated configuration
             try:
                 MerakiConfigSchema.from_config_entry(
-                    self.config_entry.data,
-                    options
+                    dict(self.config_entry.data), options
                 )
             except ConfigValidationError as err:
                 _LOGGER.error("Invalid options configuration: %s", err)

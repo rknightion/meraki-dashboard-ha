@@ -10,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import utils
 from .const import (
     DOMAIN,
     SENSOR_TYPE_MR,
@@ -29,6 +28,7 @@ from .entities.factory import (
     create_network_entity,
     create_organization_entity,
 )
+from .utils import should_create_entity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -140,7 +140,7 @@ async def _setup_mt_sensors(
         # Create regular sensors for each metric that the device supports
         entities_created_for_device = 0
         for description in MT_SENSOR_DESCRIPTIONS.values():
-            if utils.should_create_entity(device, description.key, coordinator.data):
+            if should_create_entity(device, description.key, coordinator.data):
                 try:
                     entity = create_device_entity(
                         "mt_sensor",
@@ -167,7 +167,7 @@ async def _setup_mt_sensors(
         for description in MT_ENERGY_SENSOR_DESCRIPTIONS.values():
             # Extract the base power sensor key from the energy sensor key
             power_sensor_key = description.key.replace("_energy", "")
-            if utils.should_create_entity(device, power_sensor_key, coordinator.data):
+            if should_create_entity(device, power_sensor_key, coordinator.data):
                 try:
                     entity = create_device_entity(
                         "mt_energy_sensor",
@@ -253,7 +253,7 @@ async def _setup_mr_sensors(
         entities_created = 0
         for description in MR_SENSOR_DESCRIPTIONS.values():
             # Always create memory usage sensors for MR devices (available via organization API)
-            if description.key == "memoryUsage" or utils.should_create_entity(
+            if description.key == "memoryUsage" or should_create_entity(
                 device, description.key, coordinator.data
             ):
                 try:
@@ -337,7 +337,7 @@ async def _setup_ms_sensors(
         entities_created = 0
         for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
             # Always create memory usage sensors for MS devices (available via organization API)
-            if description.key == "memoryUsage" or utils.should_create_entity(
+            if description.key == "memoryUsage" or should_create_entity(
                 device, description.key, coordinator.data
             ):
                 try:

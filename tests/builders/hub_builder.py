@@ -83,9 +83,15 @@ class HubBuilder:
         self._hub_data["networks"].append(network)
         return self
 
-    def build_config_entry(self, hass: HomeAssistant, entry_id: str = "test_entry") -> ConfigEntry:
+    def build_config_entry(self, hass: HomeAssistant, entry_id: str = None) -> ConfigEntry:
         """Build a config entry for the hub."""
+        import uuid
+
         from custom_components.meraki_dashboard.const import DOMAIN
+
+        # Generate unique entry_id if not provided
+        if not entry_id:
+            entry_id = f"test_{uuid.uuid4().hex[:8]}"
 
         data = {
             "api_key": self._hub_data["api_key"],
@@ -135,6 +141,10 @@ class HubBuilder:
         mock_api.organizations.getOrganizationDevices = MagicMock(return_value=[])
         mock_api.organizations.getOrganizationDevicesStatuses = MagicMock(return_value=[])
 
+        # Mock networks API
+        mock_api.networks = MagicMock()
+        mock_api.networks.getNetworkDevices = MagicMock(return_value=[])
+
         # Mock licenses
         mock_api.organizations.getOrganizationLicensesOverview = MagicMock(return_value={
             "status": "OK",
@@ -150,10 +160,17 @@ class HubBuilder:
         mock_api.wireless = MagicMock()
         mock_api.wireless.getNetworkWirelessUsageHistory = MagicMock(return_value=[])
         mock_api.wireless.getNetworkWirelessClientCountHistory = MagicMock(return_value=[])
+        mock_api.wireless.getNetworkWirelessSsids = MagicMock(return_value=[])
+        mock_api.wireless.getDeviceWirelessStatus = MagicMock(return_value={})
+        mock_api.wireless.getDeviceWirelessRadioSettings = MagicMock(return_value={})
+        mock_api.wireless.getDeviceWirelessConnectionStats = MagicMock(return_value={})
+        mock_api.devices = MagicMock()
+        mock_api.devices.getDeviceClients = MagicMock(return_value=[])
 
         # Mock switch API
         mock_api.switch = MagicMock()
         mock_api.switch.getOrganizationSwitchPortsStatusesBySwitch = MagicMock(return_value={})
+        mock_api.switch.getDeviceSwitchPortsStatuses = MagicMock(return_value=[])
 
         # Store for later access
         self._mock_api = mock_api
@@ -171,12 +188,9 @@ class HubBuilder:
         # Create the hub
         hub = MerakiOrganizationHub(
             hass=hass,
-            entry=config_entry,
             api_key=self._hub_data["api_key"],
             organization_id=self._hub_data["organization_id"],
-            organization_name=self._hub_data["organization_name"],
-            networks=self._hub_data["networks"],
-            base_url=self._hub_data["base_url"]
+            config_entry=config_entry
         )
 
         # Mock the API client if not already done

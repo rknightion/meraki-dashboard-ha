@@ -186,18 +186,12 @@ def calculate_retry_delay(
         Delay in seconds before next retry.
     """
     # Calculate exponential backoff delay
-    delay = min(
-        config.base_delay * (config.backoff_factor ** attempt),
-        config.max_delay
-    )
+    delay = min(config.base_delay * (config.backoff_factor**attempt), config.max_delay)
 
     # For rate limit errors, respect the Retry-After header
     if isinstance(error, MerakiRateLimitError) and error.retry_after:
         delay = min(error.retry_after, config.max_delay)
-        _LOGGER.debug(
-            "Using Retry-After header value: %d seconds",
-            error.retry_after
-        )
+        _LOGGER.debug("Using Retry-After header value: %d seconds", error.retry_after)
 
     return delay
 
@@ -271,7 +265,7 @@ class RetryContext:
 def create_retry_wrapper(
     func_name: str,
     config: RetryConfig,
-) -> Callable[[Callable], Callable]:
+) -> Callable[..., Any]:
     """Create a retry wrapper for a function.
 
     This is a lower-level function that can be used to create
@@ -284,6 +278,7 @@ def create_retry_wrapper(
     Returns:
         Wrapper function that adds retry logic.
     """
+
     async def async_retry_wrapper(
         func: Callable[..., Any],
         *args: Any,
@@ -384,6 +379,6 @@ async def retry_api_call(
         # Wrap sync function to run in executor
         async def async_func(*a: Any, **kw: Any) -> Any:
             loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, func, *a, **kw)
+            return await loop.run_in_executor(None, func, *a)
 
         return await retry_wrapper(async_func, *args, **kwargs)

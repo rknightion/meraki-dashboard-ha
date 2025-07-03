@@ -43,7 +43,9 @@ class DeviceInfoBuilder:
         }
 
         if base_url:
-            self._info["configuration_url"] = f"{base_url}/o/{org_id}/manage/organization/overview"
+            self._info["configuration_url"] = (
+                f"{base_url}/o/{org_id}/manage/organization/overview"
+            )
 
         return self
 
@@ -53,7 +55,7 @@ class DeviceInfoBuilder:
         device_type: str,
         name: str,
         org_id: str | None = None,
-        base_url: str | None = None
+        base_url: str | None = None,
     ) -> DeviceInfoBuilder:
         """Build device info for a network hub.
 
@@ -78,7 +80,9 @@ class DeviceInfoBuilder:
             self._info["via_device"] = (self.domain, f"{org_id}_org")
 
         if base_url and network_id:
-            self._info["configuration_url"] = f"{base_url}/n/{network_id}/manage/nodes/list"
+            self._info["configuration_url"] = (
+                f"{base_url}/n/{network_id}/manage/nodes/list"
+            )
 
         return self
 
@@ -89,7 +93,7 @@ class DeviceInfoBuilder:
         network_id: str | None = None,
         device_type: str | None = None,
         base_url: str | None = None,
-        via_device_id: str | None = None
+        via_device_id: str | None = None,
     ) -> DeviceInfoBuilder:
         """Build device info for an individual device.
 
@@ -162,7 +166,9 @@ class DeviceInfoBuilder:
         self._info["via_device"] = (self.domain, device_id)
         return self
 
-    def with_connections(self, connection_type: str, connection_id: str) -> DeviceInfoBuilder:
+    def with_connections(
+        self, connection_type: str, connection_id: str
+    ) -> DeviceInfoBuilder:
         """Add a connection identifier.
 
         Args:
@@ -216,16 +222,14 @@ class DeviceInfoBuilder:
             True if device info has minimum required fields.
         """
         return bool(
-            self._info.get("identifiers") and
-            self._info.get("manufacturer") and
-            self._info.get("name")
+            self._info.get("identifiers")
+            and self._info.get("manufacturer")
+            and self._info.get("name")
         )
 
 
 def create_organization_device_info(
-    org_id: str,
-    org_name: str,
-    base_url: str | None = None
+    org_id: str, org_name: str, base_url: str | None = None
 ) -> dict[str, Any]:
     """Create device info for an organization hub.
 
@@ -237,11 +241,7 @@ def create_organization_device_info(
     Returns:
         Device info dictionary.
     """
-    return (
-        DeviceInfoBuilder()
-        .for_organization(org_id, org_name, base_url)
-        .build()
-    )
+    return DeviceInfoBuilder().for_organization(org_id, org_name, base_url).build()
 
 
 def create_network_hub_device_info(
@@ -249,7 +249,7 @@ def create_network_hub_device_info(
     device_type: str,
     network_name: str,
     org_id: str,
-    base_url: str | None = None
+    base_url: str | None = None,
 ) -> dict[str, Any]:
     """Create device info for a network hub.
 
@@ -275,7 +275,7 @@ def create_device_info(
     config_entry_id: str,
     network_id: str,
     device_type: str,
-    base_url: str | None = None
+    base_url: str | None = None,
 ) -> dict[str, Any]:
     """Create device info for an individual device.
 
@@ -291,12 +291,216 @@ def create_device_info(
     """
     return (
         DeviceInfoBuilder()
-        .for_device(
-            device_data,
-            config_entry_id,
-            network_id,
-            device_type,
-            base_url
-        )
+        .for_device(device_data, config_entry_id, network_id, device_type, base_url)
         .build()
     )
+
+
+def get_device_display_name(device: dict[str, Any]) -> str:
+    """Get the best available display name for a device.
+
+    Prioritizes API-provided names, falls back to serial number or MAC address.
+
+    Args:
+        device: Device dictionary from the API
+
+    Returns:
+        A suitable display name for the device
+    """
+    # Try various name fields in order of preference
+    name = device.get("name") or device.get("deviceName")
+
+    if name and name.strip():
+        return name.strip()
+
+    # Fall back to serial number
+    if serial := device.get("serial"):
+        model = device.get("model", "Device")
+        return f"{model} ({serial})"
+
+    # Last resort: MAC address
+    if mac := device.get("mac"):
+        return f"Device ({mac})"
+
+    return "Unknown Device"
+
+
+def create_device_capability_filter(device_model: str, device_type: str) -> set[str]:
+    """Create device capability filter based on model and type.
+
+    Args:
+        device_model: Device model (e.g., "MT11", "MR46")
+        device_type: Device type ("MT", "MR", "MS")
+
+    Returns:
+        Set of supported sensor/metric keys for this device
+    """
+    if device_type == "MT":
+        # MT (Environmental) sensors have model-specific capabilities
+        if device_model in ["MT10", "MT12"]:
+            # Temperature and humidity only
+            return {"temperature", "humidity"}
+        elif device_model == "MT11":
+            # Temperature only
+            return {"temperature"}
+        elif device_model == "MT20":
+            # Full environmental monitoring
+            return {
+                "temperature",
+                "humidity",
+                "co2",
+                "tvoc",
+                "pm25",
+                "noise",
+                "indoorAirQuality",
+            }
+        elif device_model == "MT30":
+            # Smart camera with AI features
+            return {"temperature", "humidity", "battery", "button"}
+        elif device_model == "MT40":
+            # Water detection sensor
+            return {"water", "temperature"}
+        else:
+            # Default MT sensors
+            return {"temperature", "humidity", "battery"}
+
+    elif device_type == "MR":
+        # MR (Wireless) devices all have similar metrics
+        return {"usage", "status", "clients", "mesh_status"}
+
+    elif device_type == "MS":
+        # MS (Switch) devices all have similar metrics
+        return {"port_status", "power_usage", "clients", "uplink_status"}
+
+    elif device_type == "MV":
+        # MV (Camera) devices
+        return {"status", "recent_detections"}
+
+    return set()
+
+
+def discover_device_capabilities_from_readings(
+    device_serial: str, sensor_readings: dict[str, Any]
+) -> set[str]:
+    """Dynamically discover device capabilities from actual sensor readings.
+
+    This is the preferred method as it uses real API data to determine
+    what metrics each device actually provides.
+
+    Args:
+        device_serial: Device serial number
+        sensor_readings: Raw sensor readings from getOrganizationSensorReadingsLatest
+
+    Returns:
+        Set of discovered metric keys
+    """
+    capabilities = set()
+
+    # Handle various response formats
+    if isinstance(sensor_readings, dict):
+        # Single device reading
+        if sensor_readings.get("serial") == device_serial:
+            if readings := sensor_readings.get("readings", []):
+                for reading in readings:
+                    if metric := reading.get("metric"):
+                        capabilities.add(metric)
+    elif isinstance(sensor_readings, list):
+        # Multiple device readings
+        for device_reading in sensor_readings:
+            if device_reading.get("serial") == device_serial:
+                if readings := device_reading.get("readings", []):
+                    for reading in readings:
+                        if metric := reading.get("metric"):
+                            capabilities.add(metric)
+
+    return capabilities
+
+
+def get_device_capabilities(
+    device: dict[str, Any], coordinator_data: dict[str, Any] | None = None
+) -> set[str]:
+    """Get device capabilities using dynamic discovery with fallback.
+
+    Tries dynamic discovery first, falls back to model-based capabilities.
+
+    Args:
+        device: Device information
+        coordinator_data: Current coordinator data with sensor readings (if available)
+
+    Returns:
+        Set of capability/metric keys
+    """
+    device_serial = device.get("serial", "")
+    device_model = device.get("model", "")
+    device_type = device.get("productType", "").upper()
+
+    # Try dynamic discovery first if we have coordinator data
+    if coordinator_data and device_serial:
+        discovered = discover_device_capabilities_from_readings(
+            device_serial, coordinator_data
+        )
+        if discovered:
+            return discovered
+
+    # Fall back to model-based capabilities
+    return create_device_capability_filter(device_model, device_type)
+
+
+def should_create_entity(
+    device: dict[str, Any],
+    metric_key: str,
+    coordinator_data: dict[str, Any] | None = None,
+    always_create: bool = False,
+) -> bool:
+    """Determine if an entity should be created for a device/metric combination.
+
+    Uses device capabilities to filter entities, preventing creation of
+    entities for metrics the device doesn't support.
+
+    Args:
+        device: Device information
+        metric_key: The metric/sensor key to check
+        coordinator_data: Current coordinator data (optional)
+        always_create: Override capability checking
+
+    Returns:
+        True if entity should be created
+    """
+    if always_create:
+        return True
+
+    # Get device capabilities
+    capabilities = get_device_capabilities(device, coordinator_data)
+
+    # If no capabilities detected, be permissive
+    if not capabilities:
+        return True
+
+    # Check if this metric is in the device's capabilities
+    return metric_key in capabilities
+
+
+def get_device_status_info(org_hub: Any, device_serial: str) -> dict[str, Any] | None:
+    """Get status information for a specific device.
+
+    Args:
+        org_hub: Organization hub object with device_statuses attribute
+        device_serial: Serial number to look for
+
+    Returns:
+        Status dictionary or None if not found
+    """
+    if org_hub is None:
+        return None
+
+    if not hasattr(org_hub, "device_statuses"):
+        return None
+
+    device_statuses = org_hub.device_statuses
+    if not device_statuses:
+        return None
+
+    for status in device_statuses:
+        if status.get("serial") == device_serial:
+            return status
+    return None

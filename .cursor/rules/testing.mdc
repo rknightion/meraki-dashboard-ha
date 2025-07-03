@@ -1,9 +1,278 @@
 ---
-description:
-globs: **/*_test.py,**/*test_*.py
+globs: **/*test_*.py,tests/**
 alwaysApply: false
 ---
-- Use fixtures to manage setup and teardown of test environments efficiently.
-- Organize tests into directories and use meaningful names for test files and functions.
-- Leverage pytest markers to categorize tests (e.g., unit, integration) for selective execution.
-- Aim for high test coverage, but prioritize meaningful tests over quantity.
+# Testing Guidelines
+
+## Testing Architecture
+
+### Builder Pattern for Test Data
+- Use test builders from `tests/builders/` for creating test data
+- Builders provide fluent API for test object creation
+- Available builders:
+  - `MerakiDeviceBuilder` - Create device test data
+  - `SensorDataBuilder` - Create sensor reading data
+  - `HubBuilder` - Create hub configurations and instances
+  - `IntegrationTestHelper` - High-level integration testing
+
+### Builder Usage Examples
+
+#### Device Creation
+```python
+from tests.builders import MerakiDeviceBuilder
+
+# Basic device
+device = MerakiDeviceBuilder().build()
+
+# Customized MT device
+device = (MerakiDeviceBuilder()
+    .with_serial("Q2XX-TEST-0001")
+    .with_name("Test Sensor")
+    .as_mt_device()
+    .build())
+
+# Multiple devices
+devices = MerakiDeviceBuilder().build_many(count=5, serial_prefix="Q2XX-TEST-")
+```
+
+#### Sensor Data Creation
+```python
+from tests.builders import SensorDataBuilder
+
+# Temperature reading
+temp_reading = (SensorDataBuilder()
+    .as_temperature(22.5)
+    .with_serial("Q2XX-0001")
+    .build())
+
+# Multiple metrics
+readings = SensorDataBuilder().build_many(
+    metrics=["temperature", "humidity", "co2"],
+    base_value=20.0
+)
+```
+
+#### Hub Testing
+```python
+from tests.builders import HubBuilder
+
+# Create hub configuration
+hub_builder = (HubBuilder()
+    .with_api_key("test_key")
+    .with_organization("123456", "Test Org")
+    .add_network("N_123", "Main Office", ["sensor"]))
+
+# Create organization hub
+org_hub = await hub_builder.build_organization_hub(hass)
+
+# Create network hub
+network_hub = await hub_builder.build_network_hub(hass, "N_123", "MT")
+```
+
+#### Integration Testing
+```python
+from tests.builders import IntegrationTestHelper
+
+async def test_integration_flow(hass):
+    helper = IntegrationTestHelper(hass)
+
+    # Setup complete integration
+    device = MerakiDeviceBuilder().as_mt_device().build()
+    await helper.setup_meraki_integration(devices=[device])
+
+    # Test functionality
+    await helper.trigger_coordinator_update()
+
+    # Verify results
+    entity_registry = helper.get_entity_registry()
+    assert len(entity_registry.entities) > 0
+
+    # Cleanup
+    await helper.unload_integration()
+```
+
+## Testing Strategies
+
+### Unit Testing
+- Test individual components in isolation
+- Mock external dependencies (API calls, Home Assistant services)
+- Use builders for test data creation
+- Test both success and failure scenarios
+- Focus on single responsibility per test
+
+### Integration Testing
+- Test complete workflows end-to-end
+- Use `IntegrationTestHelper` for setup and teardown
+- Test with realistic device configurations
+- Verify entity and device registry updates
+- Test coordinator data flow
+
+### Performance Testing
+- Test API call performance and retry logic
+- Verify performance monitoring decorators
+- Test rate limiting and throttling
+- Monitor memory usage and cleanup
+
+### Error Handling Testing
+- Test all error scenarios and edge cases
+- Verify proper exception handling and logging
+- Test retry logic and circuit breaker patterns
+- Ensure graceful degradation
+
+## Test Organization
+
+### Test Structure
+- Organize tests by component (`test_sensor.py`, `test_hub.py`, etc.)
+- Use descriptive test names that explain the scenario
+- Group related tests in classes when appropriate
+- Use pytest fixtures for common setup
+
+### Test Categories
+- Use pytest markers to categorize tests:
+  - `@pytest.mark.unit` - Unit tests
+  - `@pytest.mark.integration` - Integration tests
+  - `@pytest.mark.slow` - Slow-running tests
+
+### Test Fixtures
+- Use fixtures for common test setup
+- Create reusable fixtures in `conftest.py`
+- Use builder patterns within fixtures
+- Ensure proper cleanup in fixtures
+
+## Mocking Best Practices
+
+### API Mocking
+```python
+from tests.fixtures.meraki_api import mock_meraki_api
+
+@mock_meraki_api
+async def test_api_interaction(hass):
+    # Test code here - API calls will be mocked
+    pass
+```
+
+### Service Mocking
+- Mock Home Assistant services appropriately
+- Use `unittest.mock` for complex mocking scenarios
+- Mock external dependencies but not internal logic
+- Verify mock calls when testing interactions
+
+### Data Mocking
+- Use builders to create realistic test data
+- Mock API responses with various scenarios
+- Test with missing or malformed data
+- Include edge cases and error conditions
+
+## Test Data Management
+
+### Using Presets
+```python
+from tests.builders.presets import DEVICE_PRESETS
+
+# Use predefined device configurations
+device = MerakiDeviceBuilder().from_preset(DEVICE_PRESETS.MT_SENSOR_BASIC).build()
+```
+
+### Creating Test Scenarios
+- Create realistic test scenarios based on real-world usage
+- Test with various device types and configurations
+- Include boundary conditions and edge cases
+- Test state transitions and updates
+
+## Running Tests
+
+### Local Testing
+```bash
+# Run all tests
+poetry run pytest
+
+# Run specific test categories
+poetry run pytest -m unit
+poetry run pytest -m integration
+
+# Run with coverage
+poetry run pytest --cov=custom_components.meraki_dashboard
+
+# Run specific test file
+poetry run pytest tests/test_sensor.py
+```
+
+### Continuous Integration
+- All tests must pass before merging
+- Maintain test coverage above 80%
+- Run tests on multiple Python versions
+- Include performance benchmarks
+
+## Test Maintenance
+
+### Best Practices
+- Keep tests simple and focused
+- Update tests when changing functionality
+- Remove or update obsolete tests
+- Use descriptive assertions with helpful messages
+- Document complex test scenarios
+
+### Test Cleanup
+- Ensure proper cleanup of test resources
+- Use context managers for resource management
+- Clean up Home Assistant state between tests
+- Remove temporary files and configurations
+
+## Advanced Testing Patterns
+
+### State Testing
+```python
+async def test_sensor_state_changes(hass):
+    helper = IntegrationTestHelper(hass)
+
+    # Setup initial state
+    device = MerakiDeviceBuilder().as_mt_device().build()
+    initial_readings = SensorDataBuilder().as_temperature(20.0).build()
+
+    await helper.setup_meraki_integration(devices=[device])
+    helper.add_sensor_data(device["serial"], [initial_readings])
+
+    # Trigger state change
+    new_readings = SensorDataBuilder().as_temperature(25.0).build()
+    helper.add_sensor_data(device["serial"], [new_readings])
+    await helper.trigger_coordinator_update()
+
+    # Verify state change
+    # Add assertions here
+```
+
+### Event Testing
+```python
+async def test_event_firing(hass):
+    events = []
+
+    def capture_event(event):
+        events.append(event)
+
+    hass.bus.async_listen("meraki_dashboard_event", capture_event)
+
+    # Trigger event
+    # Add test logic here
+
+    # Verify event was fired
+    assert len(events) == 1
+    assert events[0].data["sensor_type"] == "button"
+```
+
+### Performance Testing
+```python
+async def test_coordinator_performance(hass):
+    helper = IntegrationTestHelper(hass)
+
+    # Setup with multiple devices
+    devices = MerakiDeviceBuilder().build_many(count=10)
+    await helper.setup_meraki_integration(devices=devices)
+
+    # Measure update performance
+    start_time = time.time()
+    await helper.trigger_coordinator_update()
+    update_time = time.time() - start_time
+
+    # Verify performance meets expectations
+    assert update_time < 5.0  # Should complete within 5 seconds
+```

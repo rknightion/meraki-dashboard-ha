@@ -61,16 +61,31 @@ class ConfigMigration:
 
         # Ensure tiered refresh intervals exist
         if CONF_STATIC_DATA_INTERVAL not in options:
-            options[CONF_STATIC_DATA_INTERVAL] = STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
-            _LOGGER.debug("Added static data interval: %s seconds", options[CONF_STATIC_DATA_INTERVAL])
+            options[CONF_STATIC_DATA_INTERVAL] = (
+                STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+            )
+            _LOGGER.debug(
+                "Added static data interval: %s seconds",
+                options[CONF_STATIC_DATA_INTERVAL],
+            )
 
         if CONF_SEMI_STATIC_DATA_INTERVAL not in options:
-            options[CONF_SEMI_STATIC_DATA_INTERVAL] = SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
-            _LOGGER.debug("Added semi-static data interval: %s seconds", options[CONF_SEMI_STATIC_DATA_INTERVAL])
+            options[CONF_SEMI_STATIC_DATA_INTERVAL] = (
+                SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+            )
+            _LOGGER.debug(
+                "Added semi-static data interval: %s seconds",
+                options[CONF_SEMI_STATIC_DATA_INTERVAL],
+            )
 
         if CONF_DYNAMIC_DATA_INTERVAL not in options:
-            options[CONF_DYNAMIC_DATA_INTERVAL] = DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
-            _LOGGER.debug("Added dynamic data interval: %s seconds", options[CONF_DYNAMIC_DATA_INTERVAL])
+            options[CONF_DYNAMIC_DATA_INTERVAL] = (
+                DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+            )
+            _LOGGER.debug(
+                "Added dynamic data interval: %s seconds",
+                options[CONF_DYNAMIC_DATA_INTERVAL],
+            )
 
         # Ensure hub-specific configuration dictionaries exist
         if CONF_HUB_SCAN_INTERVALS not in options:
@@ -88,11 +103,16 @@ class ConfigMigration:
         # Ensure global intervals have defaults if missing
         if CONF_SCAN_INTERVAL not in options:
             options[CONF_SCAN_INTERVAL] = DEFAULT_SCAN_INTERVAL
-            _LOGGER.debug("Added default scan interval: %s seconds", DEFAULT_SCAN_INTERVAL)
+            _LOGGER.debug(
+                "Added default scan interval: %s seconds", DEFAULT_SCAN_INTERVAL
+            )
 
         if CONF_DISCOVERY_INTERVAL not in options:
             options[CONF_DISCOVERY_INTERVAL] = DEFAULT_DISCOVERY_INTERVAL
-            _LOGGER.debug("Added default discovery interval: %s seconds", DEFAULT_DISCOVERY_INTERVAL)
+            _LOGGER.debug(
+                "Added default discovery interval: %s seconds",
+                DEFAULT_DISCOVERY_INTERVAL,
+            )
 
         # Convert any legacy minute-based intervals to seconds
         options = self._convert_intervals_to_seconds(options)
@@ -131,7 +151,9 @@ class ConfigMigration:
                 if isinstance(value, int | float) and value < 60:
                     _LOGGER.debug(
                         "Converting %s from minutes (%s) to seconds (%s)",
-                        field, value, value * 60
+                        field,
+                        value,
+                        value * 60,
                     )
                     options[field] = int(value * 60)
 
@@ -140,8 +162,7 @@ class ConfigMigration:
             if isinstance(interval, int | float) and interval < 60:
                 options[CONF_HUB_SCAN_INTERVALS][hub_id] = int(interval * 60)
                 _LOGGER.debug(
-                    "Converting hub %s scan interval from minutes to seconds",
-                    hub_id
+                    "Converting hub %s scan interval from minutes to seconds", hub_id
                 )
 
         for hub_id, interval in options.get(CONF_HUB_DISCOVERY_INTERVALS, {}).items():
@@ -149,7 +170,7 @@ class ConfigMigration:
                 options[CONF_HUB_DISCOVERY_INTERVALS][hub_id] = int(interval * 60)
                 _LOGGER.debug(
                     "Converting hub %s discovery interval from minutes to seconds",
-                    hub_id
+                    hub_id,
                 )
 
         return options
@@ -181,14 +202,13 @@ class ConfigMigration:
             }
 
             validate_config_migration(
-                {**self._original_data, **self._original_options},
-                combined_config
+                {**self._original_data, **self._original_options}, combined_config
             )
 
             # Final validation with schema
             MerakiConfigSchema.from_config_entry(
-                self.config_entry.data,
-                self.config_entry.options
+                dict(self.config_entry.data),
+                dict(self.config_entry.options) if self.config_entry.options else None,
             )
             _LOGGER.debug("Migrated configuration validated successfully")
 

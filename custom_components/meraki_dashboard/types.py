@@ -29,27 +29,32 @@ class MerakiDeviceData(TypedDict, total=False):
 # Sensor metric value types
 class TemperatureReading(TypedDict):
     """Temperature sensor reading."""
+
     celsius: float
     fahrenheit: float | None
 
 
 class HumidityReading(TypedDict):
     """Humidity sensor reading."""
+
     relativePercentage: float
 
 
 class ConcentrationReading(TypedDict):
     """Concentration-based sensor reading (CO2, PM2.5, TVOC)."""
+
     concentration: float
 
 
 class BatteryReading(TypedDict):
     """Battery sensor reading."""
+
     percentage: float
 
 
 class PowerReading(TypedDict):
     """Power sensor reading."""
+
     value: float
     unit: str  # "W", "kW", "mW"
     draw: float | None  # Alternative field
@@ -57,12 +62,14 @@ class PowerReading(TypedDict):
 
 class ElectricalReading(TypedDict):
     """Electrical measurement reading (voltage, current, etc)."""
+
     value: float
     unit: str | None
 
 
 class NoiseReading(TypedDict, total=False):
     """Noise sensor reading with multiple possible formats."""
+
     ambient: float | None
     concentration: float | None
     level: float | dict[str, float] | None
@@ -70,11 +77,13 @@ class NoiseReading(TypedDict, total=False):
 
 class AirQualityReading(TypedDict):
     """Indoor air quality reading."""
+
     score: int
 
 
 class BinarySensorReading(TypedDict):
     """Binary sensor reading (door, water, button)."""
+
     open: bool
     detected: bool | None
     pressed: bool | None
@@ -257,6 +266,15 @@ class MemoryUsageData(TypedDict, total=False):
     freeInKb: float | None
     usedInKb: float | None
     memory_usage_percent: float | None
+    model: str
+    name: str
+    network: dict[str, Any]
+    memory_used_kb: float
+    memory_free_kb: float
+    memory_total_kb: float
+    last_interval_start: str | None
+    last_interval_end: str | None
+    raw_data: dict[str, Any]
 
 
 # Coordinator Data Types - Device-specific structures
@@ -265,6 +283,7 @@ class MTCoordinatorData(TypedDict):
 
     Structure: {device_serial: device_data}
     """
+
     # Dynamic keys - each key is a device serial number
     # Value is the device's sensor data
     __root__: dict[DeviceSerial, MTDeviceData]
@@ -304,11 +323,11 @@ DeviceSerial = str
 
 # Union type for all coordinator data types
 CoordinatorData = (
-    dict[DeviceSerial, MTDeviceData] |  # MT devices use serial as key
-    MRCoordinatorData |
-    MSCoordinatorData |
-    OrganizationCoordinatorData |
-    dict[str, Any]  # Fallback for legacy code
+    dict[DeviceSerial, MTDeviceData]  # MT devices use serial as key
+    | MRCoordinatorData
+    | MSCoordinatorData
+    | OrganizationCoordinatorData
+    | dict[str, Any]  # Fallback for legacy code
 )
 
 
@@ -316,20 +335,34 @@ CoordinatorData = (
 class MerakiApiClient(Protocol):
     """Protocol for Meraki API client."""
 
-    def organizations(self) -> dict[str, Any]:
+    @property
+    def organizations(self) -> Any:
         """Get organizations API endpoints."""
         ...
 
-    def networks(self) -> dict[str, Any]:
+    @property
+    def networks(self) -> Any:
         """Get networks API endpoints."""
         ...
 
-    def devices(self) -> dict[str, Any]:
+    @property
+    def devices(self) -> Any:
         """Get devices API endpoints."""
         ...
 
-    def sensor(self) -> dict[str, Any]:
+    @property
+    def sensor(self) -> Any:
         """Get sensor API endpoints."""
+        ...
+
+    @property
+    def wireless(self) -> Any:
+        """Get wireless API endpoints."""
+        ...
+
+    @property
+    def switch(self) -> Any:
+        """Get switch API endpoints."""
         ...
 
 

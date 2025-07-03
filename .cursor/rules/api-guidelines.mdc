@@ -3,32 +3,116 @@ description:
 globs:
 alwaysApply: true
 ---
+
 # API Guidelines
 
 ## Meraki SDK Usage
 - Always use Meraki Python SDK for all API interactions
 - Never make direct HTTP calls to the Meraki API
+- Configure SDK with proper settings: `suppress_logging=True`, `print_console=False`, `output_log=False`
+- Use the SDK's automatic pagination with `total_pages='all'`
 - Implement proper rate limiting and error handling
 - Use batch operations where possible
 - Cache device information appropriately
-- SDK helper – the Python library transparently handles pagination (total_pages='all').  Wrap each call in a tiny decorator that records meraki_http_latency_seconds and meraki_http_errors_total to spot API hiccups.
 
-## Error Handling
-- Implement ConfigEntryAuthFailed and ConfigEntryNotReady appropriately
-- Log errors at appropriate levels with helpful messages
-- Implement retry logic for transient failures
-- Handle API authentication errors gracefully
-- Use Home Assistant's built-in helpers and utilities
+## Hub-Based API Architecture
+- **Organization Hub**: Handles organization-level API calls and hub orchestration
+- **Network Hub**: Manages device-type specific API calls within networks
+- Isolate API interactions within hub classes
+- Use dependency injection for API client configuration
+- Implement hub factory patterns for dynamic creation
+- Support multiple device types (MT, MR, MS, MV) with specialized hubs
 
-## Performance Optimization
-- Minimize API calls using batch operations
-- Respect Meraki's rate limits
-- Use appropriate update intervals
-- Implement efficient data structures
-- Cache device information appropriately
+## Performance Monitoring
+- Use `@performance_monitor` decorator for all API-related methods
+- Track metrics: `meraki_http_latency_seconds`, `meraki_http_errors_total`
+- Monitor coordinator performance with success rates and update durations
+- Log performance metrics periodically (every 10 updates)
+- Implement tiered refresh intervals for different data types:
+  - Static data: 4 hours (device info, network settings)
+  - Semi-static data: 1 hour (configuration changes)
+  - Dynamic data: 5-10 minutes (sensor readings, traffic stats)
 
-## Data Management
-- Include all available attributes from API
-- Support dynamic device discovery
-- Make update intervals configurable
-- Use proper device classes and units
+## Error Handling & Retry Logic
+- Use `@handle_api_errors` decorator for comprehensive error handling
+- Implement `@with_standard_retries` for automatic retry with exponential backoff
+- Handle specific error scenarios:
+  - `ConfigEntryAuthFailed` for authentication errors
+  - `ConfigEntryNotReady` for temporary unavailability
+  - `UpdateFailed` for coordinator update failures
+- Categorize errors by type (auth, network, rate limit, server)
+- Implement circuit breaker pattern for repeated failures
+- Log errors with appropriate context and stack traces
+
+## Data Management & Caching
+- Use data transformers for API response processing
+- Implement intelligent caching strategies:
+  - Cache device lists and network information
+  - Cache static device properties
+  - Refresh dynamic data based on device type
+- Support batch operations for multiple devices
+- Normalize data structures across device types
+- Handle missing or invalid API responses gracefully
+
+## Configuration & Setup
+- Support multiple base URL regions (Global, Canada, China, India, US Gov)
+- Implement per-device-type scan intervals:
+  - MT devices: 10 minutes (environmental sensors)
+  - MR devices: 5 minutes (wireless access points)
+  - MS devices: 5 minutes (switches)
+  - MV devices: 10 minutes (cameras)
+- Allow hub-specific configuration overrides
+- Support auto-discovery with manual device selection
+- Validate API connectivity during setup
+
+## API Rate Limiting & Optimization
+- Respect Meraki's rate limits (varies by organization tier)
+- Use intelligent batching for multiple device queries
+- Implement request queuing and throttling
+- Monitor API usage and adjust intervals dynamically
+- Use efficient API endpoints:
+  - Batch device status calls
+  - Use summary endpoints where available
+  - Minimize redundant API calls
+
+## Device Type Specific Patterns
+
+### MT (Environmental Sensors)
+- Use sensor readings endpoints for real-time data
+- Batch multiple sensor types in single calls
+- Handle missing sensor types gracefully
+- Support event-based updates for critical sensors (water, door, button)
+
+### MR (Wireless Access Points)
+- Use device status and performance endpoints
+- Batch SSID and client information
+- Monitor RF metrics and channel utilization
+- Handle radio-specific data (2.4GHz vs 5GHz)
+
+### MS (Switches)
+- Use port status and statistics endpoints
+- Batch PoE and traffic information
+- Monitor switch-wide metrics (power, clients)
+- Handle port-specific data efficiently
+
+### Organization Level
+- Use organization-wide summary endpoints
+- Monitor API usage and limits
+- Track license and device counts
+- Implement alert monitoring
+
+## Logging & Debugging
+- Suppress verbose third-party library logging to ERROR level
+- Use structured logging with performance context
+- Include API call context in error messages
+- Log retry attempts and success/failure patterns
+- Never log sensitive information (API keys, tokens)
+- Use debug logging for detailed API interactions
+
+## Testing & Mocking
+- Mock all external API calls in tests
+- Use builder patterns for API response data
+- Test both success and failure scenarios
+- Mock rate limiting and error conditions
+- Test hub creation and configuration
+- Verify proper error handling and retry logic

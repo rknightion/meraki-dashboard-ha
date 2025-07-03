@@ -102,7 +102,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
             self._update_count,
             self.hub.hub_name,
             self.hub.device_type,
-            len(self.devices)
+            len(self.devices),
         )
 
         try:
@@ -110,9 +110,13 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
             if self.hub.device_type == "MT":
                 _LOGGER.debug("Fetching MT sensor data from hub %s", self.hub.hub_name)
                 data = await self.hub.async_get_sensor_data()
-                _LOGGER.debug("Retrieved MT data for %d devices", len(data) if data else 0)
+                _LOGGER.debug(
+                    "Retrieved MT data for %d devices", len(data) if data else 0
+                )
             elif self.hub.device_type == "MR":
-                _LOGGER.debug("Fetching MR wireless data from hub %s", self.hub.hub_name)
+                _LOGGER.debug(
+                    "Fetching MR wireless data from hub %s", self.hub.hub_name
+                )
                 # Update wireless data and return it
                 await self.hub._async_setup_wireless_data()
                 data = self.hub.wireless_data or {}
@@ -135,7 +139,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
                 self._update_count,
                 self._last_update_duration,
                 self.hub.hub_name,
-                self.hub.device_type
+                self.hub.device_type,
             )
 
             # Log performance metrics periodically

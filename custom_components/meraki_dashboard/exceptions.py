@@ -19,11 +19,7 @@ class MerakiError(Exception):
     during development and troubleshooting.
     """
 
-    def __init__(
-        self,
-        message: str,
-        **context: Any
-    ) -> None:
+    def __init__(self, message: str, **context: Any) -> None:
         """Initialize error with message and context.
 
         Args:
@@ -63,7 +59,7 @@ class MerakiError(Exception):
                 "MerakiError: %s | Context: %s",
                 self.message,
                 self.context,
-                exc_info=True
+                exc_info=True,
             )
         else:
             _LOGGER.debug("MerakiError: %s", self.message, exc_info=True)
@@ -78,7 +74,7 @@ class APIError(MerakiError):
         status_code: int | None = None,
         request_url: str | None = None,
         response_data: dict[str, Any] | None = None,
-        **context: Any
+        **context: Any,
     ) -> None:
         """Initialize API error with request/response details."""
         super().__init__(
@@ -86,7 +82,7 @@ class APIError(MerakiError):
             status_code=status_code,
             request_url=request_url,
             response_data=response_data,
-            **context
+            **context,
         )
         self.status_code = status_code
 
@@ -99,19 +95,21 @@ class ConfigurationError(MerakiError):
         message: str,
         config_key: str | None = None,
         config_value: Any = None,
-        **context: Any
+        **context: Any,
     ) -> None:
         """Initialize configuration error."""
         # Sanitize sensitive configuration values
         safe_value = config_value
-        if config_key and config_key.lower() in ("api_key", "password", "token", "secret"):
+        if config_key and config_key.lower() in (
+            "api_key",
+            "password",
+            "token",
+            "secret",
+        ):
             safe_value = "***REDACTED***"
 
         super().__init__(
-            message,
-            config_key=config_key,
-            config_value=safe_value,
-            **context
+            message, config_key=config_key, config_value=safe_value, **context
         )
 
 
@@ -123,20 +121,18 @@ class DeviceError(MerakiError):
         message: str,
         device_serial: str | None = None,
         device_type: str | None = None,
-        **context: Any
+        **context: Any,
     ) -> None:
         """Initialize device error with device details."""
         super().__init__(
-            message,
-            device_serial=device_serial,
-            device_type=device_type,
-            **context
+            message, device_serial=device_serial, device_type=device_type, **context
         )
 
 
 # Legacy compatibility - keep these for backward compatibility
 class MerakiApiError(APIError):
     """Legacy alias for APIError."""
+
     pass
 
 
@@ -159,17 +155,15 @@ class MerakiAuthenticationError(APIError):
 class MerakiRateLimitError(APIError):
     """Legacy alias for rate limit APIError."""
 
-    def __init__(self, message: str = "API rate limit exceeded", retry_after: int | None = None) -> None:
+    def __init__(
+        self, message: str = "API rate limit exceeded", retry_after: int | None = None
+    ) -> None:
         """Initialize rate limit error."""
         super().__init__(message, status_code=429, retry_after=retry_after)
         self.retry_after = retry_after
 
 
-def log_and_raise(
-    error_class: type[MerakiError],
-    message: str,
-    **context: Any
-) -> None:
+def log_and_raise(error_class: type[MerakiError], message: str, **context: Any) -> None:
     """Helper to log and raise an error with context.
 
     This is useful for adding debug context throughout the codebase.
@@ -206,6 +200,7 @@ def wrap_api_call(func_name: str, **context: Any):
         ...     # API call here
         ...     pass
     """
+
     def decorator(func):
         def wrapper(*args, **kwargs):
             try:
@@ -219,14 +214,16 @@ def wrap_api_call(func_name: str, **context: Any):
                     func_name,
                     str(e),
                     context,
-                    exc_info=True
+                    exc_info=True,
                 )
                 # Re-raise as APIError with context
                 raise APIError(
                     f"API call {func_name} failed: {str(e)}",
                     function_name=func_name,
                     original_error=str(e),
-                    **context
+                    **context,
                 ) from e
+
         return wrapper
+
     return decorator

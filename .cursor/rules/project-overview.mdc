@@ -1,12 +1,11 @@
 ---
-description:
-globs:
 alwaysApply: true
 ---
+
 # Meraki Dashboard Home Assistant Integration
 
 ## Project Context
-Home Assistant custom integration for Cisco Meraki Dashboard API, focusing on MT series environmental sensors with plans to expand to other device types.
+Home Assistant custom integration for Cisco Meraki Dashboard API, supporting multiple device types (MT environmental sensors, MR wireless access points, MS switches, MV cameras) with a comprehensive hub-based architecture.
 
 ## Core Principles
 - Always use Poetry to run any terminal command involving python to ensure proper venv setup
@@ -14,21 +13,115 @@ Home Assistant custom integration for Cisco Meraki Dashboard API, focusing on MT
 - Never run any git commands
 - Follow Home Assistant integration patterns and conventions
 - Implement proper async/await patterns for all I/O operations
-- Maintain comprehensive test coverage (>80%)
+- Maintain comprehensive test coverage (>50%)
 - Use type hints throughout the codebase
+- Follow the hub-based architecture pattern for scalability
+- Use factory patterns for entity creation
+- Implement comprehensive error handling and retry logic
+
+## Architecture Overview
+
+### Hub-Based System
+- **Organization Hub** (`hubs/organization.py`): Manages organization-level operations and creates network hubs
+- **Network Hub** (`hubs/network.py`): Manages device-specific operations for each network and device type
+- Supports dynamic hub creation based on available devices
+
+### Device Abstraction Layer
+- **Base Device Classes** (`devices/`): Abstract device behavior by type
+  - `devices/mt.py`: Environmental sensors (temperature, humidity, CO2, etc.)
+  - `devices/mr.py`: Wireless access points (SSIDs, clients, RF metrics)
+  - `devices/ms.py`: Switches (ports, PoE, traffic metrics)
+  - `devices/organization.py`: Organization-level metrics
+
+### Entity Management
+- **Entity Factory** (`entities/factory.py`): Creates entities based on device type and available metrics
+- **Base Entity** (`entities/base.py`): Common entity functionality and patterns
+- Dynamic entity creation based on device capabilities
+
+### Configuration Management
+- **Configuration Schemas** (`config/schemas.py`): Type-safe configuration validation
+- **Migration System** (`config/migration.py`): Handle configuration migrations between versions
+- **Hub Configuration** (`config/hub_config.py`): Hub-specific configuration handling
+
+### Data Processing
+- **Data Transformers** (`data/transformers.py`): Convert API responses to Home Assistant entities
+- Normalize data across different device types
+- Handle unit conversions and state mapping
+
+### Service Layer
+- **Event Service** (`services/event_service.py`): Handle Home Assistant events for sensor changes
+- Extensible service architecture for additional features
+
+### Utilities
+- **Performance Monitoring** (`utils/performance.py`): Track API performance and coordinator metrics
+- **Error Handling** (`utils/error_handling.py`): Comprehensive error handling with proper categorization
+- **Retry Logic** (`utils/retry.py`): Configurable retry strategies for API calls
+- **Device Information** (`utils/device_info.py`): Home Assistant device registry helpers
 
 ## Key Files
-- `__init__.py` - Main integration setup and hub class
-- `config_flow.py` - UI configuration flow
+
+### Core Integration Files
+- `__init__.py` - Main integration setup with hub orchestration
+- `coordinator.py` - Data update coordinator with performance tracking
+- `const.py` - Constants and enums (using StrEnum for type safety)
+- `types.py` - Type definitions for the entire integration
+- `exceptions.py` - Custom exception hierarchy
+
+### Platform Files
 - `sensor.py` - Sensor platform implementation
 - `binary_sensor.py` - Binary sensor platform implementation
-- `const.py` - Constants and configuration keys
+- `button.py` - Button platform implementation
+
+### Configuration Files
+- `config_flow.py` - UI configuration flow with device selection
 - `manifest.json` - Integration metadata
 - `strings.json` - UI strings and translations
 
+### Testing Architecture
+- `tests/builders/` - Comprehensive builder pattern for test data
+- `tests/fixtures/` - Test fixtures and mock data
+- Test builders for devices, sensors, hubs, and full integration scenarios
+
+## Device Type Support
+
+### MT (Environmental Sensors)
+- Temperature, humidity, CO2, TVOC, PM2.5
+- Water detection, door sensors, button presses
+- Power metrics (apparent, real, voltage, current)
+- Battery monitoring and air quality
+
+### MR (Wireless Access Points)
+- SSID management and client counts
+- RF metrics (power, channel utilization, data rates)
+- Connection success rates and traffic metrics
+- Memory usage and performance monitoring
+
+### MS (Switches)
+- Port management and PoE monitoring
+- Traffic metrics and utilization
+- Connected clients and power consumption
+- Port errors and link status
+
+### Organization Level
+- API usage metrics and device counts
+- Network management and alert monitoring
+- Client usage statistics
+- License expiration tracking
+
+## Configuration Features
+- Per-device-type scan intervals
+- Hub-specific configuration overrides
+- Auto-discovery with manual device selection
+- Runtime configuration changes via options flow
+- Tiered refresh intervals for different data types
+
+## Performance & Monitoring
+- Comprehensive performance tracking with decorators
+- API call latency and error rate monitoring
+- Coordinator performance metrics
+- Automatic retry with exponential backoff
+- Intelligent caching and batch operations
+
 ## Git & Documentation
-- Use conventional commits format
-- Keep commits atomic and focused
-- Reference issues in commit messages
-- Update documentation for all changes
-- Test integration in actual Home Assistant instance
+- Do not run any git commands yourself
+- You should run pre-commit on all files via poetry when a task has completed as this will run all tests and linting. Fix any resulting issues.

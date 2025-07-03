@@ -133,10 +133,14 @@ class MerakiEventService(EventPublisher):
     def __init__(self, hass: HomeAssistant) -> None:
         """Initialize the event service."""
         self.hass = hass
-        self._subscribers: defaultdict[str, list[tuple[EventSubscriber, EventFilter | None]]] = defaultdict(list)
+        self._subscribers: defaultdict[
+            str, list[tuple[EventSubscriber, EventFilter | None]]
+        ] = defaultdict(list)
         self._previous_states: dict[str, dict[str, Any]] = {}
         self._logged_missing_devices: set[str] = set()
-        self._throttle = EventThrottle(min_interval_seconds=0.5)  # Prevent event flooding
+        self._throttle = EventThrottle(
+            min_interval_seconds=0.5
+        )  # Prevent event flooding
 
     def subscribe(
         self,

@@ -55,14 +55,10 @@ class APIKeyConfig:
     def __post_init__(self) -> None:
         """Validate API key after initialization."""
         if not isinstance(self.value, str):
-            raise ConfigurationError(
-                "API key must be a string"
-            )
+            raise ConfigurationError("API key must be a string")
 
         if not self.value.strip():
-            raise ConfigurationError(
-                "API key cannot be empty"
-            )
+            raise ConfigurationError("API key cannot be empty")
 
         # Basic format validation - Meraki API keys are typically 40 hex characters
         if len(self.value) != 40:
@@ -81,25 +77,21 @@ class BaseURLConfig:
     """Configuration for base URL validation."""
 
     value: str
-    allowed_urls: list[str] = field(default_factory=lambda: list(REGIONAL_BASE_URLS.values()))
+    allowed_urls: list[str] = field(
+        default_factory=lambda: list(REGIONAL_BASE_URLS.values())
+    )
 
     def __post_init__(self) -> None:
         """Validate base URL after initialization."""
         if not isinstance(self.value, str):
-            raise ConfigurationError(
-                "Base URL must be a string"
-            )
+            raise ConfigurationError("Base URL must be a string")
 
         if not self.value.strip():
-            raise ConfigurationError(
-                "Base URL cannot be empty"
-            )
+            raise ConfigurationError("Base URL cannot be empty")
 
         # Must be HTTPS
         if not self.value.startswith("https://"):
-            raise ConfigurationError(
-                "Base URL must use HTTPS"
-            )
+            raise ConfigurationError("Base URL must use HTTPS")
 
         # Should be one of the allowed URLs
         if self.value not in self.allowed_urls:
@@ -113,24 +105,20 @@ class OrganizationIDConfig:
     """Configuration for organization ID validation."""
 
     value: str
-    # Meraki organization IDs can contain letters, numbers, underscores, and hyphens
-    ORG_ID_PATTERN: ClassVar[re.Pattern] = re.compile(r"^[a-zA-Z0-9_-]+$")
+    # Meraki organization IDs can contain letters, numbers, and hyphens
+    ORG_ID_PATTERN: ClassVar[re.Pattern] = re.compile(r"^[a-zA-Z0-9\-]+$")
 
     def __post_init__(self) -> None:
         """Validate organization ID after initialization."""
         if not isinstance(self.value, str):
-            raise ConfigurationError(
-                "Organization ID must be a string"
-            )
+            raise ConfigurationError("Organization ID must be a string")
 
         if not self.value.strip():
-            raise ConfigurationError(
-                "Organization ID cannot be empty"
-            )
+            raise ConfigurationError("Organization ID cannot be empty")
 
         if not self.ORG_ID_PATTERN.match(self.value):
             raise ConfigurationError(
-                "Organization ID must contain only letters, numbers, underscores, or hyphens"
+                "Organization ID must contain only letters, numbers, and hyphens"
             )
 
 
@@ -145,14 +133,10 @@ class DeviceSerialConfig:
     def __post_init__(self) -> None:
         """Validate device serial after initialization."""
         if not isinstance(self.value, str):
-            raise ConfigurationError(
-                "Device serial must be a string"
-            )
+            raise ConfigurationError("Device serial must be a string")
 
         if not self.value.strip():
-            raise ConfigurationError(
-                "Device serial cannot be empty"
-            )
+            raise ConfigurationError("Device serial cannot be empty")
 
         if not self.SERIAL_PATTERN.match(self.value):
             raise ConfigurationError(
@@ -201,9 +185,7 @@ class HubIntervalConfig:
     def __post_init__(self) -> None:
         """Validate hub-specific intervals after initialization."""
         if not isinstance(self.hub_id, str) or not self.hub_id.strip():
-            raise ConfigurationError(
-                "Hub ID must be a non-empty string"
-            )
+            raise ConfigurationError("Hub ID must be a non-empty string")
 
         if self.scan_interval is not None:
             IntervalConfig(self.scan_interval, min_seconds=60, max_seconds=3600)
@@ -211,10 +193,10 @@ class HubIntervalConfig:
         if self.discovery_interval is not None:
             IntervalConfig(self.discovery_interval, min_seconds=300, max_seconds=86400)
 
-        if self.auto_discovery is not None and not isinstance(self.auto_discovery, bool):
-            raise ConfigurationError(
-                "Auto discovery must be a boolean"
-            )
+        if self.auto_discovery is not None and not isinstance(
+            self.auto_discovery, bool
+        ):
+            raise ConfigurationError("Auto discovery must be a boolean")
 
 
 @dataclass
@@ -256,15 +238,11 @@ class MerakiConfigSchema:
 
         # Validate auto discovery
         if not isinstance(self.auto_discovery, bool):
-            raise ConfigurationError(
-                "Auto discovery must be a boolean"
-            )
+            raise ConfigurationError("Auto discovery must be a boolean")
 
         # Validate selected devices
         if not isinstance(self.selected_devices, list):
-            raise ConfigurationError(
-                "Selected devices must be a list"
-            )
+            raise ConfigurationError("Selected devices must be a list")
 
         for serial in self.selected_devices:
             DeviceSerialConfig(serial)
@@ -287,7 +265,9 @@ class MerakiConfigSchema:
         )
 
     @classmethod
-    def from_config_entry(cls, data: dict[str, Any], options: dict[str, Any] | None = None) -> MerakiConfigSchema:
+    def from_config_entry(
+        cls, data: dict[str, Any], options: dict[str, Any] | None = None
+    ) -> MerakiConfigSchema:
         """Create schema from config entry data and options.
 
         Args:
@@ -304,30 +284,27 @@ class MerakiConfigSchema:
             api_key=data["api_key"],
             base_url=data.get("base_url", DEFAULT_BASE_URL),
             organization_id=data.get("organization_id", ""),
-
             # Options configuration
             scan_interval=options.get("scan_interval", DEFAULT_SCAN_INTERVAL),
             auto_discovery=options.get("auto_discovery", True),
-            discovery_interval=options.get("discovery_interval", DEFAULT_DISCOVERY_INTERVAL),
+            discovery_interval=options.get(
+                "discovery_interval", DEFAULT_DISCOVERY_INTERVAL
+            ),
             selected_devices=options.get("selected_devices", []),
-
             # Hub-specific configuration
             hub_scan_intervals=options.get("hub_scan_intervals", {}),
             hub_discovery_intervals=options.get("hub_discovery_intervals", {}),
             hub_auto_discovery=options.get("hub_auto_discovery", {}),
-
             # Tiered refresh intervals
             static_data_interval=options.get(
-                "static_data_interval",
-                STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+                "static_data_interval", STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
             ),
             semi_static_data_interval=options.get(
                 "semi_static_data_interval",
-                SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+                SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60,
             ),
             dynamic_data_interval=options.get(
-                "dynamic_data_interval",
-                DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
+                "dynamic_data_interval", DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
             ),
         )
 
@@ -354,7 +331,9 @@ class MerakiConfigSchema:
         }
 
 
-def validate_config_migration(old_config: dict[str, Any], new_config: dict[str, Any]) -> bool:
+def validate_config_migration(
+    old_config: dict[str, Any], new_config: dict[str, Any]
+) -> bool:
     """Validate configuration migration from old to new format.
 
     Args:
@@ -369,25 +348,27 @@ def validate_config_migration(old_config: dict[str, Any], new_config: dict[str, 
     """
     # Ensure API key hasn't changed (security measure)
     if old_config.get("api_key") != new_config.get("api_key"):
-        raise ConfigurationError(
-            "API key cannot be changed during migration"
-        )
+        raise ConfigurationError("API key cannot be changed during migration")
 
     # Ensure organization ID hasn't changed
     if old_config.get("organization_id") != new_config.get("organization_id"):
-        raise ConfigurationError(
-            "Organization ID cannot be changed during migration"
-        )
+        raise ConfigurationError("Organization ID cannot be changed during migration")
 
     # Validate the new configuration
     try:
         MerakiConfigSchema.from_config_entry(
-            data={k: v for k, v in new_config.items() if k in ["api_key", "base_url", "organization_id"]},
-            options={k: v for k, v in new_config.items() if k not in ["api_key", "base_url", "organization_id"]},
+            data={
+                k: v
+                for k, v in new_config.items()
+                if k in ["api_key", "base_url", "organization_id"]
+            },
+            options={
+                k: v
+                for k, v in new_config.items()
+                if k not in ["api_key", "base_url", "organization_id"]
+            },
         )
     except Exception as e:
-        raise ConfigurationError(
-            f"Invalid configuration after migration: {e}"
-        ) from e
+        raise ConfigurationError(f"Invalid configuration after migration: {e}") from e
 
     return True

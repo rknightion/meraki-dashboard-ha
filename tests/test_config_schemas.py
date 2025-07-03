@@ -141,18 +141,27 @@ class TestOrganizationIDConfig:
 
     def test_valid_org_id(self):
         """Test valid organization ID."""
+        # Test numeric ID
         config = OrganizationIDConfig("123456")
         assert config.value == "123456"
+
+        # Test alphanumeric ID
+        config = OrganizationIDConfig("abc123")
+        assert config.value == "abc123"
+
+        # Test ID with hyphens
+        config = OrganizationIDConfig("test-org-123")
+        assert config.value == "test-org-123"
 
     def test_empty_org_id(self):
         """Test empty organization ID."""
         with pytest.raises(ConfigurationError, match="cannot be empty"):
             OrganizationIDConfig("")
 
-    def test_non_numeric_org_id(self):
-        """Test non-numeric organization ID."""
-        with pytest.raises(ConfigurationError, match="must contain only digits"):
-            OrganizationIDConfig("abc123")
+    def test_invalid_org_id_characters(self):
+        """Test organization ID with invalid characters."""
+        with pytest.raises(ConfigurationError, match="must contain only letters, numbers, and hyphens"):
+            OrganizationIDConfig("test_org@123")
 
     def test_org_id_not_string(self):
         """Test non-string organization ID."""
