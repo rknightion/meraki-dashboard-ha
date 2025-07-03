@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+from collections import deque
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -42,49 +44,51 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Cache for logging configuration to avoid repeated setup
-_LOGGING_CONFIGURED = False
+# Thread-safe cache for logging configuration
+_LOGGING_LOCK = threading.Lock()
+_LOGGING_CONFIGURED_FOR_LEVELS: dict[int, bool] = {}
 
 
 def _configure_third_party_logging() -> None:
     """Configure third-party library logging based on our component's logging level.
 
     This function adjusts the logging level for the Meraki library to match
-    our component's logging configuration. Uses caching to avoid repeated setup.
+    our component's logging configuration. Thread-safe and level-aware.
     """
-    global _LOGGING_CONFIGURED
-    if _LOGGING_CONFIGURED:
-        return
-
     # Get our component's logger level
     component_logger = logging.getLogger("custom_components.meraki_dashboard")
     component_level = component_logger.getEffectiveLevel()
 
-    # Configure third-party library logging to prevent spam
-    third_party_loggers = [
-        "meraki",
-        "urllib3",
-        "urllib3.connectionpool",
-        "requests",
-        "requests.packages.urllib3",
-        "requests.packages.urllib3.connectionpool",
-        "httpcore",
-        "httpx",
-    ]
+    with _LOGGING_LOCK:
+        # Check if we've already configured for this level
+        if _LOGGING_CONFIGURED_FOR_LEVELS.get(component_level, False):
+            return
 
-    for logger_name in third_party_loggers:
-        logger = logging.getLogger(logger_name)
-        # Only configure if not already set explicitly
-        if logger.level == logging.NOTSET:
-            # Set based on our component level
-            if component_level <= logging.DEBUG:
-                logger.setLevel(logging.INFO)  # Meraki DEBUG is very verbose
-            else:
-                logger.setLevel(logging.ERROR)  # Suppress most third-party logs
-            # Prevent propagation when not in debug mode
-            logger.propagate = component_level <= logging.DEBUG
+        # Configure third-party library logging to prevent spam
+        third_party_loggers = [
+            "meraki",
+            "urllib3",
+            "urllib3.connectionpool",
+            "requests",
+            "requests.packages.urllib3",
+            "requests.packages.urllib3.connectionpool",
+            "httpcore",
+            "httpx",
+        ]
 
-    _LOGGING_CONFIGURED = True
+        for logger_name in third_party_loggers:
+            logger = logging.getLogger(logger_name)
+            # Only configure if not already set explicitly
+            if logger.level == logging.NOTSET:
+                # Set based on our component level
+                if component_level <= logging.DEBUG:
+                    logger.setLevel(logging.INFO)  # Meraki DEBUG is very verbose
+                else:
+                    logger.setLevel(logging.ERROR)  # Suppress most third-party logs
+                # Prevent propagation when not in debug mode
+                logger.propagate = component_level <= logging.DEBUG
+
+        _LOGGING_CONFIGURED_FOR_LEVELS[component_level] = True
 
 
 class MerakiOrganizationHub:
@@ -136,7 +140,7 @@ class MerakiOrganizationHub:
         self.last_api_call_error: str | None = None
         self.total_api_calls = 0
         self.failed_api_calls = 0
-        self._api_call_durations: list[float] = []
+        self._api_call_durations: deque[float] = deque(maxlen=100)
         self._last_setup_time: datetime | None = None
 
         # Network hubs managed by this organization hub
@@ -242,9 +246,6 @@ class MerakiOrganizationHub:
     def _track_api_call_duration(self, duration: float) -> None:
         """Track API call duration for performance monitoring."""
         self._api_call_durations.append(duration)
-        # Keep only the last 100 measurements to prevent memory growth
-        if len(self._api_call_durations) > 100:
-            self._api_call_durations.pop(0)
 
     @with_standard_retries("setup")
     @handle_api_errors(

@@ -95,9 +95,27 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        return (
-            self.coordinator.last_update_success and self.coordinator.data is not None
-        )
+        # Basic availability: coordinator has successfully updated at least once
+        if not self.coordinator.last_update_success:
+            return False
+
+        # If coordinator has no data at all, entity is unavailable
+        if self.coordinator.data is None:
+            return False
+
+        # For device-specific entities, check if the device's data exists
+        # Network-level sensors use dummy serials starting with "network_"
+        if hasattr(self, "_device_serial") and self._device_serial:
+            if self._device_serial.startswith("network_"):
+                # Network-level entity - just needs coordinator data
+                return True
+            else:
+                # Device-specific entity - needs device data
+                device_data = self.coordinator.data.get(self._device_serial)
+                return device_data is not None
+
+        # Default to available if we have coordinator data
+        return True
 
     @property
     def device_info(self) -> DeviceInfo:

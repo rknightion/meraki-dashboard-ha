@@ -865,10 +865,10 @@ class TestLoggingConfiguration:
 
     def test_configure_third_party_logging_first_call(self):
         """Test first call to configure third party logging."""
-        # Reset the global flag
+        # Reset the global state
         import custom_components.meraki_dashboard.hubs.organization as org_module
 
-        org_module._LOGGING_CONFIGURED = False
+        org_module._LOGGING_CONFIGURED_FOR_LEVELS.clear()
 
         with patch("logging.getLogger") as mock_get_logger:
             mock_component_logger = Mock()
@@ -888,20 +888,28 @@ class TestLoggingConfiguration:
 
             # Should configure third-party loggers
             assert mock_third_party_logger.setLevel.called
-            assert org_module._LOGGING_CONFIGURED is True
+            assert logging.DEBUG in org_module._LOGGING_CONFIGURED_FOR_LEVELS
+            assert org_module._LOGGING_CONFIGURED_FOR_LEVELS[logging.DEBUG] is True
 
     def test_configure_third_party_logging_already_configured(self):
         """Test subsequent calls to configure third party logging."""
-        # Set the global flag
+        # Set up the state for already configured
         import custom_components.meraki_dashboard.hubs.organization as org_module
 
-        org_module._LOGGING_CONFIGURED = True
+        org_module._LOGGING_CONFIGURED_FOR_LEVELS.clear()
+        org_module._LOGGING_CONFIGURED_FOR_LEVELS[logging.INFO] = True
 
         with patch("logging.getLogger") as mock_get_logger:
+            mock_component_logger = Mock()
+            mock_component_logger.getEffectiveLevel.return_value = logging.INFO
+            
+            mock_get_logger.return_value = mock_component_logger
+            
             _configure_third_party_logging()
 
-            # Should not call getLogger when already configured
-            mock_get_logger.assert_not_called()
+            # Should only call getLogger once to get component level
+            assert mock_get_logger.call_count == 1
+            mock_get_logger.assert_called_with("custom_components.meraki_dashboard")
 
 
 class TestOrganizationHubEdgeCases:

@@ -398,8 +398,8 @@ class TestLoggingConfiguration:
             _configure_third_party_logging,
         )
 
-        # Reset the global flag
-        org_module._LOGGING_CONFIGURED = False
+        # Reset the global state
+        org_module._LOGGING_CONFIGURED_FOR_LEVELS.clear()
 
         with patch("logging.getLogger") as mock_get_logger:
             mock_component_logger = Mock()
@@ -419,11 +419,12 @@ class TestLoggingConfiguration:
             _configure_third_party_logging()
             first_call_count = mock_get_logger.call_count
 
-            # Second call should be cached and not call getLogger again
+            # Second call should use cache and only call getLogger once for component level
             _configure_third_party_logging()
             second_call_count = mock_get_logger.call_count
 
-            assert first_call_count == second_call_count  # No additional calls
+            # The second call should only add 1 call (to get component level)
+            assert second_call_count == first_call_count + 1
 
 
 class TestHubEdgeCases:
