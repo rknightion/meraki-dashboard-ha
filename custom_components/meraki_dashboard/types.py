@@ -1,8 +1,9 @@
 """Type definitions for Meraki Dashboard integration."""
+# ruff: noqa: N802, N803
 
 from __future__ import annotations
 
-from typing import Any, Protocol, TypedDict, Union
+from typing import Any, Protocol, TypedDict
 
 
 # Device and API Response Types
@@ -25,30 +26,85 @@ class MerakiDeviceData(TypedDict, total=False):
     url: str | None
 
 
+# Sensor metric value types
+class TemperatureReading(TypedDict):
+    """Temperature sensor reading."""
+    celsius: float
+    fahrenheit: float | None
+
+
+class HumidityReading(TypedDict):
+    """Humidity sensor reading."""
+    relativePercentage: float
+
+
+class ConcentrationReading(TypedDict):
+    """Concentration-based sensor reading (CO2, PM2.5, TVOC)."""
+    concentration: float
+
+
+class BatteryReading(TypedDict):
+    """Battery sensor reading."""
+    percentage: float
+
+
+class PowerReading(TypedDict):
+    """Power sensor reading."""
+    value: float
+    unit: str  # "W", "kW", "mW"
+    draw: float | None  # Alternative field
+
+
+class ElectricalReading(TypedDict):
+    """Electrical measurement reading (voltage, current, etc)."""
+    value: float
+    unit: str | None
+
+
+class NoiseReading(TypedDict, total=False):
+    """Noise sensor reading with multiple possible formats."""
+    ambient: float | None
+    concentration: float | None
+    level: float | dict[str, float] | None
+
+
+class AirQualityReading(TypedDict):
+    """Indoor air quality reading."""
+    score: int
+
+
+class BinarySensorReading(TypedDict):
+    """Binary sensor reading (door, water, button)."""
+    open: bool
+    detected: bool | None
+    pressed: bool | None
+
+
 class SensorReading(TypedDict, total=False):
     """Type definition for sensor readings."""
 
     ts: str
     metric: str
     value: float | None
-    temperature: dict[str, Any] | None
-    humidity: dict[str, Any] | None
-    co2: dict[str, Any] | None
-    battery: dict[str, Any] | None
-    realPower: dict[str, Any] | None
-    apparentPower: dict[str, Any] | None
-    voltage: dict[str, Any] | None
-    current: dict[str, Any] | None
-    frequency: dict[str, Any] | None
-    powerFactor: dict[str, Any] | None
-    pm25: dict[str, Any] | None
-    tvoc: dict[str, Any] | None
-    noise: dict[str, Any] | None
-    indoorAirQuality: dict[str, Any] | None
-    button: dict[str, Any] | None
-    door: dict[str, Any] | None
-    water: dict[str, Any] | None
-    remoteLockoutSwitch: dict[str, Any] | None
+    temperature: TemperatureReading | None
+    humidity: HumidityReading | None
+    co2: ConcentrationReading | None
+    battery: BatteryReading | None
+    realPower: PowerReading | None
+    apparentPower: PowerReading | None
+    voltage: ElectricalReading | None
+    current: ElectricalReading | None
+    frequency: ElectricalReading | None
+    powerFactor: ElectricalReading | None
+    pm25: ConcentrationReading | None
+    tvoc: ConcentrationReading | None
+    noise: NoiseReading | float | None
+    indoorAirQuality: AirQualityReading | None
+    button: BinarySensorReading | None
+    door: BinarySensorReading | None
+    water: BinarySensorReading | None
+    remoteLockoutSwitch: BinarySensorReading | None
+    downstreamPower: BinarySensorReading | None
 
 
 class MTDeviceData(TypedDict, total=False):
@@ -203,26 +259,57 @@ class MemoryUsageData(TypedDict, total=False):
     memory_usage_percent: float | None
 
 
-class CoordinatorData(TypedDict, total=False):
-    """Type definition for coordinator data."""
+# Coordinator Data Types - Device-specific structures
+class MTCoordinatorData(TypedDict):
+    """Coordinator data structure for MT (Environmental) devices.
 
-    # MT device data
-    devices: list[MTDeviceData] | None
+    Structure: {device_serial: device_data}
+    """
+    # Dynamic keys - each key is a device serial number
+    # Value is the device's sensor data
+    __root__: dict[DeviceSerial, MTDeviceData]
 
-    # Network-level data
-    devices_info: list[MerakiDeviceData | WirelessStats | SwitchStats] | None
-    ports_status: list[SwitchPortStatus] | None
-    ssids: list[dict[str, Any]] | None
-    power_modules: list[dict[str, Any]] | None
 
-    # Organization-level data
-    device_statuses: list[DeviceStatus] | None
-    license_inventory: list[LicenseInfo] | None
-    uplink_status: list[UplinkStatus] | None
-    memory_usage: list[MemoryUsageData] | None
+class MRCoordinatorData(TypedDict, total=False):
+    """Coordinator data structure for MR (Wireless) devices."""
 
-    # Aggregated organization data
-    organization_data: dict[str, Any] | None
+    devices_info: list[WirelessStats]
+    ssids: list[dict[str, Any]]
+    memory_usage: list[MemoryUsageData]
+
+
+class MSCoordinatorData(TypedDict, total=False):
+    """Coordinator data structure for MS (Switch) devices."""
+
+    devices_info: list[SwitchStats]
+    ports_status: list[SwitchPortStatus]
+    power_modules: list[dict[str, Any]]
+    memory_usage: list[MemoryUsageData]
+
+
+class OrganizationCoordinatorData(TypedDict, total=False):
+    """Coordinator data structure for organization-level data."""
+
+    device_statuses: list[DeviceStatus]
+    license_inventory: list[LicenseInfo]
+    uplink_status: list[UplinkStatus]
+    alerts: list[dict[str, Any]]
+    api_usage: dict[str, Any]
+    networks: list[NetworkData]
+    organization_data: dict[str, Any]
+
+
+# Type aliases for clarity
+DeviceSerial = str
+
+# Union type for all coordinator data types
+CoordinatorData = (
+    dict[DeviceSerial, MTDeviceData] |  # MT devices use serial as key
+    MRCoordinatorData |
+    MSCoordinatorData |
+    OrganizationCoordinatorData |
+    dict[str, Any]  # Fallback for legacy code
+)
 
 
 # Protocol Types for API interfaces
@@ -379,12 +466,11 @@ class ApiErrorResponse(TypedDict, total=False):
 
 
 # Union types for common use cases
-DeviceDataUnion = Union[MerakiDeviceData, WirelessStats, SwitchStats]
-ApiResponseUnion = Union[list[Any], dict[str, Any]]
-SensorDataUnion = Union[SensorReading, MTDeviceData]
+DeviceDataUnion = MerakiDeviceData | WirelessStats | SwitchStats
+ApiResponseUnion = list[Any] | dict[str, Any]
+SensorDataUnion = SensorReading | MTDeviceData
 
 # Type aliases for clarity
-DeviceSerial = str
 NetworkId = str
 OrganizationId = str
 EntityId = str

@@ -1,8 +1,7 @@
 """Test utility functions for Meraki Dashboard integration."""
 
 import asyncio
-from datetime import UTC, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -464,25 +463,23 @@ class TestApiCaching:
 
     def test_cache_expiration(self):
         """Test that cached data expires."""
+        import time
+
         test_data = {"key": "value"}
 
-        # Cache with very short TTL and mock datetime to control expiration
-        with patch(
-            "custom_components.meraki_dashboard.utils.datetime"
-        ) as mock_datetime:
-            # Set initial time
-            mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
-            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
-                *args, **kwargs
-            )
+        # Cache with very short TTL
+        cache_api_response("test_key", test_data, ttl_seconds=1)
 
-            cache_api_response("test_key", test_data, ttl_seconds=1)
+        # Verify data is cached
+        retrieved_data = get_cached_api_response("test_key")
+        assert retrieved_data == test_data
 
-            # Move time forward past expiration
-            mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 2, tzinfo=UTC)
+        # Wait for expiration
+        time.sleep(1.1)
 
-            retrieved_data = get_cached_api_response("test_key")
-            assert retrieved_data is None
+        # Verify data has expired
+        retrieved_data = get_cached_api_response("test_key")
+        assert retrieved_data is None
 
     def test_cache_nonexistent_key(self):
         """Test retrieving non-existent cache key."""
@@ -508,28 +505,21 @@ class TestApiCaching:
 
     def test_cleanup_expired_cache(self):
         """Test cleanup of expired cache entries."""
-        # Add data with different expiration times using datetime mocking
-        with patch(
-            "custom_components.meraki_dashboard.utils.datetime"
-        ) as mock_datetime:
-            # Set initial time for caching
-            mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 0, tzinfo=UTC)
-            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
-                *args, **kwargs
-            )
+        import time
 
-            cache_api_response("fresh_key", "fresh_value", ttl_seconds=300)
-            cache_api_response("expired_key", "expired_value", ttl_seconds=1)
+        # Add data with different expiration times
+        cache_api_response("fresh_key", "fresh_value", ttl_seconds=300)
+        cache_api_response("expired_key", "expired_value", ttl_seconds=1)
 
-            # Move time forward to expire one entry
-            mock_datetime.now.return_value = datetime(2023, 1, 1, 12, 0, 2, tzinfo=UTC)
+        # Wait for the short-lived entry to expire
+        time.sleep(1.1)
 
-            cleanup_expired_cache()
+        cleanup_expired_cache()
 
-            # Fresh data should still be there
-            assert get_cached_api_response("fresh_key") == "fresh_value"
-            # Expired data should be gone
-            assert get_cached_api_response("expired_key") is None
+        # Fresh data should still be there
+        assert get_cached_api_response("fresh_key") == "fresh_value"
+        # Expired data should be gone
+        assert get_cached_api_response("expired_key") is None
 
     def test_cache_overwrites_existing_key(self):
         """Test that caching overwrites existing keys."""

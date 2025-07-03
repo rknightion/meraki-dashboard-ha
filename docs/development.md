@@ -104,7 +104,7 @@ python test_integration.py
 
 ## Code Style and Standards
 
-This project follows [Home Assistant's development standards](https://developers.home-assistant.io/docs/development_standards/):
+This project follows [Home Assistant's development standards](https://developers.home-assistant.io/docs/development_standards/) and our [comprehensive naming conventions](naming-conventions):
 
 ### Python Style
 
@@ -113,6 +113,7 @@ This project follows [Home Assistant's development standards](https://developers
 - **Type Hints**: Required for all functions
 - **Docstrings**: Google-style docstrings
 - **Async/Await**: Use for all I/O operations
+- **Naming**: Follow our [naming conventions guide](naming-conventions) for consistency
 
 ### Home Assistant Conventions
 

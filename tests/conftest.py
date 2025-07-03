@@ -41,7 +41,7 @@ def mock_config_entry():
         domain=DOMAIN,
         title="Test Organization",
         data={
-            CONF_API_KEY: "test_api_key_12345",
+            CONF_API_KEY: "a1b2c3d4e5f6789012345678901234567890abcd",
             CONF_BASE_URL: DEFAULT_BASE_URL,
             CONF_ORGANIZATION_ID: "test_org_123",
         },

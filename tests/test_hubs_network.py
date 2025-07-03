@@ -102,7 +102,7 @@ class TestMerakiNetworkHub:
             device_type=SENSOR_TYPE_MT,
             config_entry=mock_config_entry,
         )
-        assert hasattr(hub, "event_handler")
+        assert hasattr(hub, "event_service")
 
     def test_initialization_non_mt_device_no_event_handler(
         self, mock_organization_hub, mock_config_entry
@@ -115,7 +115,7 @@ class TestMerakiNetworkHub:
             device_type=SENSOR_TYPE_MR,
             config_entry=mock_config_entry,
         )
-        assert not hasattr(hub, "event_handler")
+        assert not hasattr(hub, "event_service")
 
     def test_average_discovery_duration_empty(self, network_hub):
         """Test average discovery duration with no discoveries."""
@@ -691,9 +691,9 @@ class TestNetworkHubEdgeCases:
                 }
             ]
 
-        # Mock event handler
-        network_hub.event_handler = Mock()
-        network_hub.event_handler.track_sensor_data = Mock()
+        # Mock event service
+        network_hub.event_service = Mock()
+        network_hub.event_service.track_sensor_changes = AsyncMock()
 
         with patch.object(
             network_hub.hass,
@@ -702,8 +702,8 @@ class TestNetworkHubEdgeCases:
         ):
             await network_hub.async_get_sensor_data()
 
-        # Should call event handler
-        network_hub.event_handler.track_sensor_data.assert_called_once()
+        # Should call event service
+        network_hub.event_service.track_sensor_changes.assert_called_once()
 
     def test_hub_name_generation_special_characters(
         self, mock_organization_hub, mock_config_entry
@@ -733,7 +733,7 @@ class TestNetworkHubEdgeCases:
         ]
 
         with patch(
-            "custom_components.meraki_dashboard.hubs.network.sanitize_device_attributes"
+            "custom_components.meraki_dashboard.utils.sanitize_device_attributes"
         ) as mock_sanitize:
             mock_sanitize.return_value = {
                 "serial": "device1",

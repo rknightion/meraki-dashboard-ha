@@ -4,10 +4,10 @@ from .mr import MerakiMRDeviceSensor, MerakiMRSensor
 from .ms import MerakiMSDeviceSensor, MerakiMSSensor
 from .mt import MerakiMTEnergySensor, MerakiMTSensor
 from .organization import (
-    MerakiHubAlertsSensor,
+    MerakiHubAlertsCountSensor,
     MerakiHubApiCallsSensor,
-    MerakiHubBluetoothClientsCountSensor,
-    MerakiHubClientsCountSensor,
+    MerakiHubBluetoothClientsTotalCountSensor,
+    MerakiHubClientsTotalCountSensor,
     MerakiHubClientsUsageAverageTotalSensor,
     MerakiHubClientsUsageOverallDownstreamSensor,
     MerakiHubClientsUsageOverallTotalSensor,
@@ -17,7 +17,7 @@ from .organization import (
     MerakiHubLicenseExpiringSensor,
     MerakiHubNetworkCountSensor,
     MerakiHubOfflineDevicesSensor,
-    MerakiNetworkHubDeviceCountSensor,
+    MerakiNetworkDeviceCountSensor,
 )
 
 __all__ = [
@@ -27,10 +27,10 @@ __all__ = [
     "MerakiMRDeviceSensor",
     "MerakiMSSensor",
     "MerakiMSDeviceSensor",
-    "MerakiHubAlertsSensor",
+    "MerakiHubAlertsCountSensor",
     "MerakiHubApiCallsSensor",
-    "MerakiHubBluetoothClientsCountSensor",
-    "MerakiHubClientsCountSensor",
+    "MerakiHubBluetoothClientsTotalCountSensor",
+    "MerakiHubClientsTotalCountSensor",
     "MerakiHubClientsUsageAverageTotalSensor",
     "MerakiHubClientsUsageOverallDownstreamSensor",
     "MerakiHubClientsUsageOverallTotalSensor",
@@ -40,5 +40,5 @@ __all__ = [
     "MerakiHubLicenseExpiringSensor",
     "MerakiHubNetworkCountSensor",
     "MerakiHubOfflineDevicesSensor",
-    "MerakiNetworkHubDeviceCountSensor",
+    "MerakiNetworkDeviceCountSensor",
 ]

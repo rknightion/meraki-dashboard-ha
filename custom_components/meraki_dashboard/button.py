@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from homeassistant.components.button import ButtonEntity
+from homeassistant.components.button import ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_AUTO_DISCOVERY, DOMAIN
+from .entities.base import MerakiButtonEntity
+from .utils.device_info import DeviceInfoBuilder
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,12 +43,8 @@ async def async_setup_entry(
         )
 
 
-class MerakiUpdateSensorDataButton(ButtonEntity):
+class MerakiUpdateSensorDataButton(MerakiButtonEntity):
     """Button to manually trigger sensor data update across all coordinators."""
-
-    _attr_has_entity_name = True
-    _attr_name = "Update sensor data"
-    _attr_icon = "mdi:refresh"
 
     def __init__(
         self,
@@ -60,17 +57,28 @@ class MerakiUpdateSensorDataButton(ButtonEntity):
             org_hub: MerakiOrganizationHub instance
             config_entry: Configuration entry
         """
+        # Create description for this button
+        description = ButtonEntityDescription(
+            key="update_sensor_data",
+            name="Update sensor data",
+            icon="mdi:refresh"
+        )
+
+        # Store org hub reference
         self.org_hub = org_hub
         self._config_entry = config_entry
         self.hass = org_hub.hass
 
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry.entry_id}_update_sensor_data"
+        # Initialize parent with domain data
+        domain_data = self.hass.data[DOMAIN][config_entry.entry_id]
+        super().__init__(description, config_entry.entry_id, domain_data)
 
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{org_hub.organization_id}_org")},
-        )
+        # Override device info to organization level
+        self._attr_device_info = DeviceInfoBuilder().for_organization(
+            org_hub.organization_id,
+            f"{org_hub.organization_name} Organization",
+            org_hub.base_url
+        ).build()
 
     async def async_press(self) -> None:
         """Handle button press to update sensor data."""
@@ -107,12 +115,8 @@ class MerakiUpdateSensorDataButton(ButtonEntity):
         return len(coordinators) > 0
 
 
-class MerakiDiscoverDevicesButton(ButtonEntity):
+class MerakiDiscoverDevicesButton(MerakiButtonEntity):
     """Button to manually trigger device discovery across all network hubs."""
-
-    _attr_has_entity_name = True
-    _attr_name = "Discover devices"
-    _attr_icon = "mdi:magnify-scan"
 
     def __init__(
         self,
@@ -125,17 +129,28 @@ class MerakiDiscoverDevicesButton(ButtonEntity):
             org_hub: MerakiOrganizationHub instance
             config_entry: Configuration entry
         """
+        # Create description for this button
+        description = ButtonEntityDescription(
+            key="discover_devices",
+            name="Discover devices",
+            icon="mdi:magnify-scan"
+        )
+
+        # Store org hub reference
         self.org_hub = org_hub
         self._config_entry = config_entry
         self.hass = org_hub.hass
 
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry.entry_id}_discover_devices"
+        # Initialize parent with domain data
+        domain_data = self.hass.data[DOMAIN][config_entry.entry_id]
+        super().__init__(description, config_entry.entry_id, domain_data)
 
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{org_hub.organization_id}_org")},
-        )
+        # Override device info to organization level
+        self._attr_device_info = DeviceInfoBuilder().for_organization(
+            org_hub.organization_id,
+            f"{org_hub.organization_name} Organization",
+            org_hub.base_url
+        ).build()
 
     async def async_press(self) -> None:
         """Handle button press to discover devices."""

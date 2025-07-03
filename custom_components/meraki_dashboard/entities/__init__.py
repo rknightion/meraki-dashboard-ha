@@ -15,7 +15,7 @@ from .factory import (
 
 __all__ = [
     "MerakiEntityBase",
-    "MerakiSensorEntityBase", 
+    "MerakiSensorEntityBase",
     "MerakiCoordinatorEntityBase",
     "MerakiHubEntityBase",
     "EntityFactory",

@@ -1,39 +1,37 @@
 """Test data transformers for Meraki Dashboard integration."""
 from __future__ import annotations
 
-import pytest
-
 from custom_components.meraki_dashboard.data.transformers import (
-    MTSensorDataTransformer,
     MRWirelessDataTransformer,
     MSSwitchDataTransformer,
-    UnitConverter,
+    MTSensorDataTransformer,
     SafeExtractor,
+    UnitConverter,
     transformer_registry,
 )
 
 
 class TestUnitConverter:
     """Test unit converter utility functions."""
-    
+
     def test_deciwatts_to_watts(self):
         """Test deciwatts to watts conversion."""
         assert UnitConverter.deciwatts_to_watts(100) == 10.0
         assert UnitConverter.deciwatts_to_watts(0) == 0.0
         assert UnitConverter.deciwatts_to_watts("invalid") == 0.0
-    
+
     def test_bytes_to_mbps(self):
         """Test bytes to Mbps conversion."""
         assert UnitConverter.bytes_to_mbps(1000000) == 8.0  # 1MB = 8Mbps
         assert UnitConverter.bytes_to_mbps(0) == 0.0
         assert UnitConverter.bytes_to_mbps("invalid") == 0.0
-    
+
     def test_kwh_to_wh(self):
         """Test kWh to Wh conversion."""
         assert UnitConverter.kwh_to_wh(1.5) == 1500.0
         assert UnitConverter.kwh_to_wh(0) == 0.0
         assert UnitConverter.kwh_to_wh("invalid") == 0.0
-    
+
     def test_calculate_percentage(self):
         """Test percentage calculation."""
         assert UnitConverter.calculate_percentage(50, 100) == 50.0
@@ -43,28 +41,28 @@ class TestUnitConverter:
 
 class TestSafeExtractor:
     """Test safe data extraction utility functions."""
-    
+
     def test_get_nested_value(self):
         """Test nested value extraction."""
         data = {"level1": {"level2": {"value": 42}}}
         assert SafeExtractor.get_nested_value(data, "level1", "level2", "value") == 42
         assert SafeExtractor.get_nested_value(data, "missing", "key", default="default") == "default"
         assert SafeExtractor.get_nested_value({}, "key", default=None) is None
-    
+
     def test_safe_float(self):
         """Test safe float conversion."""
         assert SafeExtractor.safe_float("123.45") == 123.45
         assert SafeExtractor.safe_float(67) == 67.0
         assert SafeExtractor.safe_float("invalid") == 0.0
         assert SafeExtractor.safe_float(None) == 0.0
-    
+
     def test_safe_int(self):
         """Test safe int conversion."""
         assert SafeExtractor.safe_int("123") == 123
         assert SafeExtractor.safe_int(45.7) == 45
         assert SafeExtractor.safe_int("invalid") == 0
         assert SafeExtractor.safe_int(None) == 0
-    
+
     def test_safe_aggregate(self):
         """Test safe aggregation."""
         values = [1, 2, 3, "invalid", 4]
@@ -77,7 +75,7 @@ class TestSafeExtractor:
 
 class TestMTSensorDataTransformer:
     """Test MT sensor data transformer."""
-    
+
     def test_transform_temperature(self):
         """Test temperature data transformation."""
         transformer = MTSensorDataTransformer()
@@ -91,12 +89,12 @@ class TestMTSensorDataTransformer:
             "ts": "2023-01-01T00:00:00Z",
             "serial": "Q2XX-XXXX-XXXX"
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["temperature"] == 23.5
         assert result["_timestamp"] == "2023-01-01T00:00:00Z"
         assert result["_serial"] == "Q2XX-XXXX-XXXX"
-    
+
     def test_transform_multiple_metrics(self):
         """Test multiple metrics transformation."""
         transformer = MTSensorDataTransformer()
@@ -107,12 +105,12 @@ class TestMTSensorDataTransformer:
                 {"metric": "co2", "co2": {"concentration": 400}}
             ]
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["temperature"] == 23.5
         assert result["humidity"] == 65.0
         assert result["co2"] == 400.0
-    
+
     def test_transform_power_metrics(self):
         """Test power metrics with unit conversion."""
         transformer = MTSensorDataTransformer()
@@ -122,7 +120,7 @@ class TestMTSensorDataTransformer:
                 {"metric": "voltage", "voltage": {"value": 120}}
             ]
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["realPower"] == 1500.0  # Converted from kW to W
         assert result["voltage"] == 120.0
@@ -130,7 +128,7 @@ class TestMTSensorDataTransformer:
 
 class TestMRWirelessDataTransformer:
     """Test MR wireless data transformer."""
-    
+
     def test_transform_basic_info(self):
         """Test basic device info transformation."""
         transformer = MRWirelessDataTransformer()
@@ -141,13 +139,13 @@ class TestMRWirelessDataTransformer:
             "networkId": "N_123456789",
             "clientCount": 15
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["serial"] == "Q2XX-XXXX-XXXX"
         assert result["name"] == "Test AP"
         assert result["model"] == "MR46"
         assert result["client_count"] == 15
-    
+
     def test_transform_channel_utilization(self):
         """Test channel utilization transformation."""
         transformer = MRWirelessDataTransformer()
@@ -166,14 +164,14 @@ class TestMRWirelessDataTransformer:
                 }
             ]
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["channel_utilization_2_4"] == 25.0
         assert result["channel_utilization_5"] == 15.0
         assert result["radio_channel_2_4"] == 6
         assert result["radio_channel_5"] == 36
         assert result["channel_width_5"] == 80
-    
+
     def test_transform_traffic_conversion(self):
         """Test traffic data with unit conversion."""
         transformer = MRWirelessDataTransformer()
@@ -181,7 +179,7 @@ class TestMRWirelessDataTransformer:
             "trafficSent": 5000000,  # 5MB (should be converted to Mbps)
             "trafficRecv": 500       # 500 bytes (should remain as-is)
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["traffic_sent"] == 40.0  # 5MB converted to Mbps
         assert result["traffic_recv"] == 500   # Small value remains unchanged
@@ -189,7 +187,7 @@ class TestMRWirelessDataTransformer:
 
 class TestMSSwitchDataTransformer:
     """Test MS switch data transformer."""
-    
+
     def test_transform_aggregated_data(self):
         """Test transformation of already aggregated data."""
         transformer = MSSwitchDataTransformer()
@@ -199,11 +197,21 @@ class TestMSSwitchDataTransformer:
             "poe_ports": 12,
             "poe_power": 150.5
         }
-        
+
         result = transformer.transform(raw_data)
-        # Should return as-is since it's already aggregated
-        assert result == raw_data
-    
+        # Should include the original data plus standardized keys
+        expected = {
+            "serial": None,
+            "name": None,
+            "model": None,
+            "networkId": None,
+            "port_count": 24,
+            "connected_ports": 18,
+            "poe_ports": 12,
+            "poe_power": 150.5
+        }
+        assert result == expected
+
     def test_transform_port_data(self):
         """Test transformation from port-level data."""
         transformer = MSSwitchDataTransformer()
@@ -221,7 +229,7 @@ class TestMSSwitchDataTransformer:
                 },
                 {
                     "enabled": True,
-                    "status": "connected", 
+                    "status": "connected",
                     "powerUsageInWh": 300,  # 30W in deciwatts
                     "clientCount": 1,
                     "usageInKb": {"sent": 500, "recv": 1500},
@@ -230,7 +238,7 @@ class TestMSSwitchDataTransformer:
                 }
             ]
         }
-        
+
         result = transformer.transform(raw_data)
         assert result["port_count"] == 2
         assert result["connected_ports"] == 2
@@ -243,15 +251,15 @@ class TestMSSwitchDataTransformer:
 
 class TestTransformerRegistry:
     """Test transformer registry functionality."""
-    
+
     def test_registry_contains_default_transformers(self):
         """Test that registry has default transformers."""
-        transformers = transformer_registry.list_transformers()
+        transformers = transformer_registry.list_device_transformers()
         assert "MT" in transformers
         assert "MR" in transformers
         assert "MS" in transformers
         assert "organization" in transformers
-    
+
     def test_transform_with_registry(self):
         """Test transformation using registry."""
         test_data = {
@@ -259,23 +267,23 @@ class TestTransformerRegistry:
                 {"metric": "temperature", "temperature": {"celsius": 22.0}}
             ]
         }
-        
-        result = transformer_registry.transform("MT", test_data)
+
+        result = transformer_registry.transform_device_data("MT", test_data)
         assert result["temperature"] == 22.0
-    
+
     def test_transform_unknown_device_type(self):
         """Test transformation with unknown device type."""
         test_data = {"some": "data"}
-        result = transformer_registry.transform("UNKNOWN", test_data)
+        result = transformer_registry.transform_device_data("UNKNOWN", test_data)
         # Should return original data for unknown types
         assert result == test_data
-    
+
     def test_register_custom_transformer(self):
         """Test registering custom transformer."""
         class CustomTransformer:
             def transform(self, raw_data):
                 return {"custom": True}
-        
-        transformer_registry.register("CUSTOM", CustomTransformer())
-        result = transformer_registry.transform("CUSTOM", {"test": "data"})
+
+        transformer_registry.register_device_transformer("CUSTOM", CustomTransformer())
+        result = transformer_registry.transform_device_data("CUSTOM", {"test": "data"})
         assert result["custom"] is True

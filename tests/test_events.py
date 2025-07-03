@@ -52,7 +52,7 @@ class TestMerakiEventHandler:
         assert isinstance(handler._previous_states, dict)
         assert len(handler._previous_states) == 0
 
-    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    @patch("custom_components.meraki_dashboard.services.event_service.dr.async_get")
     @patch("homeassistant.core.EventBus.async_fire")
     def test_track_sensor_data_basic(
         self, mock_fire, mock_dr_get, event_handler, sample_device_info
@@ -112,7 +112,7 @@ class TestMerakiEventHandler:
             # Should not have fired any events
             mock_fire.assert_not_called()
 
-    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    @patch("custom_components.meraki_dashboard.services.event_service.dr.async_get")
     def test_track_multiple_devices(
         self, mock_dr_get, event_handler, sample_device_info
     ):
@@ -214,7 +214,7 @@ class TestMerakiEventHandler:
                 # Should not raise exceptions
                 pytest.fail("Event handler should handle malformed readings gracefully")
 
-    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    @patch("custom_components.meraki_dashboard.services.event_service.dr.async_get")
     def test_state_persistence(self, mock_dr_get, event_handler, sample_device_info):
         """Test that previous states are properly maintained."""
         # Mock device registry
@@ -324,7 +324,7 @@ class TestEventHandlerMethods:
         assert hasattr(event_handler.hass, "bus")
         assert hasattr(event_handler.hass.bus, "async_fire")
 
-    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    @patch("custom_components.meraki_dashboard.services.event_service.dr.async_get")
     def test_device_registry_integration(
         self, mock_dr_get, event_handler, sample_device_info
     ):
@@ -426,7 +426,7 @@ class TestEventHandlerEdgeCases:
             except Exception as e:
                 pytest.fail(f"Should handle duplicate metrics gracefully: {e}")
 
-    @patch("custom_components.meraki_dashboard.events.dr.async_get")
+    @patch("custom_components.meraki_dashboard.services.event_service.dr.async_get")
     def test_very_long_device_serial(
         self, mock_dr_get, event_handler, sample_device_info
     ):

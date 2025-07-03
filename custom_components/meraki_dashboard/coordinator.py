@@ -13,6 +13,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import DOMAIN
 from .types import CoordinatorData, MerakiDeviceData
 from .utils import performance_monitor
+from .utils.error_handling import handle_api_errors
+from .utils.retry import with_standard_retries
 
 if TYPE_CHECKING:
     from .hubs.network import MerakiNetworkHub
@@ -82,6 +84,8 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
         return self._last_update_duration
 
     @performance_monitor("coordinator_update")
+    @with_standard_retries("realtime")
+    @handle_api_errors(reraise_on=(UpdateFailed,))
     async def _async_update_data(self) -> CoordinatorData:
         """Fetch data from Meraki Dashboard API.
 
@@ -93,24 +97,46 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
         update_start_time = self.hass.loop.time()
         self._update_count += 1
 
+        _LOGGER.debug(
+            "Starting coordinator update #%d for %s (%s) with %d devices",
+            self._update_count,
+            self.hub.hub_name,
+            self.hub.device_type,
+            len(self.devices)
+        )
+
         try:
             # Get data from the hub based on device type
             if self.hub.device_type == "MT":
+                _LOGGER.debug("Fetching MT sensor data from hub %s", self.hub.hub_name)
                 data = await self.hub.async_get_sensor_data()
+                _LOGGER.debug("Retrieved MT data for %d devices", len(data) if data else 0)
             elif self.hub.device_type == "MR":
+                _LOGGER.debug("Fetching MR wireless data from hub %s", self.hub.hub_name)
                 # Update wireless data and return it
                 await self.hub._async_setup_wireless_data()
                 data = self.hub.wireless_data or {}
+                _LOGGER.debug("Retrieved MR wireless data with %d entries", len(data))
             elif self.hub.device_type == "MS":
+                _LOGGER.debug("Fetching MS switch data from hub %s", self.hub.hub_name)
                 # Update switch data and return it
                 await self.hub._async_setup_switch_data()
                 data = self.hub.switch_data or {}
+                _LOGGER.debug("Retrieved MS switch data with %d entries", len(data))
             else:
                 _LOGGER.warning("Unknown device type: %s", self.hub.device_type)
                 data = {}
 
             # Track update duration
             self._last_update_duration = self.hass.loop.time() - update_start_time
+
+            _LOGGER.debug(
+                "Coordinator update #%d completed in %.2fs for %s (%s)",
+                self._update_count,
+                self._last_update_duration,
+                self.hub.hub_name,
+                self.hub.device_type
+            )
 
             # Log performance metrics periodically
             if self._update_count % 10 == 0:  # Every 10 updates

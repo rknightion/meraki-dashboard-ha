@@ -11,11 +11,19 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
+from homeassistant.exceptions import ConfigValidationError
 from homeassistant.helpers import selector
 from meraki.exceptions import APIError
 
 from . import utils
 from .config import HubConfigurationManager
+from .config.schemas import (
+    APIKeyConfig,
+    BaseURLConfig,
+    DeviceSerialConfig,
+    MerakiConfigSchema,
+    OrganizationIDConfig,
+)
 from .const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
@@ -75,8 +83,8 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     including API key validation, organization selection, and device selection.
     """
 
-    VERSION = 1
-    MINOR_VERSION = 1
+    VERSION = 2
+    MINOR_VERSION = 0
     # Explicit class-level attribute for compatibility with older HA versions
     domain = DOMAIN
 
@@ -101,8 +109,12 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                # Store the base URL selection
+                # Validate API key format
+                APIKeyConfig(user_input[CONF_API_KEY])
+
+                # Validate base URL
                 self._base_url = user_input.get(CONF_BASE_URL, DEFAULT_BASE_URL)
+                BaseURLConfig(self._base_url)
 
                 # Test the API key by getting organizations
                 dashboard = await self.hass.async_add_executor_job(
@@ -127,6 +139,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._api_key = user_input[CONF_API_KEY]
                     return await self.async_step_organization()
 
+            except ConfigValidationError as err:
+                errors["base"] = "invalid_format"
+                _LOGGER.error("Configuration validation error: %s", err)
             except APIError as err:
                 if err.status == 401:
                     errors["base"] = "invalid_auth"
@@ -174,6 +189,13 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
             if organization:
+                # Validate organization ID format
+                try:
+                    OrganizationIDConfig(org_id)
+                except ConfigValidationError as err:
+                    _LOGGER.error("Invalid organization ID format: %s", err)
+                    return self.async_abort(reason="invalid_org_id")
+
                 self._organization_id = org_id
 
                 # Try to get available devices
@@ -291,14 +313,22 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             selected_devices = user_input.get(CONF_SELECTED_DEVICES, [])
 
-            return self.async_create_entry(
-                title=user_input.get(CONF_NAME, DEFAULT_NAME),
-                data={
+            # Validate selected devices
+            try:
+                for serial in selected_devices:
+                    DeviceSerialConfig(serial)
+            except ConfigValidationError as err:
+                _LOGGER.error("Invalid device serial: %s", err)
+                return self.async_abort(reason="invalid_device_serial")
+
+            # Validate complete configuration before creating entry
+            try:
+                config_data = {
                     CONF_API_KEY: self._api_key,
                     CONF_BASE_URL: self._base_url,
                     CONF_ORGANIZATION_ID: self._organization_id,
-                },
-                options={
+                }
+                config_options = {
                     CONF_SCAN_INTERVAL: user_input.get(
                         CONF_SCAN_INTERVAL,
                         DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT],
@@ -321,7 +351,18 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     * 60,
                     CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
                     * 60,
-                },
+                }
+
+                # Validate the complete configuration
+                MerakiConfigSchema.from_config_entry(config_data, config_options)
+            except ConfigValidationError as err:
+                _LOGGER.error("Configuration validation failed: %s", err)
+                return self.async_abort(reason="invalid_configuration")
+
+            return self.async_create_entry(
+                title=user_input.get(CONF_NAME, DEFAULT_NAME),
+                data=config_data,
+                options=config_options,
             )
 
         # Create device selector
@@ -542,6 +583,16 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
 
             # Convert legacy intervals from minutes to seconds
             options = hub_config_manager.convert_legacy_intervals_to_seconds(options)
+
+            # Validate the updated configuration
+            try:
+                MerakiConfigSchema.from_config_entry(
+                    self.config_entry.data,
+                    options
+                )
+            except ConfigValidationError as err:
+                _LOGGER.error("Invalid options configuration: %s", err)
+                return self.async_abort(reason="invalid_configuration")
 
             return self.async_create_entry(title="", data=options)
 

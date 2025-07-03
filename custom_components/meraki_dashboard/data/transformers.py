@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any
+
+from ..const import EntityType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,14 +34,14 @@ class UnitConverter:
     @staticmethod
     def deciwatts_to_watts(deciwatts: int | float) -> float:
         """Convert deciwatts to watts (common in PoE power readings)."""
-        if not isinstance(deciwatts, (int, float)):
+        if not isinstance(deciwatts, int | float):
             return 0.0
         return float(deciwatts) / 10.0
 
     @staticmethod
     def bytes_to_mbps(bytes_value: int | float, timespan_seconds: int = 1) -> float:
         """Convert bytes to Mbps."""
-        if not isinstance(bytes_value, (int, float)) or bytes_value <= 0:
+        if not isinstance(bytes_value, int | float) or bytes_value <= 0:
             return 0.0
         # Convert bytes to bits, then to Mbps
         bits = bytes_value * 8
@@ -48,14 +51,14 @@ class UnitConverter:
     @staticmethod
     def kwh_to_wh(kwh_value: int | float) -> float:
         """Convert kWh to Wh."""
-        if not isinstance(kwh_value, (int, float)):
+        if not isinstance(kwh_value, int | float):
             return 0.0
         return float(kwh_value) * 1000.0
 
     @staticmethod
     def kb_to_percentage(kb_value: int | float, port_speed_mbps: int = 1000) -> float:
         """Convert Kb usage to percentage of port capacity."""
-        if not isinstance(kb_value, (int, float)) or kb_value <= 0:
+        if not isinstance(kb_value, int | float) or kb_value <= 0:
             return 0.0
         # Convert Kb to Mb, then calculate percentage
         mb_value = kb_value / 1000
@@ -65,7 +68,7 @@ class UnitConverter:
     @staticmethod
     def calculate_percentage(used: int | float, total: int | float) -> float:
         """Calculate percentage with safe division."""
-        if not isinstance(used, (int, float)) or not isinstance(total, (int, float)):
+        if not isinstance(used, int | float) or not isinstance(total, int | float):
             return 0.0
         if total <= 0:
             return 0.0
@@ -97,9 +100,30 @@ class SafeExtractor:
 
     @staticmethod
     def safe_int(value: Any, default: int = 0) -> int:
-        """Safely convert value to int."""
+        """Safely convert value to int.
+
+        Handles special cases:
+        - Lists/tuples: sum all convertible numeric values
+        - Strings: convert to int
+        - None: return default
+        """
         if value is None:
             return default
+
+        # Handle lists/tuples by summing their values
+        if isinstance(value, list | tuple):
+            total = 0
+            for item in value:
+                try:
+                    if isinstance(item, int | float):
+                        total += int(item)
+                    elif isinstance(item, str):
+                        total += int(item)
+                except (ValueError, TypeError):
+                    continue  # Skip invalid values
+            return total
+
+        # Handle single values
         try:
             return int(value)
         except (ValueError, TypeError):
@@ -110,7 +134,7 @@ class SafeExtractor:
         """Safely aggregate a list of values."""
         numeric_values = []
         for value in values:
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 numeric_values.append(value)
 
         if not numeric_values:
@@ -133,7 +157,7 @@ class MTSensorDataTransformer(DataTransformer):
 
     def transform(self, raw_data: dict[str, Any]) -> dict[str, Any]:
         """Transform MT sensor readings to standardized format."""
-        transformed = {}
+        transformed: dict[str, Any] = {}
 
         readings = raw_data.get("readings", [])
         for reading in readings:
@@ -176,7 +200,7 @@ class MTSensorDataTransformer(DataTransformer):
                 noise_data = reading.get("noise")
 
                 # Handle direct numeric value
-                if isinstance(noise_data, (int, float)):
+                if isinstance(noise_data, int | float):
                     value = SafeExtractor.safe_float(noise_data)
                 elif isinstance(noise_data, dict):
                     value = (
@@ -388,8 +412,12 @@ class MSSwitchDataTransformer(DataTransformer):
                 key in raw_data
                 for key in ["port_count", "connected_ports", "poe_ports"]
             ):
-                # Return the aggregated data as-is, it's already transformed
-                return raw_data
+                # Standardize key names for already aggregated data
+                transformed.update(raw_data)
+                # Standardize PoE power key name
+                if "poe_power_draw" in raw_data:
+                    transformed["poe_power"] = raw_data["poe_power_draw"]
+                return transformed
             ports_status = []
 
         if not isinstance(ports_status, list):
@@ -611,30 +639,54 @@ class OrganizationDataTransformer(DataTransformer):
 
 
 class TransformerRegistry:
-    """Registry for managing data transformers."""
+    """Registry for entity-specific data transformers.
+
+    This registry supports:
+    - Device-level transformers for complete device data transformation
+    - Entity-specific transformers for individual metric transformation
+    - Decorator-based registration for easy extension
+    """
 
     def __init__(self):
-        self._transformers: dict[str, DataTransformer] = {}
+        """Initialize the transformer registry."""
+        self._device_transformers: dict[str, DataTransformer] = {}
+        self._entity_transformers: dict[str, Callable[[Any], Any]] = {}
         self._register_default_transformers()
 
-    def _register_default_transformers(self):
+    def _register_default_transformers(self) -> None:
         """Register default transformers for each device type."""
-        self._transformers["MT"] = MTSensorDataTransformer()
-        self._transformers["MR"] = MRWirelessDataTransformer()
-        self._transformers["MS"] = MSSwitchDataTransformer()
-        self._transformers["organization"] = OrganizationDataTransformer()
+        self._device_transformers["MT"] = MTSensorDataTransformer()
+        self._device_transformers["MR"] = MRWirelessDataTransformer()
+        self._device_transformers["MS"] = MSSwitchDataTransformer()
+        self._device_transformers["organization"] = OrganizationDataTransformer()
 
-    def register(self, device_type: str, transformer: DataTransformer):
+    @classmethod
+    def register(cls, entity_type: str) -> Callable:
+        """Decorator to register entity-specific transformers.
+
+        Usage:
+            @TransformerRegistry.register(EntityType.TEMPERATURE)
+            def transform_temperature(value: Any) -> float | None:
+                return float(value) if value is not None else None
+        """
+        def decorator(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+            # Get the global instance
+            instance = transformer_registry
+            instance._entity_transformers[entity_type] = func
+            return func
+        return decorator
+
+    def register_device_transformer(self, device_type: str, transformer: DataTransformer):
         """Register a transformer for a specific device type."""
-        self._transformers[device_type] = transformer
+        self._device_transformers[device_type] = transformer
 
-    def get_transformer(self, device_type: str) -> DataTransformer | None:
+    def get_device_transformer(self, device_type: str) -> DataTransformer | None:
         """Get transformer for a specific device type."""
-        return self._transformers.get(device_type)
+        return self._device_transformers.get(device_type)
 
-    def transform(self, device_type: str, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Transform data using the appropriate transformer."""
-        transformer = self.get_transformer(device_type)
+    def transform_device_data(self, device_type: str, raw_data: dict[str, Any]) -> dict[str, Any]:
+        """Transform complete device data using the appropriate transformer."""
+        transformer = self.get_device_transformer(device_type)
         if transformer:
             try:
                 return transformer.transform(raw_data)
@@ -647,10 +699,414 @@ class TransformerRegistry:
             _LOGGER.warning("No transformer found for device type: %s", device_type)
             return raw_data
 
-    def list_transformers(self) -> list[str]:
-        """List all registered transformer types."""
-        return list(self._transformers.keys())
+    def transform(self, entity_type: str, raw_value: Any) -> Any:
+        """Transform raw API value to entity value.
+
+        Args:
+            entity_type: The entity/metric type (temperature, humidity, etc.)
+            raw_value: The raw value from the API
+
+        Returns:
+            Transformed value ready for entity consumption
+        """
+        transformer = self._entity_transformers.get(entity_type)
+        if transformer:
+            try:
+                return transformer(raw_value)
+            except Exception as e:
+                _LOGGER.error(
+                    "Error transforming value for entity type %s: %s",
+                    entity_type, e
+                )
+                return raw_value
+        return raw_value
+
+    def list_device_transformers(self) -> list[str]:
+        """List all registered device transformer types."""
+        return list(self._device_transformers.keys())
+
+    def list_entity_transformers(self) -> list[str]:
+        """List all registered entity transformer types."""
+        return list(self._entity_transformers.keys())
 
 
 # Global transformer registry instance
 transformer_registry = TransformerRegistry()
+
+
+# Register entity-specific transformers
+
+
+@TransformerRegistry.register(EntityType.TEMPERATURE.value)
+def transform_temperature(value: Any) -> float | None:
+    """Convert Celsius temperature value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"celsius": 22.5}
+    if isinstance(value, dict) and "celsius" in value:
+        return SafeExtractor.safe_float(value["celsius"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.HUMIDITY.value)
+def transform_humidity(value: Any) -> float | None:
+    """Convert humidity percentage."""
+    if value is None:
+        return None
+    # Handle dict structure: {"relativePercentage": 45.0}
+    if isinstance(value, dict) and "relativePercentage" in value:
+        return SafeExtractor.safe_float(value["relativePercentage"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CO2.value)
+def transform_co2(value: Any) -> float | None:
+    """Convert CO2 concentration value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"concentration": 400}
+    if isinstance(value, dict) and "concentration" in value:
+        return SafeExtractor.safe_float(value["concentration"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.TVOC.value)
+def transform_tvoc(value: Any) -> float | None:
+    """Convert TVOC concentration value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"concentration": 150}
+    if isinstance(value, dict) and "concentration" in value:
+        return SafeExtractor.safe_float(value["concentration"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.PM25.value)
+def transform_pm25(value: Any) -> float | None:
+    """Convert PM2.5 concentration value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"concentration": 10}
+    if isinstance(value, dict) and "concentration" in value:
+        return SafeExtractor.safe_float(value["concentration"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.BATTERY.value)
+def transform_battery(value: Any) -> float | None:
+    """Convert battery percentage."""
+    if value is None:
+        return None
+    # Handle dict structure: {"percentage": 85.0}
+    if isinstance(value, dict) and "percentage" in value:
+        return SafeExtractor.safe_float(value["percentage"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.NOISE.value)
+def transform_noise(value: Any) -> float | None:
+    """Convert noise level value."""
+    if value is None:
+        return None
+
+    # Handle direct numeric value
+    if isinstance(value, int | float):
+        return SafeExtractor.safe_float(value)
+
+    # Handle dict structures
+    if isinstance(value, dict):
+        # Try different field names
+        noise_value = (
+            SafeExtractor.safe_float(value.get("ambient")) or
+            SafeExtractor.safe_float(value.get("concentration")) or
+            SafeExtractor.safe_float(value.get("level"))
+        )
+
+        # Handle nested level structure: {"level": {"level": 42}}
+        if not noise_value and isinstance(value.get("level"), dict):
+            nested_level = value.get("level", {})
+            noise_value = SafeExtractor.safe_float(nested_level.get("level"))
+
+        return noise_value
+
+    return 0.0
+
+
+@TransformerRegistry.register(EntityType.REAL_POWER.value)
+def transform_real_power(value: Any) -> float | None:
+    """Convert real power to watts."""
+    if value is None:
+        return None
+
+    # Handle dict structure with unit conversion
+    if isinstance(value, dict):
+        power_value = SafeExtractor.safe_float(value.get("value")) or SafeExtractor.safe_float(value.get("draw"))
+        unit = value.get("unit", "W")
+
+        if unit == "kW":
+            power_value *= 1000  # Convert kW to W
+        elif unit == "mW":
+            power_value /= 1000  # Convert mW to W
+
+        return power_value
+
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.APPARENT_POWER.value)
+def transform_apparent_power(value: Any) -> float | None:
+    """Convert apparent power to VA."""
+    # Same transformation as real power
+    return transform_real_power(value)
+
+
+@TransformerRegistry.register(EntityType.VOLTAGE.value)
+def transform_voltage(value: Any) -> float | None:
+    """Convert voltage value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"value": 120.0}
+    if isinstance(value, dict) and "value" in value:
+        return SafeExtractor.safe_float(value["value"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CURRENT.value)
+def transform_current(value: Any) -> float | None:
+    """Convert current value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"value": 1.5}
+    if isinstance(value, dict) and "value" in value:
+        return SafeExtractor.safe_float(value["value"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.FREQUENCY.value)
+def transform_frequency(value: Any) -> float | None:
+    """Convert frequency value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"value": 60.0}
+    if isinstance(value, dict) and "value" in value:
+        return SafeExtractor.safe_float(value["value"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.POWER_FACTOR.value)
+def transform_power_factor(value: Any) -> float | None:
+    """Convert power factor value."""
+    if value is None:
+        return None
+    # Handle dict structure: {"value": 0.95}
+    if isinstance(value, dict) and "value" in value:
+        return SafeExtractor.safe_float(value["value"])
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.INDOOR_AIR_QUALITY.value)
+def transform_iaq(value: Any) -> str | None:
+    """Transform Indoor Air Quality score to a descriptive string."""
+    if value is None:
+        return None
+
+    # Handle dict structure: {"score": 85}
+    if isinstance(value, dict) and "score" in value:
+        score = SafeExtractor.safe_int(value["score"])
+    else:
+        score = SafeExtractor.safe_int(value)
+
+    # Map score to description
+    if score >= 90:
+        return "Excellent"
+    elif score >= 70:
+        return "Good"
+    elif score >= 50:
+        return "Fair"
+    elif score >= 30:
+        return "Poor"
+    else:
+        return "Very Poor"
+
+
+# Binary sensor transformers
+@TransformerRegistry.register(EntityType.WATER.value)
+def transform_water(value: Any) -> bool:
+    """Transform water detection value."""
+    if isinstance(value, dict):
+        return value.get("open", False) or value.get("detected", False)
+    return bool(value)
+
+
+@TransformerRegistry.register(EntityType.DOOR.value)
+def transform_door(value: Any) -> bool:
+    """Transform door sensor value."""
+    if isinstance(value, dict):
+        return value.get("open", False)
+    return bool(value)
+
+
+@TransformerRegistry.register(EntityType.BUTTON.value)
+def transform_button(value: Any) -> bool:
+    """Transform button sensor value."""
+    if isinstance(value, dict):
+        return value.get("open", False) or value.get("pressed", False)
+    return bool(value)
+
+
+@TransformerRegistry.register(EntityType.REMOTE_LOCKOUT_SWITCH.value)
+def transform_lockout(value: Any) -> bool:
+    """Transform remote lockout switch value."""
+    if isinstance(value, dict):
+        return value.get("open", False) or value.get("locked", False)
+    return bool(value)
+
+
+@TransformerRegistry.register(EntityType.DOWNSTREAM_POWER.value)
+def transform_downstream_power(value: Any) -> bool:
+    """Transform downstream power status."""
+    if isinstance(value, dict):
+        return value.get("enabled", False) or value.get("active", False)
+    return bool(value)
+
+
+# MR/MS specific transformers
+@TransformerRegistry.register(EntityType.MEMORY_USAGE.value)
+def transform_memory_usage(value: Any) -> float | None:
+    """Transform memory usage percentage."""
+    if value is None:
+        return None
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CLIENT_COUNT.value)
+def transform_client_count(value: Any) -> int:
+    """Transform client count value."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.PORT_COUNT.value)
+def transform_port_count(value: Any) -> int:
+    """Transform port count value."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.CONNECTED_PORTS.value)
+def transform_connected_ports(value: Any) -> int:
+    """Transform connected ports count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.POE_PORTS.value)
+def transform_poe_ports(value: Any) -> int:
+    """Transform PoE ports count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.POE_POWER.value)
+def transform_poe_power(value: Any) -> float | None:
+    """Transform PoE power value to watts."""
+    if value is None:
+        return None
+    # Often in deciwatts
+    return UnitConverter.deciwatts_to_watts(value)
+
+
+@TransformerRegistry.register(EntityType.POE_LIMIT.value)
+def transform_poe_limit(value: Any) -> float | None:
+    """Transform PoE power limit to watts."""
+    if value is None:
+        return None
+    # Often in deciwatts
+    return UnitConverter.deciwatts_to_watts(value)
+
+
+@TransformerRegistry.register(EntityType.TRAFFIC_SENT.value)
+def transform_traffic_sent(value: Any) -> float | None:
+    """Transform traffic sent to Mbps."""
+    if value is None:
+        return None
+    return UnitConverter.bytes_to_mbps(value)
+
+
+@TransformerRegistry.register(EntityType.TRAFFIC_RECV.value)
+def transform_traffic_recv(value: Any) -> float | None:
+    """Transform traffic received to Mbps."""
+    if value is None:
+        return None
+    return UnitConverter.bytes_to_mbps(value)
+
+
+@TransformerRegistry.register(EntityType.PORT_TRAFFIC_SENT.value)
+def transform_port_traffic_sent(value: Any) -> float | None:
+    """Transform port traffic sent to Mbps."""
+    if value is None:
+        return None
+    return UnitConverter.bytes_to_mbps(value)
+
+
+@TransformerRegistry.register(EntityType.PORT_TRAFFIC_RECV.value)
+def transform_port_traffic_recv(value: Any) -> float | None:
+    """Transform port traffic received to Mbps."""
+    if value is None:
+        return None
+    return UnitConverter.bytes_to_mbps(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_2_4.value)
+def transform_channel_util_24(value: Any) -> float | None:
+    """Transform 2.4GHz channel utilization percentage."""
+    if value is None:
+        return None
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_5.value)
+def transform_channel_util_5(value: Any) -> float | None:
+    """Transform 5GHz channel utilization percentage."""
+    if value is None:
+        return None
+    return SafeExtractor.safe_float(value)
+
+
+# Organization level transformers
+@TransformerRegistry.register(EntityType.API_CALLS.value)
+def transform_api_calls(value: Any) -> int:
+    """Transform API calls count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.FAILED_API_CALLS.value)
+def transform_failed_api_calls(value: Any) -> int:
+    """Transform failed API calls count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.DEVICE_COUNT.value)
+def transform_device_count(value: Any) -> int:
+    """Transform device count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.NETWORK_COUNT.value)
+def transform_network_count(value: Any) -> int:
+    """Transform network count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.OFFLINE_DEVICES.value)
+def transform_offline_devices(value: Any) -> int:
+    """Transform offline devices count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.ALERTS_COUNT.value)
+def transform_alerts_count(value: Any) -> int:
+    """Transform alerts count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(EntityType.LICENSE_EXPIRING.value)
+def transform_license_expiring(value: Any) -> int:
+    """Transform expiring license count."""
+    return SafeExtractor.safe_int(value)

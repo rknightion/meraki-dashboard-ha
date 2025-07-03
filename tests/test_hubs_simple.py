@@ -144,7 +144,7 @@ class TestNetworkHubBasics:
         assert hub.hub_name == "Test Network_MT"
         assert hub.devices == []
         assert hub._selected_devices == set()
-        assert hasattr(hub, "event_handler")  # MT devices should have event handler
+        assert hasattr(hub, "event_service")  # MT devices should have event service
 
     def test_initialization_mr(self, hass: HomeAssistant, mock_config_entry):
         """Test MR network hub initialization."""
@@ -164,8 +164,8 @@ class TestNetworkHubBasics:
         assert hub.device_type == SENSOR_TYPE_MR
         assert hub.hub_name == "Test Network_MR"
         assert not hasattr(
-            hub, "event_handler"
-        )  # MR devices should not have event handler
+            hub, "event_service"
+        )  # MR devices should not have event service
 
     def test_initialization_ms(self, hass: HomeAssistant, mock_config_entry):
         """Test MS network hub initialization."""
@@ -185,8 +185,8 @@ class TestNetworkHubBasics:
         assert hub.device_type == SENSOR_TYPE_MS
         assert hub.hub_name == "Test Network_MS"
         assert not hasattr(
-            hub, "event_handler"
-        )  # MS devices should not have event handler
+            hub, "event_service"
+        )  # MS devices should not have event service
 
     def test_discovery_duration_tracking(self, hass: HomeAssistant, mock_config_entry):
         """Test discovery duration tracking."""
@@ -466,8 +466,8 @@ class TestHubEdgeCases:
             assert hub.device_type == device_type
             assert hub.hub_name == f"Test Network_{device_type}"
 
-            # Only MT devices should have event handlers
+            # Only MT devices should have event services
             if device_type == SENSOR_TYPE_MT:
-                assert hasattr(hub, "event_handler")
+                assert hasattr(hub, "event_service")
             else:
-                assert not hasattr(hub, "event_handler")
+                assert not hasattr(hub, "event_service")

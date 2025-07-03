@@ -1,37 +1,50 @@
-"""Base entity classes for Meraki Dashboard integration."""
+"""Base entity classes for Meraki Dashboard integration.
+
+This module provides a strict, single inheritance hierarchy for all Meraki entities.
+All entities MUST inherit from these base classes - no exceptions.
+"""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
+from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.button import ButtonEntity
+from homeassistant.components.sensor import (
+    RestoreSensor,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_MODEL,
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
     ATTR_SERIAL,
-    DOMAIN,
 )
 from ..coordinator import MerakiSensorCoordinator
+from ..utils.device_info import DeviceInfoBuilder
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class MerakiEntityBase(Entity):
-    """Base class for all Meraki entities."""
+class MerakiEntity(Entity):
+    """Base for ALL Meraki entities - no exceptions.
+
+    This is the root of the entity hierarchy. Every entity in the integration
+    MUST inherit from this class or one of its subclasses.
+    """
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
-        description: SensorEntityDescription,
+        description: EntityDescription,
         config_entry_id: str,
     ) -> None:
         """Initialize the Meraki entity."""
@@ -49,40 +62,31 @@ class MerakiEntityBase(Entity):
         return {}
 
 
-class MerakiSensorEntityBase(MerakiEntityBase, SensorEntity):
-    """Base class for Meraki sensor entities."""
+class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordinator]):
+    """Base for ALL coordinator-based entities.
 
-    def __init__(
-        self,
-        description: SensorEntityDescription,
-        config_entry_id: str,
-    ) -> None:
-        """Initialize the Meraki sensor entity."""
-        super().__init__(description, config_entry_id)
-
-
-class MerakiCoordinatorEntityBase(
-    CoordinatorEntity[MerakiSensorCoordinator], MerakiEntityBase
-):
-    """Base class for coordinator-based Meraki entities."""
+    This class should be used for all entities that get their data from a coordinator.
+    """
 
     def __init__(
         self,
         coordinator: MerakiSensorCoordinator,
         device: dict[str, Any],
-        description: SensorEntityDescription,
+        description: EntityDescription,
         config_entry_id: str,
         network_hub: Any,
     ) -> None:
         """Initialize the coordinator-based Meraki entity."""
+        # Initialize CoordinatorEntity first
         CoordinatorEntity.__init__(self, coordinator)
 
-        # Set device info first, before calling MerakiEntityBase.__init__
+        # Set device info
         self._device = device
         self._device_serial = device.get("serial", "unknown")
         self._network_hub = network_hub
 
-        MerakiEntityBase.__init__(self, description, config_entry_id)
+        # Initialize MerakiEntity
+        MerakiEntity.__init__(self, description, config_entry_id)
 
     def _generate_unique_id(self) -> str:
         """Generate unique ID for device entities."""
@@ -98,42 +102,26 @@ class MerakiCoordinatorEntityBase(
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_name = utils.get_device_display_name(self._device)
         network_id = self._device.get("networkId", "unknown")
         device_type = self._get_device_type()
 
-        # Get device configuration info
-        lan_ip = self._device.get("lanIp")
-        mac_address = self._device.get("mac")
-
-        # Build device info
-        device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{self._device_serial}")},
-            name=device_name,
-            manufacturer="Cisco Meraki",
-            model=self._device.get("model", "Unknown"),
-            serial_number=self._device_serial,
-            via_device=(DOMAIN, f"{self._config_entry_id}_{network_id}_{device_type}"),
-        )
-
-        # Add configuration URL if available
-        if lan_ip:
-            device_info["configuration_url"] = f"http://{lan_ip}"
-        elif hasattr(self._network_hub, "organization_hub"):
+        # Get base URL if available
+        base_url = None
+        if hasattr(self._network_hub, "organization_hub"):
             base_url = getattr(
                 self._network_hub.organization_hub,
                 "base_url",
                 "https://dashboard.meraki.com",
-            )
-            device_info["configuration_url"] = (
-                f"{base_url.replace('/api/v1', '')}/manage/usage/list"
-            )
+            ).replace("/api/v1", "")
 
-        # Add MAC address connection if available
-        if mac_address:
-            device_info["connections"] = {("mac", mac_address)}
-
-        return device_info
+        # Build device info using builder
+        return DeviceInfoBuilder().for_device(
+            self._device,
+            self._config_entry_id,
+            network_id,
+            device_type,
+            base_url
+        ).build()
 
     def _get_device_type(self) -> str:
         """Get device type from model."""
@@ -180,20 +168,110 @@ class MerakiCoordinatorEntityBase(
         return attributes
 
 
-class MerakiHubEntityBase(MerakiSensorEntityBase):
-    """Base class for Meraki hub-level entities."""
+class MerakiSensorEntity(MerakiCoordinatorEntity, SensorEntity):
+    """Base for ALL sensor entities.
+
+    All sensor entities MUST inherit from this class.
+    """
+
+    def __init__(
+        self,
+        coordinator: MerakiSensorCoordinator,
+        device: dict[str, Any],
+        description: SensorEntityDescription,
+        config_entry_id: str,
+        network_hub: Any,
+    ) -> None:
+        """Initialize the sensor entity."""
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
+
+
+class MerakiBinarySensorEntity(MerakiCoordinatorEntity, BinarySensorEntity):
+    """Base for ALL binary sensor entities.
+
+    All binary sensor entities MUST inherit from this class.
+    """
+
+    def __init__(
+        self,
+        coordinator: MerakiSensorCoordinator,
+        device: dict[str, Any],
+        description: EntityDescription,
+        config_entry_id: str,
+        network_hub: Any,
+    ) -> None:
+        """Initialize the binary sensor entity."""
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
+
+
+class MerakiButtonEntity(MerakiEntity, ButtonEntity):
+    """Base for ALL button entities.
+
+    All button entities MUST inherit from this class.
+    Note: Buttons typically don't need coordinators as they perform actions.
+    """
+
+    def __init__(
+        self,
+        description: EntityDescription,
+        config_entry_id: str,
+        integration_data: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the button entity."""
+        super().__init__(description, config_entry_id)
+        self._integration_data = integration_data or {}
+
+
+class MerakiRestoreSensorEntity(MerakiCoordinatorEntity, RestoreSensor):
+    """Base for ALL sensor entities that need state restoration.
+
+    Use this for sensors that accumulate values (like energy meters).
+    """
+
+    def __init__(
+        self,
+        coordinator: MerakiSensorCoordinator,
+        device: dict[str, Any],
+        description: SensorEntityDescription,
+        config_entry_id: str,
+        network_hub: Any,
+    ) -> None:
+        """Initialize the restorable sensor entity."""
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
+        self._restored_state: Any = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore last known state when entity is added."""
+        await super().async_added_to_hass()
+
+        # Restore previous state if available
+        if (last_state := await self.async_get_last_state()) is not None:
+            self._restored_state = last_state.state
+            _LOGGER.debug(
+                "Restored state for %s: %s",
+                self.entity_id,
+                self._restored_state,
+            )
+
+
+class MerakiHubEntity(MerakiEntity):
+    """Base for ALL hub-level entities.
+
+    Hub entities represent organization or network-level information
+    and don't typically need coordinators.
+    """
 
     def __init__(
         self,
         hub: Any,
-        description: SensorEntityDescription,
+        description: EntityDescription,
         config_entry_id: str,
         hub_type: str = "org",
     ) -> None:
         """Initialize the hub entity."""
-        super().__init__(description, config_entry_id)
         self._hub = hub
         self._hub_type = hub_type
+        super().__init__(description, config_entry_id)
 
     def _generate_unique_id(self) -> str:
         """Generate unique ID for hub entities."""
@@ -216,35 +294,63 @@ class MerakiHubEntityBase(MerakiSensorEntityBase):
             # Organization hub device info
             organization_name = getattr(self._hub, "organization_name", "Organization")
             organization_id = getattr(self._hub, "organization_id", "unknown")
+            base_url = getattr(
+                self._hub, "base_url", "https://dashboard.meraki.com"
+            ).replace("/api/v1", "")
 
-            return DeviceInfo(
-                identifiers={(DOMAIN, f"{self._config_entry_id}_org")},
-                name=f"{organization_name} Organization",
-                manufacturer="Cisco Meraki",
-                model="Organization",
-                configuration_url=getattr(
-                    self._hub, "base_url", "https://dashboard.meraki.com"
-                ).replace("/api/v1", ""),
-            )
+            return DeviceInfoBuilder().for_organization(
+                organization_id,
+                f"{organization_name} Organization",
+                base_url
+            ).build()
+
         elif hasattr(self._hub, "network_name"):
             # Network hub device info
             network_name = self._hub.network_name
             network_id = getattr(self._hub, "network_id", "unknown")
             device_type = getattr(self._hub, "device_type", "unknown")
+            org_id = self._config_entry_id  # Using config entry ID as org reference
 
-            return DeviceInfo(
-                identifiers={
-                    (DOMAIN, f"{self._config_entry_id}_{network_id}_{device_type}")
-                },
-                name=f"{network_name} {device_type} Hub",
-                manufacturer="Cisco Meraki",
-                model=f"{device_type} Network Hub",
-                via_device=(DOMAIN, f"{self._config_entry_id}_org"),
-                configuration_url=getattr(
-                    self._hub,
-                    "organization_hub.base_url",
+            base_url = None
+            if hasattr(self._hub, "organization_hub"):
+                base_url = getattr(
+                    self._hub.organization_hub,
+                    "base_url",
                     "https://dashboard.meraki.com",
-                ).replace("/api/v1", ""),
-            )
+                ).replace("/api/v1", "")
+                # Get actual org ID if available
+                org_id = getattr(self._hub.organization_hub, "organization_id", org_id)
+
+            return DeviceInfoBuilder().for_network_hub(
+                network_id,
+                device_type,
+                f"{network_name} {device_type.upper()} Hub",
+                org_id,
+                base_url
+            ).build()
 
         return None
+
+
+class MerakiHubSensorEntity(MerakiHubEntity, SensorEntity):
+    """Base for ALL hub-level sensor entities.
+
+    Use this for organization and network-level sensors.
+    """
+
+    def __init__(
+        self,
+        hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+        hub_type: str = "org",
+    ) -> None:
+        """Initialize the hub sensor entity."""
+        super().__init__(hub, description, config_entry_id, hub_type)
+
+
+# Legacy compatibility aliases - to be removed after migration
+MerakiEntityBase = MerakiEntity
+MerakiSensorEntityBase = MerakiHubSensorEntity  # Note: This was misleading before
+MerakiCoordinatorEntityBase = MerakiCoordinatorEntity
+MerakiHubEntityBase = MerakiHubSensorEntity

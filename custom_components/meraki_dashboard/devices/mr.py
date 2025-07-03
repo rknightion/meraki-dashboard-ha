@@ -7,22 +7,17 @@ from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .. import utils
 from ..const import (
     ATTR_LAST_REPORTED_AT,
-    ATTR_MODEL,
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
-    ATTR_SERIAL,
-    DOMAIN,
     MR_SENSOR_CHANNEL_UTILIZATION_2_4,
     MR_SENSOR_CHANNEL_UTILIZATION_5,
     MR_SENSOR_CHANNEL_WIDTH_5,
@@ -46,6 +41,8 @@ from ..const import (
 )
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
+from ..entities.base import MerakiSensorEntity
+from ..utils.device_info import DeviceInfoBuilder
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -227,14 +224,12 @@ MR_NETWORK_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
 }
 
 
-class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
+class MerakiMRDeviceSensor(MerakiSensorEntity):
     """Representation of a Meraki MR device sensor.
 
     Each instance represents a metric from a specific MR device,
     such as client count, channel utilization, etc.
     """
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -245,58 +240,36 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         network_hub: Any,
     ) -> None:
         """Initialize the MR device sensor."""
-        super().__init__(coordinator)
-        self._device = device
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-        self._network_hub = network_hub
-        self._device_serial = device["serial"]
-
-        # Set unique ID
-        self._attr_unique_id = (
-            f"{config_entry_id}_{self._device_serial}_{description.key}"
-        )
+        # Note: parameter order is different from base class, we need to rearrange
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_serial = self._device.get("serial", "")
-        device_name = utils.get_device_display_name(self._device)
-        device_model = self._device.get("model", "Unknown")
-
-        # Get device status information for network details
+        # Get device status information for lanIp
         device_status = None
+        device_serial = self._device.get("serial", "")
         if device_serial:
             device_status = utils.get_device_status_info(
                 self._network_hub.organization_hub, device_serial
             )
 
-        # Determine configuration URL - use lanIp if available
-        config_url = f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list"
+        # Update device data with lanIp if available
+        device_data = self._device.copy()
         if device_status and device_status.get("lanIp"):
-            lan_ip = device_status.get("lanIp")
-            # Create URL to access device directly via its IP
-            config_url = f"http://{lan_ip}"
+            device_data["lanIp"] = device_status["lanIp"]
 
-        device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
-            name=device_name,
-            manufacturer="Cisco Meraki",
-            model=device_model,
-            serial_number=device_serial,
-            configuration_url=config_url,
-            via_device=(
-                DOMAIN,
-                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
-            ),
-        )
+        # Get base URL
+        base_url = self._network_hub.organization_hub._base_url.replace("/api/v1", "")
 
-        # Add MAC address connection if available
-        device_mac = self._device.get("mac")
-        if device_mac:
-            device_info["connections"] = {("mac", device_mac)}
-
-        return device_info
+        # Build device info using builder
+        return DeviceInfoBuilder().for_device(
+            device_data,
+            self._config_entry_id,
+            self._network_hub.network_id,
+            self._network_hub.device_type,
+            base_url
+        ).build()
 
     @property
     def native_value(self) -> Any:
@@ -314,7 +287,7 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             return None
 
         # Use transformer to process data consistently
-        transformed_data = transformer_registry.transform("MR", device_info)
+        transformed_data = transformer_registry.transform_device_data("MR", device_info)
 
         # Handle special cases that need network-level data
         if self.entity_description.key == MR_SENSOR_SSID_COUNT:
@@ -357,12 +330,7 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
-        attrs = {
-            ATTR_NETWORK_ID: self.coordinator.network_hub.network_id,
-            ATTR_NETWORK_NAME: self.coordinator.network_hub.network_name,
-            ATTR_SERIAL: self._device_serial,
-            ATTR_MODEL: self._device.get("model"),
-        }
+        attrs = super().extra_state_attributes.copy()
 
         if self.coordinator.data:
             # Add timestamp if available
@@ -409,7 +377,7 @@ class MerakiMRDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         return attrs
 
 
-class MerakiMRSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
+class MerakiMRSensor(MerakiSensorEntity):
     """Representation of a Meraki MR network-level sensor.
 
     This sensor provides network-level aggregated wireless metrics.
@@ -424,22 +392,29 @@ class MerakiMRSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the network MR sensor."""
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
+        # Create a dummy device dict for network-level sensors
+        device = {
+            "serial": f"network_{coordinator.network_hub.network_id}",
+            "name": coordinator.network_hub.hub_name,
+            "model": f"{coordinator.network_hub.device_type}_Network",
+            "networkId": coordinator.network_hub.network_id,
+        }
+        super().__init__(coordinator, device, description, config_entry_id, coordinator.network_hub)
 
         # Set unique ID
         self._attr_unique_id = f"{config_entry_id}_{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}_{description.key}"
 
         # Set device info to the network hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={
-                (
-                    DOMAIN,
-                    f"{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}",
-                )
-            },
-        )
+        org_id = coordinator.network_hub.organization_hub.organization_id
+        base_url = coordinator.network_hub.organization_hub._base_url.replace("/api/v1", "")
+
+        self._attr_device_info = DeviceInfoBuilder().for_network_hub(
+            coordinator.network_hub.network_id,
+            coordinator.network_hub.device_type,
+            coordinator.network_hub.hub_name,
+            org_id,
+            base_url
+        ).build()
 
     @property
     def native_value(self) -> Any:

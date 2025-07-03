@@ -7,15 +7,17 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from .exceptions import ConfigurationError
 from homeassistant.helpers import device_registry as dr
 
+from .config.migration import async_migrate_config_entry
+from .config.schemas import MerakiConfigSchema
 from .const import (
     CONF_API_KEY,
     CONF_HUB_SCAN_INTERVALS,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
-    DEVICE_TYPE_MAPPINGS,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
     ORG_HUB_SUFFIX,
@@ -23,6 +25,10 @@ from .const import (
 from .coordinator import MerakiSensorCoordinator
 from .hubs import MerakiOrganizationHub
 from .utils import get_performance_metrics, performance_monitor
+from .utils.device_info import (
+    create_network_hub_device_info,
+    create_organization_device_info,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,8 +84,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data[CONF_ORGANIZATION_ID],
     )
 
+    _LOGGER.debug(
+        "Integration setup started - Entry ID: %s, Title: %s, Domain: %s",
+        entry.entry_id,
+        entry.title,
+        entry.domain
+    )
+
     try:
+        # Migrate configuration if needed
+        _LOGGER.debug("Checking if configuration migration is needed")
+        if not await async_migrate_config_entry(hass, entry):
+            _LOGGER.error("Failed to migrate configuration")
+            return False
+        _LOGGER.debug("Configuration migration completed successfully")
+
+        # Validate configuration before setup
+        try:
+            _LOGGER.debug("Validating configuration schema")
+            MerakiConfigSchema.from_config_entry(entry.data, entry.options)
+            _LOGGER.debug("Configuration validated successfully")
+        except ConfigurationError as err:
+            _LOGGER.error("Invalid configuration: %s", err)
+            return False
+
         # Create organization hub
+        _LOGGER.debug("Creating organization hub for organization %s", entry.data[CONF_ORGANIZATION_ID])
         org_hub = MerakiOrganizationHub(
             hass,
             entry.data[CONF_API_KEY],
@@ -87,6 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry,
         )
 
+        _LOGGER.debug("Setting up organization hub")
         if not await org_hub.async_setup():
             _LOGGER.error("Failed to set up organization hub")
             return False
@@ -101,12 +132,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         # Register the organization as a device
         device_registry = dr.async_get(hass)
+        org_device_info = create_organization_device_info(
+            entry.data[CONF_ORGANIZATION_ID],
+            f"{entry.title} - {ORG_HUB_SUFFIX}",
+            org_hub.base_url
+        )
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id,
-            identifiers={(DOMAIN, f"{entry.data[CONF_ORGANIZATION_ID]}_org")},
-            manufacturer="Cisco Meraki",
-            name=f"{entry.title} - {ORG_HUB_SUFFIX}",
-            model="Organization",
+            **org_device_info
         )
 
         # Create network hubs for each network and device type
@@ -126,13 +159,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         for hub_id, hub in network_hubs.items():
             # Register network device
+            network_device_info = create_network_hub_device_info(
+                hub.network_id,
+                hub.device_type,
+                hub.hub_name,
+                entry.data[CONF_ORGANIZATION_ID],
+                org_hub.base_url
+            )
             device_registry.async_get_or_create(
                 config_entry_id=entry.entry_id,
-                identifiers={(DOMAIN, f"{hub.network_id}_{hub.device_type}")},
-                manufacturer="Cisco Meraki",
-                name=hub.hub_name,
-                model=f"Network - {DEVICE_TYPE_MAPPINGS[hub.device_type]['description']}",
-                via_device=(DOMAIN, f"{entry.data[CONF_ORGANIZATION_ID]}_org"),
+                **network_device_info
             )
 
             # Create coordinator for all device types that have devices

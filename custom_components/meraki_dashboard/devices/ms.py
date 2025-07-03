@@ -22,7 +22,6 @@ from ..const import (
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
     ATTR_SERIAL,
-    DOMAIN,
     MS_SENSOR_CONNECTED_CLIENTS,
     MS_SENSOR_CONNECTED_PORTS,
     MS_SENSOR_MEMORY_USAGE,
@@ -42,6 +41,8 @@ from ..const import (
 )
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
+from ..entities.base import MerakiSensorEntity
+from ..utils.device_info import DeviceInfoBuilder
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -236,43 +237,30 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
-        device_serial = self._device.get("serial", "")
-        device_name = utils.get_device_display_name(self._device)
-        device_model = self._device.get("model", "Unknown")
-
-        # Get device status information for network details
+        # Get device status information for lanIp
         device_status = None
+        device_serial = self._device.get("serial", "")
         if device_serial:
             device_status = utils.get_device_status_info(
                 self._network_hub.organization_hub, device_serial
             )
 
-        # Determine configuration URL - use lanIp if available
-        config_url = f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list"
+        # Update device data with lanIp if available
+        device_data = self._device.copy()
         if device_status and device_status.get("lanIp"):
-            lan_ip = device_status.get("lanIp")
-            # Create URL to access device directly via its IP
-            config_url = f"http://{lan_ip}"
+            device_data["lanIp"] = device_status["lanIp"]
 
-        device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
-            name=device_name,
-            manufacturer="Cisco Meraki",
-            model=device_model,
-            serial_number=device_serial,
-            configuration_url=config_url,
-            via_device=(
-                DOMAIN,
-                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
-            ),
-        )
+        # Get base URL
+        base_url = self._network_hub.organization_hub._base_url.replace("/api/v1", "")
 
-        # Add MAC address connection if available
-        device_mac = self._device.get("mac")
-        if device_mac:
-            device_info["connections"] = {("mac", device_mac)}
-
-        return device_info
+        # Build device info using builder
+        return DeviceInfoBuilder().for_device(
+            device_data,
+            self._config_entry_id,
+            self._network_hub.network_id,
+            self._network_hub.device_type,
+            base_url
+        ).build()
 
     @property
     def native_value(self) -> Any:
@@ -290,7 +278,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         if device_info:
             # Use transformer to process aggregated device data
-            transformed_data = transformer_registry.transform("MS", device_info)
+            transformed_data = transformer_registry.transform_device_data("MS", device_info)
 
             # Handle special cases that need non-device data
             if self.entity_description.key == MS_SENSOR_POE_LIMIT:
@@ -340,13 +328,13 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
         # Create temporary device data and transform it
         temp_device_data = {"serial": self._device_serial, "ports_status": device_ports}
-        transformed_data = transformer_registry.transform("MS", temp_device_data)
+        transformed_data = transformer_registry.transform_device_data("MS", temp_device_data)
         return transformed_data.get(self.entity_description.key)
 
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self.coordinator.data is not None
+        return self.coordinator.last_update_success and self.coordinator.data is not None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -463,14 +451,12 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
         return attrs
 
 
-class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
+class MerakiMSSensor(MerakiSensorEntity):
     """Representation of a Meraki MS network-level sensor.
 
     This sensor provides network-level aggregated switch metrics
     across all switches in the network.
     """
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -479,22 +465,14 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the network MS sensor."""
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}_{description.key}"
-
-        # Set device info to the network hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={
-                (
-                    DOMAIN,
-                    f"{coordinator.network_hub.network_id}_{coordinator.network_hub.device_type}",
-                )
-            },
-        )
+        # Create a dummy device dict for network-level sensors
+        device = {
+            "serial": f"network_{coordinator.network_hub.network_id}",
+            "name": coordinator.network_hub.hub_name,
+            "model": f"{coordinator.network_hub.device_type}_Network",
+            "networkId": coordinator.network_hub.network_id,
+        }
+        super().__init__(coordinator, device, description, config_entry_id, coordinator.network_hub)
 
     @property
     def native_value(self) -> Any:
@@ -567,18 +545,12 @@ class MerakiMSSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEntity):
 
         return None
 
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self.coordinator.data is not None
+    # available property is inherited from base class
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
-        attrs = {
-            ATTR_NETWORK_ID: self.coordinator.network_hub.network_id,
-            ATTR_NETWORK_NAME: self.coordinator.network_hub.network_name,
-        }
+        attrs = super().extra_state_attributes.copy()
 
         if self.coordinator.data:
             switch_data = self.coordinator.data

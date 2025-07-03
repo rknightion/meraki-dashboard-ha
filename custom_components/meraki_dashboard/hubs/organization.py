@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import meraki
 from homeassistant.config_entries import ConfigEntry
@@ -34,7 +34,8 @@ from ..types import (
     NetworkData,
     OrganizationData,
 )
-from ..utils.error_handling import api_retry, handle_api_errors
+from ..utils.error_handling import handle_api_errors
+from ..utils.retry import RetryStrategies, retry_on_api_error, with_standard_retries
 
 if TYPE_CHECKING:
     from .network import MerakiNetworkHub
@@ -233,6 +234,11 @@ class MerakiOrganizationHub:
             (datetime.now(UTC) - self._last_memory_usage_update).total_seconds() / 60
         )
 
+    @property
+    def base_url(self) -> str:
+        """Get the base URL for the Meraki API."""
+        return self._base_url
+
     def _track_api_call_duration(self, duration: float) -> None:
         """Track API call duration for performance monitoring."""
         self._api_call_durations.append(duration)
@@ -240,6 +246,8 @@ class MerakiOrganizationHub:
         if len(self._api_call_durations) > 100:
             self._api_call_durations.pop(0)
 
+    @with_standard_retries("setup")
+    @handle_api_errors(convert_auth_errors=True, convert_connection_errors=True, reraise_on=(ConfigEntryAuthFailed,))
     async def async_setup(self) -> bool:
         """Set up the organization hub and create network hubs.
 
@@ -424,6 +432,8 @@ class MerakiOrganizationHub:
             )
             raise ConfigEntryNotReady from err
 
+    @with_standard_retries("discovery")
+    @handle_api_errors(default_return={})
     async def async_create_network_hubs(self) -> dict[str, MerakiNetworkHub]:
         """Create network hubs for each network and device type combination.
 
@@ -554,7 +564,7 @@ class MerakiOrganizationHub:
                 id=self.organization_id, name=self.organization_name or "Unknown"
             )
 
-    @api_retry(max_attempts=2, retry_on=(ConfigEntryNotReady,))
+    @retry_on_api_error(RetryStrategies.STATIC_DATA)
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _fetch_license_data(self) -> None:
         """Fetch license information for the organization."""
@@ -718,6 +728,7 @@ class MerakiOrganizationHub:
         except Exception as err:
             _LOGGER.warning("Could not fetch license data: %s", err)
 
+    @with_standard_retries("realtime")
     async def _fetch_alerts_data(self) -> None:
         """Fetch alerts overview by network for the organization."""
         if not self.dashboard:
@@ -798,6 +809,7 @@ class MerakiOrganizationHub:
             self.active_alerts_count = 0
             self.recent_alerts = []
 
+    @with_standard_retries("realtime")
     async def _fetch_clients_overview(self) -> None:
         """Fetch clients overview data for the organization using default timespan (1 day)."""
         if not self.dashboard:
@@ -892,6 +904,7 @@ class MerakiOrganizationHub:
             self.clients_usage_overall_upstream = 0.0
             self.clients_usage_average_total = 0.0
 
+    @with_standard_retries("realtime")
     async def _fetch_bluetooth_clients_overview(self) -> None:
         """Fetch Bluetooth clients data from all networks in the organization.
 
@@ -979,7 +992,7 @@ class MerakiOrganizationHub:
             # Set fallback value on error
             self.bluetooth_clients_total_count = 0
 
-    @api_retry(max_attempts=2)
+    @retry_on_api_error(RetryStrategies.STATIC_DATA)
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _fetch_device_statuses(self) -> None:
         """Fetch device status information across the organization."""
@@ -1001,6 +1014,7 @@ class MerakiOrganizationHub:
         except Exception as err:
             _LOGGER.warning("Could not fetch device statuses: %s", err)
 
+    @with_standard_retries("realtime")
     async def _fetch_memory_usage(self) -> None:
         """Fetch memory usage data for MR and MS devices across the organization.
 
@@ -1188,6 +1202,7 @@ class MerakiOrganizationHub:
             # Set fallback on error
             self.device_memory_usage = {}
 
+    @with_standard_retries("discovery")
     async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:
         """Check if a network has devices of a specific type.
 

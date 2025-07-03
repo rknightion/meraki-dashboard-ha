@@ -76,7 +76,7 @@ class TestMerakiDashboardConfigFlow:
             # Submit API key
             result = await mock_config_flow.async_step_user(
                 {
-                    CONF_API_KEY: "test_api_key",
+                    CONF_API_KEY: "a1b2c3d4e5f6789012345678901234567890abcd",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 }
             )
@@ -104,7 +104,7 @@ class TestMerakiDashboardConfigFlow:
 
             result = await mock_config_flow.async_step_user(
                 {
-                    CONF_API_KEY: "invalid_api_key",
+                    CONF_API_KEY: "9999999999999999999999999999999999999999",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 }
             )
@@ -127,7 +127,7 @@ class TestMerakiDashboardConfigFlow:
         ):
             result = await mock_config_flow.async_step_user(
                 {
-                    CONF_API_KEY: "test_api_key",
+                    CONF_API_KEY: "a1b2c3d4e5f6789012345678901234567890abcd",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 }
             )
@@ -143,7 +143,7 @@ class TestMerakiDashboardConfigFlow:
 
         # Set up flow state
         mock_config_flow._organizations = MOCK_ORGANIZATION_DATA
-        mock_config_flow._api_key = "test_api_key"
+        mock_config_flow._api_key = "a1b2c3d4e5f6789012345678901234567890abcd"
         mock_config_flow._base_url = DEFAULT_BASE_URL
 
         # Mock the async_set_unique_id and _abort_if_unique_id_configured
@@ -175,7 +175,7 @@ class TestMerakiDashboardConfigFlow:
 
         # Set up flow state
         mock_config_flow._organizations = MOCK_ORGANIZATION_DATA
-        mock_config_flow._api_key = "test_api_key"
+        mock_config_flow._api_key = "a1b2c3d4e5f6789012345678901234567890abcd"
         mock_config_flow._base_url = DEFAULT_BASE_URL
 
         # Mock the async_set_unique_id and _abort_if_unique_id_configured
@@ -203,6 +203,7 @@ class TestMerakiDashboardConfigFlow:
 
         # Set up flow state
         mock_config_flow._organization_id = MOCK_ORGANIZATION_DATA[0]["id"]
+        mock_config_flow._api_key = "a1b2c3d4e5f6789012345678901234567890abcd"
         mock_config_flow._api = mock_dashboard_api
         mock_config_flow._devices = []
 
@@ -212,9 +213,9 @@ class TestMerakiDashboardConfigFlow:
 
         result = await mock_config_flow.async_step_device_selection(
             {
-                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL // 60,  # Convert to minutes
                 CONF_AUTO_DISCOVERY: True,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL,
+                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,  # Convert to minutes
             }
         )
 
@@ -268,7 +269,7 @@ class TestMerakiDashboardConfigFlow:
             mock_api.side_effect = MockAPIError(401)
 
             result = await mock_config_flow.async_step_reauth(
-                {CONF_API_KEY: "invalid_api_key"}
+                {CONF_API_KEY: "9999999999999999999999999999999999999999"}
             )
 
             assert result["type"] == FlowResultType.FORM
@@ -303,7 +304,7 @@ class TestMerakiDashboardConfigFlow:
             mock_api.side_effect = MockAPIError(403)
 
             result = await mock_config_flow.async_step_reauth(
-                {CONF_API_KEY: "forbidden_api_key"}
+                {CONF_API_KEY: "8888888888888888888888888888888888888888"}
             )
 
             assert result["type"] == FlowResultType.FORM
@@ -332,6 +333,7 @@ class TestMerakiDashboardConfigFlow:
 
         # Set up flow state
         mock_config_flow._organization_id = MOCK_ORGANIZATION_DATA[0]["id"]
+        mock_config_flow._api_key = "a1b2c3d4e5f6789012345678901234567890abcd"
         mock_config_flow._api = mock_dashboard_api
         mock_config_flow._devices = []
 
@@ -341,9 +343,9 @@ class TestMerakiDashboardConfigFlow:
 
         result = await mock_config_flow.async_step_device_selection(
             {
-                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
+                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL // 60,  # Convert to minutes
                 CONF_AUTO_DISCOVERY: True,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL,
+                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,  # Convert to minutes
             }
         )
 
@@ -370,7 +372,7 @@ class TestConfigFlowEdgeCases:
 
             result = await mock_config_flow.async_step_user(
                 {
-                    CONF_API_KEY: "test_api_key",
+                    CONF_API_KEY: "a1b2c3d4e5f6789012345678901234567890abcd",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 }
             )
@@ -384,7 +386,7 @@ class TestConfigFlowEdgeCases:
 
         result = await mock_config_flow.async_step_user(
             {
-                CONF_API_KEY: "test_api_key",
+                CONF_API_KEY: "a1b2c3d4e5f6789012345678901234567890abcd",
                 CONF_BASE_URL: "invalid_url",
             }
         )

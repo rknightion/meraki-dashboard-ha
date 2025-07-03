@@ -7,9 +7,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
-    RestoreSensor,
     SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -26,16 +24,8 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .. import utils
 from ..const import (
-    ATTR_LAST_REPORTED_AT,
-    ATTR_MODEL,
-    ATTR_NETWORK_ID,
-    ATTR_NETWORK_NAME,
-    ATTR_SERIAL,
-    DOMAIN,
     MT_SENSOR_APPARENT_POWER,
     MT_SENSOR_BATTERY,
     MT_SENSOR_BUTTON,
@@ -54,7 +44,7 @@ from ..const import (
 )
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
-from ..entities.base import MerakiCoordinatorEntityBase
+from ..entities.base import MerakiRestoreSensorEntity, MerakiSensorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -183,7 +173,7 @@ MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
 }
 
 
-class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
+class MerakiMTSensor(MerakiSensorEntity):
     """Representation of a Meraki MT sensor.
 
     Each instance represents a single metric from a Meraki MT device,
@@ -222,7 +212,7 @@ class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
             return None
 
         # Use transformer to process data consistently
-        transformed_data = transformer_registry.transform("MT", device_data)
+        transformed_data = transformer_registry.transform_device_data("MT", device_data)
 
         # Return the value for our specific metric
         return transformed_data.get(self.entity_description.key)
@@ -266,14 +256,12 @@ class MerakiMTSensor(MerakiCoordinatorEntityBase, SensorEntity):
         return attrs
 
 
-class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSensor):
+class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
     """Representation of a Meraki MT energy sensor.
 
     This sensor integrates power measurements over time to provide energy consumption
     in watt-hours, following Home Assistant conventions for energy sensors.
     """
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -285,23 +273,13 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
         power_sensor_key: str,
     ) -> None:
         """Initialize the energy sensor."""
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._device = device
-        self._config_entry_id = config_entry_id
-        self._network_hub = network_hub
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
         self._power_sensor_key = power_sensor_key
 
         # Energy tracking state
         self._energy_value = 0.0
         self._last_power_value: float | None = None
         self._last_power_timestamp: datetime.datetime | None = None
-
-        # Generate unique ID
-        self._attr_unique_id = f"{config_entry_id}_{device['serial']}_{description.key}"
-
-        # Store device serial for data lookup
-        self._device_serial = device["serial"]
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to hass."""
@@ -341,25 +319,10 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
                     )
                     self._energy_value = 0.0
 
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device information for device registry."""
-        device_serial = self._device.get("serial", "")
-        device_name = utils.get_device_display_name(self._device)
-        device_model = self._device.get("model", "Unknown")
+        # Store the restored state in the base class attribute
+        self._restored_state = self._energy_value
 
-        return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
-            name=device_name,
-            manufacturer="Cisco Meraki",
-            model=device_model,
-            serial_number=device_serial,
-            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
-            via_device=(
-                DOMAIN,
-                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
-            ),
-        )
+    # device_info property is inherited from base class
 
     @property
     def native_value(self) -> float | None:
@@ -440,20 +403,6 @@ class MerakiMTEnergySensor(CoordinatorEntity[MerakiSensorCoordinator], RestoreSe
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
-        attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
-            ATTR_SERIAL: self._device_serial,
-            ATTR_MODEL: self._device.get("model"),
-            "power_sensor": self._power_sensor_key,
-        }
-
-        if self.coordinator.data:
-            device_data = self.coordinator.data.get(self._device_serial)
-            if device_data:
-                # Add timestamp if available
-                timestamp = device_data.get("ts")
-                if timestamp:
-                    attrs[ATTR_LAST_REPORTED_AT] = timestamp
-
+        attrs = super().extra_state_attributes.copy()
+        attrs["power_sensor"] = self._power_sensor_key
         return attrs

@@ -1,7 +1,7 @@
 """Utility modules for Meraki Dashboard integration."""
 
 # Import functions from the main utils.py file at parent level
-import sys
+from datetime import datetime
 from pathlib import Path
 
 from .error_handling import (
@@ -55,7 +55,6 @@ if utils_file.exists():
         should_create_entity = getattr(utils_module, "should_create_entity", None)
 
 # Export datetime for test compatibility
-from datetime import datetime
 
 __all__ = [
     "MerakiApiError",

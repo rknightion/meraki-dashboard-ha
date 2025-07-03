@@ -6,14 +6,12 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import (
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 
-from ..const import DOMAIN
+from ..entities.base import MerakiHubSensorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -134,10 +132,8 @@ NETWORK_HUB_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
 }
 
 
-class MerakiHubApiCallsSensor(SensorEntity):
+class MerakiHubApiCallsSensor(MerakiHubSensorEntity):
     """Sensor for tracking API calls from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -146,27 +142,13 @@ class MerakiHubApiCallsSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the API calls sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the number of API calls."""
         return self._organization_hub.total_api_calls
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -207,10 +189,8 @@ class MerakiHubApiCallsSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubFailedApiCallsSensor(SensorEntity):
+class MerakiHubFailedApiCallsSensor(MerakiHubSensorEntity):
     """Sensor for tracking failed API calls from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -219,27 +199,13 @@ class MerakiHubFailedApiCallsSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the failed API calls sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the number of failed API calls."""
         return self._organization_hub.failed_api_calls
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -250,10 +216,8 @@ class MerakiHubFailedApiCallsSensor(SensorEntity):
         }
 
 
-class MerakiHubDeviceCountSensor(SensorEntity):
+class MerakiHubDeviceCountSensor(MerakiHubSensorEntity):
     """Sensor for tracking device count from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -262,17 +226,8 @@ class MerakiHubDeviceCountSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the device count sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
@@ -281,11 +236,6 @@ class MerakiHubDeviceCountSensor(SensorEntity):
         for network_hub in self._organization_hub.network_hubs.values():
             total_devices += len(network_hub.devices)
         return total_devices
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -302,10 +252,8 @@ class MerakiHubDeviceCountSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubNetworkCountSensor(SensorEntity):
+class MerakiHubNetworkCountSensor(MerakiHubSensorEntity):
     """Sensor for tracking network count from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -314,27 +262,13 @@ class MerakiHubNetworkCountSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the network count sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the total number of networks."""
         return len(self._organization_hub.network_hubs)
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -355,10 +289,8 @@ class MerakiHubNetworkCountSensor(SensorEntity):
         return attrs
 
 
-class MerakiNetworkHubDeviceCountSensor(SensorEntity):
+class MerakiNetworkDeviceCountSensor(MerakiHubSensorEntity):
     """Sensor for tracking device count from a network hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -367,31 +299,13 @@ class MerakiNetworkHubDeviceCountSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the network hub device count sensor."""
+        super().__init__(network_hub, description, config_entry_id, "network")
         self._network_hub = network_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = (
-            f"{config_entry_id}_{network_hub.hub_name}_{description.key}"
-        )
-
-        # Set device info to the network hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={
-                (DOMAIN, f"{network_hub.network_id}_{network_hub.device_type}")
-            },
-        )
 
     @property
     def native_value(self) -> int:
         """Return the number of devices in this network hub."""
         return len(self._network_hub.devices)
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -413,10 +327,8 @@ class MerakiNetworkHubDeviceCountSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubOfflineDevicesSensor(SensorEntity):
+class MerakiHubOfflineDevicesSensor(MerakiHubSensorEntity):
     """Sensor for tracking offline devices from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -425,17 +337,8 @@ class MerakiHubOfflineDevicesSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the offline devices sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
@@ -455,11 +358,6 @@ class MerakiHubOfflineDevicesSensor(SensorEntity):
                     offline_count += 1
 
         return offline_count
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -518,10 +416,8 @@ class MerakiHubOfflineDevicesSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubAlertsSensor(SensorEntity):
+class MerakiHubAlertsCountSensor(MerakiHubSensorEntity):
     """Sensor for tracking network alerts overview from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -530,27 +426,13 @@ class MerakiHubAlertsSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the network alerts overview sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the total number of network alerts across all networks."""
         return getattr(self._organization_hub, "active_alerts_count", 0)
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -588,10 +470,8 @@ class MerakiHubAlertsSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubLicenseExpiringSensor(SensorEntity):
+class MerakiHubLicenseExpiringSensor(MerakiHubSensorEntity):
     """Sensor for tracking licenses expiring soon from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -600,27 +480,13 @@ class MerakiHubLicenseExpiringSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the license expiring sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the number of licenses expiring within 90 days."""
         return getattr(self._organization_hub, "licenses_expiring_count", 0)
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -643,10 +509,8 @@ class MerakiHubLicenseExpiringSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubClientsCountSensor(SensorEntity):
+class MerakiHubClientsTotalCountSensor(MerakiHubSensorEntity):
     """Sensor for tracking total client count from an organization hub (24-hour timespan)."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -655,27 +519,13 @@ class MerakiHubClientsCountSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the clients count sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the client count."""
         return getattr(self._organization_hub, "clients_total_count", 0)
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -698,10 +548,8 @@ class MerakiHubClientsCountSensor(SensorEntity):
         return attrs
 
 
-class MerakiHubClientsUsageSensor(SensorEntity):
+class MerakiHubClientsUsageSensor(MerakiHubSensorEntity):
     """Base sensor for tracking client usage data from an organization hub (24-hour timespan)."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -712,29 +560,15 @@ class MerakiHubClientsUsageSensor(SensorEntity):
         description_text: str,
     ) -> None:
         """Initialize the clients usage sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
         self._attribute_name = attribute_name
         self._description_text = description_text
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> float:
         """Return the usage value."""
         return getattr(self._organization_hub, self._attribute_name, 0.0)
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -858,10 +692,8 @@ class MerakiHubClientsUsageAverageTotalSensor(MerakiHubClientsUsageSensor):
         )
 
 
-class MerakiHubBluetoothClientsCountSensor(SensorEntity):
+class MerakiHubBluetoothClientsTotalCountSensor(MerakiHubSensorEntity):
     """Sensor for tracking total Bluetooth client count from an organization hub."""
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -870,27 +702,13 @@ class MerakiHubBluetoothClientsCountSensor(SensorEntity):
         config_entry_id: str,
     ) -> None:
         """Initialize the Bluetooth clients count sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
         self._organization_hub = organization_hub
-        self.entity_description = description
-        self._config_entry_id = config_entry_id
-
-        # Set unique ID
-        self._attr_unique_id = f"{config_entry_id}_org_{description.key}"
-
-        # Set device info to the organization hub device
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{organization_hub.organization_id}_org")},
-        )
 
     @property
     def native_value(self) -> int:
         """Return the total number of Bluetooth clients."""
         return self._organization_hub.bluetooth_clients_total_count
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return True
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

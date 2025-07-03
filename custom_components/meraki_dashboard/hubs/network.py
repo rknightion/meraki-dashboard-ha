@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.event import async_track_time_interval
@@ -23,7 +23,7 @@ from ..const import (
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
 )
-from ..events import MerakiEventHandler
+from ..services import MerakiEventService
 from ..types import (
     MerakiDeviceData,
     MTDeviceData,
@@ -34,6 +34,7 @@ from ..types import (
 # Import for backward compatibility with tests
 from ..utils import performance_monitor
 from ..utils.error_handling import handle_api_errors
+from ..utils.retry import with_standard_retries
 
 if TYPE_CHECKING:
     from .organization import MerakiOrganizationHub
@@ -62,7 +63,7 @@ class MerakiNetworkHub:
         devices: List of discovered devices of this type
         wireless_data: Wireless-specific data for MR devices
         switch_data: Switch-specific data for MS devices
-        event_handler: Event handler for state changes (MT devices only)
+        event_service: Event service for state changes (MT devices only)
     """
 
     def __init__(
@@ -110,9 +111,9 @@ class MerakiNetworkHub:
         # Performance tracking
         self._discovery_durations: list[float] = []
 
-        # Initialize event handler for MT devices
+        # Initialize event service for MT devices
         if device_type == SENSOR_TYPE_MT:
-            self.event_handler = MerakiEventHandler(self.hass)
+            self.event_service = MerakiEventService(self.hass)
 
     @property
     def average_discovery_duration(self) -> float:
@@ -128,6 +129,7 @@ class MerakiNetworkHub:
         if len(self._discovery_durations) > 50:
             self._discovery_durations.pop(0)
 
+    @with_standard_retries("setup")
     async def async_setup(self) -> bool:
         """Set up the network hub and discover initial devices.
 
@@ -232,6 +234,7 @@ class MerakiNetworkHub:
         return True
 
     @performance_monitor("device_discovery")
+    @with_standard_retries("discovery")
     async def _async_discover_devices(self, _now: datetime | None = None) -> None:
         """Discover devices of our type in this network."""
         # Check if discovery is needed to avoid redundant API calls
@@ -343,6 +346,7 @@ class MerakiNetworkHub:
             self._discovery_in_progress = False
 
     @performance_monitor("wireless_data_setup")
+    @with_standard_retries("realtime")
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _async_setup_wireless_data(self) -> None:
         """Set up wireless data for MR devices (SSIDs, device stats, radio settings, etc.)."""
@@ -771,6 +775,7 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
 
     @performance_monitor("switch_data_setup")
+    @with_standard_retries("realtime")
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _async_setup_switch_data(self) -> None:
         """Set up switch data for MS devices (ports, status, power modules, configuration, etc.)."""
@@ -1081,6 +1086,7 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
 
     @performance_monitor("sensor_data_fetch")
+    @with_standard_retries("realtime")
     @handle_api_errors(
         default_return={}, log_errors=True, convert_connection_errors=False
     )
@@ -1147,7 +1153,7 @@ class MerakiNetworkHub:
                     result[serial] = reading
 
                     # Process events for state changes
-                    if self.event_handler:
+                    if self.event_service:
                         try:
                             device_info = next(
                                 (d for d in self.devices if d["serial"] == serial),
@@ -1158,7 +1164,8 @@ class MerakiNetworkHub:
                                     **device_info,
                                     "domain": DOMAIN,
                                 }
-                                self.event_handler.track_sensor_data(
+                                # Use async method with await
+                                await self.event_service.track_sensor_changes(
                                     serial,
                                     reading.get("readings", []),
                                     device_info_with_domain,

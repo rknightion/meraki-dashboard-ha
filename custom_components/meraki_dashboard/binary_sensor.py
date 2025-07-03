@@ -12,22 +12,16 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    ATTR_LAST_REPORTED_AT,
-    ATTR_MODEL,
-    ATTR_NETWORK_ID,
-    ATTR_NETWORK_NAME,
-    ATTR_SERIAL,
     DOMAIN,
     MT_BINARY_SENSOR_METRICS,
     SENSOR_TYPE_MT,
 )
 from .coordinator import MerakiSensorCoordinator
-from .utils import get_device_display_name, should_create_entity
+from .entities.base import MerakiBinarySensorEntity
+from .utils import should_create_entity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -145,16 +139,12 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class MerakiMTBinarySensor(
-    CoordinatorEntity[MerakiSensorCoordinator], BinarySensorEntity
-):
+class MerakiMTBinarySensor(MerakiBinarySensorEntity):
     """Representation of a Meraki MT binary sensor.
 
     Each instance represents a binary sensor metric from a Meraki MT device,
     such as water detection, door open/close, etc.
     """
-
-    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -165,37 +155,9 @@ class MerakiMTBinarySensor(
         network_hub: Any,
     ) -> None:
         """Initialize the MT binary sensor."""
-        super().__init__(coordinator)
-        self.entity_description = description
-        self._device = device
-        self._config_entry_id = config_entry_id
-        self._network_hub = network_hub
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
 
-        # Generate unique ID
-        self._attr_unique_id = f"{config_entry_id}_{device['serial']}_{description.key}"
-
-        # Store device serial for data lookup
-        self._device_serial = device["serial"]
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device information for device registry."""
-        device_serial = self._device.get("serial")
-        device_name = get_device_display_name(self._device)
-        device_model = self._device.get("model", "Unknown")
-
-        return DeviceInfo(
-            identifiers={(DOMAIN, f"{self._config_entry_id}_{device_serial}")},
-            name=device_name,
-            manufacturer="Cisco Meraki",
-            model=device_model,
-            serial_number=device_serial,
-            configuration_url=f"{self._network_hub.organization_hub._base_url.replace('/api/v1', '')}/manage/usage/list",
-            via_device=(
-                DOMAIN,
-                f"{self._network_hub.network_id}_{self._network_hub.device_type}",
-            ),
-        )
+    # device_info property is inherited from base class
 
     @property
     def is_on(self) -> bool | None:
@@ -234,36 +196,15 @@ class MerakiMTBinarySensor(
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        if not self.coordinator.last_update_success:
+        if not super().available:
             return False
 
-        if not self.coordinator.data:
-            return False
-
+        # MT-specific availability check: we need actual readings
         device_data = self.coordinator.data.get(self._device_serial)
         if not device_data:
             return False
 
-        # Check if we have recent readings
         readings = device_data.get("readings", [])
         return len(readings) > 0
 
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        attrs = {
-            ATTR_NETWORK_ID: self._network_hub.network_id,
-            ATTR_NETWORK_NAME: self._network_hub.network_name,
-            ATTR_SERIAL: self._device_serial,
-            ATTR_MODEL: self._device.get("model"),
-        }
-
-        if self.coordinator.data:
-            device_data = self.coordinator.data.get(self._device_serial)
-            if device_data:
-                # Add timestamp if available
-                timestamp = device_data.get("ts")
-                if timestamp:
-                    attrs[ATTR_LAST_REPORTED_AT] = timestamp
-
-        return attrs
+    # extra_state_attributes property is inherited from base class
