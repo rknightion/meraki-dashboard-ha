@@ -127,7 +127,7 @@ jobs:
         run: |
           poetry run python --version
           poetry run python -c "import sys; print('Python executable:', sys.executable)"
-          poetry run python -c "import homeassistant; print('Home Assistant version:', homeassistant.__version__)"
+          poetry run python -c "from homeassistant.const import __version__; print('Home Assistant version:', __version__)"
 
       - name: Create Home Assistant config directory
         run: mkdir -p /tmp/homeassistant
