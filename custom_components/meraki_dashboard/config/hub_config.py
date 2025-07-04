@@ -317,11 +317,15 @@ class HubConfigurationManager:
         if CONF_SCAN_INTERVAL in options:
             options[CONF_SCAN_INTERVAL] = int(options[CONF_SCAN_INTERVAL] * 60)
         if CONF_DISCOVERY_INTERVAL in options:
-            options[CONF_DISCOVERY_INTERVAL] = int(options[CONF_DISCOVERY_INTERVAL] * 60)
+            options[CONF_DISCOVERY_INTERVAL] = int(
+                options[CONF_DISCOVERY_INTERVAL] * 60
+            )
 
         # Convert tiered refresh intervals from minutes to seconds
         if CONF_STATIC_DATA_INTERVAL in options:
-            options[CONF_STATIC_DATA_INTERVAL] = int(options[CONF_STATIC_DATA_INTERVAL] * 60)
+            options[CONF_STATIC_DATA_INTERVAL] = int(
+                options[CONF_STATIC_DATA_INTERVAL] * 60
+            )
         if CONF_SEMI_STATIC_DATA_INTERVAL in options:
             options[CONF_SEMI_STATIC_DATA_INTERVAL] = int(
                 options[CONF_SEMI_STATIC_DATA_INTERVAL] * 60

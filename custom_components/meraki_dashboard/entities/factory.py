@@ -1001,6 +1001,21 @@ def _register_organization_entities():
             "MerakiHubOfflineDevicesSensor", hub, description, entry_id
         )
     )
+    EntityFactory._registry["online_devices"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubOnlineDevicesSensor", hub, description, entry_id
+        )
+    )
+    EntityFactory._registry["alerting_devices"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubAlertingDevicesSensor", hub, description, entry_id
+        )
+    )
+    EntityFactory._registry["dormant_devices"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubDormantDevicesSensor", hub, description, entry_id
+        )
+    )
     EntityFactory._registry["alerts_count"] = (
         lambda hub, description, entry_id: _create_org_entity(
             "MerakiHubAlertsCountSensor", hub, description, entry_id

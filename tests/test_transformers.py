@@ -111,18 +111,22 @@ class TestMTSensorDataTransformer:
         assert result["co2"] == 400.0
 
     def test_transform_power_metrics(self):
-        """Test power metrics with unit conversion."""
+        """Test power metrics transformation from API format."""
         transformer = MTSensorDataTransformer()
         raw_data = {
             "readings": [
-                {"metric": "realPower", "realPower": {"value": 1.5, "unit": "kW"}},
-                {"metric": "voltage", "voltage": {"value": 120}},
+                {"metric": "realPower", "realPower": {"draw": 47.9}},
+                {"metric": "voltage", "voltage": {"level": 240.2}},
+                {"metric": "current", "current": {"draw": 0.37}},
+                {"metric": "powerFactor", "powerFactor": {"percentage": 53}},
             ]
         }
 
         result = transformer.transform(raw_data)
-        assert result["realPower"] == 1500.0  # Converted from kW to W
-        assert result["voltage"] == 120.0
+        assert result["realPower"] == 47.9  # Direct value in watts
+        assert result["voltage"] == 240.2
+        assert result["current"] == 0.37
+        assert result["powerFactor"] == 53
 
 
 class TestMRWirelessDataTransformer:

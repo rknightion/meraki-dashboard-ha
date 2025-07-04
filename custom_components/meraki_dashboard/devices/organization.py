@@ -52,6 +52,27 @@ ORG_HUB_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    "online_devices": SensorEntityDescription(
+        key="online_devices",
+        name="Online Devices",
+        icon="mdi:access-point-network",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "alerting_devices": SensorEntityDescription(
+        key="alerting_devices",
+        name="Alerting Devices",
+        icon="mdi:alert-circle",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "dormant_devices": SensorEntityDescription(
+        key="dormant_devices",
+        name="Dormant Devices",
+        icon="mdi:sleep",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
     "alerts_count": SensorEntityDescription(
         key="alerts_count",
         name="Network Alerts",
@@ -232,10 +253,12 @@ class MerakiHubDeviceCountSensor(MerakiHubSensorEntity):
     @property
     def native_value(self) -> int:
         """Return the total number of devices."""
-        total_devices = 0
-        for network_hub in self._organization_hub.network_hubs.values():
-            total_devices += len(network_hub.devices)
-        return total_devices
+        # Use device status overview for accurate total
+        overview = self._organization_hub.device_status_overview
+        if overview and "counts" in overview:
+            by_status = overview["counts"].get("byStatus", {})
+            return sum(by_status.values())
+        return 0
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -343,21 +366,11 @@ class MerakiHubOfflineDevicesSensor(MerakiHubSensorEntity):
     @property
     def native_value(self) -> int:
         """Return the number of offline devices."""
-        # Use actual device status data from organization hub
-        offline_count = 0
-
-        # Check device statuses from organization API data
-        for device_status in self._organization_hub.device_statuses:
-            if device_status.get("status") == "offline":
-                offline_count += 1
-
-        # Also check network hub devices for offline status
-        for network_hub in self._organization_hub.network_hubs.values():
-            for device in network_hub.devices:
-                if device.get("status") == "offline":
-                    offline_count += 1
-
-        return offline_count
+        # Use device status overview
+        overview = self._organization_hub.device_status_overview
+        if overview and "counts" in overview:
+            return overview["counts"].get("byStatus", {}).get("offline", 0)
+        return 0
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -412,6 +425,138 @@ class MerakiHubOfflineDevicesSensor(MerakiHubSensorEntity):
         # Limit to most recent 10 offline devices to prevent attribute overflow
         attrs["offline_devices"] = offline_devices[:10]
         attrs["total_devices"] = len(self._organization_hub.device_statuses)
+
+        return attrs
+
+
+class MerakiHubOnlineDevicesSensor(MerakiHubSensorEntity):
+    """Sensor for tracking online devices from an organization hub."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the online devices sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
+        self._organization_hub = organization_hub
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of online devices."""
+        # Use device status overview
+        overview = self._organization_hub.device_status_overview
+        if overview and "counts" in overview:
+            return overview["counts"].get("byStatus", {}).get("online", 0)
+        return 0
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        return {
+            "organization_id": self._organization_hub.organization_id,
+            "organization_name": self._organization_hub.organization_name,
+        }
+
+
+class MerakiHubAlertingDevicesSensor(MerakiHubSensorEntity):
+    """Sensor for tracking alerting devices from an organization hub."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the alerting devices sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
+        self._organization_hub = organization_hub
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of alerting devices."""
+        # Use device status overview
+        overview = self._organization_hub.device_status_overview
+        if overview and "counts" in overview:
+            return overview["counts"].get("byStatus", {}).get("alerting", 0)
+        return 0
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attrs = {
+            "organization_id": self._organization_hub.organization_id,
+            "organization_name": self._organization_hub.organization_name,
+        }
+
+        # Add alerting device details if available
+        alerting_devices = []
+        for device_status in self._organization_hub.device_statuses:
+            if device_status.get("status") == "alerting":
+                alerting_devices.append(
+                    {
+                        "serial": device_status.get("serial"),
+                        "name": device_status.get("name"),
+                        "model": device_status.get("model"),
+                        "network_id": device_status.get("networkId"),
+                    }
+                )
+
+        # Limit to first 10 devices to prevent attribute overflow
+        if alerting_devices:
+            attrs["alerting_devices"] = alerting_devices[:10]
+
+        return attrs
+
+
+class MerakiHubDormantDevicesSensor(MerakiHubSensorEntity):
+    """Sensor for tracking dormant devices from an organization hub."""
+
+    def __init__(
+        self,
+        organization_hub: Any,
+        description: SensorEntityDescription,
+        config_entry_id: str,
+    ) -> None:
+        """Initialize the dormant devices sensor."""
+        super().__init__(organization_hub, description, config_entry_id, "org")
+        self._organization_hub = organization_hub
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of dormant devices."""
+        # Use device status overview
+        overview = self._organization_hub.device_status_overview
+        if overview and "counts" in overview:
+            return overview["counts"].get("byStatus", {}).get("dormant", 0)
+        return 0
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes."""
+        attrs = {
+            "organization_id": self._organization_hub.organization_id,
+            "organization_name": self._organization_hub.organization_name,
+        }
+
+        # Add dormant device details if available
+        dormant_devices = []
+        for device_status in self._organization_hub.device_statuses:
+            if device_status.get("status") == "dormant":
+                dormant_devices.append(
+                    {
+                        "serial": device_status.get("serial"),
+                        "name": device_status.get("name"),
+                        "model": device_status.get("model"),
+                        "network_id": device_status.get("networkId"),
+                        "last_seen": device_status.get("lastReportedAt"),
+                    }
+                )
+
+        # Limit to first 10 devices to prevent attribute overflow
+        if dormant_devices:
+            attrs["dormant_devices"] = dormant_devices[:10]
 
         return attrs
 

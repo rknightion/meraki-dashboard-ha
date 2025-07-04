@@ -817,61 +817,19 @@ class TestSensorNativeValues:
             network_hub=mock_network_hub,
         )
 
-        # Test case 1: Standard structure with "ambient" key
+        # Test case 1: Standard API structure with nested "ambient.level"
         mock_coordinator.data = {
             "Q2XX-XXXX-XXXX": {
                 "readings": [
                     {
                         "metric": "noise",
                         "ts": "2024-01-01T12:00:00.000000Z",
-                        "noise": {"ambient": 45.2},
+                        "noise": {"ambient": {"level": 45.2}},
                     }
                 ]
             }
         }
         assert sensor.native_value == 45.2
-
-        # Test case 2: Structure with "level" key (the problematic case)
-        mock_coordinator.data = {
-            "Q2XX-XXXX-XXXX": {
-                "readings": [
-                    {
-                        "metric": "noise",
-                        "ts": "2024-01-01T12:00:00.000000Z",
-                        "noise": {"level": 33},
-                    }
-                ]
-            }
-        }
-        assert sensor.native_value == 33
-
-        # Test case 3: Nested structure where level is also a dict
-        mock_coordinator.data = {
-            "Q2XX-XXXX-XXXX": {
-                "readings": [
-                    {
-                        "metric": "noise",
-                        "ts": "2024-01-01T12:00:00.000000Z",
-                        "noise": {"level": {"level": 42}},
-                    }
-                ]
-            }
-        }
-        assert sensor.native_value == 42
-
-        # Test case 4: Direct numeric value
-        mock_coordinator.data = {
-            "Q2XX-XXXX-XXXX": {
-                "readings": [
-                    {
-                        "metric": "noise",
-                        "ts": "2024-01-01T12:00:00.000000Z",
-                        "noise": 50.5,
-                    }
-                ]
-            }
-        }
-        assert sensor.native_value == 50.5
 
     def test_sensor_native_value_no_data(
         self, mock_coordinator, mock_device_info, mock_network_hub

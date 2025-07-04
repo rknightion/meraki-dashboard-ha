@@ -140,7 +140,7 @@ async def _setup_mt_sensors(
         _LOGGER.debug(
             "Creating sensors for MT device: %s (model: %s)",
             device_serial,
-            device.get("model", "MISSING")
+            device.get("model", "MISSING"),
         )
 
         # Create regular sensors for each metric that the device supports

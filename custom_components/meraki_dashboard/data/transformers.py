@@ -160,102 +160,165 @@ class MTSensorDataTransformer(DataTransformer):
         transformed: dict[str, Any] = {}
 
         readings = raw_data.get("readings", [])
+
         for reading in readings:
             metric = reading.get("metric")
             if not metric:
                 continue
 
-            # Transform specific MT metrics
+            # Transform specific MT metrics based on API format
             if metric == "temperature":
-                temp_data = reading.get("temperature", {})
-                transformed[metric] = SafeExtractor.safe_float(temp_data.get("celsius"))
+                value = self._extract_temperature_value(reading)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric == "humidity":
-                humidity_data = reading.get("humidity", {})
-                transformed[metric] = SafeExtractor.safe_float(
-                    humidity_data.get("relativePercentage")
-                )
+                value = self._extract_humidity_value(reading)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric == "co2":
-                co2_data = reading.get("co2", {})
-                transformed[metric] = SafeExtractor.safe_float(
-                    co2_data.get("concentration")
-                )
+                value = self._extract_co2_value(reading)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric == "battery":
-                battery_data = reading.get("battery", {})
-                transformed[metric] = SafeExtractor.safe_float(
-                    battery_data.get("percentage")
-                )
+                value = self._extract_battery_value(reading)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric in ["pm25", "tvoc"]:
-                # These metrics have direct concentration values
-                concentration = SafeExtractor.get_nested_value(
-                    reading, metric, "concentration"
-                )
-                transformed[metric] = SafeExtractor.safe_float(concentration)
+                value = self._extract_concentration_value(reading, metric)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric == "noise":
-                # Noise metrics can have different structures
-                noise_data = reading.get("noise")
-                value = None
-
-                # Handle direct numeric value
-                if isinstance(noise_data, int | float):
-                    value = SafeExtractor.safe_float(noise_data)
-                elif isinstance(noise_data, dict):
-                    # Try different field names for noise data
-                    value = (
-                        SafeExtractor.safe_float(noise_data.get("ambient"))
-                        or SafeExtractor.safe_float(noise_data.get("concentration"))
-                        or SafeExtractor.safe_float(noise_data.get("level"))
-                    )
-
-                    # Handle nested level structure: {"level": {"level": 42}}
-                    if not value and isinstance(noise_data.get("level"), dict):
-                        nested_level = noise_data.get("level", {})
-                        value = SafeExtractor.safe_float(nested_level.get("level"))
-
-                # Only set transformed value if we found actual data
+                value = self._extract_noise_value(reading, metric)
                 if value is not None:
                     transformed[metric] = value
 
             elif metric in ["realPower", "apparentPower"]:
-                # Power metrics with unit conversion
-                power_data = reading.get(metric, {})
-                # Handle both "value" and "draw" fields
-                value = SafeExtractor.safe_float(
-                    power_data.get("value")
-                ) or SafeExtractor.safe_float(power_data.get("draw"))
-                unit = power_data.get("unit", "")
-
-                if unit == "kW":
-                    value *= 1000  # Convert kW to W
-                elif unit == "mW":
-                    value /= 1000  # Convert mW to W
-
-                transformed[metric] = value
+                value = self._extract_power_value(reading, metric)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric in ["voltage", "current", "frequency", "powerFactor"]:
-                # Electrical metrics with direct values
-                metric_data = reading.get(metric, {})
-                transformed[metric] = SafeExtractor.safe_float(metric_data.get("value"))
+                value = self._extract_electrical_value(reading, metric)
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric == "indoorAirQuality":
-                # Indoor air quality score
-                iaq_data = reading.get("indoorAirQuality", {})
-                transformed[metric] = SafeExtractor.safe_float(iaq_data.get("score"))
+                value = self._extract_iaq_value(reading)
+                if value is not None:
+                    transformed[metric] = value
 
-            elif metric in ["button", "door", "water", "remoteLockoutSwitch"]:
+            elif metric == "motion":
+                # Motion is a binary sensor
+                transformed[metric] = self._extract_motion_value(reading)
+
+            elif metric in [
+                "button",
+                "door",
+                "water",
+                "remoteLockoutSwitch",
+                "downstreamPower",
+            ]:
                 # Binary sensors
-                metric_data = reading.get(metric, {})
-                transformed[metric] = metric_data.get("open", False)
+                transformed[metric] = self._extract_binary_value(reading, metric)
 
         # Add metadata
         transformed["_timestamp"] = raw_data.get("ts")
         transformed["_serial"] = raw_data.get("serial")
 
         return transformed
+
+    def _extract_temperature_value(self, reading: dict[str, Any]) -> float | None:
+        """Extract temperature value from API format."""
+        temp_data = reading.get("temperature", {})
+        return SafeExtractor.safe_float(temp_data.get("celsius"))
+
+    def _extract_humidity_value(self, reading: dict[str, Any]) -> float | None:
+        """Extract humidity value from API format."""
+        humidity_data = reading.get("humidity", {})
+        return SafeExtractor.safe_float(humidity_data.get("relativePercentage"))
+
+    def _extract_co2_value(self, reading: dict[str, Any]) -> float | None:
+        """Extract CO2 value from API format."""
+        co2_data = reading.get("co2", {})
+        return SafeExtractor.safe_float(co2_data.get("concentration"))
+
+    def _extract_battery_value(self, reading: dict[str, Any]) -> float | None:
+        """Extract battery value from API format."""
+        battery_data = reading.get("battery", {})
+        return SafeExtractor.safe_float(battery_data.get("percentage"))
+
+    def _extract_concentration_value(
+        self, reading: dict[str, Any], metric: str
+    ) -> float | None:
+        """Extract concentration value for metrics like PM2.5, TVOC."""
+        metric_data = reading.get(metric, {})
+        return SafeExtractor.safe_float(metric_data.get("concentration"))
+
+    def _extract_noise_value(
+        self, reading: dict[str, Any], metric: str
+    ) -> float | None:
+        """Extract noise value from API format."""
+        # API returns noise as nested structure: {"ambient": {"level": 48}}
+        noise_data = reading.get("noise", {})
+        ambient_data = noise_data.get("ambient", {})
+        return SafeExtractor.safe_float(ambient_data.get("level"))
+
+    def _extract_power_value(
+        self, reading: dict[str, Any], metric: str
+    ) -> float | None:
+        """Extract power value from API format."""
+        # API returns power metrics with "draw" field in watts
+        power_data = reading.get(metric, {})
+        return SafeExtractor.safe_float(power_data.get("draw"))
+
+    def _extract_electrical_value(
+        self, reading: dict[str, Any], metric: str
+    ) -> float | None:
+        """Extract electrical metrics value from API format."""
+        metric_data = reading.get(metric, {})
+
+        # Different metrics use different field names
+        if metric in ["voltage", "frequency"]:
+            # These use "level" field
+            return SafeExtractor.safe_float(metric_data.get("level"))
+        elif metric == "current":
+            # Current uses "draw" field
+            return SafeExtractor.safe_float(metric_data.get("draw"))
+        elif metric == "powerFactor":
+            # Power factor uses "percentage" field
+            return SafeExtractor.safe_float(metric_data.get("percentage"))
+
+        return None
+
+    def _extract_iaq_value(self, reading: dict[str, Any]) -> float | None:
+        """Extract indoor air quality score from API format."""
+        iaq_data = reading.get("indoorAirQuality", {})
+        return SafeExtractor.safe_float(iaq_data.get("score"))
+
+    def _extract_motion_value(self, reading: dict[str, Any]) -> bool:
+        """Extract motion sensor value from API format."""
+        motion_data = reading.get("motion", {})
+        return bool(motion_data.get("detected", False))
+
+    def _extract_binary_value(self, reading: dict[str, Any], metric: str) -> bool:
+        """Extract binary sensor values from API format."""
+        metric_data = reading.get(metric, {})
+
+        # Each binary sensor has specific field names
+        if metric == "downstreamPower":
+            return bool(metric_data.get("enabled", False))
+        elif metric == "remoteLockoutSwitch":
+            return bool(metric_data.get("locked", False))
+        elif metric in ["door", "water", "button"]:
+            # These use either "open" or "detected" fields
+            return bool(metric_data.get("open", metric_data.get("detected", False)))
+
+        return False
 
 
 class MRWirelessDataTransformer(DataTransformer):

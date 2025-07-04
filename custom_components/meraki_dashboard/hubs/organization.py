@@ -152,6 +152,7 @@ class MerakiOrganizationHub:
         self.recent_alerts: list[dict[str, str]] = []
         self.active_alerts_count = 0
         self.device_statuses: list[DeviceStatus] = []
+        self.device_status_overview: dict[str, Any] = {}
 
         # Clients overview data (1-hour timespan)
         self.clients_total_count = 0
@@ -1017,7 +1018,30 @@ class MerakiOrganizationHub:
         assert self.dashboard is not None  # Type guard  # nosec B101
 
         try:
-            # Get organization device statuses
+            # Get organization device statuses overview for aggregated counts
+            device_status_overview = await self.hass.async_add_executor_job(
+                self.dashboard.organizations.getOrganizationDevicesStatusesOverview,
+                self.organization_id,
+            )
+            self.total_api_calls += 1
+            self.device_status_overview = device_status_overview
+            _LOGGER.debug(
+                "Device status overview: online=%s, offline=%s, alerting=%s, dormant=%s",
+                device_status_overview.get("counts", {})
+                .get("byStatus", {})
+                .get("online", 0),
+                device_status_overview.get("counts", {})
+                .get("byStatus", {})
+                .get("offline", 0),
+                device_status_overview.get("counts", {})
+                .get("byStatus", {})
+                .get("alerting", 0),
+                device_status_overview.get("counts", {})
+                .get("byStatus", {})
+                .get("dormant", 0),
+            )
+
+            # Get detailed organization device statuses
             device_statuses = await self.hass.async_add_executor_job(
                 self.dashboard.organizations.getOrganizationDevicesStatuses,
                 self.organization_id,
@@ -1082,22 +1106,15 @@ class MerakiOrganizationHub:
                 self.device_memory_usage = {}
                 return
 
-            # Log the raw API response for debugging
+            # Log the API response type for debugging (without raw data)
             if memory_data:
                 _LOGGER.debug("API response type: %s", type(memory_data))
                 if isinstance(memory_data, list):
                     _LOGGER.debug("API returned %d device records", len(memory_data))
-                    _LOGGER.debug(
-                        "Raw API response sample: %s",
-                        memory_data[:2] if len(memory_data) > 1 else memory_data,
-                    )
                 elif isinstance(memory_data, dict):
                     _LOGGER.debug(
                         "API returned dict with keys: %s", list(memory_data.keys())
                     )
-                    _LOGGER.debug("Raw API response: %s", memory_data)
-                else:
-                    _LOGGER.debug("Raw API response: %s", memory_data)
             else:
                 _LOGGER.debug("API returned no data or None")
 

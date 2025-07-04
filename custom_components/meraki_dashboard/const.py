@@ -241,12 +241,12 @@ MT_POWER_SENSORS: Final = [
     EntityType.VOLTAGE,
     EntityType.FREQUENCY,
     EntityType.POWER_FACTOR,
-    EntityType.DOWNSTREAM_POWER,
 ]
 
 MT_BINARY_SENSOR_METRICS: Final = [
     EntityType.BUTTON,
     EntityType.DOOR,
+    EntityType.DOWNSTREAM_POWER,
     EntityType.REMOTE_LOCKOUT_SWITCH,
     EntityType.WATER,
 ]

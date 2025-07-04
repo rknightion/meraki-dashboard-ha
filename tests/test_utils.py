@@ -686,8 +686,17 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT14 devices."""
         capabilities = create_device_capability_filter("MT14", "MT")
 
-        # MT14 is a door sensor with environmental monitoring and water detection
-        expected_capabilities = {"temperature", "humidity", "battery", "door", "water"}
+        # MT14 is a door sensor with full environmental monitoring
+        expected_capabilities = {
+            "temperature",
+            "humidity",
+            "battery",
+            "door",
+            "indoorAirQuality",
+            "tvoc",
+            "noise",
+            "pm25",
+        }
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt20(self):
@@ -718,8 +727,17 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT40 devices."""
         capabilities = create_device_capability_filter("MT40", "MT")
 
-        # MT40 is water detection sensor
-        expected_capabilities = {"water", "temperature"}
+        # MT40 is energy switch and sensor with binary sensors
+        expected_capabilities = {
+            "realPower",
+            "apparentPower",
+            "voltage",
+            "current",
+            "frequency",
+            "powerFactor",
+            "downstreamPower",
+            "remoteLockoutSwitch",
+        }
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_unknown_mt(self):
@@ -877,15 +895,25 @@ class TestShouldCreateEntity:
 
         coordinator_data = {"Q2XX-XXXX-XXXX": {"real_power": {"watts": 5.2}}}
 
-        # MT40 is water detection sensor, doesn't support real_power
-        assert should_create_entity(device, "real_power", coordinator_data) is False
-        # MT40 supports water and temperature
-        assert should_create_entity(device, "water", coordinator_data) is True
-        assert should_create_entity(device, "temperature", coordinator_data) is True
+        # MT40 is energy switch/sensor, supports power metrics and binary sensors
+        assert should_create_entity(device, "realPower", coordinator_data) is True
+        assert should_create_entity(device, "apparentPower", coordinator_data) is True
+        assert should_create_entity(device, "voltage", coordinator_data) is True
+        assert should_create_entity(device, "current", coordinator_data) is True
+        assert should_create_entity(device, "frequency", coordinator_data) is True
+        assert should_create_entity(device, "powerFactor", coordinator_data) is True
+        assert should_create_entity(device, "downstreamPower", coordinator_data) is True
+        assert (
+            should_create_entity(device, "remoteLockoutSwitch", coordinator_data)
+            is True
+        )
+        # MT40 doesn't support water or temperature
+        assert should_create_entity(device, "water", coordinator_data) is False
+        assert should_create_entity(device, "temperature", coordinator_data) is False
 
         # MT11 doesn't support power metrics either
         device["model"] = "MT11"
-        assert should_create_entity(device, "real_power", coordinator_data) is False
+        assert should_create_entity(device, "realPower", coordinator_data) is False
 
     def test_should_create_entity_binary_sensors(self):
         """Test entity creation for binary sensors."""

@@ -123,7 +123,7 @@ class DeviceInfoBuilder:
                 device_model = "MT"
                 _LOGGER.debug(
                     "Device %s has no model, using generic 'MT' based on productType='sensor'",
-                    device_serial
+                    device_serial,
                 )
             elif device_type:
                 # Use device type as last resort
@@ -131,7 +131,7 @@ class DeviceInfoBuilder:
                 _LOGGER.debug(
                     "Device %s has no model, using device type '%s' as fallback",
                     device_serial,
-                    device_type
+                    device_type,
                 )
             else:
                 device_model = "Unknown"
@@ -372,11 +372,29 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             # Motion sensor with environmental monitoring
             return {"temperature", "humidity", "battery", "motion"}
         elif device_model == "MT14":
-            # Door sensor with environmental monitoring and water detection
-            return {"temperature", "humidity", "battery", "door", "water"}
+            # Door sensor with full environmental monitoring
+            return {
+                "temperature",
+                "humidity",
+                "battery",
+                "door",
+                "indoorAirQuality",
+                "tvoc",
+                "noise",
+                "pm25",
+            }
         elif device_model == "MT15":
-            # Water detection sensor with environmental monitoring
-            return {"temperature", "humidity", "water", "battery"}
+            # Environmental monitoring sensor
+            return {
+                "temperature",
+                "humidity",
+                "battery",
+                "indoorAirQuality",
+                "pm25",
+                "noise",
+                "tvoc",
+                "co2",
+            }
         elif device_model == "MT20":
             # Full environmental monitoring - using API metric names
             return {
@@ -392,16 +410,16 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             # Smart camera with AI features
             return {"temperature", "humidity", "battery", "button"}
         elif device_model == "MT40":
-            # Power monitoring sensor with water detection
+            # Power monitoring sensor (energy switch) with binary sensors
             return {
-                "water",
-                "temperature",
                 "realPower",
                 "apparentPower",
                 "voltage",
                 "current",
                 "frequency",
-                "powerFactor"
+                "powerFactor",
+                "downstreamPower",
+                "remoteLockoutSwitch",
             }
         else:
             # Default MT sensors - only basic environmental
@@ -486,13 +504,21 @@ def discover_device_capabilities_from_readings(
                 readings = device_data.get("readings", [])
                 for reading in readings:
                     if metric := reading.get("metric"):
-                        capabilities.add(metric)
+                        # Normalize metric names like "noise.ambient.level" to "noise"
+                        if metric.startswith("noise."):
+                            capabilities.add("noise")
+                        else:
+                            capabilities.add(metric)
         # Single device reading
         elif sensor_readings.get("serial") == device_serial:
             if readings := sensor_readings.get("readings", []):
                 for reading in readings:
                     if metric := reading.get("metric"):
-                        capabilities.add(metric)
+                        # Normalize metric names like "noise.ambient.level" to "noise"
+                        if metric.startswith("noise."):
+                            capabilities.add("noise")
+                        else:
+                            capabilities.add(metric)
     elif isinstance(sensor_readings, list):
         # Multiple device readings
         for device_reading in sensor_readings:
@@ -500,7 +526,11 @@ def discover_device_capabilities_from_readings(
                 if readings := device_reading.get("readings", []):
                     for reading in readings:
                         if metric := reading.get("metric"):
-                            capabilities.add(metric)
+                            # Normalize metric names like "noise.ambient.level" to "noise"
+                            if metric.startswith("noise."):
+                                capabilities.add("noise")
+                            else:
+                                capabilities.add(metric)
 
     return capabilities
 
@@ -589,20 +619,27 @@ def should_create_entity(
     # The metric_key comes from sensor descriptions which use EntityType values
     # These need to be mapped to the API metric names for capability checking
     if device_model.startswith("MT"):
-        # Get device capabilities
-        capabilities = get_device_capabilities(device, coordinator_data)
-
-        # If we have discovered capabilities from actual data, use them
-        if capabilities:
-            # Handle special cases where sensor keys don't exactly match API metrics
-            if metric_key == "noise" and any("noise" in cap for cap in capabilities):
-                return True
-            # Check if the metric key matches any capability
-            return metric_key in capabilities
-
-        # Fall back to model-based capabilities
+        # Get model-based capabilities first as the source of truth
         model_capabilities = create_device_capability_filter(device_model, "MT")
 
+        # Get dynamically discovered capabilities
+        discovered_capabilities = get_device_capabilities(device, coordinator_data)
+
+        # If we have discovered capabilities, use the intersection with model capabilities
+        # This prevents creating sensors for metrics the device doesn't actually support
+        if discovered_capabilities:
+            # Only use capabilities that are both discovered AND in the model definition
+            actual_capabilities = discovered_capabilities & model_capabilities
+
+            # Handle special cases where sensor keys don't exactly match API metrics
+            if metric_key == "noise" and any(
+                "noise" in cap for cap in actual_capabilities
+            ):
+                return True
+            # Check if the metric key matches any capability
+            return metric_key in actual_capabilities
+
+        # Fall back to model-based capabilities if no dynamic discovery
         # Handle noise sensor special case (API uses "noise.ambient.level")
         if metric_key == "noise" and "noise" in model_capabilities:
             return True

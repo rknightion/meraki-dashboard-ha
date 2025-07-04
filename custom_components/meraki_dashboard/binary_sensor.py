@@ -107,7 +107,7 @@ async def async_setup_entry(
             _LOGGER.debug(
                 "Creating binary sensors for MT device: %s (model: %s)",
                 device_serial,
-                device.get("model", "MISSING")
+                device.get("model", "MISSING"),
             )
 
             # Create binary sensors for applicable metrics that the device supports
@@ -174,7 +174,8 @@ class MerakiMTBinarySensor(MerakiBinarySensorEntity):
             return None
 
         # Use transformer to process data consistently
-        from ..data.transformers import transformer_registry
+        from .data.transformers import transformer_registry
+
         transformed_data = transformer_registry.transform_device_data("MT", device_data)
 
         # Get the value for our specific metric
