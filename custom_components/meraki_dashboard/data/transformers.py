@@ -7,7 +7,49 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
-from ..const import EntityType
+from ..const import (
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24,
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
+    MR_SENSOR_CLIENT_COUNT,
+    MR_SENSOR_MEMORY_USAGE,
+    MS_SENSOR_CONNECTED_PORTS,
+    MS_SENSOR_POE_LIMIT,
+    MS_SENSOR_POE_PORTS,
+    MS_SENSOR_POE_POWER,
+    MS_SENSOR_PORT_COUNT,
+    MS_SENSOR_PORT_TRAFFIC_RECV,
+    MS_SENSOR_PORT_TRAFFIC_SENT,
+    MT_SENSOR_APPARENT_POWER,
+    MT_SENSOR_BATTERY,
+    MT_SENSOR_BUTTON,
+    MT_SENSOR_CO2,
+    MT_SENSOR_CURRENT,
+    MT_SENSOR_DOOR,
+    MT_SENSOR_DOWNSTREAM_POWER,
+    MT_SENSOR_FREQUENCY,
+    MT_SENSOR_HUMIDITY,
+    MT_SENSOR_INDOOR_AIR_QUALITY,
+    MT_SENSOR_NOISE,
+    MT_SENSOR_PM25,
+    MT_SENSOR_POWER_FACTOR,
+    MT_SENSOR_REAL_POWER,
+    MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
+    MT_SENSOR_TEMPERATURE,
+    MT_SENSOR_TVOC,
+    MT_SENSOR_VOLTAGE,
+    MT_SENSOR_WATER,
+    ORG_SENSOR_ALERTS_COUNT,
+    ORG_SENSOR_API_CALLS,
+    ORG_SENSOR_DEVICE_COUNT,
+    ORG_SENSOR_FAILED_API_CALLS,
+    ORG_SENSOR_LICENSE_EXPIRING,
+    ORG_SENSOR_NETWORK_COUNT,
+    ORG_SENSOR_OFFLINE_DEVICES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -621,7 +663,7 @@ class TransformerRegistry:
         """Decorator to register entity-specific transformers.
 
         Usage:
-            @TransformerRegistry.register(EntityType.TEMPERATURE)
+            @TransformerRegistry.register(MT_SENSOR_TEMPERATURE)
             def transform_temperature(value: Any) -> float | None:
                 return float(value) if value is not None else None
         """
@@ -698,7 +740,7 @@ transformer_registry = TransformerRegistry()
 # Register entity-specific transformers
 
 
-@TransformerRegistry.register(EntityType.TEMPERATURE.value)
+@TransformerRegistry.register(MT_SENSOR_TEMPERATURE)
 def transform_temperature(value: Any) -> float | None:
     """Convert Celsius temperature value."""
     if value is None:
@@ -709,7 +751,7 @@ def transform_temperature(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.HUMIDITY.value)
+@TransformerRegistry.register(MT_SENSOR_HUMIDITY)
 def transform_humidity(value: Any) -> float | None:
     """Convert humidity percentage."""
     if value is None:
@@ -720,7 +762,7 @@ def transform_humidity(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CO2.value)
+@TransformerRegistry.register(MT_SENSOR_CO2)
 def transform_co2(value: Any) -> float | None:
     """Convert CO2 concentration value."""
     if value is None:
@@ -731,7 +773,7 @@ def transform_co2(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.TVOC.value)
+@TransformerRegistry.register(MT_SENSOR_TVOC)
 def transform_tvoc(value: Any) -> float | None:
     """Convert TVOC concentration value."""
     if value is None:
@@ -742,7 +784,7 @@ def transform_tvoc(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.PM25.value)
+@TransformerRegistry.register(MT_SENSOR_PM25)
 def transform_pm25(value: Any) -> float | None:
     """Convert PM2.5 concentration value."""
     if value is None:
@@ -753,7 +795,7 @@ def transform_pm25(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.BATTERY.value)
+@TransformerRegistry.register(MT_SENSOR_BATTERY)
 def transform_battery(value: Any) -> float | None:
     """Convert battery percentage."""
     if value is None:
@@ -764,7 +806,7 @@ def transform_battery(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.NOISE.value)
+@TransformerRegistry.register(MT_SENSOR_NOISE)
 def transform_noise(value: Any) -> float | None:
     """Convert noise level value."""
     if value is None:
@@ -793,7 +835,7 @@ def transform_noise(value: Any) -> float | None:
     return None
 
 
-@TransformerRegistry.register(EntityType.REAL_POWER.value)
+@TransformerRegistry.register(MT_SENSOR_REAL_POWER)
 def transform_real_power(value: Any) -> float | None:
     """Convert real power to watts."""
     if value is None:
@@ -816,14 +858,14 @@ def transform_real_power(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.APPARENT_POWER.value)
+@TransformerRegistry.register(MT_SENSOR_APPARENT_POWER)
 def transform_apparent_power(value: Any) -> float | None:
     """Convert apparent power to VA."""
     # Same transformation as real power
     return transform_real_power(value)
 
 
-@TransformerRegistry.register(EntityType.VOLTAGE.value)
+@TransformerRegistry.register(MT_SENSOR_VOLTAGE)
 def transform_voltage(value: Any) -> float | None:
     """Convert voltage value."""
     if value is None:
@@ -834,7 +876,7 @@ def transform_voltage(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CURRENT.value)
+@TransformerRegistry.register(MT_SENSOR_CURRENT)
 def transform_current(value: Any) -> float | None:
     """Convert current value."""
     if value is None:
@@ -845,7 +887,7 @@ def transform_current(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.FREQUENCY.value)
+@TransformerRegistry.register(MT_SENSOR_FREQUENCY)
 def transform_frequency(value: Any) -> float | None:
     """Convert frequency value."""
     if value is None:
@@ -856,7 +898,7 @@ def transform_frequency(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.POWER_FACTOR.value)
+@TransformerRegistry.register(MT_SENSOR_POWER_FACTOR)
 def transform_power_factor(value: Any) -> float | None:
     """Convert power factor value."""
     if value is None:
@@ -867,7 +909,7 @@ def transform_power_factor(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.INDOOR_AIR_QUALITY.value)
+@TransformerRegistry.register(MT_SENSOR_INDOOR_AIR_QUALITY)
 def transform_iaq(value: Any) -> str | None:
     """Transform Indoor Air Quality score to a descriptive string."""
     if value is None:
@@ -893,7 +935,7 @@ def transform_iaq(value: Any) -> str | None:
 
 
 # Binary sensor transformers
-@TransformerRegistry.register(EntityType.WATER.value)
+@TransformerRegistry.register(MT_SENSOR_WATER)
 def transform_water(value: Any) -> bool:
     """Transform water detection value."""
     if isinstance(value, dict):
@@ -901,7 +943,7 @@ def transform_water(value: Any) -> bool:
     return bool(value)
 
 
-@TransformerRegistry.register(EntityType.DOOR.value)
+@TransformerRegistry.register(MT_SENSOR_DOOR)
 def transform_door(value: Any) -> bool:
     """Transform door sensor value."""
     if isinstance(value, dict):
@@ -909,7 +951,7 @@ def transform_door(value: Any) -> bool:
     return bool(value)
 
 
-@TransformerRegistry.register(EntityType.BUTTON.value)
+@TransformerRegistry.register(MT_SENSOR_BUTTON)
 def transform_button(value: Any) -> bool:
     """Transform button sensor value."""
     if isinstance(value, dict):
@@ -917,7 +959,7 @@ def transform_button(value: Any) -> bool:
     return bool(value)
 
 
-@TransformerRegistry.register(EntityType.REMOTE_LOCKOUT_SWITCH.value)
+@TransformerRegistry.register(MT_SENSOR_REMOTE_LOCKOUT_SWITCH)
 def transform_lockout(value: Any) -> bool:
     """Transform remote lockout switch value."""
     if isinstance(value, dict):
@@ -925,7 +967,7 @@ def transform_lockout(value: Any) -> bool:
     return bool(value)
 
 
-@TransformerRegistry.register(EntityType.DOWNSTREAM_POWER.value)
+@TransformerRegistry.register(MT_SENSOR_DOWNSTREAM_POWER)
 def transform_downstream_power(value: Any) -> bool:
     """Transform downstream power status."""
     if isinstance(value, dict):
@@ -934,7 +976,7 @@ def transform_downstream_power(value: Any) -> bool:
 
 
 # MR/MS specific transformers
-@TransformerRegistry.register(EntityType.MEMORY_USAGE.value)
+@TransformerRegistry.register(MR_SENSOR_MEMORY_USAGE)
 def transform_memory_usage(value: Any) -> float | None:
     """Transform memory usage percentage."""
     if value is None:
@@ -942,68 +984,68 @@ def transform_memory_usage(value: Any) -> float | None:
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CLIENT_COUNT.value)
+@TransformerRegistry.register(MR_SENSOR_CLIENT_COUNT)
 def transform_client_count(value: Any) -> int:
     """Transform client count value."""
     return SafeExtractor.safe_int(value)
 
 
 # Channel utilization transformers
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_TOTAL_24.value)
+@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24)
 def transform_channel_utilization_total_24(value: Any) -> float | None:
     """Transform 2.4GHz total channel utilization percentage."""
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_WIFI_24.value)
+@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24)
 def transform_channel_utilization_wifi_24(value: Any) -> float | None:
     """Transform 2.4GHz WiFi channel utilization percentage."""
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_NON_WIFI_24.value)
+@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24)
 def transform_channel_utilization_non_wifi_24(value: Any) -> float | None:
     """Transform 2.4GHz non-WiFi channel utilization percentage."""
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_TOTAL_5.value)
+@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5)
 def transform_channel_utilization_total_5(value: Any) -> float | None:
     """Transform 5GHz total channel utilization percentage."""
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_WIFI_5.value)
+@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5)
 def transform_channel_utilization_wifi_5(value: Any) -> float | None:
     """Transform 5GHz WiFi channel utilization percentage."""
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_NON_WIFI_5.value)
+@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5)
 def transform_channel_utilization_non_wifi_5(value: Any) -> float | None:
     """Transform 5GHz non-WiFi channel utilization percentage."""
     return SafeExtractor.safe_float(value)
 
 
-@TransformerRegistry.register(EntityType.PORT_COUNT.value)
+@TransformerRegistry.register(MS_SENSOR_PORT_COUNT)
 def transform_port_count(value: Any) -> int:
     """Transform port count value."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.CONNECTED_PORTS.value)
+@TransformerRegistry.register(MS_SENSOR_CONNECTED_PORTS)
 def transform_connected_ports(value: Any) -> int:
     """Transform connected ports count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.POE_PORTS.value)
+@TransformerRegistry.register(MS_SENSOR_POE_PORTS)
 def transform_poe_ports(value: Any) -> int:
     """Transform PoE ports count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.POE_POWER.value)
+@TransformerRegistry.register(MS_SENSOR_POE_POWER)
 def transform_poe_power(value: Any) -> float | None:
     """Transform PoE power value to watts."""
     if value is None:
@@ -1012,7 +1054,7 @@ def transform_poe_power(value: Any) -> float | None:
     return UnitConverter.deciwatts_to_watts(value)
 
 
-@TransformerRegistry.register(EntityType.POE_LIMIT.value)
+@TransformerRegistry.register(MS_SENSOR_POE_LIMIT)
 def transform_poe_limit(value: Any) -> float | None:
     """Transform PoE power limit to watts."""
     if value is None:
@@ -1021,7 +1063,7 @@ def transform_poe_limit(value: Any) -> float | None:
     return UnitConverter.deciwatts_to_watts(value)
 
 
-@TransformerRegistry.register(EntityType.PORT_TRAFFIC_SENT.value)
+@TransformerRegistry.register(MS_SENSOR_PORT_TRAFFIC_SENT)
 def transform_port_traffic_sent(value: Any) -> float | None:
     """Transform port traffic sent to Mbps."""
     if value is None:
@@ -1029,7 +1071,7 @@ def transform_port_traffic_sent(value: Any) -> float | None:
     return UnitConverter.bytes_to_mbps(value)
 
 
-@TransformerRegistry.register(EntityType.PORT_TRAFFIC_RECV.value)
+@TransformerRegistry.register(MS_SENSOR_PORT_TRAFFIC_RECV)
 def transform_port_traffic_recv(value: Any) -> float | None:
     """Transform port traffic received to Mbps."""
     if value is None:
@@ -1038,43 +1080,43 @@ def transform_port_traffic_recv(value: Any) -> float | None:
 
 
 # Organization level transformers
-@TransformerRegistry.register(EntityType.API_CALLS.value)
+@TransformerRegistry.register(ORG_SENSOR_API_CALLS)
 def transform_api_calls(value: Any) -> int:
     """Transform API calls count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.FAILED_API_CALLS.value)
+@TransformerRegistry.register(ORG_SENSOR_FAILED_API_CALLS)
 def transform_failed_api_calls(value: Any) -> int:
     """Transform failed API calls count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.DEVICE_COUNT.value)
+@TransformerRegistry.register(ORG_SENSOR_DEVICE_COUNT)
 def transform_device_count(value: Any) -> int:
     """Transform device count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.NETWORK_COUNT.value)
+@TransformerRegistry.register(ORG_SENSOR_NETWORK_COUNT)
 def transform_network_count(value: Any) -> int:
     """Transform network count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.OFFLINE_DEVICES.value)
+@TransformerRegistry.register(ORG_SENSOR_OFFLINE_DEVICES)
 def transform_offline_devices(value: Any) -> int:
     """Transform offline devices count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.ALERTS_COUNT.value)
+@TransformerRegistry.register(ORG_SENSOR_ALERTS_COUNT)
 def transform_alerts_count(value: Any) -> int:
     """Transform alerts count."""
     return SafeExtractor.safe_int(value)
 
 
-@TransformerRegistry.register(EntityType.LICENSE_EXPIRING.value)
+@TransformerRegistry.register(ORG_SENSOR_LICENSE_EXPIRING)
 def transform_license_expiring(value: Any) -> int:
     """Transform expiring license count."""
     return SafeExtractor.safe_int(value)

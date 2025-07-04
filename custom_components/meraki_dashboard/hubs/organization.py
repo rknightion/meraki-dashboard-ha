@@ -27,7 +27,6 @@ from ..const import (
     SENSOR_TYPE_MT,
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
-    DeviceType,
 )
 from ..types import (
     DeviceStatus,
@@ -1235,9 +1234,7 @@ class MerakiOrganizationHub:
             self.device_memory_usage = {}
 
     @with_standard_retries("discovery")
-    async def _network_has_device_type(
-        self, network_id: str, device_type: DeviceType
-    ) -> bool:
+    async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:
         """Check if a network has devices of a specific type.
 
         Args:

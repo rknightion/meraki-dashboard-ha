@@ -14,8 +14,57 @@ from typing import Any, TypeVar, cast
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.helpers.entity import Entity
 
-from ..const import DeviceType
-from ..const import EntityType as MetricType
+from ..const import (
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24,
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
+    MR_SENSOR_CLIENT_COUNT,
+    MR_SENSOR_ENABLED_SSIDS,
+    MR_SENSOR_MEMORY_USAGE,
+    MR_SENSOR_OPEN_SSIDS,
+    MR_SENSOR_SSID_COUNT,
+    MS_SENSOR_CONNECTED_CLIENTS,
+    MS_SENSOR_CONNECTED_PORTS,
+    MS_SENSOR_POE_LIMIT,
+    MS_SENSOR_POE_PORTS,
+    MS_SENSOR_POE_POWER,
+    MS_SENSOR_PORT_COUNT,
+    MS_SENSOR_PORT_DISCARDS,
+    MS_SENSOR_PORT_ERRORS,
+    MS_SENSOR_PORT_LINK_COUNT,
+    MS_SENSOR_PORT_TRAFFIC_RECV,
+    MS_SENSOR_PORT_TRAFFIC_SENT,
+    MS_SENSOR_PORT_UTILIZATION,
+    MS_SENSOR_PORT_UTILIZATION_RECV,
+    MS_SENSOR_PORT_UTILIZATION_SENT,
+    MS_SENSOR_POWER_MODULE_STATUS,
+    MT_SENSOR_APPARENT_POWER,
+    MT_SENSOR_BATTERY,
+    MT_SENSOR_CO2,
+    MT_SENSOR_CURRENT,
+    MT_SENSOR_DOOR,
+    MT_SENSOR_FREQUENCY,
+    MT_SENSOR_HUMIDITY,
+    MT_SENSOR_INDOOR_AIR_QUALITY,
+    MT_SENSOR_NOISE,
+    MT_SENSOR_PM25,
+    MT_SENSOR_POWER_FACTOR,
+    MT_SENSOR_REAL_POWER,
+    MT_SENSOR_TEMPERATURE,
+    MT_SENSOR_TVOC,
+    MT_SENSOR_VOLTAGE,
+    MT_SENSOR_WATER,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
+    SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
+)
+from ..const import (
+    MS_SENSOR_MEMORY_USAGE as MS_SENSOR_MEMORY_USAGE,
+)
 from ..coordinator import MerakiSensorCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,10 +84,10 @@ class EntityFactory:
     """
 
     _registry: dict[str, Callable[..., Entity]] = {}
-    _device_capabilities: dict[str, list[MetricType]] = {}
+    _device_capabilities: dict[str, list[str]] = {}
 
     @classmethod
-    def register(cls, device_type: DeviceType, entity_type: MetricType) -> Callable:
+    def register(cls, device_type: str, entity_type: str) -> Callable:
         """Decorator to register entity creation functions.
 
         Args:
@@ -63,8 +112,8 @@ class EntityFactory:
     @classmethod
     def create_entity(
         cls,
-        device_type: DeviceType,
-        entity_type: MetricType,
+        device_type: str,
+        entity_type: str,
         *args,
         **kwargs,
     ) -> Entity:
@@ -143,25 +192,25 @@ class EntityFactory:
         return entities
 
     @classmethod
-    def _get_device_type(cls, device_data: dict[str, Any]) -> DeviceType | None:
+    def _get_device_type(cls, device_data: dict[str, Any]) -> str | None:
         """Determine device type from device data."""
         model = device_data.get("model", "")
 
         if model.startswith("MT"):
-            return DeviceType.MT
+            return SENSOR_TYPE_MT
         elif model.startswith("MR"):
-            return DeviceType.MR
+            return SENSOR_TYPE_MR
         elif model.startswith("MS"):
-            return DeviceType.MS
+            return SENSOR_TYPE_MS
         elif model.startswith("MV"):
-            return DeviceType.MV
+            return SENSOR_TYPE_MV
 
         return None
 
     @classmethod
     def _get_available_metrics(
-        cls, device_type: DeviceType, device_data: dict[str, Any]
-    ) -> list[MetricType]:
+        cls, device_type: str, device_data: dict[str, Any]
+    ) -> list[str]:
         """Get available metrics for a device based on its capabilities."""
         # Start with all registered metrics for this device type
         potential_metrics = cls._device_capabilities.get(device_type, [])
@@ -175,7 +224,7 @@ class EntityFactory:
             if metric in sensor_data:
                 available_metrics.append(metric)
             # Special cases for derived metrics
-            elif metric == MetricType.INDOOR_AIR_QUALITY and "tvoc" in sensor_data:
+            elif metric == MT_SENSOR_INDOOR_AIR_QUALITY and "tvoc" in sensor_data:
                 available_metrics.append(metric)
             # Add more special cases as needed
 
@@ -187,12 +236,12 @@ class EntityFactory:
         return list(cls._registry.keys())
 
     @classmethod
-    def get_device_capabilities(cls, device_type: DeviceType) -> list[MetricType]:
+    def get_device_capabilities(cls, device_type: str) -> list[str]:
         """Get all possible capabilities for a device type."""
         return cls._device_capabilities.get(device_type, [])
 
     @classmethod
-    def is_registered(cls, device_type: DeviceType, entity_type: MetricType) -> bool:
+    def is_registered(cls, device_type: str, entity_type: str) -> bool:
         """Check if an entity type is registered for a device type."""
         return f"{device_type}_{entity_type}" in cls._registry
 
@@ -202,7 +251,7 @@ def _register_mt_entities():
     """Register MT (Environmental) sensor entities."""
 
     # Temperature sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.TEMPERATURE)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_TEMPERATURE)
     def create_mt_temperature(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -216,7 +265,7 @@ def _register_mt_entities():
         )
 
     # Humidity sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.HUMIDITY)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_HUMIDITY)
     def create_mt_humidity(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -230,7 +279,7 @@ def _register_mt_entities():
         )
 
     # CO2 sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.CO2)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_CO2)
     def create_mt_co2(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -244,7 +293,7 @@ def _register_mt_entities():
         )
 
     # TVOC sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.TVOC)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_TVOC)
     def create_mt_tvoc(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -258,7 +307,7 @@ def _register_mt_entities():
         )
 
     # PM2.5 sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.PM25)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_PM25)
     def create_mt_pm25(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -272,7 +321,7 @@ def _register_mt_entities():
         )
 
     # Noise sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.NOISE)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_NOISE)
     def create_mt_noise(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -286,7 +335,7 @@ def _register_mt_entities():
         )
 
     # Indoor Air Quality sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.INDOOR_AIR_QUALITY)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_INDOOR_AIR_QUALITY)
     def create_mt_iaq(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -300,7 +349,7 @@ def _register_mt_entities():
         )
 
     # Battery sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.BATTERY)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_BATTERY)
     def create_mt_battery(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -314,7 +363,7 @@ def _register_mt_entities():
         )
 
     # Binary sensors for MT devices
-    @EntityFactory.register(DeviceType.MT, MetricType.WATER)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_WATER)
     def create_mt_water_binary(coordinator, device, config_entry_id, network_hub=None):
         from ..binary_sensor import MT_BINARY_SENSOR_DESCRIPTIONS, MerakiMTBinarySensor
 
@@ -326,7 +375,7 @@ def _register_mt_entities():
             network_hub,
         )
 
-    @EntityFactory.register(DeviceType.MT, MetricType.DOOR)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_DOOR)
     def create_mt_door_binary(coordinator, device, config_entry_id, network_hub=None):
         from ..binary_sensor import MT_BINARY_SENSOR_DESCRIPTIONS, MerakiMTBinarySensor
 
@@ -339,7 +388,7 @@ def _register_mt_entities():
         )
 
     # Power Factor sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.POWER_FACTOR)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_POWER_FACTOR)
     def create_mt_power_factor(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -353,7 +402,7 @@ def _register_mt_entities():
         )
 
     # Real Power sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.REAL_POWER)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_REAL_POWER)
     def create_mt_real_power(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -367,7 +416,7 @@ def _register_mt_entities():
         )
 
     # Voltage sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.VOLTAGE)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_VOLTAGE)
     def create_mt_voltage(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -381,7 +430,7 @@ def _register_mt_entities():
         )
 
     # Current sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.CURRENT)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_CURRENT)
     def create_mt_current(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -395,7 +444,7 @@ def _register_mt_entities():
         )
 
     # Frequency sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.FREQUENCY)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_FREQUENCY)
     def create_mt_frequency(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mt import MerakiMTSensor
         from ..sensor import MT_SENSOR_DESCRIPTIONS
@@ -409,7 +458,7 @@ def _register_mt_entities():
         )
 
     # Apparent Power sensor
-    @EntityFactory.register(DeviceType.MT, MetricType.APPARENT_POWER)
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_APPARENT_POWER)
     def create_mt_apparent_power(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -429,7 +478,7 @@ def _register_mr_entities():
     """Register MR (Wireless) sensor entities."""
 
     # MR device sensors
-    @EntityFactory.register(DeviceType.MR, MetricType.CLIENT_COUNT)
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CLIENT_COUNT)
     def create_mr_client_count(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mr import MerakiMRDeviceSensor
         from ..sensor import MR_SENSOR_DESCRIPTIONS
@@ -442,7 +491,7 @@ def _register_mr_entities():
             network_hub,
         )
 
-    @EntityFactory.register(DeviceType.MR, MetricType.MEMORY_USAGE)
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_MEMORY_USAGE)
     def create_mr_memory_usage(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MR_SENSOR_MEMORY_USAGE
         from ..devices.mr import MerakiMRDeviceSensor
@@ -457,7 +506,7 @@ def _register_mr_entities():
         )
 
     # SSID sensors
-    @EntityFactory.register(DeviceType.MR, MetricType.SSID_COUNT)
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_SSID_COUNT)
     def create_mr_ssid_count(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MR_SENSOR_SSID_COUNT
         from ..devices.mr import MerakiMRDeviceSensor
@@ -471,7 +520,7 @@ def _register_mr_entities():
             network_hub,
         )
 
-    @EntityFactory.register(DeviceType.MR, MetricType.ENABLED_SSIDS)
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_ENABLED_SSIDS)
     def create_mr_enabled_ssids(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MR_SENSOR_ENABLED_SSIDS
         from ..devices.mr import MerakiMRDeviceSensor
@@ -485,7 +534,7 @@ def _register_mr_entities():
             network_hub,
         )
 
-    @EntityFactory.register(DeviceType.MR, MetricType.OPEN_SSIDS)
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_OPEN_SSIDS)
     def create_mr_open_ssids(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MR_SENSOR_OPEN_SSIDS
         from ..devices.mr import MerakiMRDeviceSensor
@@ -499,12 +548,110 @@ def _register_mr_entities():
             network_hub,
         )
 
+    # Channel utilization sensors - 2.4GHz
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24)
+    def create_mr_channel_util_total_24(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24)
+    def create_mr_channel_util_wifi_24(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24)
+    def create_mr_channel_util_non_wifi_24(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Channel utilization sensors - 5GHz
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5)
+    def create_mr_channel_util_total_5(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5)
+    def create_mr_channel_util_wifi_5(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5)
+    def create_mr_channel_util_non_wifi_5(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5],
+            config_entry_id,
+            network_hub,
+        )
+
 
 def _register_ms_entities():
     """Register MS (Switch) sensor entities."""
 
     # MS device sensors
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_COUNT)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_COUNT)
     def create_ms_port_count(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.ms import MerakiMSDeviceSensor
         from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
@@ -517,7 +664,7 @@ def _register_ms_entities():
             network_hub,
         )
 
-    @EntityFactory.register(DeviceType.MS, MetricType.MEMORY_USAGE)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_MEMORY_USAGE)
     def create_ms_memory_usage(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MS_SENSOR_MEMORY_USAGE
         from ..devices.ms import MerakiMSDeviceSensor
@@ -532,7 +679,7 @@ def _register_ms_entities():
         )
 
     # Connected Ports sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.CONNECTED_PORTS)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_CONNECTED_PORTS)
     def create_ms_connected_ports(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -548,7 +695,7 @@ def _register_ms_entities():
         )
 
     # PoE Ports sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.POE_PORTS)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POE_PORTS)
     def create_ms_poe_ports(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.ms import MerakiMSDeviceSensor
         from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
@@ -562,7 +709,7 @@ def _register_ms_entities():
         )
 
     # Port Utilization Sent sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_UTILIZATION_SENT)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_UTILIZATION_SENT)
     def create_ms_port_utilization_sent(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -578,7 +725,7 @@ def _register_ms_entities():
         )
 
     # Port Utilization Received sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_UTILIZATION_RECV)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_UTILIZATION_RECV)
     def create_ms_port_utilization_recv(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -594,7 +741,7 @@ def _register_ms_entities():
         )
 
     # Port Traffic Sent sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_TRAFFIC_SENT)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_TRAFFIC_SENT)
     def create_ms_port_traffic_sent(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -610,7 +757,7 @@ def _register_ms_entities():
         )
 
     # Port Traffic Received sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_TRAFFIC_RECV)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_TRAFFIC_RECV)
     def create_ms_port_traffic_recv(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -626,7 +773,7 @@ def _register_ms_entities():
         )
 
     # PoE Power sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.POE_POWER)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POE_POWER)
     def create_ms_poe_power(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MS_SENSOR_POE_POWER
         from ..devices.ms import MerakiMSDeviceSensor
@@ -641,7 +788,7 @@ def _register_ms_entities():
         )
 
     # Connected Clients sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.CONNECTED_CLIENTS)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_CONNECTED_CLIENTS)
     def create_ms_connected_clients(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -657,7 +804,7 @@ def _register_ms_entities():
         )
 
     # Port Errors sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_ERRORS)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_ERRORS)
     def create_ms_port_errors(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.ms import MerakiMSDeviceSensor
         from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
@@ -671,7 +818,7 @@ def _register_ms_entities():
         )
 
     # Port Discards sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_DISCARDS)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_DISCARDS)
     def create_ms_port_discards(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.ms import MerakiMSDeviceSensor
         from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
@@ -685,7 +832,7 @@ def _register_ms_entities():
         )
 
     # Power Module Status sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.POWER_MODULE_STATUS)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POWER_MODULE_STATUS)
     def create_ms_power_module_status(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -701,7 +848,7 @@ def _register_ms_entities():
         )
 
     # Port Link Count sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_LINK_COUNT)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_LINK_COUNT)
     def create_ms_port_link_count(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -717,7 +864,7 @@ def _register_ms_entities():
         )
 
     # PoE Limit sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.POE_LIMIT)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POE_LIMIT)
     def create_ms_poe_limit(coordinator, device, config_entry_id, network_hub=None):
         from ..const import MS_SENSOR_POE_LIMIT
         from ..devices.ms import MerakiMSDeviceSensor
@@ -732,7 +879,7 @@ def _register_ms_entities():
         )
 
     # Port Utilization sensor
-    @EntityFactory.register(DeviceType.MS, MetricType.PORT_UTILIZATION)
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_UTILIZATION)
     def create_ms_port_utilization(
         coordinator, device, config_entry_id, network_hub=None
     ):
@@ -998,27 +1145,27 @@ def create_device_entity(
     # Map old entity types to new pattern
     if entity_type == "mt_sensor":
         # Determine metric type from description key
-        metric_type = MetricType(description.key)
+        metric_type = description.key
         return cast(
             SensorEntity,
             EntityFactory.create_entity(
-                DeviceType.MT, metric_type, coordinator, device, entry_id, network_hub
+                SENSOR_TYPE_MT, metric_type, coordinator, device, entry_id, network_hub
             ),
         )
     elif entity_type == "mr_device_sensor":
-        metric_type = MetricType(description.key)
+        metric_type = description.key
         return cast(
             SensorEntity,
             EntityFactory.create_entity(
-                DeviceType.MR, metric_type, coordinator, device, entry_id, network_hub
+                SENSOR_TYPE_MR, metric_type, coordinator, device, entry_id, network_hub
             ),
         )
     elif entity_type == "ms_device_sensor":
-        metric_type = MetricType(description.key)
+        metric_type = description.key
         return cast(
             SensorEntity,
             EntityFactory.create_entity(
-                DeviceType.MS, metric_type, coordinator, device, entry_id, network_hub
+                SENSOR_TYPE_MS, metric_type, coordinator, device, entry_id, network_hub
             ),
         )
     else:

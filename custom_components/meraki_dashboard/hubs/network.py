@@ -21,7 +21,6 @@ from ..const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    DeviceType,
 )
 from ..services import MerakiEventService
 from ..types import (
@@ -74,7 +73,7 @@ class MerakiNetworkHub:
         organization_hub: MerakiOrganizationHub,
         network_id: str,
         network_name: str,
-        device_type: DeviceType,
+        device_type: str,
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the network hub.
@@ -503,7 +502,7 @@ class MerakiNetworkHub:
         Returns:
             Dictionary mapping device serial to channel utilization data
         """
-        channel_utilization = {}
+        channel_utilization: dict[str, dict[str, Any]] = {}
 
         if not self.dashboard:
             return channel_utilization

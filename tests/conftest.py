@@ -22,6 +22,16 @@ from custom_components.meraki_dashboard.const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
 )
+from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Clear API cache before each test to ensure test isolation."""
+    clear_api_cache()
+    yield
+    # Optionally clear after test as well
+    clear_api_cache()
 
 
 @pytest.fixture(name="bypass_setup_fixture")
