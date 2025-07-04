@@ -392,8 +392,17 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             # Smart camera with AI features
             return {"temperature", "humidity", "battery", "button"}
         elif device_model == "MT40":
-            # Water detection sensor
-            return {"water", "temperature"}
+            # Power monitoring sensor with water detection
+            return {
+                "water",
+                "temperature",
+                "realPower",
+                "apparentPower",
+                "voltage",
+                "current",
+                "frequency",
+                "powerFactor"
+            }
         else:
             # Default MT sensors - only basic environmental
             return {"temperature", "humidity"}

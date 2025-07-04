@@ -198,11 +198,13 @@ class MTSensorDataTransformer(DataTransformer):
             elif metric == "noise":
                 # Noise metrics can have different structures
                 noise_data = reading.get("noise")
+                value = None
 
                 # Handle direct numeric value
                 if isinstance(noise_data, int | float):
                     value = SafeExtractor.safe_float(noise_data)
                 elif isinstance(noise_data, dict):
+                    # Try different field names for noise data
                     value = (
                         SafeExtractor.safe_float(noise_data.get("ambient"))
                         or SafeExtractor.safe_float(noise_data.get("concentration"))
@@ -213,10 +215,10 @@ class MTSensorDataTransformer(DataTransformer):
                     if not value and isinstance(noise_data.get("level"), dict):
                         nested_level = noise_data.get("level", {})
                         value = SafeExtractor.safe_float(nested_level.get("level"))
-                else:
-                    value = 0.0
 
-                transformed[metric] = value
+                # Only set transformed value if we found actual data
+                if value is not None:
+                    transformed[metric] = value
 
             elif metric in ["realPower", "apparentPower"]:
                 # Power metrics with unit conversion
@@ -238,6 +240,11 @@ class MTSensorDataTransformer(DataTransformer):
                 # Electrical metrics with direct values
                 metric_data = reading.get(metric, {})
                 transformed[metric] = SafeExtractor.safe_float(metric_data.get("value"))
+
+            elif metric == "indoorAirQuality":
+                # Indoor air quality score
+                iaq_data = reading.get("indoorAirQuality", {})
+                transformed[metric] = SafeExtractor.safe_float(iaq_data.get("score"))
 
             elif metric in ["button", "door", "water", "remoteLockoutSwitch"]:
                 # Binary sensors
@@ -834,7 +841,7 @@ def transform_noise(value: Any) -> float | None:
 
         return noise_value
 
-    return 0.0
+    return None
 
 
 @TransformerRegistry.register(EntityType.REAL_POWER.value)

@@ -31,9 +31,9 @@ DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES = 10  # 10 minutes
 
 # Device type scan intervals (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS = {
-    "MT": 600,  # 10 minutes for environmental sensors
-    "MR": 300,  # 5 minutes for wireless access points
-    "MS": 300,  # 5 minutes for switches
+    "MT": 60,  # 1 minute for environmental sensors
+    "MR": 60,  # 1 minute for wireless access points
+    "MS": 60,  # 1 minute for switches
     "MV": 600,  # 10 minutes for cameras
 }
 
@@ -235,11 +235,11 @@ class HubConfigurationManager:
             if key.startswith("scan_interval_"):
                 hub_display_name = key.replace("scan_interval_", "")
                 hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
-                hub_scan_intervals[hub_key] = value * 60  # Convert to seconds
+                hub_scan_intervals[hub_key] = int(value * 60)  # Convert to seconds
             elif key.startswith("discovery_interval_"):
                 hub_display_name = key.replace("discovery_interval_", "")
                 hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
-                hub_discovery_intervals[hub_key] = value * 60  # Convert to seconds
+                hub_discovery_intervals[hub_key] = int(value * 60)  # Convert to seconds
             elif key.startswith("auto_discovery_"):
                 hub_display_name = key.replace("auto_discovery_", "")
                 hub_key = hub_display_to_key.get(hub_display_name, hub_display_name)
@@ -315,19 +315,19 @@ class HubConfigurationManager:
     def convert_legacy_intervals_to_seconds(options: dict[str, Any]) -> dict[str, Any]:
         """Convert legacy scan/discovery intervals from minutes to seconds."""
         if CONF_SCAN_INTERVAL in options:
-            options[CONF_SCAN_INTERVAL] = options[CONF_SCAN_INTERVAL] * 60
+            options[CONF_SCAN_INTERVAL] = int(options[CONF_SCAN_INTERVAL] * 60)
         if CONF_DISCOVERY_INTERVAL in options:
-            options[CONF_DISCOVERY_INTERVAL] = options[CONF_DISCOVERY_INTERVAL] * 60
+            options[CONF_DISCOVERY_INTERVAL] = int(options[CONF_DISCOVERY_INTERVAL] * 60)
 
         # Convert tiered refresh intervals from minutes to seconds
         if CONF_STATIC_DATA_INTERVAL in options:
-            options[CONF_STATIC_DATA_INTERVAL] = options[CONF_STATIC_DATA_INTERVAL] * 60
+            options[CONF_STATIC_DATA_INTERVAL] = int(options[CONF_STATIC_DATA_INTERVAL] * 60)
         if CONF_SEMI_STATIC_DATA_INTERVAL in options:
-            options[CONF_SEMI_STATIC_DATA_INTERVAL] = (
+            options[CONF_SEMI_STATIC_DATA_INTERVAL] = int(
                 options[CONF_SEMI_STATIC_DATA_INTERVAL] * 60
             )
         if CONF_DYNAMIC_DATA_INTERVAL in options:
-            options[CONF_DYNAMIC_DATA_INTERVAL] = (
+            options[CONF_DYNAMIC_DATA_INTERVAL] = int(
                 options[CONF_DYNAMIC_DATA_INTERVAL] * 60
             )
 

@@ -173,29 +173,25 @@ class MerakiMTBinarySensor(MerakiBinarySensorEntity):
         if not device_data:
             return None
 
-        readings = device_data.get("readings", [])
-        if not readings:
+        # Use transformer to process data consistently
+        from ..data.transformers import transformer_registry
+        transformed_data = transformer_registry.transform_device_data("MT", device_data)
+
+        # Get the value for our specific metric
+        value = transformed_data.get(self.entity_description.key)
+
+        if value is None:
             return None
 
-        # Find the reading for this metric
-        for reading in readings:
-            metric = reading.get("metric")
-            if metric == self.entity_description.key:
-                value = reading.get("value")
-                if value is None:
-                    return None
+        # For binary sensors, interpret the value
+        if isinstance(value, bool):
+            return value
+        elif isinstance(value, int | float):
+            return value > 0
+        elif isinstance(value, str):
+            return value.lower() in ("true", "1", "on", "yes", "detected")
 
-                # For binary sensors, interpret the value
-                if isinstance(value, bool):
-                    return value
-                elif isinstance(value, int | float):
-                    return value > 0
-                elif isinstance(value, str):
-                    return value.lower() in ("true", "1", "on", "yes", "detected")
-
-                return bool(value)
-
-        return None
+        return bool(value)
 
     @property
     def available(self) -> bool:
