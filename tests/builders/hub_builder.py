@@ -179,9 +179,6 @@ class HubBuilder:
             return_value=[]
         )
         mock_api.wireless.getNetworkWirelessSsids = MagicMock(return_value=[])
-        mock_api.wireless.getDeviceWirelessStatus = MagicMock(return_value={})
-        mock_api.wireless.getDeviceWirelessRadioSettings = MagicMock(return_value={})
-        mock_api.wireless.getDeviceWirelessConnectionStats = MagicMock(return_value={})
         mock_api.devices = MagicMock()
         mock_api.devices.getDeviceClients = MagicMock(return_value=[])
 

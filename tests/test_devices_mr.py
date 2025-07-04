@@ -3,20 +3,12 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import PERCENTAGE
+from homeassistant.components.sensor import SensorStateClass
 
 from custom_components.meraki_dashboard.const import (
     DOMAIN,
-    MR_SENSOR_CHANNEL_UTILIZATION_2_4,
-    MR_SENSOR_CHANNEL_UTILIZATION_5,
     MR_SENSOR_CLIENT_COUNT,
-    MR_SENSOR_DATA_RATE_2_4,
-    MR_SENSOR_DATA_RATE_5,
-    MR_SENSOR_RF_POWER,
     MR_SENSOR_SSID_COUNT,
-    MR_SENSOR_TRAFFIC_RECV,
-    MR_SENSOR_TRAFFIC_SENT,
     SENSOR_TYPE_MR,
 )
 from custom_components.meraki_dashboard.coordinator import MerakiSensorCoordinator
@@ -216,42 +208,6 @@ class TestMerakiMRSensors:
                 SensorStateClass.TOTAL_INCREASING,
             ]
 
-    async def test_mr_sensor_units_and_precision(self):
-        """Test MR sensor units and precision settings."""
-        # Check percentage sensors
-        percentage_sensors = [
-            MR_SENSOR_CHANNEL_UTILIZATION_2_4,
-            MR_SENSOR_CHANNEL_UTILIZATION_5,
-        ]
-        for sensor_key in percentage_sensors:
-            if sensor_key in MR_SENSOR_DESCRIPTIONS:
-                desc = MR_SENSOR_DESCRIPTIONS[sensor_key]
-                assert desc.native_unit_of_measurement == PERCENTAGE
-                assert desc.suggested_display_precision is not None
-
-        # Check data rate sensors use correct Home Assistant units
-        data_rate_sensors = [
-            MR_SENSOR_DATA_RATE_2_4,
-            MR_SENSOR_DATA_RATE_5,
-            MR_SENSOR_TRAFFIC_SENT,
-            MR_SENSOR_TRAFFIC_RECV,
-        ]
-        for sensor_key in data_rate_sensors:
-            if sensor_key in MR_SENSOR_DESCRIPTIONS:
-                desc = MR_SENSOR_DESCRIPTIONS[sensor_key]
-                # Must use "Mbit/s" for DATA_RATE device class, not "Mbps"
-                assert desc.native_unit_of_measurement == "Mbit/s"
-                assert desc.device_class == SensorDeviceClass.DATA_RATE
-
-    async def test_mr_sensor_device_classes(self):
-        """Test MR sensor device class assignments."""
-        # RF power sensors should have signal strength device class
-        rf_sensors = [MR_SENSOR_RF_POWER]
-        for sensor_key in rf_sensors:
-            if sensor_key in MR_SENSOR_DESCRIPTIONS:
-                desc = MR_SENSOR_DESCRIPTIONS[sensor_key]
-                assert desc.device_class == SensorDeviceClass.SIGNAL_STRENGTH
-
     async def test_mr_device_sensor_unique_id_generation(
         self, hass, mock_mr_coordinator, mock_mr_device
     ):
@@ -445,8 +401,6 @@ class TestMerakiMRSensors:
         expected_icons = {
             MR_SENSOR_SSID_COUNT: "mdi:wifi",
             MR_SENSOR_CLIENT_COUNT: "mdi:account-multiple",
-            MR_SENSOR_CHANNEL_UTILIZATION_2_4: "mdi:wifi-strength-1",
-            MR_SENSOR_RF_POWER: "mdi:signal-variant",
         }
 
         for sensor_key, expected_icon in expected_icons.items():

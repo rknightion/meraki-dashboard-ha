@@ -334,124 +334,10 @@ class MRWirelessDataTransformer(DataTransformer):
         transformed["model"] = raw_data.get("model")
         transformed["networkId"] = raw_data.get("networkId")
 
-        # Process BasicServiceSets for channel utilization and other metrics
-        basic_service_sets = raw_data.get("basicServiceSets", [])
-        channel_util_24 = []
-        channel_util_5 = []
-
-        for bss in basic_service_sets:
-            band = bss.get("band", "")
-            channel_util = bss.get("channelUtilization", {})
-
-            if isinstance(channel_util, dict):
-                total_util = SafeExtractor.safe_float(channel_util.get("total", 0))
-
-                if band == "2.4":
-                    channel_util_24.append(total_util)
-                    transformed["radio_channel_2_4"] = SafeExtractor.safe_int(
-                        bss.get("channel")
-                    )
-                elif band == "5":
-                    channel_util_5.append(total_util)
-                    transformed["radio_channel_5"] = SafeExtractor.safe_int(
-                        bss.get("channel")
-                    )
-                    transformed["channel_width_5"] = SafeExtractor.safe_int(
-                        bss.get("channelWidth")
-                    )
-
-        # Aggregate channel utilization
-        transformed["channel_utilization_2_4"] = SafeExtractor.safe_aggregate(
-            channel_util_24, "avg"
-        )
-        transformed["channel_utilization_5"] = SafeExtractor.safe_aggregate(
-            channel_util_5, "avg"
-        )
-
-        # Also handle direct values from mock data for backward compatibility
-        if "channelUtilization24" in raw_data:
-            transformed["channel_utilization_2_4"] = SafeExtractor.safe_float(
-                raw_data.get("channelUtilization24")
-            )
-        if "channelUtilization5" in raw_data:
-            transformed["channel_utilization_5"] = SafeExtractor.safe_float(
-                raw_data.get("channelUtilization5")
-            )
-        if "radioChannel24" in raw_data:
-            transformed["radio_channel_2_4"] = SafeExtractor.safe_int(
-                raw_data.get("radioChannel24")
-            )
-        if "radioChannel5" in raw_data:
-            transformed["radio_channel_5"] = SafeExtractor.safe_int(
-                raw_data.get("radioChannel5")
-            )
-        if "channelWidth5" in raw_data:
-            transformed["channel_width_5"] = SafeExtractor.safe_int(
-                raw_data.get("channelWidth5")
-            )
-
-        # Process connection stats
-        connection_stats = raw_data.get("connectionStats")
-        if isinstance(connection_stats, dict):
-            transformed["connection_success_rate"] = SafeExtractor.safe_float(
-                connection_stats.get("connectionSuccessRate")
-                or connection_stats.get("assocs", 0)
-            )
-        elif isinstance(connection_stats, list) and connection_stats:
-            latest_stats = connection_stats[-1]
-            if isinstance(latest_stats, dict):
-                transformed["connection_success_rate"] = SafeExtractor.safe_float(
-                    latest_stats.get("connectionSuccessRate")
-                    or latest_stats.get("assocs", 0)
-                )
-
-        # Handle direct connection success rate from mock data
-        if "connectionSuccessRate" in raw_data:
-            transformed["connection_success_rate"] = SafeExtractor.safe_float(
-                raw_data.get("connectionSuccessRate")
-            )
-        if "connectionFailures" in raw_data:
-            transformed["connection_failures"] = SafeExtractor.safe_int(
-                raw_data.get("connectionFailures")
-            )
-
-        # Process traffic data with unit conversion
-        traffic_sent = SafeExtractor.safe_float(raw_data.get("trafficSent", 0))
-        traffic_recv = SafeExtractor.safe_float(raw_data.get("trafficRecv", 0))
-
-        # Convert large byte values to Mbps (assuming they're in bytes if > 1MB)
-        if traffic_sent > 1000000:
-            transformed["traffic_sent"] = UnitConverter.bytes_to_mbps(traffic_sent)
-        else:
-            transformed["traffic_sent"] = traffic_sent
-
-        if traffic_recv > 1000000:
-            transformed["traffic_recv"] = UnitConverter.bytes_to_mbps(traffic_recv)
-        else:
-            transformed["traffic_recv"] = traffic_recv
-
         # Extract client count
         transformed["client_count"] = SafeExtractor.safe_int(
             raw_data.get("clientCount", 0)
         )
-
-        # Extract RF power settings - handle both formats
-        transformed["rf_power"] = SafeExtractor.safe_float(raw_data.get("rfPower"))
-        transformed["rf_power_2_4"] = SafeExtractor.safe_float(
-            raw_data.get("rfPower24")
-        ) or SafeExtractor.safe_float(raw_data.get("rf_power_2_4"))
-        transformed["rf_power_5"] = SafeExtractor.safe_float(
-            raw_data.get("rfPower5")
-        ) or SafeExtractor.safe_float(raw_data.get("rf_power_5"))
-
-        # Extract data rates - handle both formats
-        transformed["data_rate_2_4"] = SafeExtractor.safe_float(
-            raw_data.get("dataRate24")
-        )
-        transformed["data_rate_5"] = SafeExtractor.safe_float(raw_data.get("dataRate5"))
-
-        # Extract RF profile
-        transformed["rf_profile_id"] = raw_data.get("rfProfileId")
 
         return transformed
 
@@ -1062,6 +948,43 @@ def transform_client_count(value: Any) -> int:
     return SafeExtractor.safe_int(value)
 
 
+# Channel utilization transformers
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_TOTAL_24.value)
+def transform_channel_utilization_total_24(value: Any) -> float | None:
+    """Transform 2.4GHz total channel utilization percentage."""
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_WIFI_24.value)
+def transform_channel_utilization_wifi_24(value: Any) -> float | None:
+    """Transform 2.4GHz WiFi channel utilization percentage."""
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_NON_WIFI_24.value)
+def transform_channel_utilization_non_wifi_24(value: Any) -> float | None:
+    """Transform 2.4GHz non-WiFi channel utilization percentage."""
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_TOTAL_5.value)
+def transform_channel_utilization_total_5(value: Any) -> float | None:
+    """Transform 5GHz total channel utilization percentage."""
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_WIFI_5.value)
+def transform_channel_utilization_wifi_5(value: Any) -> float | None:
+    """Transform 5GHz WiFi channel utilization percentage."""
+    return SafeExtractor.safe_float(value)
+
+
+@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_NON_WIFI_5.value)
+def transform_channel_utilization_non_wifi_5(value: Any) -> float | None:
+    """Transform 5GHz non-WiFi channel utilization percentage."""
+    return SafeExtractor.safe_float(value)
+
+
 @TransformerRegistry.register(EntityType.PORT_COUNT.value)
 def transform_port_count(value: Any) -> int:
     """Transform port count value."""
@@ -1098,22 +1021,6 @@ def transform_poe_limit(value: Any) -> float | None:
     return UnitConverter.deciwatts_to_watts(value)
 
 
-@TransformerRegistry.register(EntityType.TRAFFIC_SENT.value)
-def transform_traffic_sent(value: Any) -> float | None:
-    """Transform traffic sent to Mbps."""
-    if value is None:
-        return None
-    return UnitConverter.bytes_to_mbps(value)
-
-
-@TransformerRegistry.register(EntityType.TRAFFIC_RECV.value)
-def transform_traffic_recv(value: Any) -> float | None:
-    """Transform traffic received to Mbps."""
-    if value is None:
-        return None
-    return UnitConverter.bytes_to_mbps(value)
-
-
 @TransformerRegistry.register(EntityType.PORT_TRAFFIC_SENT.value)
 def transform_port_traffic_sent(value: Any) -> float | None:
     """Transform port traffic sent to Mbps."""
@@ -1128,22 +1035,6 @@ def transform_port_traffic_recv(value: Any) -> float | None:
     if value is None:
         return None
     return UnitConverter.bytes_to_mbps(value)
-
-
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_2_4.value)
-def transform_channel_util_24(value: Any) -> float | None:
-    """Transform 2.4GHz channel utilization percentage."""
-    if value is None:
-        return None
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(EntityType.CHANNEL_UTILIZATION_5.value)
-def transform_channel_util_5(value: Any) -> float | None:
-    """Transform 5GHz channel utilization percentage."""
-    if value is None:
-        return None
-    return SafeExtractor.safe_float(value)
 
 
 # Organization level transformers

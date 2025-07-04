@@ -1,0 +1,9 @@
+potentialfutures:
+
+There's an API endpoint getDeviceLldpCdp that returns lldb data based on the target MS device serial. Can we add this metadata to every and MS device as an attribute to a new entity "LLDP Clients" which for each MS device the entity will show a total count of LLDP clients for that device and then in the attributes store the actual    │
+│   LLDB data? An example of the complete endpoint call and returned code is below:                                                                                                                                                                                                                                                                 │
+│   {{baseUrl}}/devices/:serial/lldpCdp                                                                                                                                                                                                                                                                                                             │
+│                                                                                                                                                                                                                                                                                                                                                   │
+│   [Pasted text #1 +145 lines]
+
+

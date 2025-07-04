@@ -202,21 +202,6 @@ class WirelessStats(TypedDict, total=False):
     serial: str
     model: str
     clientCount: int | None
-    basicServiceSets: list[dict[str, Any]] | None
-    connectionStats: dict[str, Any] | list[dict[str, Any]] | None
-    channelUtilization24: float | None
-    channelUtilization5: float | None
-    dataRate24: float | None
-    dataRate5: float | None
-    trafficSent: float | None
-    trafficRecv: float | None
-    rfPower: float | None
-    rfPower24: float | None
-    rfPower5: float | None
-    radioChannel24: int | None
-    radioChannel5: int | None
-    channelWidth5: int | None
-    rfProfileId: str | None
 
 
 class SwitchPortStatus(TypedDict, total=False):

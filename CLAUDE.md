@@ -122,7 +122,7 @@ hub = await HubBuilder().with_device(device).build()
 - Use `total_pages='all'` for pagination
 - Implement tiered refresh intervals:
   - Static data: 4 hours
-  - Semi-static: 1 hour  
+  - Semi-static: 1 hour
   - Dynamic: 5-10 minutes
 
 ## Home Assistant Conventions
@@ -142,6 +142,7 @@ _LOGGER.debug("API response: %s", response)
 ```
 
 ### Add New Sensor Type
+0. Validate API calls against the Meraki Dashboard API docs available from https://developer.cisco.com/meraki/api-v1
 1. Add to device sensor descriptions
 2. Update data transformer
 3. Add icon mapping in factory

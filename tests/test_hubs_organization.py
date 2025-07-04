@@ -70,12 +70,7 @@ def mock_dashboard_api():
     dashboard.organizations.getOrganizationDevicesStatusesOverview = Mock(
         return_value={
             "counts": {
-                "byStatus": {
-                    "online": 10,
-                    "offline": 2,
-                    "alerting": 1,
-                    "dormant": 0
-                }
+                "byStatus": {"online": 10, "offline": 2, "alerting": 1, "dormant": 0}
             }
         }
     )

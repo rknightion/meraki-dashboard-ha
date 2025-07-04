@@ -6,7 +6,6 @@ import logging
 from typing import Any, cast
 
 from homeassistant.components.sensor import (
-    SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -17,26 +16,17 @@ from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
-    MR_SENSOR_CHANNEL_UTILIZATION_2_4,
-    MR_SENSOR_CHANNEL_UTILIZATION_5,
-    MR_SENSOR_CHANNEL_WIDTH_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24,
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
     MR_SENSOR_CLIENT_COUNT,
-    MR_SENSOR_CONNECTION_FAILURES,
-    MR_SENSOR_CONNECTION_SUCCESS_RATE,
-    MR_SENSOR_DATA_RATE_2_4,
-    MR_SENSOR_DATA_RATE_5,
     MR_SENSOR_ENABLED_SSIDS,
     MR_SENSOR_MEMORY_USAGE,
     MR_SENSOR_OPEN_SSIDS,
-    MR_SENSOR_RADIO_CHANNEL_2_4,
-    MR_SENSOR_RADIO_CHANNEL_5,
-    MR_SENSOR_RF_POWER,
-    MR_SENSOR_RF_POWER_2_4,
-    MR_SENSOR_RF_POWER_5,
-    MR_SENSOR_RF_PROFILE_ID,
     MR_SENSOR_SSID_COUNT,
-    MR_SENSOR_TRAFFIC_RECV,
-    MR_SENSOR_TRAFFIC_SENT,
 )
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
@@ -72,129 +62,60 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:account-multiple",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MR_SENSOR_CHANNEL_UTILIZATION_2_4: SensorEntityDescription(
-        key=MR_SENSOR_CHANNEL_UTILIZATION_2_4,
-        name="2.4GHz Channel Utilization",
-        icon="mdi:wifi-strength-1",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        suggested_display_precision=1,
-    ),
-    MR_SENSOR_CHANNEL_UTILIZATION_5: SensorEntityDescription(
-        key=MR_SENSOR_CHANNEL_UTILIZATION_5,
-        name="5GHz Channel Utilization",
-        icon="mdi:wifi-strength-4",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        suggested_display_precision=1,
-    ),
-    MR_SENSOR_DATA_RATE_2_4: SensorEntityDescription(
-        key=MR_SENSOR_DATA_RATE_2_4,
-        name="2.4GHz Data Rate",
-        icon="mdi:speedometer",
-        device_class=SensorDeviceClass.DATA_RATE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbit/s",
-        suggested_display_precision=1,
-    ),
-    MR_SENSOR_DATA_RATE_5: SensorEntityDescription(
-        key=MR_SENSOR_DATA_RATE_5,
-        name="5GHz Data Rate",
-        icon="mdi:speedometer",
-        device_class=SensorDeviceClass.DATA_RATE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbit/s",
-        suggested_display_precision=1,
-    ),
-    MR_SENSOR_CONNECTION_SUCCESS_RATE: SensorEntityDescription(
-        key=MR_SENSOR_CONNECTION_SUCCESS_RATE,
-        name="Connection Success Rate",
-        icon="mdi:wifi-check",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        suggested_display_precision=1,
-    ),
-    MR_SENSOR_CONNECTION_FAILURES: SensorEntityDescription(
-        key=MR_SENSOR_CONNECTION_FAILURES,
-        name="Connection Failures",
-        icon="mdi:wifi-off",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MR_SENSOR_TRAFFIC_SENT: SensorEntityDescription(
-        key=MR_SENSOR_TRAFFIC_SENT,
-        name="Traffic Sent",
-        icon="mdi:upload",
-        device_class=SensorDeviceClass.DATA_RATE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbit/s",
-        suggested_display_precision=2,
-    ),
-    MR_SENSOR_TRAFFIC_RECV: SensorEntityDescription(
-        key=MR_SENSOR_TRAFFIC_RECV,
-        name="Traffic Received",
-        icon="mdi:download",
-        device_class=SensorDeviceClass.DATA_RATE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="Mbit/s",
-        suggested_display_precision=2,
-    ),
-    MR_SENSOR_RF_POWER: SensorEntityDescription(
-        key=MR_SENSOR_RF_POWER,
-        name="RF Power",
-        icon="mdi:signal-variant",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="dBm",
-        suggested_display_precision=0,
-    ),
-    MR_SENSOR_RF_POWER_2_4: SensorEntityDescription(
-        key=MR_SENSOR_RF_POWER_2_4,
-        name="2.4GHz RF Power",
-        icon="mdi:signal-variant",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="dBm",
-        suggested_display_precision=0,
-    ),
-    MR_SENSOR_RF_POWER_5: SensorEntityDescription(
-        key=MR_SENSOR_RF_POWER_5,
-        name="5GHz RF Power",
-        icon="mdi:signal-variant",
-        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="dBm",
-        suggested_display_precision=0,
-    ),
-    MR_SENSOR_RADIO_CHANNEL_2_4: SensorEntityDescription(
-        key=MR_SENSOR_RADIO_CHANNEL_2_4,
-        name="2.4GHz Radio Channel",
-        icon="mdi:antenna",
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    MR_SENSOR_RADIO_CHANNEL_5: SensorEntityDescription(
-        key=MR_SENSOR_RADIO_CHANNEL_5,
-        name="5GHz Radio Channel",
-        icon="mdi:antenna",
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
-    MR_SENSOR_CHANNEL_WIDTH_5: SensorEntityDescription(
-        key=MR_SENSOR_CHANNEL_WIDTH_5,
-        name="5GHz Channel Width",
-        icon="mdi:wifi-strength-4",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="MHz",
-        suggested_display_precision=0,
-    ),
-    MR_SENSOR_RF_PROFILE_ID: SensorEntityDescription(
-        key=MR_SENSOR_RF_PROFILE_ID,
-        name="RF Profile ID",
-        icon="mdi:cog",
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
     MR_SENSOR_MEMORY_USAGE: SensorEntityDescription(
         key=MR_SENSOR_MEMORY_USAGE,
         name="Memory Usage",
         icon="mdi:memory",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    # 2.4GHz channel utilization
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24,
+        name="Channel Utilization 2.4GHz (Total)",
+        icon="mdi:access-point",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
+        name="Channel Utilization 2.4GHz (Wifi)",
+        icon="mdi:wifi",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
+        name="Channel Utilization 2.4GHz (Non-Wifi)",
+        icon="mdi:signal-off",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    # 5GHz channel utilization
+    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
+        name="Channel Utilization 5GHz (Total)",
+        icon="mdi:access-point",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
+        name="Channel Utilization 5GHz (Wifi)",
+        icon="mdi:wifi",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5: SensorEntityDescription(
+        key=MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
+        name="Channel Utilization 5GHz (Non-Wifi)",
+        icon="mdi:signal-off",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=1,
@@ -322,6 +243,36 @@ class MerakiMRDeviceSensor(MerakiSensorEntity):
                 if memory_data:
                     usage_percent = memory_data.get("memory_usage_percent", 0)
                     return usage_percent
+            return 0
+        elif self.entity_description.key in [
+            MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24,
+            MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
+            MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
+            MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
+            MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
+            MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
+        ]:
+            # Get channel utilization data from wireless_data
+            channel_data = self.coordinator.data.get("channel_utilization", {})
+            device_channel_data = channel_data.get(self._device_serial, {})
+
+            if self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24:
+                return device_channel_data.get("wifi0", {}).get("utilization", 0)
+            elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24:
+                return device_channel_data.get("wifi0", {}).get("wifi", 0)
+            elif (
+                self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24
+            ):
+                return device_channel_data.get("wifi0", {}).get("non_wifi", 0)
+            elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5:
+                return device_channel_data.get("wifi1", {}).get("utilization", 0)
+            elif self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5:
+                return device_channel_data.get("wifi1", {}).get("wifi", 0)
+            elif (
+                self.entity_description.key == MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5
+            ):
+                return device_channel_data.get("wifi1", {}).get("non_wifi", 0)
+
             return 0
         else:
             # Use transformed data for all other metrics

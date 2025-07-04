@@ -424,165 +424,7 @@ class MerakiNetworkHub:
                         "name": get_device_display_name(device),
                         "model": device.get("model"),
                         "clientCount": 0,
-                        "channelUtilization24": 0,
-                        "channelUtilization5": 0,
-                        "dataRate24": 0,
-                        "dataRate5": 0,
-                        "connectionSuccessRate": 0,
-                        "connectionFailures": 0,
-                        "trafficSent": 0,
-                        "trafficRecv": 0,
-                        "rfPower": 0,
-                        "radioSettings": {},
-                        "portConfig": {},
                     }
-
-                    # Get wireless device status and statistics
-                    try:
-                        device_status = await self.hass.async_add_executor_job(
-                            self.dashboard.wireless.getDeviceWirelessStatus,
-                            device_serial,
-                        )
-                        self.organization_hub.total_api_calls += 1
-
-                        # Update device info with status data
-                        if device_status:
-                            basic_service_sets = device_status.get(
-                                "basicServiceSets", []
-                            )
-                            for bss in basic_service_sets:
-                                band = bss.get("band", "")
-                                if band == "2.4":
-                                    # Channel utilization as percentage
-                                    channel_util = bss.get("channelUtilization", {})
-                                    if isinstance(channel_util, dict):
-                                        device_info["channelUtilization24"] = (
-                                            channel_util.get("total", 0)
-                                        )
-                                    else:
-                                        device_info["channelUtilization24"] = (
-                                            channel_util or 0
-                                        )
-
-                                    # Radio channel number
-                                    device_info["radioChannel24"] = bss.get(
-                                        "channel", 0
-                                    )
-
-                                    # Data rate from performance data
-                                    performance = bss.get("performance", {})
-                                    if isinstance(performance, dict):
-                                        device_info["dataRate24"] = performance.get(
-                                            "avgDataRateMbps", 0
-                                        )
-
-                                elif band == "5":
-                                    # Channel utilization as percentage
-                                    channel_util = bss.get("channelUtilization", {})
-                                    if isinstance(channel_util, dict):
-                                        device_info["channelUtilization5"] = (
-                                            channel_util.get("total", 0)
-                                        )
-                                    else:
-                                        device_info["channelUtilization5"] = (
-                                            channel_util or 0
-                                        )
-
-                                    # Radio channel number
-                                    device_info["radioChannel5"] = bss.get("channel", 0)
-
-                                    # Data rate from performance data
-                                    performance = bss.get("performance", {})
-                                    if isinstance(performance, dict):
-                                        device_info["dataRate5"] = performance.get(
-                                            "avgDataRateMbps", 0
-                                        )
-
-                    except Exception as status_err:
-                        _LOGGER.debug(
-                            "Could not get wireless status for %s: %s",
-                            device_serial,
-                            status_err,
-                        )
-
-                    # Get radio settings for RF power limits
-                    try:
-                        radio_settings = await self.hass.async_add_executor_job(
-                            self.dashboard.wireless.getDeviceWirelessRadioSettings,
-                            device_serial,
-                        )
-                        self.organization_hub.total_api_calls += 1
-
-                        # Handle the actual API response structure
-                        if radio_settings:
-                            device_info["radioSettings"] = radio_settings
-
-                            # Debug: Log the actual structure to understand API response
-                            _LOGGER.debug(
-                                "Raw radio settings for %s: %s",
-                                device_serial,
-                                radio_settings,
-                            )
-
-                            # Extract power from the correct API structure
-                            # API returns: {"twoFourGhzSettings": {"targetPower": 21}, "fiveGhzSettings": {"targetPower": 15}}
-                            if isinstance(radio_settings, dict):
-                                # Extract RF Profile ID (if available)
-                                rf_profile_id = radio_settings.get("rfProfileId")
-                                if rf_profile_id is not None:
-                                    device_info["rfProfileId"] = rf_profile_id
-
-                                # Extract 2.4GHz power
-                                two_four_settings = radio_settings.get(
-                                    "twoFourGhzSettings", {}
-                                )
-                                if isinstance(two_four_settings, dict):
-                                    power_2_4 = two_four_settings.get("targetPower")
-                                    if power_2_4 is not None:
-                                        device_info["rf_power_2_4"] = power_2_4
-                                        device_info["rfPower"] = max(
-                                            device_info["rfPower"], power_2_4
-                                        )
-
-                                # Extract 5GHz power and channel width
-                                five_ghz_settings = radio_settings.get(
-                                    "fiveGhzSettings", {}
-                                )
-                                if isinstance(five_ghz_settings, dict):
-                                    power_5 = five_ghz_settings.get("targetPower")
-                                    if power_5 is not None:
-                                        device_info["rf_power_5"] = power_5
-                                        device_info["rfPower"] = max(
-                                            device_info["rfPower"], power_5
-                                        )
-
-                                    # Extract channel width (only available for 5GHz)
-                                    channel_width_5 = five_ghz_settings.get(
-                                        "channelWidth"
-                                    )
-                                    if channel_width_5 is not None:
-                                        device_info["channelWidth5"] = channel_width_5
-
-                            _LOGGER.debug(
-                                "Processed radio settings for %s: format=%s, power_2_4=%s, power_5=%s, channel_width_5=%s, rf_profile=%s",
-                                device_serial,
-                                type(radio_settings).__name__,
-                                device_info.get("rf_power_2_4"),
-                                device_info.get("rf_power_5"),
-                                device_info.get("channelWidth5"),
-                                device_info.get("rfProfileId"),
-                            )
-                        else:
-                            _LOGGER.debug(
-                                "No radio settings returned for %s", device_serial
-                            )
-
-                    except Exception as radio_err:
-                        _LOGGER.debug(
-                            "Could not get radio settings for %s: %s",
-                            device_serial,
-                            radio_err,
-                        )
 
                     # Get client count and connection statistics
                     try:
@@ -605,167 +447,11 @@ class MerakiNetworkHub:
                         else:
                             device_info["clientCount"] = 0
 
-                        # Get connection stats separately if available
-                        try:
-
-                            def get_connection_stats(serial: str):
-                                if self.dashboard is None:
-                                    return None
-                                return self.dashboard.wireless.getDeviceWirelessConnectionStats(
-                                    serial,
-                                    timespan=3600,  # 1 hour in seconds
-                                )
-
-                            connection_stats = await self.hass.async_add_executor_job(
-                                get_connection_stats, device_serial
-                            )
-                            self.organization_hub.total_api_calls += 1
-
-                            if connection_stats:
-                                # Handle different response formats
-                                if isinstance(connection_stats, dict):
-                                    # Direct dict format
-                                    device_info["connectionSuccessRate"] = (
-                                        connection_stats.get("connectionSuccessRate", 0)
-                                        or connection_stats.get("assocs", 0)
-                                        or 0
-                                    )
-                                    device_info["connectionFailures"] = (
-                                        connection_stats.get("connectionFailures", 0)
-                                        or connection_stats.get("authFailures", 0)
-                                        or 0
-                                    )
-                                elif (
-                                    isinstance(connection_stats, list)
-                                    and connection_stats
-                                ):
-                                    # List format - take the most recent entry
-                                    latest_stats = connection_stats[-1]
-                                    if isinstance(latest_stats, dict):
-                                        device_info["connectionSuccessRate"] = (
-                                            latest_stats.get("connectionSuccessRate", 0)
-                                            or latest_stats.get("assocs", 0)
-                                            or 0
-                                        )
-                                        device_info["connectionFailures"] = (
-                                            latest_stats.get("connectionFailures", 0)
-                                            or latest_stats.get("authFailures", 0)
-                                            or 0
-                                        )
-
-                                _LOGGER.debug(
-                                    "Connection stats for %s: success_rate=%s, failures=%s",
-                                    device_serial,
-                                    device_info.get("connectionSuccessRate"),
-                                    device_info.get("connectionFailures"),
-                                )
-
-                        except Exception as conn_err:
-                            _LOGGER.debug(
-                                "Could not get connection stats for %s: %s",
-                                device_serial,
-                                conn_err,
-                            )
-
                     except Exception as client_err:
                         _LOGGER.debug(
                             "Could not get client count for %s: %s",
                             device_serial,
                             client_err,
-                        )
-
-                    # Get traffic data - try device status first, then usage history
-                    try:
-                        # Try to get traffic from device status first
-                        device_status = await self.hass.async_add_executor_job(
-                            self.dashboard.wireless.getDeviceWirelessStatus,
-                            device_serial,
-                        )
-                        self.organization_hub.total_api_calls += 1
-
-                        traffic_found = False
-                        if device_status:
-                            # Look for traffic data in device status
-                            basic_service_sets = device_status.get(
-                                "basicServiceSets", []
-                            )
-                            total_sent = 0
-                            total_recv = 0
-
-                            for bss in basic_service_sets:
-                                performance = bss.get("performance", {})
-                                if isinstance(performance, dict):
-                                    # Try different field names for traffic data
-                                    sent = performance.get(
-                                        "trafficSent", 0
-                                    ) or performance.get("sent", 0)
-                                    recv = (
-                                        performance.get("trafficReceived", 0)
-                                        or performance.get("received", 0)
-                                        or performance.get("recv", 0)
-                                    )
-                                    total_sent += sent
-                                    total_recv += recv
-
-                            if total_sent > 0 or total_recv > 0:
-                                device_info["trafficSent"] = total_sent
-                                device_info["trafficRecv"] = total_recv
-                                traffic_found = True
-
-                        # If no traffic found, try alternative API endpoints
-                        if not traffic_found:
-                            # Note: getDeviceLossAndLatencyHistory is only available for MX, MG, and Z devices,
-                            # not for MR (wireless) devices, so we skip this API call for wireless devices
-                            _LOGGER.debug(
-                                "Traffic data not found in device status for %s, "
-                                "skipping latency stats (not available for MR devices)",
-                                device_serial,
-                            )
-
-                        if not traffic_found:
-                            # Fallback: Get usage history if device status unavailable
-                            traffic_end_time = datetime.now(UTC)
-                            traffic_start_time = traffic_end_time - timedelta(hours=1)
-
-                            def get_wireless_usage_history(
-                                start_time: str, end_time: str, serial: str
-                            ):
-                                if self.dashboard is None:
-                                    return None
-                                return self.dashboard.wireless.getNetworkWirelessUsageHistory(
-                                    self.network_id,
-                                    t0=start_time,
-                                    t1=end_time,
-                                    resolution=3600,  # 1 hour resolution
-                                    perPage=1000,
-                                    deviceSerial=serial,
-                                )
-
-                            traffic_analysis = await self.hass.async_add_executor_job(
-                                get_wireless_usage_history,
-                                traffic_start_time.isoformat(),
-                                traffic_end_time.isoformat(),
-                                device_serial,
-                            )
-                            self.organization_hub.total_api_calls += 1
-
-                            # Process traffic data for this specific device
-                            total_sent = 0
-                            total_recv = 0
-
-                            if traffic_analysis and isinstance(traffic_analysis, list):
-                                for entry in traffic_analysis:
-                                    total_sent += entry.get("sent", 0)
-                                    total_recv += entry.get("received", 0)
-
-                            device_info["trafficSent"] = total_sent
-                            device_info["trafficRecv"] = total_recv
-
-                    except Exception as traffic_err:
-                        _LOGGER.debug(
-                            "Could not get traffic stats for %s: %s",
-                            device_serial,
-                            traffic_err,
                         )
 
                     devices_info.append(device_info)
@@ -778,9 +464,15 @@ class MerakiNetworkHub:
                     )
                     continue
 
+            # Get channel utilization data for wireless devices
+            channel_utilization_data = await self._async_get_channel_utilization(
+                wireless_devices
+            )
+
             self.wireless_data = {
                 "ssids": ssids,
                 "devices_info": devices_info,
+                "channel_utilization": channel_utilization_data,
                 "network_id": self.network_id,
                 "network_name": self.network_name,
                 "last_updated": datetime.now(UTC).isoformat(),
@@ -799,6 +491,95 @@ class MerakiNetworkHub:
         except Exception as err:
             _LOGGER.error("Error getting wireless data for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
+
+    async def _async_get_channel_utilization(
+        self, wireless_devices: list[dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Get channel utilization data for wireless devices.
+
+        Args:
+            wireless_devices: List of wireless device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to channel utilization data
+        """
+        channel_utilization = {}
+
+        if not self.dashboard:
+            return channel_utilization
+
+        try:
+            # Get channel utilization for the network with minimum timespan
+            _LOGGER.debug(
+                "Fetching channel utilization for network %s",
+                self.network_name,
+            )
+
+            # Wrapper function for API call
+            def get_channel_utilization():
+                if self.dashboard is None:
+                    return []
+                return (
+                    self.dashboard.networks.getNetworkNetworkHealthChannelUtilization(
+                        self.network_id,
+                        timespan=600,  # 10 minutes (minimum supported)
+                    )
+                )
+
+            utilization_data = await self.hass.async_add_executor_job(
+                get_channel_utilization
+            )
+            self.organization_hub.total_api_calls += 1
+
+            # Process the utilization data
+            for device_data in utilization_data:
+                serial = device_data.get("serial")
+                if not serial:
+                    continue
+
+                # Extract latest values for each radio
+                device_utilization = {
+                    "serial": serial,
+                    "model": device_data.get("model"),
+                }
+
+                # Process wifi0 (2.4GHz) data
+                wifi0_data = device_data.get("wifi0", [])
+                if wifi0_data and isinstance(wifi0_data, list) and wifi0_data:
+                    latest_wifi0 = wifi0_data[0]  # Get most recent entry
+                    device_utilization["wifi0"] = {
+                        "utilization": latest_wifi0.get("utilization", 0),
+                        "wifi": latest_wifi0.get("wifi", 0),
+                        "non_wifi": latest_wifi0.get("non_wifi", 0),
+                    }
+
+                # Process wifi1 (5GHz) data
+                wifi1_data = device_data.get("wifi1", [])
+                if wifi1_data and isinstance(wifi1_data, list) and wifi1_data:
+                    latest_wifi1 = wifi1_data[0]  # Get most recent entry
+                    device_utilization["wifi1"] = {
+                        "utilization": latest_wifi1.get("utilization", 0),
+                        "wifi": latest_wifi1.get("wifi", 0),
+                        "non_wifi": latest_wifi1.get("non_wifi", 0),
+                    }
+
+                channel_utilization[serial] = device_utilization
+
+            _LOGGER.debug(
+                "Retrieved channel utilization for %d devices in network %s",
+                len(channel_utilization),
+                self.network_name,
+            )
+
+        except Exception as err:
+            _LOGGER.debug(
+                "Could not get channel utilization for network %s: %s",
+                self.network_name,
+                err,
+            )
+            self.organization_hub.failed_api_calls += 1
+
+        return channel_utilization
 
     @performance_monitor("switch_data_setup")
     @with_standard_retries("realtime")
@@ -1236,6 +1017,232 @@ class MerakiNetworkHub:
 
         except (ValueError, TypeError):
             return False
+
+    @performance_monitor("network_events_fetch")
+    @with_standard_retries("realtime")
+    @handle_api_errors(
+        default_return=[], log_errors=True, convert_connection_errors=False
+    )
+    async def async_fetch_network_events(self) -> list[dict[str, Any]]:
+        """Fetch network events for MR (wireless) and MS (switch) devices.
+
+        Returns:
+            List of network events
+        """
+        if self.device_type not in [SENSOR_TYPE_MR, SENSOR_TYPE_MS]:
+            return []
+
+        if self.dashboard is None:
+            _LOGGER.error("Dashboard API not initialized")
+            return []
+
+        # Determine product type based on device type
+        product_type = "wireless" if self.device_type == SENSOR_TYPE_MR else "switch"
+
+        try:
+            _LOGGER.debug(
+                "Fetching %s events for network %s",
+                product_type,
+                self.network_name,
+            )
+
+            # Get events with a reasonable page size
+            # Create a wrapper function to properly pass keyword arguments
+            def get_network_events():
+                return self.dashboard.networks.getNetworkEvents(
+                    self.network_id,
+                    productType=product_type,
+                    perPage=50,  # Reasonable page size
+                )
+
+            response = await self.hass.async_add_executor_job(get_network_events)
+            self.organization_hub.total_api_calls += 1
+
+            # Handle API response format
+            if isinstance(response, dict):
+                # Extract events array from response
+                events = response.get("events", [])
+                _LOGGER.debug(
+                    "Network events response for %s: found %d events",
+                    self.network_name,
+                    len(events),
+                )
+            elif isinstance(response, list):
+                # Direct list response (shouldn't happen according to API docs)
+                events = response
+            else:
+                _LOGGER.warning(
+                    "Unexpected response format for network events in %s: %s (type: %s)",
+                    self.network_name,
+                    response,
+                    type(response).__name__,
+                )
+                return []
+
+            # Process events to avoid duplicates
+            new_events = []
+            last_event_time = getattr(self, "_last_event_occurredAt", None)
+
+            if last_event_time:
+                # Filter out events we've already processed
+                for event in events:
+                    event_time = event.get("occurredAt")
+                    if event_time and event_time > last_event_time:
+                        new_events.append(event)
+            else:
+                # First run - take all events
+                new_events = events
+
+            # Update last event timestamp if we have new events
+            if new_events:
+                # Events are returned in descending order, so first is newest
+                self._last_event_occurredAt = new_events[0].get("occurredAt")
+
+                # Process and fire events
+                await self._process_network_events(new_events)
+
+            _LOGGER.debug(
+                "Found %d new %s events for network %s",
+                len(new_events),
+                product_type,
+                self.network_name,
+            )
+
+            return new_events
+
+        except Exception as err:
+            self.organization_hub.failed_api_calls += 1
+            _LOGGER.error(
+                "Error fetching network events for %s: %s", self.hub_name, err
+            )
+            return []
+
+    async def _process_network_events(self, events: list[dict[str, Any]]) -> None:
+        """Process network events and fire Home Assistant events.
+
+        Args:
+            events: List of network events to process
+        """
+        for event in events:
+            try:
+                # Extract event details
+                event_type = event.get("type", "unknown")
+                occurred_at = event.get("occurredAt", "")
+                description = event.get("description", "")
+                device_serial = event.get("deviceSerial", "")
+                device_name = event.get("deviceName", "")
+                category = event.get("category", "")
+
+                # Format the event description for logbook
+                logbook_message = self._format_event_for_logbook(event)
+
+                # Create event data for Home Assistant
+                ha_event_data = {
+                    "integration": "meraki_dashboard",
+                    "network_id": self.network_id,
+                    "network_name": self.network_name,
+                    "device_type": self.device_type,
+                    "device_serial": device_serial,
+                    "device_name": device_name,
+                    "event_type": event_type,
+                    "category": category,
+                    "description": description,
+                    "message": logbook_message,
+                    "occurred_at": occurred_at,
+                    "raw_event": event,  # Include full event data
+                }
+
+                # Fire the event on Home Assistant's event bus
+                event_name = f"meraki_{self.device_type.lower()}_network_event"
+                self.hass.bus.async_fire(event_name, ha_event_data)
+
+                _LOGGER.debug(
+                    "Fired event %s for device %s: %s",
+                    event_name,
+                    device_serial,
+                    logbook_message,
+                )
+
+            except Exception as err:
+                _LOGGER.error("Error processing network event: %s", err, exc_info=True)
+
+    def _format_event_for_logbook(self, event: dict[str, Any]) -> str:
+        """Format network event for nice display in Home Assistant logbook.
+
+        Args:
+            event: Network event data
+
+        Returns:
+            Formatted message for logbook
+        """
+        event_type = event.get("type", "unknown")
+        description = event.get("description", "")
+        device_name = event.get("deviceName", "Unknown Device")
+
+        # Format based on device type and event type
+        if self.device_type == SENSOR_TYPE_MR:
+            # Wireless events
+            client_desc = event.get("clientDescription", "")
+            client_mac = event.get("clientMac", "")
+            ssid_name = event.get("ssidName", "")
+
+            if event_type == "association":
+                rssi = event.get("eventData", {}).get("rssi", "")
+                channel = event.get("eventData", {}).get("channel", "")
+                return f"{device_name}: {client_desc or client_mac} connected to {ssid_name} (RSSI: -{rssi}dBm, Channel: {channel})"
+
+            elif event_type == "disassociation":
+                reason = event.get("eventData", {}).get("reason", "")
+                duration = event.get("eventData", {}).get("duration", "")
+                if duration:
+                    try:
+                        duration_sec = float(duration)
+                        if duration_sec > 3600:
+                            duration_str = f"{duration_sec / 3600:.1f} hours"
+                        elif duration_sec > 60:
+                            duration_str = f"{duration_sec / 60:.1f} minutes"
+                        else:
+                            duration_str = f"{duration_sec:.1f} seconds"
+                    except (ValueError, TypeError):
+                        duration_str = duration
+                else:
+                    duration_str = "unknown duration"
+                return f"{device_name}: {client_desc or client_mac} disconnected from {ssid_name} after {duration_str} (reason: {reason})"
+
+            elif event_type == "wpa_auth":
+                return f"{device_name}: {client_desc or client_mac} authenticated to {ssid_name}"
+
+            elif event_type == "11r_fast_roam":
+                return f"{device_name}: {client_desc or client_mac} roamed to this AP on {ssid_name}"
+
+            else:
+                # Generic wireless event
+                return f"{device_name}: {description} - {client_desc or client_mac} on {ssid_name}"
+
+        elif self.device_type == SENSOR_TYPE_MS:
+            # Switch events
+            if event_type == "mac_flap_detected":
+                mac = event.get("eventData", {}).get("mac", "")
+                vlan = event.get("eventData", {}).get("vlan", "")
+                port_info = event.get("eventData", {}).get("port", [])
+
+                # Format port information
+                if isinstance(port_info, list) and port_info:
+                    if len(port_info) > 1:
+                        ports = f"ports {', '.join(str(p) for p in port_info if isinstance(p, str | int))}"
+                    else:
+                        ports = f"port {port_info[0]}"
+                else:
+                    ports = "unknown ports"
+
+                return f"{device_name}: MAC address {mac} flapping on {ports} (VLAN {vlan})"
+
+            else:
+                # Generic switch event
+                return f"{device_name}: {description}"
+
+        # Fallback for unknown event types
+        return f"{device_name}: {description}"
 
     async def async_unload(self) -> None:
         """Unload the network hub and clean up resources."""

@@ -121,12 +121,29 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
                 await self.hub._async_setup_wireless_data()
                 data = self.hub.wireless_data or {}
                 _LOGGER.debug("Retrieved MR wireless data with %d entries", len(data))
+
+                # Also fetch network events for wireless devices
+                try:
+                    await self.hub.async_fetch_network_events()
+                except Exception as event_err:
+                    _LOGGER.debug(
+                        "Failed to fetch wireless network events: %s", event_err
+                    )
+
             elif self.hub.device_type == "MS":
                 _LOGGER.debug("Fetching MS switch data from hub %s", self.hub.hub_name)
                 # Update switch data and return it
                 await self.hub._async_setup_switch_data()
                 data = self.hub.switch_data or {}
                 _LOGGER.debug("Retrieved MS switch data with %d entries", len(data))
+
+                # Also fetch network events for switch devices
+                try:
+                    await self.hub.async_fetch_network_events()
+                except Exception as event_err:
+                    _LOGGER.debug(
+                        "Failed to fetch switch network events: %s", event_err
+                    )
             else:
                 _LOGGER.warning("Unknown device type: %s", self.hub.device_type)
                 data = {}

@@ -149,40 +149,6 @@ class TestMRWirelessDataTransformer:
         assert result["model"] == "MR46"
         assert result["client_count"] == 15
 
-    def test_transform_channel_utilization(self):
-        """Test channel utilization transformation."""
-        transformer = MRWirelessDataTransformer()
-        raw_data = {
-            "basicServiceSets": [
-                {"band": "2.4", "channel": 6, "channelUtilization": {"total": 25.0}},
-                {
-                    "band": "5",
-                    "channel": 36,
-                    "channelWidth": 80,
-                    "channelUtilization": {"total": 15.0},
-                },
-            ]
-        }
-
-        result = transformer.transform(raw_data)
-        assert result["channel_utilization_2_4"] == 25.0
-        assert result["channel_utilization_5"] == 15.0
-        assert result["radio_channel_2_4"] == 6
-        assert result["radio_channel_5"] == 36
-        assert result["channel_width_5"] == 80
-
-    def test_transform_traffic_conversion(self):
-        """Test traffic data with unit conversion."""
-        transformer = MRWirelessDataTransformer()
-        raw_data = {
-            "trafficSent": 5000000,  # 5MB (should be converted to Mbps)
-            "trafficRecv": 500,  # 500 bytes (should remain as-is)
-        }
-
-        result = transformer.transform(raw_data)
-        assert result["traffic_sent"] == 40.0  # 5MB converted to Mbps
-        assert result["traffic_recv"] == 500  # Small value remains unchanged
-
 
 class TestMSSwitchDataTransformer:
     """Test MS switch data transformer."""

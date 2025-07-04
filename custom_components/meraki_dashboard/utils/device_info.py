@@ -433,21 +433,6 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             "ssid_count",
             "enabled_ssids",
             "open_ssids",
-            "channel_utilization_2_4",
-            "channel_utilization_5",
-            "data_rate_2_4",
-            "data_rate_5",
-            "connection_success_rate",
-            "connection_failures",
-            "traffic_sent",
-            "traffic_recv",
-            "rf_power",
-            "rf_power_2_4",
-            "rf_power_5",
-            "radio_channel_2_4",
-            "radio_channel_5",
-            "channel_width_5",
-            "rf_profile_id",
         }
 
     elif device_type == "MS":
