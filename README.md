@@ -4,6 +4,7 @@
 [![GitHub Release](https://img.shields.io/github/release/rknightion/meraki-dashboard-ha.svg?style=flat-square)](https://github.com/rknightion/meraki-dashboard-ha/releases)
 [![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha?ref=badge_shield)
 
 ![Meraki Logo](docs/images/icon.png)
 
@@ -292,6 +293,9 @@ For detailed instructions, see [docs/development.md](docs/development.md).
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha?ref=badge_large)
 
 ## Disclaimer
 
