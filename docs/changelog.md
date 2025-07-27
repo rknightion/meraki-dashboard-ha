@@ -17,6 +17,18 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.25.0] - 2025-07-27
+
+
+### 🚀 Features
+- add device type filtering options
+
+### 🧰 Maintenance
+65696c8 ci: improve draft release cleanup in GitHub workflow
+8c7051c ci: enhance GitHub workflows for release management
+700d44d ci: remove redundant build job from update-version workflow
+
+
 ## [0.24.30] - 2025-07-27
 
 
