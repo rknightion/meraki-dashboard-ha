@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.24] - 2025-07-27
+
+
+### 🐛 Bug Fixes
+- improve configuration migration process
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/main'
+
+
 ## [0.24.23] - 2025-07-27
 
 
