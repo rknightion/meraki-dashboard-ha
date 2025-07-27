@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.29] - 2025-07-27
+
+
+### 🚀 Features
+- add new sensors for Meraki MR and MS devices
+
+
 ## [0.24.28] - 2025-07-27
 
 
