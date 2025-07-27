@@ -27,8 +27,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: main
-          fetch-depth: 0
-          persist-credentials: false
+          fetch-depth: 0 # zizmor: ignore[artipacked]
 
       - name: Update CHANGELOG.md first
         run: |
@@ -195,6 +194,9 @@ jobs:
           # Configure git
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          # Configure git to use the token for authentication
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
           # Ensure we're on main branch (should already be due to checkout, but double-check)
           echo "Current branch: $(git branch --show-current)"
@@ -227,6 +229,7 @@ jobs:
         env:
           STEPS_VERSION_OUTPUTS_VERSION: ${{ steps.version.outputs.version }}
           GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and upload release assets
         env:

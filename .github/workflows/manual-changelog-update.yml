@@ -32,8 +32,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: main
-          fetch-depth: 0
-          persist-credentials: false
+          fetch-depth: 0 # zizmor: ignore[artipacked]
 
       - name: Update CHANGELOG.md
         run: |
@@ -137,6 +136,9 @@ jobs:
 
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          # Configure git to use the token for authentication
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
           if ! git diff --quiet CHANGELOG.md docs/changelog.md; then
             git add CHANGELOG.md docs/changelog.md
@@ -150,3 +152,4 @@ jobs:
 
         env:
           GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
