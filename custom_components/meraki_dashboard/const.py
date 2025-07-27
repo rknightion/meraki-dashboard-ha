@@ -70,6 +70,23 @@ MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24: Final = "channel_utilization_non_wifi
 MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5: Final = "channel_utilization_total_5"
 MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5: Final = "channel_utilization_wifi_5"
 MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5: Final = "channel_utilization_non_wifi_5"
+# Connection stats
+MR_SENSOR_CONNECTION_STATS_ASSOC: Final = "connection_stats_assoc"
+MR_SENSOR_CONNECTION_STATS_AUTH: Final = "connection_stats_auth"
+MR_SENSOR_CONNECTION_STATS_DHCP: Final = "connection_stats_dhcp"
+MR_SENSOR_CONNECTION_STATS_DNS: Final = "connection_stats_dns"
+MR_SENSOR_CONNECTION_STATS_SUCCESS: Final = "connection_stats_success"
+# Power metrics
+MR_SENSOR_POWER_AC_CONNECTED: Final = "power_ac_connected"
+MR_SENSOR_POWER_POE_CONNECTED: Final = "power_poe_connected"
+MR_SENSOR_AGGREGATION_ENABLED: Final = "aggregation_enabled"
+MR_SENSOR_AGGREGATION_SPEED: Final = "aggregation_speed"
+# Packet loss metrics
+MR_SENSOR_PACKET_LOSS_DOWNSTREAM: Final = "packet_loss_downstream"
+MR_SENSOR_PACKET_LOSS_UPSTREAM: Final = "packet_loss_upstream"
+MR_SENSOR_PACKET_LOSS_TOTAL: Final = "packet_loss_total"
+# CPU load
+MR_SENSOR_CPU_LOAD_5MIN: Final = "cpu_load_5min"
 
 # MS (Switch) sensor metrics
 MS_SENSOR_PORT_COUNT: Final = "port_count"
@@ -88,6 +105,27 @@ MS_SENSOR_PORT_LINK_COUNT: Final = "port_link_count"
 MS_SENSOR_POE_LIMIT: Final = "poe_limit"
 MS_SENSOR_PORT_UTILIZATION: Final = "port_utilization"
 MS_SENSOR_MEMORY_USAGE: Final = "memory_usage"
+
+# MS Port packet statistics
+MS_SENSOR_PORT_PACKETS_TOTAL: Final = "port_packets_total"
+MS_SENSOR_PORT_PACKETS_BROADCAST: Final = "port_packets_broadcast"
+MS_SENSOR_PORT_PACKETS_MULTICAST: Final = "port_packets_multicast"
+MS_SENSOR_PORT_PACKETS_CRCERRORS: Final = "port_packets_crcerrors"
+MS_SENSOR_PORT_PACKETS_FRAGMENTS: Final = "port_packets_fragments"
+MS_SENSOR_PORT_PACKETS_COLLISIONS: Final = "port_packets_collisions"
+MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES: Final = "port_packets_topologychanges"
+
+# MS Port packet rates (packets per second)
+MS_SENSOR_PORT_PACKETS_RATE_TOTAL: Final = "port_packets_rate_total"
+MS_SENSOR_PORT_PACKETS_RATE_BROADCAST: Final = "port_packets_rate_broadcast"
+MS_SENSOR_PORT_PACKETS_RATE_MULTICAST: Final = "port_packets_rate_multicast"
+MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS: Final = "port_packets_rate_crcerrors"
+MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS: Final = "port_packets_rate_fragments"
+MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS: Final = "port_packets_rate_collisions"
+MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES: Final = "port_packets_rate_topologychanges"
+
+# MS STP priority
+MS_SENSOR_STP_PRIORITY: Final = "stp_priority"
 
 # Organization-level metrics
 ORG_SENSOR_API_CALLS: Final = "api_calls"

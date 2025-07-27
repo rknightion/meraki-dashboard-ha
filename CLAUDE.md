@@ -1,165 +1,180 @@
-# CLAUDE.md
+# Meraki Dashboard Home Assistant Integration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This is a comprehensive Home Assistant custom integration for Cisco Meraki Dashboard API with hub-based architecture supporting MT environmental sensors, MR wireless access points, MS switches, and MV cameras.
 
-## Project Overview
+## Tech Stack
 
-This is a Home Assistant custom integration for Cisco Meraki Dashboard API. It monitors Meraki networking devices (MT environmental sensors, MR access points, MS switches) using a hub-based architecture.
+- **Framework**: Home Assistant Custom Integration
+- **Language**: Python 3.13.2+
+- **API Client**: Meraki Python SDK 2.0.3
+- **Package Manager**: uv (with Poetry fallback)
+- **Dependency Management**: pyproject.toml with dependency groups
+- **Testing**: pytest with HA custom component framework
+- **Code Quality**: ruff (formatting/linting), mypy (type checking), bandit (security)
+
+## Project Structure
+
+- `custom_components/meraki_dashboard/` - Main integration code
+  - `hubs/` - Hub-based architecture (organization, network)
+  - `devices/` - Device type implementations (MT, MR, MS, MV)
+  - `entities/` - Entity factory and base classes
+  - `config/` - Configuration schemas and migration
+  - `data/` - API response transformers
+  - `services/` - Service layer (events, monitoring)
+  - `utils/` - Utilities (error handling, retry, performance)
+- `tests/` - Comprehensive test suite with builder patterns
+- `docs/` - GitHub Pages documentation
 
 ## Essential Commands
 
-### Development
 ```bash
-# Install dependencies (always use uv)
-make install
+# Development setup
+make install              # Install all dependencies and pre-commit hooks
+uv sync --all-extras     # Alternative dependency installation
 
-# Run linting and formatting
-make lint          # Run all linters (ruff, mypy, bandit)
-make format        # Format code with ruff
+# Code quality
+make format              # Format code with ruff
+make lint               # Run all linters (ruff, mypy, bandit)
+make pre-commit         # Run pre-commit hooks on all files
 
-# Run tests
-make test                                         # Run all tests with coverage
-make test-file FILE=tests/test_sensor.py         # Run specific test file
-make test-match MATCH=test_name                  # Run tests matching pattern
-make test-watch                                  # Watch files and run tests on change
-make test-debug                                  # Run tests with debug output
-make coverage                                    # Generate and open HTML coverage report
+# Testing
+make test               # Run all tests with coverage
+make test-file FILE=tests/test_sensor.py    # Run specific test file
+make test-match MATCH=test_sensor           # Run tests matching pattern
+make test-watch         # Watch files and run tests on change
+make coverage           # Generate HTML coverage report
 
-# Pre-commit checks (runs tests + linting)
-make pre-commit
-
-# Validate integration locally
-make validate      # Run all local validations (lint + pre-commit)
-make check-all     # Run all checks including tests
-
-# Note: hassfest validation runs in CI via GitHub Actions
+# Validation
+make validate           # Run all local validations (lint + pre-commit)
+make check-all          # Run comprehensive checks (lint + test + validate)
 ```
 
-### Testing Specific Components
-```bash
-# Test a specific file
-make test-file FILE=tests/test_hubs_network.py
-
-# Test with pattern matching
-make test-match MATCH="test_sensor"
-
-# Test with coverage for specific module
-uv run pytest tests/test_sensor_with_builders.py --cov=custom_components.meraki_dashboard.sensor
-
-# Debug failing tests
-make test-debug
-```
-
-## Architecture
+## Architecture Patterns
 
 ### Hub-Based Design
-- **OrganizationHub**: Root hub that manages organization-level operations and creates network hubs
-- **NetworkHub**: Manages device operations for specific network/device type combinations
-- Dynamic hub creation based on available devices (MT, MR, MS, MV)
+- **OrganizationHub**: Manages org-level operations, creates network hubs
+- **NetworkHub**: Handles device operations per network/device type
+- Dynamic hub creation based on discovered devices
+- Dependency injection for API client configuration
 
-### Key Components
-1. **`hubs/`**: Hub implementations (organization.py, network.py)
-2. **`devices/`**: Device-specific logic (mt.py, mr.py, ms.py)
-3. **`entities/`**: Entity factory and base classes
-4. **`config/`**: Configuration schemas and migration
-5. **`data/`**: Data transformers for API responses
-6. **`services/`**: Service layer (event tracking)
-7. **`utils/`**: Utilities (error handling, retry, caching, sanitization)
+### Entity Management
+- **Entity Factory**: Creates entities based on device capabilities
+- **Builder Pattern**: For test data creation (`MerakiDeviceBuilder`, `SensorDataBuilder`)
+- **Device Abstraction**: Device-specific classes in `devices/` folder
 
-### Entity Creation Flow
-1. Hub discovers devices via API
+### Data Flow
+1. Hub discovers devices via Meraki API
 2. Device classes define available sensors
-3. Data transformers process API responses
+3. Data transformers normalize API responses
 4. Entity factory creates Home Assistant entities
-5. Coordinator manages updates
+5. Coordinator manages updates with performance monitoring
 
-## Development Patterns
+## Code Conventions
+
+- **Type Hints**: Required for all functions and class methods
+- **Docstrings**: Google-style with type information
+- **Constants**: Use StrEnum for type-safe constants
+- **Error Handling**: Use decorators (`@handle_api_errors`, `@with_standard_retries`)
+- **Performance**: Use `@performance_monitor` for API methods
+- **Async**: All I/O operations must use async/await
+- **Line Length**: 88 characters (Black formatter)
+
+## API Guidelines
+
+- **Always use Meraki Python SDK** - Never direct HTTP calls
+- Configure SDK: `suppress_logging=True, print_console=False, output_log=False`
+- Use `total_pages='all'` for automatic pagination
+- Implement tiered refresh intervals:
+  - Static data: 4 hours (device info, network settings)
+  - Semi-static: 1 hour (configuration changes)
+  - Dynamic: 5-10 minutes (sensor readings, stats)
+
+## Development Workflow
 
 ### Adding New Device Support
 1. Create device class in `devices/` (e.g., `devices/mv.py`)
-2. Define sensor descriptions with proper units and device classes
+2. Define sensor descriptions with proper units/device classes
 3. Add data transformer in `data/transformers.py`
 4. Update entity factory in `entities/factory.py`
-5. Add device type to schemas and types
-6. Write tests using builder pattern
+5. Add device type to schemas and constants
+6. Write tests using builder patterns
+7. Add icon mappings to `icons.json`
 
-### Error Handling
+### Error Handling Pattern
 ```python
-# Always use decorators for API calls
-@handle_api_errors
-@with_standard_retries
-@performance_monitor
+@handle_api_errors(reraise_on=(UpdateFailed,))
+@with_standard_retries("realtime")
+@performance_monitor("api_operation")
 async def api_method(self):
-    # API call here
+    # API implementation
 ```
 
 ### Testing with Builders
 ```python
-# Use builders for test data
-device = MerakiDeviceBuilder().with_type("MT").with_name("Test Sensor").build()
-sensor_data = SensorDataBuilder().with_temperature(22.5).build()
-hub = await HubBuilder().with_device(device).build()
+# Device creation
+device = MerakiDeviceBuilder().as_mt_device().with_serial("Q2XX-TEST-0001").build()
+
+# Sensor data
+readings = SensorDataBuilder().as_temperature(22.5).with_timestamp().build()
+
+# Hub setup
+hub = await HubBuilder().with_device(device).build_network_hub(hass, "N_123", "MT")
 ```
-
-### Performance Monitoring
-- Use `@performance_monitor` decorator on API methods
-- Metrics tracked: `meraki_http_latency_seconds`, `meraki_http_errors_total`
-- Circuit breaker pattern for repeated failures
-
-## Code Style
-
-- **Formatting**: Black formatter with 88-char line length
-- **Type hints**: Required for all functions
-- **Docstrings**: Google style
-- **Constants**: Use StrEnum
-- **Imports**: Group logically (stdlib, third-party, local)
-- **Early returns**: Reduce nesting
-
-## API Guidelines
-
-- Use Meraki Python SDK (never direct HTTP)
-- Configure with `suppress_logging=True`
-- Use `total_pages='all'` for pagination
-- Implement tiered refresh intervals:
-  - Static data: 4 hours
-  - Semi-static: 1 hour
-  - Dynamic: 5-10 minutes
 
 ## Home Assistant Conventions
 
-- Use update coordinators for data fetching
-- Proper error handling (ConfigEntryAuthFailed, ConfigEntryNotReady)
-- Physical devices = HA devices, metrics = entities
+- Use update coordinators for efficient data fetching
+- Handle auth errors with `ConfigEntryAuthFailed`
+- Handle temporary issues with `ConfigEntryNotReady`
+- Physical devices = HA devices, individual metrics = entities
 - Implement proper unique IDs and device identifiers
-- Follow HA entity naming conventions
+- Follow HA entity naming and categorization
+
+## Performance & Monitoring
+
+- Track metrics: `meraki_http_latency_seconds`, `meraki_http_errors_total`
+- Log performance every 10 coordinator updates
+- Use circuit breaker pattern for repeated failures
+- Implement intelligent caching and batch operations
+- Monitor API usage and adjust intervals dynamically
+
+## Do Not Section
+
+- **Never run git commands** - This is handled by CI/CD
+- **Never modify legacy files** in `src/legacy` (if any exist)
+- **Never log sensitive data** (API keys, tokens)
+- **Never bypass the hub architecture** - Always use hubs for API calls
+- **Never create direct HTTP calls** - Always use Meraki Python SDK
+- **Never skip error handling decorators** on API methods
+- **Never commit without running pre-commit hooks**
 
 ## Common Tasks
 
-### Debug API Calls
+### Debug API Performance
 ```python
-# Add logging to debug API responses
-_LOGGER.debug("API response: %s", response)
+# Add performance logging
+_LOGGER.debug("API call completed in %.2f seconds", elapsed_time)
 ```
 
 ### Add New Sensor Type
-0. Validate API calls against the Meraki Dashboard API docs available from https://developer.cisco.com/meraki/api-v1
-1. Add to device sensor descriptions
-2. Update data transformer
-3. Add icon mapping in factory
-4. Write unit tests
+1. Validate against Meraki API docs: https://developer.cisco.com/meraki/api-v1
+2. Add sensor constant to `const.py`
+3. Update device sensor descriptions
+4. Add data transformer logic
+5. Update entity factory
+6. Add tests with builders
 
-### Handle Missing Data
+### Handle Configuration Changes
 ```python
-# Use get() with defaults
-value = data.get("temperature", {}).get("value")
-if value is not None:
-    # Process value
+# Use configuration schemas for validation
+config = MerakiConfigSchema.from_config_entry(entry.data, entry.options)
 ```
 
 ## Important Files
 
-- `coordinator.py`: Main update coordinator
-- `entities/factory.py`: Entity creation logic
-- `config/schemas.py`: Configuration data classes
-- `data/transformers.py`: API response processing
-- `utils/error_handling.py`: Error handling utilities
+- `coordinator.py` - Main update coordinator with performance tracking
+- `entities/factory.py` - Entity creation and capability detection
+- `hubs/organization.py` - Organization-level hub operations
+- `hubs/network.py` - Network-level device operations
+- `config/schemas.py` - Type-safe configuration validation
+- `utils/error_handling.py` - Comprehensive error handling utilities

@@ -381,6 +381,69 @@ class MRWirelessDataTransformer(DataTransformer):
             raw_data.get("clientCount", 0)
         )
 
+        # Connection stats
+        connection_stats = raw_data.get("connectionStats", {})
+        transformed["connection_stats_assoc"] = SafeExtractor.safe_int(
+            connection_stats.get("assoc", 0)
+        )
+        transformed["connection_stats_auth"] = SafeExtractor.safe_int(
+            connection_stats.get("auth", 0)
+        )
+        transformed["connection_stats_dhcp"] = SafeExtractor.safe_int(
+            connection_stats.get("dhcp", 0)
+        )
+        transformed["connection_stats_dns"] = SafeExtractor.safe_int(
+            connection_stats.get("dns", 0)
+        )
+        transformed["connection_stats_success"] = SafeExtractor.safe_int(
+            connection_stats.get("success", 0)
+        )
+
+        # Power metrics
+        power_info = raw_data.get("power", {})
+        ac_info = power_info.get("ac", {})
+        poe_info = power_info.get("poe", {})
+        transformed["power_ac_connected"] = (
+            1 if ac_info.get("isConnected", False) else 0
+        )
+        transformed["power_poe_connected"] = (
+            1 if poe_info.get("isConnected", False) else 0
+        )
+
+        # Aggregation info
+        aggregation_info = raw_data.get("aggregation", {})
+        transformed["aggregation_enabled"] = (
+            1 if aggregation_info.get("enabled", False) else 0
+        )
+        transformed["aggregation_speed"] = SafeExtractor.safe_float(
+            aggregation_info.get("speed", 0)
+        )
+
+        # Packet loss metrics
+        downstream = raw_data.get("downstream", {})
+        upstream = raw_data.get("upstream", {})
+        transformed["packet_loss_downstream"] = SafeExtractor.safe_float(
+            downstream.get("lossPercentage", 0)
+        )
+        transformed["packet_loss_upstream"] = SafeExtractor.safe_float(
+            upstream.get("lossPercentage", 0)
+        )
+        # Calculate total packet loss
+        downstream_total = downstream.get("total", 0)
+        downstream_lost = downstream.get("lost", 0)
+        upstream_total = upstream.get("total", 0)
+        upstream_lost = upstream.get("lost", 0)
+        total_packets = downstream_total + upstream_total
+        total_lost = downstream_lost + upstream_lost
+        transformed["packet_loss_total"] = (
+            (total_lost / total_packets * 100) if total_packets > 0 else 0
+        )
+
+        # CPU load (API returns in hundredths of percent)
+        cpu_data = raw_data.get("cpu", {})
+        cpu_load_raw = cpu_data.get("cpuLoad5", 0)
+        transformed["cpu_load_5min"] = cpu_load_raw / 100.0
+
         return transformed
 
 
@@ -428,6 +491,8 @@ class MSSwitchDataTransformer(DataTransformer):
         utilization_recv = []
         error_counts = []
         discard_counts = []
+        traffic_sent_kbps = []
+        traffic_recv_kbps = []
 
         connected_ports = 0
         poe_ports = 0
@@ -454,7 +519,20 @@ class MSSwitchDataTransformer(DataTransformer):
             if client_count > 0:
                 client_counts.append(client_count)
 
-            # Process port utilization
+            # Process port traffic rate (when timespan is provided)
+            traffic = port.get("trafficInKbps", {})
+            if isinstance(traffic, dict):
+                # Traffic is in kbps - store for traffic sensors
+                sent_kbps = SafeExtractor.safe_float(traffic.get("sent", 0))
+                recv_kbps = SafeExtractor.safe_float(traffic.get("recv", 0))
+
+                # Aggregate traffic data
+                if sent_kbps > 0:
+                    traffic_sent_kbps.append(sent_kbps)
+                if recv_kbps > 0:
+                    traffic_recv_kbps.append(recv_kbps)
+
+            # Process port utilization (total usage in KB over timespan)
             usage = port.get("usageInKb", {})
             if isinstance(usage, dict):
                 sent = SafeExtractor.safe_float(usage.get("sent", 0))
@@ -481,6 +559,12 @@ class MSSwitchDataTransformer(DataTransformer):
         transformed["port_utilization_recv"] = SafeExtractor.safe_aggregate(
             utilization_recv, "avg"
         )
+        transformed["port_traffic_sent"] = SafeExtractor.safe_aggregate(
+            traffic_sent_kbps, "avg"
+        )
+        transformed["port_traffic_recv"] = SafeExtractor.safe_aggregate(
+            traffic_recv_kbps, "avg"
+        )
         transformed["port_errors"] = SafeExtractor.safe_aggregate(error_counts)
         transformed["port_discards"] = SafeExtractor.safe_aggregate(discard_counts)
 
@@ -503,7 +587,78 @@ class MSSwitchDataTransformer(DataTransformer):
         else:
             transformed["power_module_status"] = 0
 
+        # Handle packet statistics if present
+        if "packetCounters" in raw_data:
+            self._transform_packet_statistics(raw_data["packetCounters"], transformed)
+
+        # Handle STP priority
+        if "stp_priority" in raw_data:
+            transformed["stp_priority"] = SafeExtractor.safe_int(
+                raw_data.get("stp_priority", 32768)
+            )
+
         return transformed
+
+    def _transform_packet_statistics(
+        self, packet_data: list[dict[str, Any]], transformed: dict[str, Any]
+    ) -> None:
+        """Transform packet statistics data."""
+        # Initialize packet counters
+        total_packets = 0
+        broadcast_packets = 0
+        multicast_packets = 0
+        crc_errors = 0
+        fragments = 0
+        collisions = 0
+        topology_changes = 0
+
+        # Process each port's packet data
+        for port_data in packet_data:
+            if not isinstance(port_data, dict):
+                continue
+
+            packets = port_data.get("packets", [])
+            for packet_type in packets:
+                if not isinstance(packet_type, dict):
+                    continue
+
+                desc = packet_type.get("desc", "")
+                total = SafeExtractor.safe_int(packet_type.get("total", 0))
+                rate = SafeExtractor.safe_float(
+                    packet_type.get("ratePerSec", {}).get("total", 0)
+                )
+
+                # Aggregate packet counts and rates
+                if desc == "Total":
+                    total_packets += total
+                    transformed["port_packets_rate_total"] = rate
+                elif desc == "Broadcast":
+                    broadcast_packets += total
+                    transformed["port_packets_rate_broadcast"] = rate
+                elif desc == "Multicast":
+                    multicast_packets += total
+                    transformed["port_packets_rate_multicast"] = rate
+                elif desc == "CRC align errors":
+                    crc_errors += total
+                    transformed["port_packets_rate_crcerrors"] = rate
+                elif desc == "Fragments":
+                    fragments += total
+                    transformed["port_packets_rate_fragments"] = rate
+                elif desc == "Collisions":
+                    collisions += total
+                    transformed["port_packets_rate_collisions"] = rate
+                elif desc == "Topology changes":
+                    topology_changes += total
+                    transformed["port_packets_rate_topologychanges"] = rate
+
+        # Set totals
+        transformed["port_packets_total"] = total_packets
+        transformed["port_packets_broadcast"] = broadcast_packets
+        transformed["port_packets_multicast"] = multicast_packets
+        transformed["port_packets_crcerrors"] = crc_errors
+        transformed["port_packets_fragments"] = fragments
+        transformed["port_packets_collisions"] = collisions
+        transformed["port_packets_topologychanges"] = topology_changes
 
 
 class OrganizationDataTransformer(DataTransformer):

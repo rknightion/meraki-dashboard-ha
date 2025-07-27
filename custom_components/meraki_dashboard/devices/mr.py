@@ -6,16 +6,19 @@ import logging
 from typing import Any, cast
 
 from homeassistant.components.sensor import (
+    SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE
+from homeassistant.const import PERCENTAGE, UnitOfDataRate
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from ..const import (
     ATTR_LAST_REPORTED_AT,
     ATTR_NETWORK_ID,
     ATTR_NETWORK_NAME,
+    MR_SENSOR_AGGREGATION_ENABLED,
+    MR_SENSOR_AGGREGATION_SPEED,
     MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
     MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
     MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
@@ -23,9 +26,20 @@ from ..const import (
     MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
     MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
     MR_SENSOR_CLIENT_COUNT,
+    MR_SENSOR_CONNECTION_STATS_ASSOC,
+    MR_SENSOR_CONNECTION_STATS_AUTH,
+    MR_SENSOR_CONNECTION_STATS_DHCP,
+    MR_SENSOR_CONNECTION_STATS_DNS,
+    MR_SENSOR_CONNECTION_STATS_SUCCESS,
+    MR_SENSOR_CPU_LOAD_5MIN,
     MR_SENSOR_ENABLED_SSIDS,
     MR_SENSOR_MEMORY_USAGE,
     MR_SENSOR_OPEN_SSIDS,
+    MR_SENSOR_PACKET_LOSS_DOWNSTREAM,
+    MR_SENSOR_PACKET_LOSS_TOTAL,
+    MR_SENSOR_PACKET_LOSS_UPSTREAM,
+    MR_SENSOR_POWER_AC_CONNECTED,
+    MR_SENSOR_POWER_POE_CONNECTED,
     MR_SENSOR_SSID_COUNT,
 )
 from ..coordinator import MerakiSensorCoordinator
@@ -116,6 +130,101 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key=MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
         name="Channel Utilization 5GHz (Non-Wifi)",
         icon="mdi:signal-off",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=1,
+    ),
+    # Connection stats
+    MR_SENSOR_CONNECTION_STATS_ASSOC: SensorEntityDescription(
+        key=MR_SENSOR_CONNECTION_STATS_ASSOC,
+        name="Connection Stats - Association",
+        icon="mdi:wifi-sync",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_CONNECTION_STATS_AUTH: SensorEntityDescription(
+        key=MR_SENSOR_CONNECTION_STATS_AUTH,
+        name="Connection Stats - Authentication",
+        icon="mdi:account-check",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_CONNECTION_STATS_DHCP: SensorEntityDescription(
+        key=MR_SENSOR_CONNECTION_STATS_DHCP,
+        name="Connection Stats - DHCP",
+        icon="mdi:ip-network",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_CONNECTION_STATS_DNS: SensorEntityDescription(
+        key=MR_SENSOR_CONNECTION_STATS_DNS,
+        name="Connection Stats - DNS",
+        icon="mdi:dns",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_CONNECTION_STATS_SUCCESS: SensorEntityDescription(
+        key=MR_SENSOR_CONNECTION_STATS_SUCCESS,
+        name="Connection Stats - Success",
+        icon="mdi:check-network",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    # Power metrics
+    MR_SENSOR_POWER_AC_CONNECTED: SensorEntityDescription(
+        key=MR_SENSOR_POWER_AC_CONNECTED,
+        name="AC Power Connected",
+        icon="mdi:power-plug",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_POWER_POE_CONNECTED: SensorEntityDescription(
+        key=MR_SENSOR_POWER_POE_CONNECTED,
+        name="PoE Power Connected",
+        icon="mdi:ethernet-cable-electric",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_AGGREGATION_ENABLED: SensorEntityDescription(
+        key=MR_SENSOR_AGGREGATION_ENABLED,
+        name="Port Aggregation Enabled",
+        icon="mdi:merge",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    MR_SENSOR_AGGREGATION_SPEED: SensorEntityDescription(
+        key=MR_SENSOR_AGGREGATION_SPEED,
+        name="Aggregated Port Speed",
+        icon="mdi:speedometer",
+        device_class=SensorDeviceClass.DATA_RATE,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        suggested_display_precision=0,
+    ),
+    # Packet loss metrics
+    MR_SENSOR_PACKET_LOSS_DOWNSTREAM: SensorEntityDescription(
+        key=MR_SENSOR_PACKET_LOSS_DOWNSTREAM,
+        name="Packet Loss Downstream",
+        icon="mdi:download-off",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=2,
+    ),
+    MR_SENSOR_PACKET_LOSS_UPSTREAM: SensorEntityDescription(
+        key=MR_SENSOR_PACKET_LOSS_UPSTREAM,
+        name="Packet Loss Upstream",
+        icon="mdi:upload-off",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=2,
+    ),
+    MR_SENSOR_PACKET_LOSS_TOTAL: SensorEntityDescription(
+        key=MR_SENSOR_PACKET_LOSS_TOTAL,
+        name="Packet Loss Total",
+        icon="mdi:network-off",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+        suggested_display_precision=2,
+    ),
+    # CPU load
+    MR_SENSOR_CPU_LOAD_5MIN: SensorEntityDescription(
+        key=MR_SENSOR_CPU_LOAD_5MIN,
+        name="CPU Load (5 min)",
+        icon="mdi:chip",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=1,

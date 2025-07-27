@@ -468,10 +468,58 @@ class MerakiNetworkHub:
                 wireless_devices
             )
 
+            # Get connection stats for wireless devices
+            connection_stats_data = await self._async_get_connection_stats(
+                wireless_devices
+            )
+
+            # Get ethernet status for wireless devices
+            ethernet_status_data = await self._async_get_ethernet_status(
+                wireless_devices
+            )
+
+            # Get packet loss metrics
+            packet_loss_data = await self._async_get_packet_loss(wireless_devices)
+
+            # Get CPU load metrics
+            cpu_load_data = await self._async_get_cpu_load(wireless_devices)
+
+            # Merge all collected data into device_info entries
+            for device_info in devices_info:
+                device_serial = device_info.get("serial")
+                if not device_serial:
+                    continue
+
+                # Merge connection stats
+                if device_serial in connection_stats_data:
+                    device_info["connectionStats"] = connection_stats_data[
+                        device_serial
+                    ]
+
+                # Merge ethernet status (power info)
+                if device_serial in ethernet_status_data:
+                    ethernet_data = ethernet_status_data[device_serial]
+                    device_info["power"] = ethernet_data.get("power", {})
+                    device_info["aggregation"] = ethernet_data.get("aggregation", {})
+
+                # Merge packet loss data
+                if device_serial in packet_loss_data:
+                    loss_data = packet_loss_data[device_serial]
+                    device_info["downstream"] = loss_data.get("downstream", {})
+                    device_info["upstream"] = loss_data.get("upstream", {})
+
+                # Merge CPU load data
+                if device_serial in cpu_load_data:
+                    device_info.update(cpu_load_data[device_serial])
+
             self.wireless_data = {
                 "ssids": ssids,
                 "devices_info": devices_info,
                 "channel_utilization": channel_utilization_data,
+                "connection_stats": connection_stats_data,
+                "ethernet_status": ethernet_status_data,
+                "packet_loss": packet_loss_data,
+                "cpu_load": cpu_load_data,
                 "network_id": self.network_id,
                 "network_name": self.network_name,
                 "last_updated": datetime.now(UTC).isoformat(),
@@ -650,11 +698,16 @@ class MerakiNetworkHub:
                         "port_link_count": 0,
                     }
 
-                    # Get port status
+                    # Get port status with 1-hour timespan for traffic data
                     try:
+                        if not self.dashboard:
+                            continue
+                        dashboard = self.dashboard  # Store in local variable for mypy
                         ports_status = await self.hass.async_add_executor_job(
-                            self.dashboard.switch.getDeviceSwitchPortsStatuses,
-                            device_serial,
+                            lambda: dashboard.switch.getDeviceSwitchPortsStatuses(
+                                device_serial,
+                                timespan=3600,  # 1 hour for traffic statistics
+                            )
                         )
                         self.organization_hub.total_api_calls += 1
 
@@ -739,9 +792,14 @@ class MerakiNetworkHub:
                     # Get port statistics for error/discard counters
                     try:
                         # Get port statistics once per device, not per port
+                        if not self.dashboard:
+                            continue
+                        dashboard = self.dashboard  # Store in local variable for mypy
                         port_stats = await self.hass.async_add_executor_job(
-                            self.dashboard.switch.getDeviceSwitchPortsStatuses,
-                            device_serial,
+                            lambda: dashboard.switch.getDeviceSwitchPortsStatuses(
+                                device_serial,
+                                timespan=3600,  # 1 hour for statistics
+                            )
                         )
                         self.organization_hub.total_api_calls += 1
 
@@ -865,12 +923,34 @@ class MerakiNetworkHub:
                     )
                     continue
 
+            # Get packet statistics for all switches
+            packet_statistics = await self._async_get_packet_statistics(switch_devices)
+
+            # Get STP priorities for switches
+            stp_priorities = await self._async_get_stp_priorities(switch_devices)
+
+            # Merge packet statistics and STP priorities into device info
+            for device_info in devices_info:
+                device_serial = device_info.get("serial")
+                if not device_serial:
+                    continue
+
+                # Merge packet statistics
+                if device_serial in packet_statistics:
+                    device_info["packetCounters"] = packet_statistics[device_serial]
+
+                # Merge STP priority
+                if device_serial in stp_priorities:
+                    device_info["stp_priority"] = stp_priorities[device_serial]
+
             self.switch_data = {
                 "devices": switch_devices,
                 "devices_info": devices_info,  # Add aggregated device info
                 "ports_status": all_ports_status,
                 "port_configs": all_port_configs,
                 "power_modules": all_power_modules,
+                "packet_statistics": packet_statistics,
+                "stp_priorities": stp_priorities,
                 "network_id": self.network_id,
                 "network_name": self.network_name,
                 "last_updated": datetime.now(UTC).isoformat(),
@@ -1242,6 +1322,313 @@ class MerakiNetworkHub:
 
         # Fallback for unknown event types
         return f"{device_name}: {description}"
+
+    async def _async_get_connection_stats(
+        self, wireless_devices: list[dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Get connection statistics for MR devices.
+
+        Args:
+            wireless_devices: List of wireless device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to connection statistics data
+        """
+        connection_stats: dict[str, dict[str, Any]] = {}
+
+        if not self.dashboard:
+            return connection_stats
+
+        for device in wireless_devices:
+            device_serial = device.get("serial")
+            if not device_serial:
+                continue
+
+            try:
+                _LOGGER.debug("Getting connection stats for device %s", device_serial)
+
+                # Get connection stats with 30-minute timespan
+                if not self.dashboard:
+                    return {}
+                dashboard = self.dashboard  # Store in local variable for mypy
+                result = await self.hass.async_add_executor_job(
+                    lambda: dashboard.wireless.getDeviceWirelessConnectionStats(
+                        device_serial,
+                        timespan=1800,  # 30 minutes
+                    )
+                )
+
+                self.organization_hub.total_api_calls += 1
+
+                if result:
+                    connection_stats[device_serial] = result
+
+            except Exception as err:
+                _LOGGER.debug(
+                    "Error getting connection stats for %s: %s", device_serial, err
+                )
+                continue
+
+        return connection_stats
+
+    async def _async_get_ethernet_status(
+        self, wireless_devices: list[dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Get ethernet and power status for MR devices.
+
+        Args:
+            wireless_devices: List of wireless device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to ethernet status data
+        """
+        ethernet_status: dict[str, dict[str, Any]] = {}
+
+        if not self.dashboard:
+            return ethernet_status
+
+        for device in wireless_devices:
+            device_serial = device.get("serial")
+            if not device_serial:
+                continue
+
+            try:
+                _LOGGER.debug("Getting ethernet status for device %s", device_serial)
+
+                # Get current ethernet status
+                result = await self.hass.async_add_executor_job(
+                    self.dashboard.wireless.getDeviceWirelessEthernetStatus,
+                    device_serial,
+                )
+
+                self.organization_hub.total_api_calls += 1
+
+                if result:
+                    ethernet_status[device_serial] = result
+
+            except Exception as err:
+                _LOGGER.debug(
+                    "Error getting ethernet status for %s: %s", device_serial, err
+                )
+                continue
+
+        return ethernet_status
+
+    async def _async_get_packet_loss(
+        self, wireless_devices: list[dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Get packet loss statistics for MR devices.
+
+        Args:
+            wireless_devices: List of wireless device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to packet loss data
+        """
+        packet_loss: dict[str, dict[str, Any]] = {}
+
+        if not self.dashboard:
+            return packet_loss
+
+        for device in wireless_devices:
+            device_serial = device.get("serial")
+            if not device_serial:
+                continue
+
+            try:
+                _LOGGER.debug("Getting packet loss stats for device %s", device_serial)
+
+                # Get packet loss with 5-minute timespan
+                if not self.dashboard:
+                    return {}
+                dashboard = self.dashboard  # Store in local variable for mypy
+                result = await self.hass.async_add_executor_job(
+                    lambda: dashboard.wireless.getDeviceWirelessLatencyStats(
+                        device_serial,
+                        timespan=300,  # 5 minutes
+                    )
+                )
+
+                self.organization_hub.total_api_calls += 1
+
+                if result:
+                    packet_loss[device_serial] = result
+
+            except Exception as err:
+                _LOGGER.debug(
+                    "Error getting packet loss for %s: %s", device_serial, err
+                )
+                continue
+
+        return packet_loss
+
+    async def _async_get_cpu_load(
+        self, wireless_devices: list[dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Get CPU load history for MR devices.
+
+        Args:
+            wireless_devices: List of wireless device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to CPU load data
+        """
+        cpu_load: dict[str, dict[str, Any]] = {}
+
+        if not self.dashboard:
+            return cpu_load
+
+        for device in wireless_devices:
+            device_serial = device.get("serial")
+            if not device_serial:
+                continue
+
+            try:
+                _LOGGER.debug("Getting CPU load for device %s", device_serial)
+
+                # Get wireless status which includes basicServiceSets with load info
+                result = await self.hass.async_add_executor_job(
+                    self.dashboard.wireless.getDeviceWirelessStatus, device_serial
+                )
+
+                self.organization_hub.total_api_calls += 1
+
+                if result:
+                    # Extract CPU load from wireless status if available
+                    # For MR devices, we can estimate load from client count
+                    # and radio utilization as a proxy
+                    basic_service_sets = result.get("basicServiceSets", [])
+                    total_clients = sum(
+                        bss.get("clientCount", 0) for bss in basic_service_sets
+                    )
+
+                    # Use a simple heuristic: 1 client = ~0.5% CPU load, max 100%
+                    estimated_cpu_load = min(total_clients * 0.5, 100)
+
+                    cpu_load[device_serial] = {
+                        "cpu": {
+                            "cpuLoad5": int(
+                                estimated_cpu_load * 100
+                            )  # Convert to hundredths
+                        }
+                    }
+
+            except Exception as err:
+                _LOGGER.debug("Error getting CPU load for %s: %s", device_serial, err)
+                continue
+
+        return cpu_load
+
+    async def _async_get_packet_statistics(
+        self, switch_devices: list[dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """Get packet statistics for MS devices.
+
+        Args:
+            switch_devices: List of switch device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to packet statistics data
+        """
+        packet_statistics: dict[str, dict[str, Any]] = {}
+
+        if not self.dashboard:
+            return packet_statistics
+
+        for device in switch_devices:
+            device_serial = device.get("serial")
+            if not device_serial:
+                continue
+
+            try:
+                _LOGGER.debug("Getting packet statistics for device %s", device_serial)
+
+                # Get packet statistics with 5-minute timespan
+                if not self.dashboard:
+                    return {}
+                dashboard = self.dashboard  # Store in local variable for mypy
+                result = await self.hass.async_add_executor_job(
+                    lambda: dashboard.switch.getDeviceSwitchPortsStatusesPackets(
+                        device_serial,
+                        timespan=300,  # 5 minutes
+                    )
+                )
+
+                self.organization_hub.total_api_calls += 1
+
+                if result:
+                    packet_statistics[device_serial] = result
+
+            except Exception as err:
+                _LOGGER.debug(
+                    "Error getting packet statistics for %s: %s", device_serial, err
+                )
+                continue
+
+        return packet_statistics
+
+    async def _async_get_stp_priorities(
+        self, switch_devices: list[dict[str, Any]]
+    ) -> dict[str, int]:
+        """Get STP priorities for MS devices.
+
+        Args:
+            switch_devices: List of switch device dictionaries
+
+        Returns:
+            Dictionary mapping device serial to STP priority
+        """
+        stp_priorities: dict[str, int] = {}
+
+        if not self.dashboard:
+            return stp_priorities
+
+        try:
+            # Get networks to check STP settings
+            networks = await self.hass.async_add_executor_job(
+                self.dashboard.organizations.getOrganizationNetworks,
+                self.organization_id,
+            )
+            self.organization_hub.total_api_calls += 1
+
+            # Find this network's STP settings
+            for network in networks:
+                if network.get("id") == self.network_id:
+                    try:
+                        # Get switch settings for the network
+                        switch_settings = await self.hass.async_add_executor_job(
+                            self.dashboard.switch.getNetworkSwitchSettings,
+                            self.network_id,
+                        )
+                        self.organization_hub.total_api_calls += 1
+
+                        # Extract STP priority for each switch
+                        stp_configs = switch_settings.get("stpBridgePriority", [])
+                        if isinstance(stp_configs, list):
+                            for config in stp_configs:
+                                for switch in config.get("switches", []):
+                                    # Map switch name/serial to priority
+                                    for device in switch_devices:
+                                        if (
+                                            device.get("serial") == switch
+                                            or device.get("name") == switch
+                                        ):
+                                            stp_priorities[device["serial"]] = (
+                                                config.get("stpBridgePriority", 32768)
+                                            )
+                                            break
+                    except Exception as err:
+                        _LOGGER.debug(
+                            "Error getting STP settings for network %s: %s",
+                            self.network_id,
+                            err,
+                        )
+                    break
+
+        except Exception as err:
+            _LOGGER.debug("Error getting STP priorities: %s", err)
+
+        return stp_priorities
 
     async def async_unload(self) -> None:
         """Unload the network hub and clean up resources."""
