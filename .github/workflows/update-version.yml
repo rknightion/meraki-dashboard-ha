@@ -64,16 +64,26 @@ jobs:
           echo "" >> /tmp/new_changelog.md
 
           # Extract changes from release body
-          if grep -q "## Changes" /tmp/release_body.md; then
+          # Look for "What's Changed" or "Changes" section and extract until Installation
+          if grep -q "## What's Changed" /tmp/release_body.md; then
+            sed -n '/## What.s Changed/,/## Installation/p' /tmp/release_body.md | \
+              sed '/## Installation/d' | \
+              sed '/## What.s Changed/d' | \
+              sed '/^[[:space:]]*$/N;/^\n$/d' >> /tmp/new_changelog.md
+          elif grep -q "## Changes" /tmp/release_body.md; then
             sed -n '/## Changes/,/## Installation/p' /tmp/release_body.md | \
               sed '/## Installation/d' | \
               sed '/## Changes/d' | \
-              sed '/^[[:space:]]*$/d' >> /tmp/new_changelog.md
+              sed '/^[[:space:]]*$/N;/^\n$/d' >> /tmp/new_changelog.md
           else
-            echo "### Changed" >> /tmp/new_changelog.md
-            echo "- Release $VERSION" >> /tmp/new_changelog.md
+            # Fallback: extract everything before Installation section
+            sed -n '1,/## Installation/p' /tmp/release_body.md | \
+              sed '/## Installation/d' | \
+              sed '/^[[:space:]]*$/N;/^\n$/d' >> /tmp/new_changelog.md || \
+              echo "- Release $VERSION" >> /tmp/new_changelog.md
           fi
 
+          # Ensure there's a blank line after content
           echo "" >> /tmp/new_changelog.md
 
           # Add existing releases

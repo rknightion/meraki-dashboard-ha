@@ -42,8 +42,9 @@ jobs:
             SINCE_TAG="${{ github.event.inputs.since_tag }}"
           else
             # Auto-triggered by push - generate next version
-            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
-            echo "Latest tag: $LATEST_TAG"
+            # Get the latest version tag (matching v*.*.* pattern)
+            LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || echo "v0.24.0")
+            echo "Latest version tag: $LATEST_TAG"
 
             # Extract version and increment patch number
             LATEST_VERSION=${LATEST_TAG#v}
@@ -53,52 +54,81 @@ jobs:
             SINCE_TAG="$LATEST_TAG"
           fi
 
-          # If no since_tag provided in manual mode, get the latest tag
+          # If no since_tag provided in manual mode, get the latest version tag
           if [ -z "$SINCE_TAG" ]; then
-            SINCE_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            SINCE_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || echo "")
           fi
 
           # If no target_version provided in manual mode, auto-generate
           if [ -z "$TARGET_VERSION" ]; then
-            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
+            LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || echo "v0.24.0")
             LATEST_VERSION=${LATEST_TAG#v}
             IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
             NEW_PATCH=$((patch + 1))
             TARGET_VERSION="$major.$minor.$NEW_PATCH"
           fi
 
+          # Validate version format
+          if ! [[ "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid version format: $TARGET_VERSION"
+            exit 1
+          fi
+
           echo "Generating release notes for v$TARGET_VERSION"
           echo "Since tag: $SINCE_TAG"
 
-          # Create release notes
+          # Create release notes header
           cat > /tmp/release_notes.md << 'EOF'
-          ## Changes
+          ## What's Changed
 
           EOF
 
-          # Get commits since the last tag
+          # Get all commits since the last tag
           if [ -n "$SINCE_TAG" ]; then
-            COMMITS=$(git log --oneline "$SINCE_TAG..HEAD" --grep="^feat" --grep="^fix" --grep="^docs" --grep="^refactor" --grep="^perf" --grep="^test" --grep="^build" --grep="^ci" --grep="^style" --grep="^chore" --grep="^security" --extended-regexp)
+            ALL_COMMITS=$(git log --oneline "$SINCE_TAG..HEAD")
           else
-            COMMITS=$(git log --oneline HEAD~10..HEAD --grep="^feat" --grep="^fix" --grep="^docs" --grep="^refactor" --grep="^perf" --grep="^test" --grep="^build" --grep="^ci" --grep="^style" --grep="^chore" --grep="^security" --extended-regexp)
+            ALL_COMMITS=$(git log --oneline HEAD~20..HEAD)
           fi
 
-          # Categorize commits
-          echo "### 🚀 Features" >> /tmp/release_notes.md
-          echo "$COMMITS" | grep "^[a-f0-9]* feat" | sed 's/^[a-f0-9]* feat[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No new features" >> /tmp/release_notes.md
-          echo "" >> /tmp/release_notes.md
+          # Helper function to add section if commits exist
+          add_section() {
+            local title="$1"
+            local pattern="$2"
+            local prefix="$3"
+            
+            # Extract commits matching pattern
+            local commits=$(echo "$ALL_COMMITS" | grep -E "^[a-f0-9]+ $pattern" | sed "s/^[a-f0-9]* $prefix[^:]*: /- /" | sed 's/@.*//' || true)
+            
+            # Only add section if there are commits
+            if [ -n "$commits" ]; then
+              echo "### $title" >> /tmp/release_notes.md
+              echo "$commits" >> /tmp/release_notes.md
+              echo "" >> /tmp/release_notes.md
+            fi
+          }
 
-          echo "### 🐛 Bug Fixes" >> /tmp/release_notes.md
-          echo "$COMMITS" | grep "^[a-f0-9]* fix" | sed 's/^[a-f0-9]* fix[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No bug fixes" >> /tmp/release_notes.md
-          echo "" >> /tmp/release_notes.md
+          # Add sections only if they have content
+          add_section "🚀 Features" "feat(\(|:)" "feat"
+          add_section "🐛 Bug Fixes" "fix(\(|:)" "fix"
+          add_section "🧰 Maintenance" "(chore|ci|build|refactor)(\(|:)" "(chore|ci|build|refactor)"
+          add_section "📚 Documentation" "docs(\(|:)" "docs"
+          add_section "🔐 Security" "security(\(|:)" "security"
+          add_section "⚡ Performance" "perf(\(|:)" "perf"
+          add_section "✅ Tests" "test(\(|:)" "test"
 
-          echo "### 🧰 Maintenance" >> /tmp/release_notes.md
-          echo "$COMMITS" | grep -E "^[a-f0-9]* (chore|ci|build|refactor)" | sed -E 's/^[a-f0-9]* (chore|ci|build|refactor)[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No maintenance changes" >> /tmp/release_notes.md
-          echo "" >> /tmp/release_notes.md
+          # Add other commits section if there are any non-conventional commits
+          OTHER_COMMITS=$(echo "$ALL_COMMITS" | grep -v -E "^[a-f0-9]+ (feat|fix|docs|refactor|perf|test|build|ci|style|chore|security)(\(|:)" || true)
+          if [ -n "$OTHER_COMMITS" ]; then
+            echo "### 📋 Other Changes" >> /tmp/release_notes.md
+            echo "$OTHER_COMMITS" | sed 's/^[a-f0-9]* /- /' >> /tmp/release_notes.md
+            echo "" >> /tmp/release_notes.md
+          fi
 
-          echo "### 📚 Documentation" >> /tmp/release_notes.md
-          echo "$COMMITS" | grep "^[a-f0-9]* docs" | sed 's/^[a-f0-9]* docs[^:]*: /- /' | sed 's/@.*//' >> /tmp/release_notes.md || echo "- No documentation changes" >> /tmp/release_notes.md
-          echo "" >> /tmp/release_notes.md
+          # If no changes at all, add a message
+          if [ $(grep -c "^### " /tmp/release_notes.md || true) -eq 0 ]; then
+            echo "No significant changes in this release." >> /tmp/release_notes.md
+            echo "" >> /tmp/release_notes.md
+          fi
 
           # Add installation instructions
           cat >> /tmp/release_notes.md << 'EOF'
@@ -122,7 +152,8 @@ jobs:
           echo "Generated release notes:"
           cat /tmp/release_notes.md
 
-          # Save for next step
+          # Save version and notes for next step
+          echo "TARGET_VERSION=$TARGET_VERSION" >> $GITHUB_OUTPUT
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
           cat /tmp/release_notes.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -131,37 +162,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the target version from the previous step
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TARGET_VERSION="${{ github.event.inputs.target_version }}"
-            if [ -z "$TARGET_VERSION" ]; then
-              # Auto-generate if not provided in manual mode
-              LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
-              LATEST_VERSION=${LATEST_TAG#v}
-              IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
-              NEW_PATCH=$((patch + 1))
-              TARGET_VERSION="$major.$minor.$NEW_PATCH"
-            fi
-          else
-            # Auto-triggered by push - generate next version
-            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.24.0")
-            LATEST_VERSION=${LATEST_TAG#v}
-            IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
-            NEW_PATCH=$((patch + 1))
-            TARGET_VERSION="$major.$minor.$NEW_PATCH"
-          fi
-
+          # Get the target version from the previous step output
+          TARGET_VERSION="${{ steps.generate_notes.outputs.TARGET_VERSION }}"
           TAG_NAME="v$TARGET_VERSION"
 
+          # Validate tag format before proceeding
+          if ! [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid tag format: $TAG_NAME"
+            exit 1
+          fi
+
           # Check if ANY release (draft or published) already exists with this tag
-          EXISTING_RELEASE=$(gh release list --limit 50 | grep "$TAG_NAME" | head -1 | cut -f1 || echo "")
+          EXISTING_RELEASE=$(gh release list --limit 50 | grep "^$TAG_NAME" | head -1 | cut -f1 || echo "")
 
           if [ -n "$EXISTING_RELEASE" ]; then
             # Check if it's a draft
             IS_DRAFT=$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')
             if [ "$IS_DRAFT" = "true" ]; then
               echo "Updating existing draft release: $TAG_NAME"
-              gh release edit "$TAG_NAME" --notes-file /tmp/release_notes.md
+              gh release edit "$TAG_NAME" --notes-file /tmp/release_notes.md --title "Release $TAG_NAME"
               echo "✅ Updated draft release $TAG_NAME with new release notes"
             else
               echo "Release $TAG_NAME already exists and is published. Skipping update."
@@ -181,6 +200,9 @@ jobs:
 
             TAG_NAME="v$TARGET_VERSION"
             echo "Creating new draft release: $TAG_NAME"
-            gh release create "$TAG_NAME" --draft --title "$TAG_NAME" --notes-file /tmp/release_notes.md
+            gh release create "$TAG_NAME" --draft --title "Release $TAG_NAME" --notes-file /tmp/release_notes.md
             echo "✅ Created new draft release $TAG_NAME"
           fi
+
+          # Output the final tag name
+          echo "Created/Updated release: $TAG_NAME"
