@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.24.30] - 2025-07-27
+
+
+### 🧰 Maintenance
+fb1feff ci: remove GitHub Pages deployment from version update workflow
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/main'
+
+
 ## [0.24.29] - 2025-07-27
 
 
