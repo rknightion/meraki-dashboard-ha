@@ -67,6 +67,29 @@ _setup_logging()
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
 
 
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old entry.
+
+    This function is called by Home Assistant when the config entry version
+    is lower than the current version defined in the config flow.
+
+    Args:
+        hass: Home Assistant instance
+        entry: Configuration entry to migrate
+
+    Returns:
+        bool: True if migration successful, False otherwise
+    """
+    _LOGGER.debug(
+        "Migrating configuration entry from version %s to %s",
+        entry.version,
+        2,  # Current version from config_flow.py
+    )
+
+    # Delegate to the existing migration logic
+    return await async_migrate_config_entry(hass, entry)
+
+
 @performance_monitor("integration_setup")
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Meraki Dashboard from a config entry.
@@ -94,13 +117,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     try:
-        # Migrate configuration if needed
-        _LOGGER.debug("Checking if configuration migration is needed")
-        if not await async_migrate_config_entry(hass, entry):
-            _LOGGER.error("Failed to migrate configuration")
-            return False
-        _LOGGER.debug("Configuration migration completed successfully")
-
         # Validate configuration before setup
         try:
             _LOGGER.debug("Validating configuration schema")

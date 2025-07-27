@@ -961,9 +961,9 @@ class MerakiNetworkHub:
                     # Process events for state changes
                     if self.event_service:
                         try:
-                            device_info: MerakiDeviceData = next(
+                            device_info: MerakiDeviceData | None = next(
                                 (d for d in self.devices if d["serial"] == serial),
-                                {},
+                                None,
                             )
                             if device_info:
                                 device_info_with_domain = {

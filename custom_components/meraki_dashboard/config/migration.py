@@ -183,45 +183,56 @@ class ConfigMigration:
         """
         current_version = self.config_entry.version
 
+        # Handle None version (should be handled by async_migrate_config_entry, but be safe)
+        if current_version is None:
+            current_version = 1
+
         if current_version == 1:
             # Migrate from version 1 to 2
             if not await self.async_migrate_to_version_2():
                 return False
 
-            # Update version
+            # Get the updated options after migration
+            migrated_options = dict(self.config_entry.options or {})
+
+            # Validate the migrated configuration BEFORE updating version
+            try:
+                # Create the combined config that will be used after migration
+                combined_config = {
+                    **self._original_data,
+                    **migrated_options,
+                }
+
+                # Check that critical fields weren't changed
+                validate_config_migration(
+                    {**self._original_data, **self._original_options}, combined_config
+                )
+
+                # Final validation with schema
+                MerakiConfigSchema.from_config_entry(
+                    dict(self.config_entry.data),
+                    migrated_options,
+                )
+                _LOGGER.debug("Migrated configuration validated successfully")
+
+            except ConfigValidationError as err:
+                _LOGGER.error(
+                    "Configuration validation failed after migration: %s", err
+                )
+                # Restore original configuration
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    data=self._original_data,
+                    options=self._original_options,
+                    version=current_version,
+                )
+                return False
+
+            # Only update version if validation passed
             self.hass.config_entries.async_update_entry(
                 self.config_entry,
                 version=2,
             )
-
-        # Validate the migrated configuration
-        try:
-            combined_config = {
-                **self._original_data,
-                **dict(self.config_entry.options or {}),
-            }
-
-            validate_config_migration(
-                {**self._original_data, **self._original_options}, combined_config
-            )
-
-            # Final validation with schema
-            MerakiConfigSchema.from_config_entry(
-                dict(self.config_entry.data),
-                dict(self.config_entry.options) if self.config_entry.options else None,
-            )
-            _LOGGER.debug("Migrated configuration validated successfully")
-
-        except ConfigValidationError as err:
-            _LOGGER.error("Configuration validation failed after migration: %s", err)
-            # Restore original configuration
-            self.hass.config_entries.async_update_entry(
-                self.config_entry,
-                data=self._original_data,
-                options=self._original_options,
-                version=current_version,
-            )
-            return False
 
         return True
 
@@ -239,7 +250,20 @@ async def async_migrate_config_entry(
     Returns:
         True if migration successful
     """
-    if config_entry.version < 2:
+    # Handle case where version is not set (treat as version 1)
+    current_version = config_entry.version
+    if current_version is None:
+        _LOGGER.warning(
+            "Config entry has no version set, treating as version 1 for migration"
+        )
+        # Set version to 1 so migration can proceed
+        hass.config_entries.async_update_entry(
+            config_entry,
+            version=1,
+        )
+        current_version = 1
+
+    if current_version < 2:
         migration = ConfigMigration(hass, config_entry)
         return await migration.async_migrate()
 
