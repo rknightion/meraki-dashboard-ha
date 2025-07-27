@@ -17,6 +17,13 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.25.4] - 2025-07-27
+
+
+### 🐛 Bug Fixes
+- improve GitHub Actions authentication for workflows
+
+
 ## [0.25.1] - 2025-07-27
 
 
