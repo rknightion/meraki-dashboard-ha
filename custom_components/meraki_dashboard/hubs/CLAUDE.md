@@ -15,16 +15,16 @@ hubs/
 
 ### Two-Tier Hub System
 
-- **OrganizationHub**: Root-level hub that manages organization operations
-- **NetworkHub**: Device-type specific hubs created per network/device combination
+-   **OrganizationHub**: Root-level hub that manages organization operations
+-   **NetworkHub**: Device-type specific hubs created per network/device combination
 
 ### Hub Responsibilities
 
-- **ALL API interactions** - Never bypass hubs for direct API calls
-- Device discovery and capability detection
-- Data caching and intelligent refresh strategies
-- Performance monitoring and error handling
-- Hub factory for dynamic creation
+-   **ALL API interactions** - Never bypass hubs for direct API calls
+-   Device discovery and capability detection
+-   Data caching and intelligent refresh strategies
+-   Performance monitoring and error handling
+-   Hub factory for dynamic creation
 
 ## OrganizationHub Patterns
 
@@ -287,20 +287,20 @@ async def test_hub_api_interaction(hass):
 
 ### Do Not
 
-- **Never bypass hubs for direct API calls** - Always use hub methods
-- **Never create API clients outside hubs** - Hubs manage API configuration
-- **Never mix device types in single hub** - Use separate hubs per device type
-- **Never skip error handling decorators** - Always use `@handle_api_errors`
-- **Never ignore performance monitoring** - Use `@performance_monitor`
-- **Never cache sensitive data** - Only cache non-sensitive device information
+-   **Never bypass hubs for direct API calls** - Always use hub methods
+-   **Never create API clients outside hubs** - Hubs manage API configuration
+-   **Never mix device types in single hub** - Use separate hubs per device type
+-   **Never skip error handling decorators** - Always use `@handle_api_errors`
+-   **Never ignore performance monitoring** - Use `@performance_monitor`
+-   **Never cache sensitive data** - Only cache non-sensitive device information
 
 ### Performance Considerations
 
-- Use batch API calls when possible (`total_pages='all'`)
-- Implement intelligent caching based on data volatility
-- Respect API rate limits with built-in retry logic
-- Use tiered refresh intervals (static vs dynamic data)
-- Monitor consecutive failures for circuit breaker
+-   Use batch API calls when possible (`total_pages='all'`)
+-   Implement intelligent caching based on data volatility
+-   Respect API rate limits with built-in retry logic
+-   Use tiered refresh intervals (static vs dynamic data)
+-   Monitor consecutive failures for circuit breaker
 
 ## Hub Configuration
 
@@ -326,14 +326,14 @@ HUB_CONFIGURATIONS = {
 
 ### OrganizationHub Core Methods
 
-- `async_setup()` - Initialize organization hub and API client
-- `async_create_network_hubs()` - Factory for network hubs
-- `async_get_organizations()` - Get organization information
-- `async_get_networks()` - Discover networks and device types
+-   `async_setup()` - Initialize organization hub and API client
+-   `async_create_network_hubs()` - Factory for network hubs
+-   `async_get_organizations()` - Get organization information
+-   `async_get_networks()` - Discover networks and device types
 
 ### NetworkHub Core Methods
 
-- `async_get_devices()` - Get devices for this network/device type
-- `async_get_sensor_data()` - Get latest sensor readings
-- `async_update_device_cache()` - Update cached device information
-- `async_check_device_availability()` - Verify device connectivity
+-   `async_get_devices()` - Get devices for this network/device type
+-   `async_get_sensor_data()` - Get latest sensor readings
+-   `async_update_device_cache()` - Update cached device information
+-   `async_check_device_availability()` - Verify device connectivity

@@ -26,10 +26,10 @@ meraki_dashboard/
 
 ### Hub Architecture
 
-- **OrganizationHub** (`hubs/organization.py`): Root hub, manages org operations
-- **NetworkHub** (`hubs/network.py`): Device-specific operations per network
-- Hubs handle ALL API interactions - never bypass this pattern
-- Use hub factory for dynamic creation: `create_network_hubs()`
+-   **OrganizationHub** (`hubs/organization.py`): Root hub, manages org operations
+-   **NetworkHub** (`hubs/network.py`): Device-specific operations per network
+-   Hubs handle ALL API interactions - never bypass this pattern
+-   Use hub factory for dynamic creation: `create_network_hubs()`
 
 ### Entity Factory Pattern
 
@@ -94,10 +94,10 @@ def _create_mv_entities(self, device_data: dict) -> list[Entity]:
 
 ### Device Type Constants
 
-- `SENSOR_TYPE_MT` - Environmental sensors (temp, humidity, CO2, etc.)
-- `SENSOR_TYPE_MR` - Wireless access points (SSIDs, clients, RF metrics)
-- `SENSOR_TYPE_MS` - Switches (ports, PoE, traffic metrics)
-- `SENSOR_TYPE_MV` - Cameras (status, recording, motion detection)
+-   `SENSOR_TYPE_MT` - Environmental sensors (temp, humidity, CO2, etc.)
+-   `SENSOR_TYPE_MR` - Wireless access points (SSIDs, clients, RF metrics)
+-   `SENSOR_TYPE_MS` - Switches (ports, PoE, traffic metrics)
+-   `SENSOR_TYPE_MV` - Cameras (status, recording, motion detection)
 
 ## API Integration Patterns
 
@@ -235,19 +235,19 @@ await event_service.track_sensor_changes(device_serial, readings, device_info)
 
 ### Do Not
 
-- **Never bypass hub architecture** - All API calls must go through hubs
-- **Never create direct HTTP calls** - Always use Meraki Python SDK
-- **Never skip error handling decorators** on API methods
-- **Never log sensitive data** (API keys, device locations)
-- **Never modify coordinator state directly** - Use proper update methods
-- **Never create entities outside the factory pattern**
+-   **Never bypass hub architecture** - All API calls must go through hubs
+-   **Never create direct HTTP calls** - Always use Meraki Python SDK
+-   **Never skip error handling decorators** on API methods
+-   **Never log sensitive data** (API keys, device locations)
+-   **Never modify coordinator state directly** - Use proper update methods
+-   **Never create entities outside the factory pattern**
 
 ### Performance Considerations
 
-- Use batch API calls when possible (`total_pages='all'`)
-- Implement intelligent caching for static data
-- Respect API rate limits with built-in retry logic
-- Use tiered refresh intervals based on data type volatility
+-   Use batch API calls when possible (`total_pages='all'`)
+-   Implement intelligent caching for static data
+-   Respect API rate limits with built-in retry logic
+-   Use tiered refresh intervals based on data type volatility
 
 ## Testing Integration Components
 
@@ -264,9 +264,9 @@ async def test_component(hass):
 
 ## Critical Files
 
-- `__init__.py` - Integration setup, hub orchestration, logging config
-- `coordinator.py` - Main update coordinator with performance tracking
-- `entities/factory.py` - Entity creation based on device capabilities
-- `hubs/organization.py` - Root hub for organization operations
-- `config/schemas.py` - Type-safe configuration validation
-- `const.py` - All constants using StrEnum for type safety
+-   `__init__.py` - Integration setup, hub orchestration, logging config
+-   `coordinator.py` - Main update coordinator with performance tracking
+-   `entities/factory.py` - Entity creation based on device capabilities
+-   `hubs/organization.py` - Root hub for organization operations
+-   `config/schemas.py` - Type-safe configuration validation
+-   `const.py` - All constants using StrEnum for type safety

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -704,7 +705,8 @@ class MerakiNetworkHub:
                             continue
                         dashboard = self.dashboard  # Store in local variable for mypy
                         ports_status = await self.hass.async_add_executor_job(
-                            lambda: dashboard.switch.getDeviceSwitchPortsStatuses(
+                            functools.partial(
+                                dashboard.switch.getDeviceSwitchPortsStatuses,
                                 device_serial,
                                 timespan=3600,  # 1 hour for traffic statistics
                             )
@@ -796,7 +798,8 @@ class MerakiNetworkHub:
                             continue
                         dashboard = self.dashboard  # Store in local variable for mypy
                         port_stats = await self.hass.async_add_executor_job(
-                            lambda: dashboard.switch.getDeviceSwitchPortsStatuses(
+                            functools.partial(
+                                dashboard.switch.getDeviceSwitchPortsStatuses,
                                 device_serial,
                                 timespan=3600,  # 1 hour for statistics
                             )
@@ -1352,7 +1355,8 @@ class MerakiNetworkHub:
                     return {}
                 dashboard = self.dashboard  # Store in local variable for mypy
                 result = await self.hass.async_add_executor_job(
-                    lambda: dashboard.wireless.getDeviceWirelessConnectionStats(
+                    functools.partial(
+                        dashboard.wireless.getDeviceWirelessConnectionStats,
                         device_serial,
                         timespan=1800,  # 30 minutes
                     )
@@ -1443,7 +1447,8 @@ class MerakiNetworkHub:
                     return {}
                 dashboard = self.dashboard  # Store in local variable for mypy
                 result = await self.hass.async_add_executor_job(
-                    lambda: dashboard.wireless.getDeviceWirelessLatencyStats(
+                    functools.partial(
+                        dashboard.wireless.getDeviceWirelessLatencyStats,
                         device_serial,
                         timespan=300,  # 5 minutes
                     )
@@ -1548,7 +1553,8 @@ class MerakiNetworkHub:
                     return {}
                 dashboard = self.dashboard  # Store in local variable for mypy
                 result = await self.hass.async_add_executor_job(
-                    lambda: dashboard.switch.getDeviceSwitchPortsStatusesPackets(
+                    functools.partial(
+                        dashboard.switch.getDeviceSwitchPortsStatusesPackets,
                         device_serial,
                         timespan=300,  # 5 minutes
                     )
