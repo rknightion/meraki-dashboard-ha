@@ -39,7 +39,7 @@ jobs:
           echo "Updating CHANGELOG.md for version $VERSION"
 
           # Save release body to a file safely
-          cat > /tmp/release_body.md << 'RELEASE_BODY_EOF'
+          cat > /tmp/release_body.md << RELEASE_BODY_EOF
 $GITHUB_EVENT_RELEASE_BODY
 RELEASE_BODY_EOF
 
