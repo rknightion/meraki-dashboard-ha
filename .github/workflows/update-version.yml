@@ -40,8 +40,8 @@ jobs:
 
           # Save release body to a file safely
           cat > /tmp/release_body.md << RELEASE_BODY_EOF
-$GITHUB_EVENT_RELEASE_BODY
-RELEASE_BODY_EOF
+          $GITHUB_EVENT_RELEASE_BODY
+          RELEASE_BODY_EOF
 
           # Create new changelog with header
           cat > /tmp/new_changelog.md << 'EOF'
