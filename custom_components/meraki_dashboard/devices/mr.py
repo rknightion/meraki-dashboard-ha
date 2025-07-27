@@ -170,14 +170,12 @@ MR_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key=MR_SENSOR_POWER_AC_CONNECTED,
         name="AC Power Connected",
         icon="mdi:power-plug",
-        device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     MR_SENSOR_POWER_POE_CONNECTED: SensorEntityDescription(
         key=MR_SENSOR_POWER_POE_CONNECTED,
         name="PoE Power Connected",
         icon="mdi:ethernet-cable-electric",
-        device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     MR_SENSOR_AGGREGATION_ENABLED: SensorEntityDescription(
