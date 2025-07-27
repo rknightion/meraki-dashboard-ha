@@ -5,14 +5,14 @@ description = "Meraki Dashboard integration for Home Assistant"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 readme = "README.md"
 requires-python = "<3.14,>=3.13.2"
 keywords = ["homeassistant", "meraki", "cisco", "iot", "sensors"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache License 2.0",
     "Programming Language :: Python :: 3.13",
     "Topic :: Home Automation",
 ]
