@@ -35,30 +35,21 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          activate-environment: true
+          enable-cache: true
 
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
+        run: uv sync --all-extras
 
       - name: Run Ruff linting
-        run: poetry run ruff check --fix custom_components tests
+        run: uv run ruff check --fix custom_components tests
 
       - name: Run Ruff formatting
-        run: poetry run ruff format custom_components tests
+        run: uv run ruff format custom_components tests
 
   # Check with Home Assistant's hassfest
   hassfest:
@@ -101,33 +92,25 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          activate-environment: true
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          # Always install dependencies to ensure they're up to date
-          poetry install --no-interaction --with dev
+          # Install dependencies with all extras
+          uv sync --all-extras
           # Verify installation
-          poetry show
+          uv pip list
 
       - name: Verify Python environment
         run: |
-          poetry run python --version
-          poetry run python -c "import sys; print('Python executable:', sys.executable)"
-          poetry run python -c "from homeassistant.const import __version__; print('Home Assistant version:', __version__)"
+          uv run python --version
+          uv run python -c "import sys; print('Python executable:', sys.executable)"
+          uv run python -c "from homeassistant.const import __version__; print('Home Assistant version:', __version__)"
 
       - name: Create Home Assistant config directory
         run: mkdir -p /tmp/homeassistant
@@ -148,8 +131,8 @@ jobs:
           LC_ALL: C.UTF-8
           LANG: C.UTF-8
         run: |
-          # Run tests using poetry environment
-          poetry run python -m pytest tests/ \
+          # Run tests using uv environment
+          uv run python -m pytest tests/ \
             --cov=custom_components.meraki_dashboard \
             --cov-report=term-missing \
             --cov-report=xml \

@@ -20,13 +20,13 @@ help:
 
 # Install dependencies
 install:
-	poetry install
-	poetry run pre-commit install
+	uv sync --all-extras
+	uv run pre-commit install
 	@echo "Development environment setup complete!"
 
 # Run tests with coverage
 test:
-	poetry run pytest \
+	uv run pytest \
 		--cov=custom_components.meraki_dashboard \
 		--cov-report=term-missing:skip-covered \
 		--cov-report=html \
@@ -37,7 +37,7 @@ test:
 # Run specific test file or test
 test-file:
 ifdef FILE
-	poetry run pytest $(FILE) -vv
+	uv run pytest $(FILE) -vv
 else
 	@echo "Usage: make test-file FILE=tests/test_sensor.py"
 endif
@@ -45,48 +45,48 @@ endif
 # Run specific test by name pattern
 test-match:
 ifdef MATCH
-	poetry run pytest -k "$(MATCH)" -vv
+	uv run pytest -k "$(MATCH)" -vv
 else
 	@echo "Usage: make test-match MATCH=test_pattern"
 endif
 
 # Watch for changes and run tests
 test-watch:
-	@command -v watchmedo >/dev/null 2>&1 || (echo "Installing watchdog..." && poetry add --dev watchdog)
-	poetry run watchmedo shell-command \
+	@command -v watchmedo >/dev/null 2>&1 || (echo "Installing watchdog..." && uv add --dev watchdog)
+	uv run watchmedo shell-command \
 		--patterns="*.py" \
 		--recursive \
-		--command='clear && poetry run pytest -x' \
+		--command='clear && uv run pytest -x' \
 		custom_components tests
 
 # Run tests with debug output
 test-debug:
-	poetry run pytest -vv -s --log-cli-level=DEBUG
+	uv run pytest -vv -s --log-cli-level=DEBUG
 
 # Run all linters
 lint: lint-ruff lint-mypy lint-bandit
 
 # Individual linters
 lint-ruff:
-	poetry run ruff check custom_components tests
+	uv run ruff check custom_components tests
 
 lint-mypy:
-	poetry run mypy custom_components \
+	uv run mypy custom_components \
 		--ignore-missing-imports \
 		--install-types \
 		--non-interactive
 
 lint-bandit:
-	poetry run bandit -r custom_components -f json -o bandit-report.json
+	uv run bandit -r custom_components -f json -o bandit-report.json
 
 # Format code with ruff
 format:
-	poetry run ruff format custom_components tests
-	poetry run ruff check --fix custom_components tests
+	uv run ruff format custom_components tests
+	uv run ruff check --fix custom_components tests
 
 # Type check only
 type-check:
-	poetry run mypy custom_components
+	uv run mypy custom_components
 
 # Clean build artifacts
 clean:
@@ -106,7 +106,7 @@ clean:
 
 # Generate coverage report
 coverage:
-	poetry run pytest --cov=custom_components.meraki_dashboard --cov-report=html
+	uv run pytest --cov=custom_components.meraki_dashboard --cov-report=html
 	@echo "Coverage report generated in htmlcov/index.html"
 	@if command -v open >/dev/null 2>&1; then \
 		open htmlcov/index.html; \
@@ -118,11 +118,11 @@ coverage:
 
 # Run pre-commit hooks
 pre-commit:
-	poetry run pre-commit run --all-files
+	uv run pre-commit run --all-files
 
 # Update pre-commit hooks
 pre-commit-update:
-	poetry run pre-commit autoupdate
+	uv run pre-commit autoupdate
 
 # Validate integration (hassfest runs in CI)
 validate: lint pre-commit
@@ -166,21 +166,21 @@ release:
 
 # Update dependencies
 update-deps:
-	poetry update
-	poetry show --outdated
+	uv lock --upgrade
+	uv pip list --outdated
 
 # Security check
 security:
-	poetry run bandit -r custom_components
-	@if poetry show safety >/dev/null 2>&1; then \
-		poetry run safety check; \
+	uv run bandit -r custom_components
+	@if uv pip show safety >/dev/null 2>&1; then \
+		uv run safety check; \
 	else \
-		echo "Tip: Install safety with 'poetry add --dev safety' for vulnerability scanning"; \
+		echo "Tip: Install safety with 'uv add --dev safety' for vulnerability scanning"; \
 	fi
 
 # Type stubs
 stubs:
-	poetry run stubgen custom_components -o stubs/
+	uv run stubgen custom_components -o stubs/
 
 # Docker commands for testing
 docker-build:
@@ -222,7 +222,7 @@ setup: install
 
 # Check Python version
 check-python:
-	@python_version=$$(poetry run python --version 2>&1 | cut -d' ' -f2); \
+	@python_version=$$(uv run python --version 2>&1 | cut -d' ' -f2); \
 	required_version="3.12"; \
 	if [ "$$(printf '%s\n' "$$required_version" "$$python_version" | sort -V | head -n1)" != "$$required_version" ]; then \
 		echo "⚠️  Python $$python_version found, but $$required_version+ is required"; \
@@ -233,6 +233,6 @@ check-python:
 
 # Install git hooks
 install-hooks:
-	poetry run pre-commit install
-	poetry run pre-commit install --hook-type commit-msg
+	uv run pre-commit install
+	uv run pre-commit install --hook-type commit-msg
 	@echo "Git hooks installed!"

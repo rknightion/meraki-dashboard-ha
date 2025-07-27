@@ -10,7 +10,7 @@ This is a Home Assistant custom integration for Cisco Meraki Dashboard API. It m
 
 ### Development
 ```bash
-# Install dependencies (always use Poetry)
+# Install dependencies (always use uv)
 make install
 
 # Run linting and formatting
@@ -44,7 +44,7 @@ make test-file FILE=tests/test_hubs_network.py
 make test-match MATCH="test_sensor"
 
 # Test with coverage for specific module
-poetry run pytest tests/test_sensor_with_builders.py --cov=custom_components.meraki_dashboard.sensor
+uv run pytest tests/test_sensor_with_builders.py --cov=custom_components.meraki_dashboard.sensor
 
 # Debug failing tests
 make test-debug

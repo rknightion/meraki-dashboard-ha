@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.13.2"
+requires-python = "<3.14,>=3.13.2"
 keywords = ["homeassistant", "meraki", "cisco", "iot", "sensors"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -20,36 +20,29 @@ dependencies = [
     "meraki==2.0.3",
 ]
 
+[dependency-groups]
+dev = [
+    "homeassistant-stubs==2025.6.1",
+    "pytest-homeassistant-custom-component==0.13.252",
+    "pytest<9.0.0,>=8.0.0",
+    "pytest-asyncio<1.0.0,>=0.26.0",
+    "pytest-cov<7.0.0,>=6.0.0",
+    "ruff<1.0.0,>=0.12.5",
+    "mypy",
+    "pre-commit<5.0.0,>=4.2.0",
+    "bandit",
+    "types-requests",
+    "types-PyYAML",
+    "safety",
+    "marshmallow<5.0.0",
+]
+
+
 [project.urls]
 Homepage = "https://github.com/rknightion/meraki-dashboard-ha"
 Documentation = "https://rknightion.github.io/meraki-dashboard-ha"
 Repository = "https://github.com/rknightion/meraki-dashboard-ha"
 "Bug Tracker" = "https://github.com/rknightion/meraki-dashboard-ha/issues"
-
-[tool.poetry]
-package-mode = false
-
-[tool.poetry.dependencies]
-python = ">=3.13.2,<3.14"
-
-[tool.poetry.group.dev.dependencies]
-homeassistant-stubs = "2025.6.1"
-pytest-homeassistant-custom-component = "0.13.252"
-pytest = "^8.0.0"
-pytest-asyncio = "^0.26.0"
-pytest-cov = "^6.0.0"
-ruff = "^0.12.5"
-mypy = "*"
-pre-commit = "^4.2.0"
-bandit = "*"
-types-requests = "*"
-types-PyYAML = "*"
-safety = "*"
-marshmallow = "<5.0.0"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
 python_version = "3.13"
@@ -161,3 +154,4 @@ convention = "google"
 quote-style = "double"
 # Like Black, indent with spaces.
 indent-style = "space"
+
