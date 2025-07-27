@@ -17,6 +17,24 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.24.28] - 2025-07-27
+
+
+### 🧰 Maintenance
+334c7cc chore(deps): update dependency wrangler to v4
+
+### 📚 Documentation
+- add AGENTS.md with project guidelines and architecture
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/renovate/wrangler-4.x'
+- Remove markdownlint and fix Lambda functions
+- Auto stash before merge of "main" and "origin/main"
+- Auto stash before merge of "main" and "origin/main"
+- Merge remote-tracking branch 'origin/main'
+- enhance: expand integration with comprehensive documentation and new device metrics
+
+
 ## [0.24.24] - 2025-07-27
 
 
