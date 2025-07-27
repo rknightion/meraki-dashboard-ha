@@ -15,6 +15,8 @@ from homeassistant.components.sensor import SensorEntity, SensorEntityDescriptio
 from homeassistant.helpers.entity import Entity
 
 from ..const import (
+    MR_SENSOR_AGGREGATION_ENABLED,
+    MR_SENSOR_AGGREGATION_SPEED,
     MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
     MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
     MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
@@ -22,9 +24,20 @@ from ..const import (
     MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
     MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
     MR_SENSOR_CLIENT_COUNT,
+    MR_SENSOR_CONNECTION_STATS_ASSOC,
+    MR_SENSOR_CONNECTION_STATS_AUTH,
+    MR_SENSOR_CONNECTION_STATS_DHCP,
+    MR_SENSOR_CONNECTION_STATS_DNS,
+    MR_SENSOR_CONNECTION_STATS_SUCCESS,
+    MR_SENSOR_CPU_LOAD_5MIN,
     MR_SENSOR_ENABLED_SSIDS,
     MR_SENSOR_MEMORY_USAGE,
     MR_SENSOR_OPEN_SSIDS,
+    MR_SENSOR_PACKET_LOSS_DOWNSTREAM,
+    MR_SENSOR_PACKET_LOSS_TOTAL,
+    MR_SENSOR_PACKET_LOSS_UPSTREAM,
+    MR_SENSOR_POWER_AC_CONNECTED,
+    MR_SENSOR_POWER_POE_CONNECTED,
     MR_SENSOR_SSID_COUNT,
     MS_SENSOR_CONNECTED_CLIENTS,
     MS_SENSOR_CONNECTED_PORTS,
@@ -35,12 +48,27 @@ from ..const import (
     MS_SENSOR_PORT_DISCARDS,
     MS_SENSOR_PORT_ERRORS,
     MS_SENSOR_PORT_LINK_COUNT,
+    MS_SENSOR_PORT_PACKETS_BROADCAST,
+    MS_SENSOR_PORT_PACKETS_COLLISIONS,
+    MS_SENSOR_PORT_PACKETS_CRCERRORS,
+    MS_SENSOR_PORT_PACKETS_FRAGMENTS,
+    MS_SENSOR_PORT_PACKETS_MULTICAST,
+    MS_SENSOR_PORT_PACKETS_RATE_BROADCAST,
+    MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS,
+    MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS,
+    MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS,
+    MS_SENSOR_PORT_PACKETS_RATE_MULTICAST,
+    MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES,
+    MS_SENSOR_PORT_PACKETS_RATE_TOTAL,
+    MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES,
+    MS_SENSOR_PORT_PACKETS_TOTAL,
     MS_SENSOR_PORT_TRAFFIC_RECV,
     MS_SENSOR_PORT_TRAFFIC_SENT,
     MS_SENSOR_PORT_UTILIZATION,
     MS_SENSOR_PORT_UTILIZATION_RECV,
     MS_SENSOR_PORT_UTILIZATION_SENT,
     MS_SENSOR_POWER_MODULE_STATUS,
+    MS_SENSOR_STP_PRIORITY,
     MT_SENSOR_APPARENT_POWER,
     MT_SENSOR_BATTERY,
     MT_SENSOR_CO2,
@@ -646,6 +674,217 @@ def _register_mr_entities():
             network_hub,
         )
 
+    # Connection stats sensors
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CONNECTION_STATS_ASSOC)
+    def create_mr_connection_stats_assoc(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CONNECTION_STATS_ASSOC
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_STATS_ASSOC],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CONNECTION_STATS_AUTH)
+    def create_mr_connection_stats_auth(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CONNECTION_STATS_AUTH
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_STATS_AUTH],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CONNECTION_STATS_DHCP)
+    def create_mr_connection_stats_dhcp(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CONNECTION_STATS_DHCP
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_STATS_DHCP],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CONNECTION_STATS_DNS)
+    def create_mr_connection_stats_dns(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CONNECTION_STATS_DNS
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_STATS_DNS],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CONNECTION_STATS_SUCCESS)
+    def create_mr_connection_stats_success(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_CONNECTION_STATS_SUCCESS
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CONNECTION_STATS_SUCCESS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Power sensors
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_POWER_AC_CONNECTED)
+    def create_mr_power_ac_connected(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_POWER_AC_CONNECTED
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_POWER_AC_CONNECTED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_POWER_POE_CONNECTED)
+    def create_mr_power_poe_connected(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_POWER_POE_CONNECTED
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_POWER_POE_CONNECTED],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Aggregation sensors
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_AGGREGATION_ENABLED)
+    def create_mr_aggregation_enabled(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_AGGREGATION_ENABLED
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_AGGREGATION_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_AGGREGATION_SPEED)
+    def create_mr_aggregation_speed(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_AGGREGATION_SPEED
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_AGGREGATION_SPEED],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Packet loss sensors
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_PACKET_LOSS_DOWNSTREAM)
+    def create_mr_packet_loss_downstream(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_PACKET_LOSS_DOWNSTREAM
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_PACKET_LOSS_DOWNSTREAM],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_PACKET_LOSS_UPSTREAM)
+    def create_mr_packet_loss_upstream(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_PACKET_LOSS_UPSTREAM
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_PACKET_LOSS_UPSTREAM],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_PACKET_LOSS_TOTAL)
+    def create_mr_packet_loss_total(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MR_SENSOR_PACKET_LOSS_TOTAL
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_PACKET_LOSS_TOTAL],
+            config_entry_id,
+            network_hub,
+        )
+
+    # CPU load sensor
+    @EntityFactory.register(SENSOR_TYPE_MR, MR_SENSOR_CPU_LOAD_5MIN)
+    def create_mr_cpu_load_5min(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MR_SENSOR_CPU_LOAD_5MIN
+        from ..devices.mr import MerakiMRDeviceSensor
+        from ..sensor import MR_SENSOR_DESCRIPTIONS
+
+        return MerakiMRDeviceSensor(
+            device,
+            coordinator,
+            MR_SENSOR_DESCRIPTIONS[MR_SENSOR_CPU_LOAD_5MIN],
+            config_entry_id,
+            network_hub,
+        )
+
 
 def _register_ms_entities():
     """Register MS (Switch) sensor entities."""
@@ -890,6 +1129,259 @@ def _register_ms_entities():
             device,
             coordinator,
             MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Total sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_TOTAL)
+    def create_ms_port_packets_total(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_TOTAL
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_TOTAL],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Broadcast sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_BROADCAST)
+    def create_ms_port_packets_broadcast(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_BROADCAST
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_BROADCAST],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Multicast sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_MULTICAST)
+    def create_ms_port_packets_multicast(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_MULTICAST
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_MULTICAST],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets CRC Errors sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_CRCERRORS)
+    def create_ms_port_packets_crcerrors(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_CRCERRORS
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_CRCERRORS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Fragments sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_FRAGMENTS)
+    def create_ms_port_packets_fragments(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_FRAGMENTS
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_FRAGMENTS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Collisions sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_COLLISIONS)
+    def create_ms_port_packets_collisions(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_COLLISIONS
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_COLLISIONS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Topology Changes sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES)
+    def create_ms_port_packets_topologychanges(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate Total sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_TOTAL)
+    def create_ms_port_packets_rate_total(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_TOTAL
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_TOTAL],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate Broadcast sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_BROADCAST)
+    def create_ms_port_packets_rate_broadcast(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_BROADCAST
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_BROADCAST],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate Multicast sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_MULTICAST)
+    def create_ms_port_packets_rate_multicast(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_MULTICAST
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_MULTICAST],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate CRC Errors sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS)
+    def create_ms_port_packets_rate_crcerrors(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate Fragments sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS)
+    def create_ms_port_packets_rate_fragments(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate Collisions sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS)
+    def create_ms_port_packets_rate_collisions(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Port Packets Rate Topology Changes sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES)
+    def create_ms_port_packets_rate_topologychanges(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..const import MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES],
+            config_entry_id,
+            network_hub,
+        )
+
+    # STP Priority sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_STP_PRIORITY)
+    def create_ms_stp_priority(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MS_SENSOR_STP_PRIORITY
+        from ..devices.ms import MerakiMSDeviceSensor
+        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
+
+        return MerakiMSDeviceSensor(
+            device,
+            coordinator,
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_STP_PRIORITY],
             config_entry_id,
             network_hub,
         )
