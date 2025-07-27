@@ -7,14 +7,10 @@ repos:
     hooks:
     -   id: pre-commit-update
 
-
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     # Check for the latest ruff version
     rev: v0.12.5
     hooks:
-    -   id: ruff-check
-        args:
-        -   --fix
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
     -   id: ruff-format
@@ -25,13 +21,13 @@ repos:
     -   id: zizmor
 
   # Security checks
-# Temporarily disabled detect-secrets due to false positives
-# -   repo: https://github.com/Yelp/detect-secrets
-#     rev: v1.5.0
-#     hooks:
-#     -   id: detect-secrets
-#         args: ['--baseline', '.secrets.baseline']
-#         exclude: package.lock.json
+  # Temporarily disabled detect-secrets due to false positives
+  # - repo: https://github.com/Yelp/detect-secrets
+  #   rev: v1.5.0
+  #   hooks:
+  #     - id: detect-secrets
+  #       args: ['--baseline', '.secrets.baseline']
+  #       exclude: package.lock.json
 
 -   repo: https://github.com/PyCQA/bandit
     rev: '1.8.6' # Keep updated
@@ -134,6 +130,11 @@ repos:
     hooks:
     -   id: check-github-workflows
 
+-   repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+    -   id: gitleaks
+
 # Global excludes (your existing excludes are good)
 exclude: |
   (?x)^(
@@ -153,7 +154,3 @@ exclude: |
 # Configuration for specific tools
 files: ^(custom_components|script)/
 minimum_pre_commit_version: 3.0.0 # It's good to use a more recent version
--   repo: https://github.com/gitleaks/gitleaks
-    rev: v8.16.3
-    hooks:
-    -   id: gitleaks
