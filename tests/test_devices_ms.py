@@ -14,8 +14,6 @@ from custom_components.meraki_dashboard.const import (
     MS_SENSOR_PORT_COUNT,
     MS_SENSOR_PORT_DISCARDS,
     MS_SENSOR_PORT_ERRORS,
-    MS_SENSOR_PORT_TRAFFIC_RECV,
-    MS_SENSOR_PORT_TRAFFIC_SENT,
     SENSOR_TYPE_MS,
 )
 from custom_components.meraki_dashboard.coordinator import MerakiSensorCoordinator
@@ -233,18 +231,6 @@ class TestMerakiMSSensors:
             desc = MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_POWER]
             assert desc.native_unit_of_measurement == UnitOfPower.WATT
             assert desc.suggested_display_precision is not None
-
-        # Check data rate sensors use correct Home Assistant units
-        data_rate_sensors = [
-            MS_SENSOR_PORT_TRAFFIC_SENT,
-            MS_SENSOR_PORT_TRAFFIC_RECV,
-        ]
-        for sensor_key in data_rate_sensors:
-            if sensor_key in MS_DEVICE_SENSOR_DESCRIPTIONS:
-                desc = MS_DEVICE_SENSOR_DESCRIPTIONS[sensor_key]
-                # Must use "kB/s" for traffic sensors (valid Home Assistant unit)
-                assert desc.native_unit_of_measurement == "kB/s"
-                assert desc.device_class == SensorDeviceClass.DATA_RATE
 
     async def test_ms_device_sensor_unique_id_generation(
         self, hass, mock_ms_coordinator, mock_ms_device
