@@ -35,6 +35,9 @@ CONF_STATIC_DATA_INTERVAL: Final = "static_data_interval"
 CONF_SEMI_STATIC_DATA_INTERVAL: Final = "semi_static_data_interval"
 CONF_DYNAMIC_DATA_INTERVAL: Final = "dynamic_data_interval"
 
+# Device type enablement configuration
+CONF_ENABLED_DEVICE_TYPES: Final = "enabled_device_types"
+
 # MT (Environmental) sensor metrics
 MT_SENSOR_APPARENT_POWER: Final = "apparentPower"
 MT_SENSOR_BATTERY: Final = "battery"

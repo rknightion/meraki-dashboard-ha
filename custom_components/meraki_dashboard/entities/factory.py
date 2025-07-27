@@ -28,19 +28,13 @@ from ..const import (
     MR_SENSOR_SSID_COUNT,
     MS_SENSOR_CONNECTED_CLIENTS,
     MS_SENSOR_CONNECTED_PORTS,
-    MS_SENSOR_POE_LIMIT,
     MS_SENSOR_POE_PORTS,
     MS_SENSOR_POE_POWER,
     MS_SENSOR_PORT_COUNT,
     MS_SENSOR_PORT_DISCARDS,
     MS_SENSOR_PORT_ERRORS,
     MS_SENSOR_PORT_LINK_COUNT,
-    MS_SENSOR_PORT_TRAFFIC_RECV,
-    MS_SENSOR_PORT_TRAFFIC_SENT,
-    MS_SENSOR_PORT_UTILIZATION,
-    MS_SENSOR_PORT_UTILIZATION_RECV,
-    MS_SENSOR_PORT_UTILIZATION_SENT,
-    MS_SENSOR_POWER_MODULE_STATUS,
+    MS_SENSOR_STP_PRIORITY,
     MT_SENSOR_APPARENT_POWER,
     MT_SENSOR_BATTERY,
     MT_SENSOR_CO2,
@@ -708,70 +702,6 @@ def _register_ms_entities():
             network_hub,
         )
 
-    # Port Utilization Sent sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_UTILIZATION_SENT)
-    def create_ms_port_utilization_sent(
-        coordinator, device, config_entry_id, network_hub=None
-    ):
-        from ..devices.ms import MerakiMSDeviceSensor
-        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
-
-        return MerakiMSDeviceSensor(
-            device,
-            coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization_sent"],
-            config_entry_id,
-            network_hub,
-        )
-
-    # Port Utilization Received sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_UTILIZATION_RECV)
-    def create_ms_port_utilization_recv(
-        coordinator, device, config_entry_id, network_hub=None
-    ):
-        from ..devices.ms import MerakiMSDeviceSensor
-        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
-
-        return MerakiMSDeviceSensor(
-            device,
-            coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization_recv"],
-            config_entry_id,
-            network_hub,
-        )
-
-    # Port Traffic Sent sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_TRAFFIC_SENT)
-    def create_ms_port_traffic_sent(
-        coordinator, device, config_entry_id, network_hub=None
-    ):
-        from ..devices.ms import MerakiMSDeviceSensor
-        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
-
-        return MerakiMSDeviceSensor(
-            device,
-            coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["port_traffic_sent"],
-            config_entry_id,
-            network_hub,
-        )
-
-    # Port Traffic Received sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_TRAFFIC_RECV)
-    def create_ms_port_traffic_recv(
-        coordinator, device, config_entry_id, network_hub=None
-    ):
-        from ..devices.ms import MerakiMSDeviceSensor
-        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
-
-        return MerakiMSDeviceSensor(
-            device,
-            coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["port_traffic_recv"],
-            config_entry_id,
-            network_hub,
-        )
-
     # PoE Power sensor
     @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POE_POWER)
     def create_ms_poe_power(coordinator, device, config_entry_id, network_hub=None):
@@ -831,22 +761,6 @@ def _register_ms_entities():
             network_hub,
         )
 
-    # Power Module Status sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POWER_MODULE_STATUS)
-    def create_ms_power_module_status(
-        coordinator, device, config_entry_id, network_hub=None
-    ):
-        from ..devices.ms import MerakiMSDeviceSensor
-        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
-
-        return MerakiMSDeviceSensor(
-            device,
-            coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["power_module_status"],
-            config_entry_id,
-            network_hub,
-        )
-
     # Port Link Count sensor
     @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_LINK_COUNT)
     def create_ms_port_link_count(
@@ -863,33 +777,17 @@ def _register_ms_entities():
             network_hub,
         )
 
-    # PoE Limit sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_POE_LIMIT)
-    def create_ms_poe_limit(coordinator, device, config_entry_id, network_hub=None):
-        from ..const import MS_SENSOR_POE_LIMIT
+    # STP Priority sensor
+    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_STP_PRIORITY)
+    def create_ms_stp_priority(coordinator, device, config_entry_id, network_hub=None):
+        from ..const import MS_SENSOR_STP_PRIORITY
         from ..devices.ms import MerakiMSDeviceSensor
         from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
 
         return MerakiMSDeviceSensor(
             device,
             coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_POE_LIMIT],
-            config_entry_id,
-            network_hub,
-        )
-
-    # Port Utilization sensor
-    @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_UTILIZATION)
-    def create_ms_port_utilization(
-        coordinator, device, config_entry_id, network_hub=None
-    ):
-        from ..devices.ms import MerakiMSDeviceSensor
-        from ..sensor import MS_DEVICE_SENSOR_DESCRIPTIONS
-
-        return MerakiMSDeviceSensor(
-            device,
-            coordinator,
-            MS_DEVICE_SENSOR_DESCRIPTIONS["port_utilization"],
+            MS_DEVICE_SENSOR_DESCRIPTIONS[MS_SENSOR_STP_PRIORITY],
             config_entry_id,
             network_hub,
         )

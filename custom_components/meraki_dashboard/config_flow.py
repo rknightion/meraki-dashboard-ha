@@ -29,6 +29,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
     CONF_DYNAMIC_DATA_INTERVAL,
+    CONF_ENABLED_DEVICE_TYPES,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
@@ -49,6 +50,8 @@ from .const import (
     MIN_SCAN_INTERVAL_MINUTES,
     REGIONAL_BASE_URLS,
     SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
     STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     USER_AGENT,
@@ -272,6 +275,11 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         * 60,
                         CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
                         * 60,
+                        CONF_ENABLED_DEVICE_TYPES: [
+                            SENSOR_TYPE_MT,
+                            SENSOR_TYPE_MR,
+                            SENSOR_TYPE_MS,
+                        ],
                     },
                 )
 
@@ -351,6 +359,10 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     * 60,
                     CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
                     * 60,
+                    CONF_ENABLED_DEVICE_TYPES: user_input.get(
+                        CONF_ENABLED_DEVICE_TYPES,
+                        [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
+                    ),
                 }
 
                 # Validate the complete configuration
@@ -392,6 +404,29 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+                    vol.Optional(
+                        CONF_ENABLED_DEVICE_TYPES,
+                        default=[SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                selector.SelectOptionDict(
+                                    value=SENSOR_TYPE_MT,
+                                    label="MT - Environmental Sensors",
+                                ),
+                                selector.SelectOptionDict(
+                                    value=SENSOR_TYPE_MR,
+                                    label="MR - Wireless Access Points",
+                                ),
+                                selector.SelectOptionDict(
+                                    value=SENSOR_TYPE_MS,
+                                    label="MS - Switches",
+                                ),
+                            ],
+                            mode=selector.SelectSelectorMode.LIST,
+                            multiple=True,
+                        )
+                    ),
                     vol.Optional(CONF_SELECTED_DEVICES): device_selector,
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
@@ -599,9 +634,40 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         hubs_info = await self._get_available_hubs()
         current_options = dict(self.config_entry.options or {})
 
-        # Use HubConfigurationManager to build schema and description placeholders
+        # Use HubConfigurationManager to build the rest of the schema
         hub_config_manager = HubConfigurationManager(current_options)
         schema_dict = hub_config_manager.build_schema_dict(hubs_info)
+
+        # Add device type options at the top of the schema
+        schema_dict[
+            vol.Optional(
+                CONF_ENABLED_DEVICE_TYPES,
+                default=current_options.get(
+                    CONF_ENABLED_DEVICE_TYPES,
+                    [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
+                ),
+            )
+        ] = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    selector.SelectOptionDict(
+                        value=SENSOR_TYPE_MT,
+                        label="MT - Environmental Sensors",
+                    ),
+                    selector.SelectOptionDict(
+                        value=SENSOR_TYPE_MR,
+                        label="MR - Wireless Access Points",
+                    ),
+                    selector.SelectOptionDict(
+                        value=SENSOR_TYPE_MS,
+                        label="MS - Switches",
+                    ),
+                ],
+                mode=selector.SelectSelectorMode.LIST,
+                multiple=True,
+            )
+        )
+
         description_placeholders = hub_config_manager.build_description_placeholders(
             hubs_info
         )

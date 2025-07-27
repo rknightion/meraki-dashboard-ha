@@ -24,33 +24,12 @@ from ..const import (
     MS_SENSOR_CONNECTED_CLIENTS,
     MS_SENSOR_CONNECTED_PORTS,
     MS_SENSOR_MEMORY_USAGE,
-    MS_SENSOR_POE_LIMIT,
     MS_SENSOR_POE_PORTS,
     MS_SENSOR_POE_POWER,
     MS_SENSOR_PORT_COUNT,
     MS_SENSOR_PORT_DISCARDS,
     MS_SENSOR_PORT_ERRORS,
     MS_SENSOR_PORT_LINK_COUNT,
-    MS_SENSOR_PORT_PACKETS_BROADCAST,
-    MS_SENSOR_PORT_PACKETS_COLLISIONS,
-    MS_SENSOR_PORT_PACKETS_CRCERRORS,
-    MS_SENSOR_PORT_PACKETS_FRAGMENTS,
-    MS_SENSOR_PORT_PACKETS_MULTICAST,
-    MS_SENSOR_PORT_PACKETS_RATE_BROADCAST,
-    MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS,
-    MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS,
-    MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS,
-    MS_SENSOR_PORT_PACKETS_RATE_MULTICAST,
-    MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES,
-    MS_SENSOR_PORT_PACKETS_RATE_TOTAL,
-    MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES,
-    MS_SENSOR_PORT_PACKETS_TOTAL,
-    MS_SENSOR_PORT_TRAFFIC_RECV,
-    MS_SENSOR_PORT_TRAFFIC_SENT,
-    MS_SENSOR_PORT_UTILIZATION,
-    MS_SENSOR_PORT_UTILIZATION_RECV,
-    MS_SENSOR_PORT_UTILIZATION_SENT,
-    MS_SENSOR_POWER_MODULE_STATUS,
     MS_SENSOR_STP_PRIORITY,
 )
 from ..coordinator import MerakiSensorCoordinator
@@ -81,40 +60,6 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:ethernet-cable-electric",
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    MS_SENSOR_PORT_UTILIZATION_SENT: SensorEntityDescription(
-        key=MS_SENSOR_PORT_UTILIZATION_SENT,
-        name="Port Utilization Sent",
-        icon="mdi:upload-network",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        suggested_display_precision=1,
-    ),
-    MS_SENSOR_PORT_UTILIZATION_RECV: SensorEntityDescription(
-        key=MS_SENSOR_PORT_UTILIZATION_RECV,
-        name="Port Utilization Received",
-        icon="mdi:download-network",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        suggested_display_precision=1,
-    ),
-    MS_SENSOR_PORT_TRAFFIC_SENT: SensorEntityDescription(
-        key=MS_SENSOR_PORT_TRAFFIC_SENT,
-        name="Port Traffic Sent",
-        icon="mdi:upload",
-        device_class=SensorDeviceClass.DATA_RATE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="kB/s",
-        suggested_display_precision=0,
-    ),
-    MS_SENSOR_PORT_TRAFFIC_RECV: SensorEntityDescription(
-        key=MS_SENSOR_PORT_TRAFFIC_RECV,
-        name="Port Traffic Received",
-        icon="mdi:download",
-        device_class=SensorDeviceClass.DATA_RATE,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="kB/s",
-        suggested_display_precision=0,
-    ),
     MS_SENSOR_POE_POWER: SensorEntityDescription(
         key=MS_SENSOR_POE_POWER,
         name="PoE Power Usage",
@@ -142,34 +87,11 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:trash-can",
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
-    MS_SENSOR_POWER_MODULE_STATUS: SensorEntityDescription(
-        key=MS_SENSOR_POWER_MODULE_STATUS,
-        name="Power Module Status",
-        icon="mdi:power-plug",
-        state_class=SensorStateClass.MEASUREMENT,
-    ),
     MS_SENSOR_PORT_LINK_COUNT: SensorEntityDescription(
         key=MS_SENSOR_PORT_LINK_COUNT,
         name="Port Link Count",
         icon="mdi:ethernet-cable",
         state_class=SensorStateClass.MEASUREMENT,
-    ),
-    MS_SENSOR_POE_LIMIT: SensorEntityDescription(
-        key=MS_SENSOR_POE_LIMIT,
-        name="PoE Power Limit",
-        icon="mdi:power-plug-outline",
-        device_class=SensorDeviceClass.POWER,
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=UnitOfPower.WATT,
-        suggested_display_precision=0,
-    ),
-    MS_SENSOR_PORT_UTILIZATION: SensorEntityDescription(
-        key=MS_SENSOR_PORT_UTILIZATION,
-        name="Overall Port Utilization",
-        icon="mdi:speedometer",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement=PERCENTAGE,
-        suggested_display_precision=1,
     ),
     MS_SENSOR_MEMORY_USAGE: SensorEntityDescription(
         key=MS_SENSOR_MEMORY_USAGE,
@@ -178,106 +100,6 @@ MS_DEVICE_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
         suggested_display_precision=1,
-    ),
-    # Packet statistics
-    MS_SENSOR_PORT_PACKETS_TOTAL: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_TOTAL,
-        name="Port Total Packets",
-        icon="mdi:package-variant",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MS_SENSOR_PORT_PACKETS_BROADCAST: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_BROADCAST,
-        name="Port Broadcast Packets",
-        icon="mdi:broadcast",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MS_SENSOR_PORT_PACKETS_MULTICAST: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_MULTICAST,
-        name="Port Multicast Packets",
-        icon="mdi:access-point",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MS_SENSOR_PORT_PACKETS_CRCERRORS: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_CRCERRORS,
-        name="Port CRC Errors",
-        icon="mdi:alert-octagon",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MS_SENSOR_PORT_PACKETS_FRAGMENTS: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_FRAGMENTS,
-        name="Port Fragment Packets",
-        icon="mdi:puzzle",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MS_SENSOR_PORT_PACKETS_COLLISIONS: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_COLLISIONS,
-        name="Port Collision Packets",
-        icon="mdi:car-emergency",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_TOPOLOGYCHANGES,
-        name="Port Topology Changes",
-        icon="mdi:sitemap",
-        state_class=SensorStateClass.TOTAL_INCREASING,
-    ),
-    # Packet rates
-    MS_SENSOR_PORT_PACKETS_RATE_TOTAL: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_TOTAL,
-        name="Port Total Packet Rate",
-        icon="mdi:package-variant",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="packets/s",
-        suggested_display_precision=1,
-    ),
-    MS_SENSOR_PORT_PACKETS_RATE_BROADCAST: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_BROADCAST,
-        name="Port Broadcast Packet Rate",
-        icon="mdi:broadcast",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="packets/s",
-        suggested_display_precision=1,
-    ),
-    MS_SENSOR_PORT_PACKETS_RATE_MULTICAST: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_MULTICAST,
-        name="Port Multicast Packet Rate",
-        icon="mdi:access-point",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="packets/s",
-        suggested_display_precision=1,
-    ),
-    MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_CRCERRORS,
-        name="Port CRC Error Rate",
-        icon="mdi:alert-octagon",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="errors/s",
-        suggested_display_precision=2,
-    ),
-    MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_FRAGMENTS,
-        name="Port Fragment Rate",
-        icon="mdi:puzzle",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="fragments/s",
-        suggested_display_precision=2,
-    ),
-    MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_COLLISIONS,
-        name="Port Collision Rate",
-        icon="mdi:car-emergency",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="collisions/s",
-        suggested_display_precision=2,
-    ),
-    MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES: SensorEntityDescription(
-        key=MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES,
-        name="Port Topology Change Rate",
-        icon="mdi:sitemap",
-        state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="changes/s",
-        suggested_display_precision=2,
     ),
     # STP priority
     MS_SENSOR_STP_PRIORITY: SensorEntityDescription(
@@ -410,27 +232,7 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
             )
 
             # Handle special cases that need non-device data
-            if self.entity_description.key == MS_SENSOR_POE_LIMIT:
-                # Only get from power module data via API - no hardcoded values
-                power_modules = self.coordinator.data.get("power_modules", [])
-                device_power = next(
-                    (
-                        pm
-                        for pm in power_modules
-                        if pm.get("device_serial") == self._device_serial
-                    ),
-                    None,
-                )
-                if device_power:
-                    power_status = device_power.get("power_status", {})
-                    # Handle different power status formats
-                    if isinstance(power_status, list) and power_status:
-                        # If it's a list, take the first power module
-                        return power_status[0].get("powerLimit", 0)
-                    elif isinstance(power_status, dict):
-                        return power_status.get("powerLimit", 0)
-                return 0
-            elif self.entity_description.key == MS_SENSOR_MEMORY_USAGE:
+            if self.entity_description.key == MS_SENSOR_MEMORY_USAGE:
                 # Get memory usage from organization hub memory data
                 if hasattr(self.coordinator.network_hub, "organization_hub"):
                     memory_data = self.coordinator.network_hub.organization_hub.device_memory_usage.get(
@@ -526,24 +328,6 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
 
                 # Add first few port configurations as examples (limit to prevent overflow)
                 attrs["port_configurations"] = device_port_configs[:10]
-
-            # Add power module information if available
-            power_modules = self.coordinator.data.get("power_modules", [])
-            device_power = next(
-                (
-                    pm
-                    for pm in power_modules
-                    if pm.get("device_serial") == self._device_serial
-                ),
-                None,
-            )
-            if device_power:
-                power_status = device_power.get("power_status", {})
-                attrs["power_module_info"] = {
-                    "status": power_status.get("status"),
-                    "power_draw": power_status.get("powerDraw"),
-                    "power_limit": power_status.get("powerLimit"),
-                }
 
             # Add memory usage information if available
             if hasattr(self.coordinator.network_hub, "organization_hub"):

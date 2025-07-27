@@ -32,12 +32,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: main
-          fetch-depth: 0
+          fetch-depth: 0 # zizmor: ignore[artipacked]
 
       - name: Update CHANGELOG.md
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          CHANGES="${{ github.event.inputs.changes }}"
+          VERSION="$GITHUB_EVENT_INPUTS_VERSION"
+          CHANGES="$GITHUB_EVENT_INPUTS_CHANGES"
           RELEASE_DATE=$(date -u +"%Y-%m-%d")
 
           echo "Updating CHANGELOG.md for version $VERSION"
@@ -80,6 +80,9 @@ jobs:
 
           mv /tmp/new_changelog.md CHANGELOG.md
           echo "✅ Updated CHANGELOG.md with version $VERSION"
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_EVENT_INPUTS_CHANGES: ${{ github.event.inputs.changes }}
 
       - name: Update docs changelog
         run: |
@@ -129,10 +132,13 @@ jobs:
 
       - name: Commit changes
         run: |
-          VERSION="${{ github.event.inputs.version }}"
+          VERSION="$GITHUB_EVENT_INPUTS_VERSION"
 
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+          # Configure git to use the token for authentication
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
 
           if ! git diff --quiet CHANGELOG.md docs/changelog.md; then
             git add CHANGELOG.md docs/changelog.md
@@ -143,3 +149,7 @@ jobs:
           else
             echo "No changes to commit"
           fi
+
+        env:
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

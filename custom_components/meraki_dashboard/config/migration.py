@@ -12,6 +12,7 @@ from homeassistant.exceptions import ConfigValidationError
 from ..const import (
     CONF_DISCOVERY_INTERVAL,
     CONF_DYNAMIC_DATA_INTERVAL,
+    CONF_ENABLED_DEVICE_TYPES,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
@@ -22,6 +23,9 @@ from ..const import (
     DEFAULT_SCAN_INTERVAL,
     DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES,
     SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
+    SENSOR_TYPE_MT,
     STATIC_DATA_REFRESH_INTERVAL_MINUTES,
 )
 from .schemas import MerakiConfigSchema, validate_config_migration
@@ -51,6 +55,7 @@ class ConfigMigration:
         - Add tiered refresh intervals if missing
         - Ensure all intervals are in seconds
         - Add hub-specific configuration dictionaries if missing
+        - Add enabled_device_types with default values if missing
 
         Returns:
             True if migration successful
@@ -112,6 +117,18 @@ class ConfigMigration:
             _LOGGER.debug(
                 "Added default discovery interval: %s seconds",
                 DEFAULT_DISCOVERY_INTERVAL,
+            )
+
+        # Ensure enabled device types exists with default values
+        if CONF_ENABLED_DEVICE_TYPES not in options:
+            options[CONF_ENABLED_DEVICE_TYPES] = [
+                SENSOR_TYPE_MT,
+                SENSOR_TYPE_MR,
+                SENSOR_TYPE_MS,
+            ]
+            _LOGGER.debug(
+                "Added default enabled device types: %s",
+                options[CONF_ENABLED_DEVICE_TYPES],
             )
 
         # Convert any legacy minute-based intervals to seconds

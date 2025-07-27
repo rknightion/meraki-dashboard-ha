@@ -1620,7 +1620,7 @@ class MerakiNetworkHub:
                                             or device.get("name") == switch
                                         ):
                                             stp_priorities[device["serial"]] = (
-                                                config.get("stpBridgePriority", 32768)
+                                                config.get("stpPriority", 32768)
                                             )
                                             break
                     except Exception as err:
