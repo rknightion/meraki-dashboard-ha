@@ -39,18 +39,23 @@ jobs:
         run: |
           echo "Cleaning up old draft releases..."
           
-          # Get all draft releases
-          DRAFT_RELEASES=$(gh release list --limit 100 | grep "Draft" | awk '{print $1}' || true)
+          # Get all draft releases using JSON output for reliable parsing
+          DRAFT_RELEASES=$(gh api repos/${{ github.repository }}/releases --paginate | \
+            jq -r '.[] | select(.draft == true) | .tag_name' || true)
           
           if [ -n "$DRAFT_RELEASES" ]; then
-            echo "Found draft releases to clean up:"
-            echo "$DRAFT_RELEASES"
+            DRAFT_COUNT=$(echo "$DRAFT_RELEASES" | wc -l | tr -d ' ')
+            echo "Found $DRAFT_COUNT draft releases to clean up"
             
             # Delete each draft release
-            while IFS= read -r release; do
-              if [ -n "$release" ]; then
-                echo "Deleting draft release: $release"
-                gh release delete "$release" --yes --cleanup-tag || true
+            while IFS= read -r tag; do
+              if [ -n "$tag" ]; then
+                echo "Deleting draft release: $tag"
+                if gh release delete "$tag" --yes --cleanup-tag 2>/dev/null; then
+                  echo "  ✅ Successfully deleted $tag"
+                else
+                  echo "  ⚠️  Failed to delete $tag (may already be deleted)"
+                fi
               fi
             done <<< "$DRAFT_RELEASES"
             
