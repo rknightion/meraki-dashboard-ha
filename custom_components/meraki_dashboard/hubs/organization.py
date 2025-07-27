@@ -463,8 +463,17 @@ class MerakiOrganizationHub:
             network_id = network["id"]
             network_name = network["name"]
 
-            # Check each device type to see if there are devices in this network
+            # Get enabled device types from config
+            enabled_device_types = self.config_entry.options.get(
+                "enabled_device_types", [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]
+            )
+
+            # Check each enabled device type to see if there are devices in this network
             for device_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]:
+                # Skip if this device type is not enabled
+                if device_type not in enabled_device_types:
+                    _LOGGER.debug("Skipping disabled device type: %s", device_type)
+                    continue
                 try:
                     # Check if there are devices of this type in the network
                     if self.dashboard is None:

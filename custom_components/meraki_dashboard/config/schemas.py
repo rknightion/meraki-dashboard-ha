@@ -224,6 +224,9 @@ class MerakiConfigSchema:
     semi_static_data_interval: int = SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
     dynamic_data_interval: int = DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
 
+    # Device type enablement (all device types enabled by default)
+    enabled_device_types: list[str] = field(default_factory=lambda: ["MT", "MR", "MS"])
+
     def __post_init__(self) -> None:
         """Validate complete configuration after initialization."""
         # Validate core configuration
@@ -263,6 +266,17 @@ class MerakiConfigSchema:
             semi_static_interval=self.semi_static_data_interval,
             dynamic_interval=self.dynamic_data_interval,
         )
+
+        # Validate enabled device types
+        if not isinstance(self.enabled_device_types, list):
+            raise ConfigurationError("Enabled device types must be a list")
+
+        valid_device_types = ["MT", "MR", "MS", "MV"]
+        for device_type in self.enabled_device_types:
+            if device_type not in valid_device_types:
+                raise ConfigurationError(
+                    f"Invalid device type '{device_type}'. Must be one of: {', '.join(valid_device_types)}"
+                )
 
     @classmethod
     def from_config_entry(
@@ -306,6 +320,10 @@ class MerakiConfigSchema:
             dynamic_data_interval=options.get(
                 "dynamic_data_interval", DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
             ),
+            # Device type enablement
+            enabled_device_types=options.get(
+                "enabled_device_types", ["MT", "MR", "MS"]
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -328,6 +346,7 @@ class MerakiConfigSchema:
             "static_data_interval": self.static_data_interval,
             "semi_static_data_interval": self.semi_static_data_interval,
             "dynamic_data_interval": self.dynamic_data_interval,
+            "enabled_device_types": self.enabled_device_types,
         }
 
 
