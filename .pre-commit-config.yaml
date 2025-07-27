@@ -10,7 +10,7 @@ repos:
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     # Check for the latest ruff version
-    rev: v0.12.2
+    rev: v0.12.5
     hooks:
     -   id: ruff-check
         args:
@@ -34,7 +34,7 @@ repos:
 #         exclude: package.lock.json
 
 -   repo: https://github.com/PyCQA/bandit
-    rev: '1.8.5' # Keep updated
+    rev: '1.8.6' # Keep updated
     hooks:
     -   id: bandit
         args:
@@ -90,7 +90,7 @@ repos:
 
   # Python static type checking
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1 # Keep updated
+    rev: v1.17.0 # Keep updated
     hooks:
     -   id: mypy
         # Your mypy args are fine, consider moving to pyproject.toml
