@@ -25,7 +25,7 @@ dev = [
     "homeassistant-stubs==2025.6.1",
     "pytest-homeassistant-custom-component==0.13.252",
     "pytest<9.0.0,>=8.0.0",
-    "pytest-asyncio<1.0.0,>=0.26.0",
+    "pytest-asyncio==0.26.0",
     "pytest-cov<7.0.0,>=6.0.0",
     "ruff<1.0.0,>=0.12.5",
     "mypy",
