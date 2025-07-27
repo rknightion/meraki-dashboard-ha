@@ -1,0 +1,12 @@
+name = "meraki-ha-docs"
+compatibility_date = "2025-04-01"
+routes = [
+  { pattern = "meraki.ha-components.m7kni.com", custom_domain = true }
+]
+
+[assets]
+directory = "./site"
+not_found_handling = "404-page"
+
+[observability.logs]
+enabled = true

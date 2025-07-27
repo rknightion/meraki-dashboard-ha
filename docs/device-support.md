@@ -1,0 +1,138 @@
+# Device Support
+
+The Meraki Dashboard integration supports various Meraki device types, each providing different metrics and capabilities.
+
+## Supported Device Types
+
+### MT - Environmental Sensors
+
+Environmental monitoring sensors providing real-time data about physical spaces.
+
+**Supported Metrics:**
+- Temperature (°C/°F)
+- Humidity (%)
+- Air Quality (CO₂, PM2.5, TVOC)
+- Noise levels (dB)
+- Water detection
+- Door status
+- Motion detection
+- Power metrics (voltage, current, power factor)
+
+**Common Models:** MT10, MT12, MT14, MT20, MT30
+
+### MR - Wireless Access Points
+
+Enterprise-grade wireless access points with comprehensive network metrics.
+
+**Supported Metrics:**
+- SSID status and configuration
+- Client count and connections
+- Channel utilization (2.4GHz/5GHz)
+- Connection statistics (auth, DHCP, DNS)
+- Power status (AC/PoE)
+- Packet loss metrics
+- CPU load
+- Memory usage
+
+**Common Models:** MR33, MR42, MR46, MR52, MR84
+
+### MS - Switches
+
+Managed switches with port-level monitoring and PoE capabilities.
+
+**Supported Metrics:**
+- Port status and connectivity
+- Traffic statistics (sent/received)
+- PoE power consumption
+- Client count per port
+- Packet statistics (broadcast, multicast, errors)
+- STP priority
+- Memory usage
+
+**Common Models:** MS120, MS210, MS225, MS350, MS425
+
+### MV - Cameras (Coming Soon)
+
+Security cameras with video analytics and motion detection.
+
+**Planned Metrics:**
+- Camera status
+- Recording status
+- Motion detection events
+- Analytics zones
+- Video quality metrics
+
+## Entity Creation
+
+Entities are created based on device capabilities:
+
+- Only available metrics create entities
+- Entities follow consistent naming patterns
+- Network-level aggregation available for some metrics
+
+## Metric Availability
+
+Not all devices support all metrics:
+
+- Check device documentation for specific capabilities
+- Entities only appear if the device supports the metric
+- Some metrics require specific firmware versions
+
+## Binary Sensors
+
+Certain metrics create binary sensors:
+
+- Door open/closed (MT)
+- Water detected/not detected (MT)
+- Button pressed/not pressed (MT)
+- Motion detected/not detected (MV)
+
+## Device Attributes
+
+Each device entity includes attributes:
+
+- Network ID and name
+- Device serial number
+- Model information
+- Last reported timestamp
+- Additional device-specific metadata
+
+## Network Aggregation
+
+Some metrics are aggregated at the network level:
+
+- Total connected clients
+- Total PoE power usage
+- Network-wide port utilization
+- Combined SSID statistics
+
+## Limitations
+
+- Real-time data subject to API polling intervals
+- Historical data not available through integration
+- Some advanced metrics require higher-tier licenses
+- API rate limits may affect update frequency
+
+## Future Support
+
+Planned device support:
+
+- MX Security Appliances
+- MG Cellular Gateways
+- Enhanced MV camera integration
+- Additional sensor types
+
+## Troubleshooting Device Support
+
+If devices aren't appearing:
+
+1. Verify device is online in Meraki Dashboard
+2. Check API key has access to the device's network
+3. Ensure device firmware is up to date
+4. Review Home Assistant logs for errors
+
+## Next Steps
+
+- [Entity Naming](naming-conventions.md) - Understanding entity IDs
+- [Configuration](configuration.md) - Optimizing device polling
+- [FAQ](faq.md) - Common device-related questions

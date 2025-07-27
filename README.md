@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha?ref=badge_shield)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg)](https://meraki.ha-components.m7kni.com)
 
 ![Meraki Logo](docs/images/icon.png)
 
@@ -101,15 +102,21 @@ After setup, you can modify options by clicking "Configure" on the integration:
 - **Enable Auto-Discovery**: Automatically discover and add new MT devices
 - **Device Discovery Interval**: How often to scan for new devices when auto-discovery is enabled
 
+## Documentation
+
+📚 **[Full Documentation](https://meraki.ha-components.m7kni.com)** - Comprehensive guides, API reference, and troubleshooting
+
 ## Supported Devices
 
 ### Currently Supported
 - **MT Series Environmental Sensors**
   - MT10, MT12, MT14, MT15, MT20, MT30, MT40
+- **MR Series Wireless Access Points**
+  - All MR models with SSID, client, and performance metrics
+- **MS Series Switches**
+  - All MS models with port status, PoE, and traffic metrics
 
 ### Planned Support
-- MR Series Wireless Access Points
-- MS Series Switches
 - MV Series Cameras
 
 ## Entity Naming

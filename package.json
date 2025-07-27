@@ -1,0 +1,24 @@
+{
+  "name": "meraki-dashboard-ha-docs",
+  "version": "1.0.0",
+  "description": "Documentation for Meraki Dashboard Home Assistant Integration",
+  "scripts": {
+    "build": "pip install -r requirements-docs.txt && mkdocs build",
+    "serve": "mkdocs serve",
+    "deploy": "wrangler pages deploy site"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rknightion/meraki-dashboard-ha.git"
+  },
+  "keywords": [
+    "home-assistant",
+    "meraki",
+    "documentation"
+  ],
+  "author": "Rob Knighton",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
