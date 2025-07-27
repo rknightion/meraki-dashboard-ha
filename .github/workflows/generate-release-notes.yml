@@ -33,6 +33,32 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Clean up old draft releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning up old draft releases..."
+          
+          # Get all draft releases
+          DRAFT_RELEASES=$(gh release list --limit 100 | grep "Draft" | awk '{print $1}' || true)
+          
+          if [ -n "$DRAFT_RELEASES" ]; then
+            echo "Found draft releases to clean up:"
+            echo "$DRAFT_RELEASES"
+            
+            # Delete each draft release
+            while IFS= read -r release; do
+              if [ -n "$release" ]; then
+                echo "Deleting draft release: $release"
+                gh release delete "$release" --yes --cleanup-tag || true
+              fi
+            done <<< "$DRAFT_RELEASES"
+            
+            echo "✅ Cleaned up all old draft releases"
+          else
+            echo "No draft releases to clean up"
+          fi
+
       - name: Generate release notes from git history
         id: generate_notes
         run: |
@@ -41,16 +67,65 @@ jobs:
             TARGET_VERSION="${{ github.event.inputs.target_version }}"
             SINCE_TAG="${{ github.event.inputs.since_tag }}"
           else
-            # Auto-triggered by push - generate next version
+            # Auto-triggered by push - use semantic versioning
             # Get the latest version tag (matching v*.*.* pattern)
             LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1 || echo "v0.24.0")
             echo "Latest version tag: $LATEST_TAG"
 
-            # Extract version and increment patch number
+            # Extract version
             LATEST_VERSION=${LATEST_TAG#v}
             IFS='.' read -r major minor patch <<< "$LATEST_VERSION"
-            NEW_PATCH=$((patch + 1))
-            TARGET_VERSION="$major.$minor.$NEW_PATCH"
+            
+            # Get all commits since the last tag to determine version bump
+            if [ -n "$LATEST_TAG" ]; then
+              COMMITS=$(git log --oneline "$LATEST_TAG..HEAD")
+            else
+              COMMITS=$(git log --oneline HEAD~20..HEAD)
+            fi
+            
+            # Determine version bump based on conventional commits
+            MAJOR_BUMP=false
+            MINOR_BUMP=false
+            PATCH_BUMP=false
+            
+            # Check for breaking changes (major bump)
+            if echo "$COMMITS" | grep -qE "BREAKING CHANGE:|^[a-f0-9]+ [a-z]+(\(.*\))?!:"; then
+              echo "Found breaking changes - major version bump"
+              MAJOR_BUMP=true
+            fi
+            
+            # Check for features (minor bump)
+            if echo "$COMMITS" | grep -qE "^[a-f0-9]+ feat(\(|:)"; then
+              echo "Found new features - minor version bump"
+              MINOR_BUMP=true
+            fi
+            
+            # Check for fixes and other changes (patch bump)
+            if echo "$COMMITS" | grep -qE "^[a-f0-9]+ (fix|chore|docs|style|refactor|perf|test|build|ci)(\(|:)"; then
+              echo "Found fixes/maintenance - patch version bump"
+              PATCH_BUMP=true
+            fi
+            
+            # Apply version bump
+            if [ "$MAJOR_BUMP" = true ]; then
+              major=$((major + 1))
+              minor=0
+              patch=0
+              echo "Bumping major version: $LATEST_VERSION -> $major.$minor.$patch"
+            elif [ "$MINOR_BUMP" = true ]; then
+              minor=$((minor + 1))
+              patch=0
+              echo "Bumping minor version: $LATEST_VERSION -> $major.$minor.$patch"
+            elif [ "$PATCH_BUMP" = true ]; then
+              patch=$((patch + 1))
+              echo "Bumping patch version: $LATEST_VERSION -> $major.$minor.$patch"
+            else
+              # Default to patch bump if no conventional commits found
+              patch=$((patch + 1))
+              echo "No conventional commits found, default patch bump: $LATEST_VERSION -> $major.$minor.$patch"
+            fi
+            
+            TARGET_VERSION="$major.$minor.$patch"
             SINCE_TAG="$LATEST_TAG"
           fi
 
@@ -158,7 +233,7 @@ jobs:
           cat /tmp/release_notes.md >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create or update draft release
+      - name: Create draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -172,37 +247,15 @@ jobs:
             exit 1
           fi
 
-          # Check if ANY release (draft or published) already exists with this tag
-          EXISTING_RELEASE=$(gh release list --limit 50 | grep "^$TAG_NAME" | head -1 | cut -f1 || echo "")
-
-          if [ -n "$EXISTING_RELEASE" ]; then
-            # Check if it's a draft
-            IS_DRAFT=$(gh release view "$TAG_NAME" --json isDraft --jq '.isDraft')
-            if [ "$IS_DRAFT" = "true" ]; then
-              echo "Updating existing draft release: $TAG_NAME"
-              gh release edit "$TAG_NAME" --notes-file /tmp/release_notes.md --title "Release $TAG_NAME"
-              echo "✅ Updated draft release $TAG_NAME with new release notes"
-            else
-              echo "Release $TAG_NAME already exists and is published. Skipping update."
-              echo "✅ Skipped updating published release $TAG_NAME"
-            fi
+          # Check if a published release already exists with this tag
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists. Skipping creation."
+            echo "⚠️ Skipped creating release $TAG_NAME (already exists)"
           else
-            # Find a unique version number if needed
-            COUNTER=0
-            ORIGINAL_VERSION="$TARGET_VERSION"
-            while gh release view "v$TARGET_VERSION" >/dev/null 2>&1; do
-              COUNTER=$((COUNTER + 1))
-              IFS='.' read -r major minor patch <<< "$ORIGINAL_VERSION"
-              NEW_PATCH=$((patch + COUNTER))
-              TARGET_VERSION="$major.$minor.$NEW_PATCH"
-              echo "Tag v$ORIGINAL_VERSION exists, trying v$TARGET_VERSION"
-            done
-
-            TAG_NAME="v$TARGET_VERSION"
             echo "Creating new draft release: $TAG_NAME"
             gh release create "$TAG_NAME" --draft --title "Release $TAG_NAME" --notes-file /tmp/release_notes.md
             echo "✅ Created new draft release $TAG_NAME"
           fi
 
           # Output the final tag name
-          echo "Created/Updated release: $TAG_NAME"
+          echo "Release tag: $TAG_NAME"
