@@ -66,7 +66,6 @@ theme:
 
 plugins:
   - privacy
-  - social
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
       lang: en
@@ -193,19 +192,13 @@ nav:
     - FAQ: faq.md
 
 extra:
-  analytics:
-    provider: google
-    property: !ENV GOOGLE_ANALYTICS_KEY
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/rknightion/meraki-dashboard-ha
+      link: https://github.com/rknightion/autopi-ha
       name: GitHub Repository
     - icon: material/home-assistant
       link: https://www.home-assistant.io
       name: Home Assistant
-    - icon: fontawesome/solid/paper-plane
-      link: mailto:rob@example.com
-      name: Send a message
   version:
     provider: mike
     default: stable
@@ -226,7 +219,7 @@ extra_css:
 
 extra_javascript:
   - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
   - javascripts/extra.js
   - javascripts/seo.js

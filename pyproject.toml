@@ -17,7 +17,7 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 dependencies = [
-    "meraki==2.0.3",
+    "meraki==2.0.3"
 ]
 
 [dependency-groups]
@@ -31,6 +31,13 @@ dev = [
     "safety",
     "marshmallow<5.0.0",
     "pytest-homeassistant-custom-component>=0.13.263",
+    "mkdocs-git-authors-plugin>=0.10.0",
+    "mkdocs-git-committers-plugin-2>=2.5.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+    "mkdocs-glightbox>=0.4.0",
+    "mkdocs-include-markdown-plugin>=7.1.6",
+    "mkdocs-material>=9.6.16",
+    "mkdocs-minify-plugin>=0.8.0",
 ]
 
 
