@@ -1,7 +1,7 @@
-name = "meraki-ha-docs"
+name = "meraki-ha"
 compatibility_date = "2025-04-01"
 routes = [
-  { pattern = "meraki.homeassistant.m7kni.com", custom_domain = true }
+  { pattern = "m7kni.io/meraki-dashboard-ha/*", custom_domain = true }
 ]
 
 [assets]
