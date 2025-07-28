@@ -1301,13 +1301,6 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "meraki" },
-    { name = "mkdocs-git-authors-plugin" },
-    { name = "mkdocs-git-committers-plugin-2" },
-    { name = "mkdocs-git-revision-date-localized-plugin" },
-    { name = "mkdocs-glightbox" },
-    { name = "mkdocs-include-markdown-plugin" },
-    { name = "mkdocs-material" },
-    { name = "mkdocs-minify-plugin" },
 ]
 
 [package.dev-dependencies]
@@ -1315,6 +1308,13 @@ dev = [
     { name = "bandit" },
     { name = "homeassistant-stubs" },
     { name = "marshmallow" },
+    { name = "mkdocs-git-authors-plugin" },
+    { name = "mkdocs-git-committers-plugin-2" },
+    { name = "mkdocs-git-revision-date-localized-plugin" },
+    { name = "mkdocs-glightbox" },
+    { name = "mkdocs-include-markdown-plugin" },
+    { name = "mkdocs-material" },
+    { name = "mkdocs-minify-plugin" },
     { name = "mypy" },
     { name = "pytest-homeassistant-custom-component" },
     { name = "ruff" },
@@ -1324,8 +1324,13 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "meraki", specifier = "==2.0.3" },
+requires-dist = [{ name = "meraki", specifier = "==2.0.3" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bandit" },
+    { name = "homeassistant-stubs", specifier = "==2025.7.3" },
+    { name = "marshmallow", specifier = "<5.0.0" },
     { name = "mkdocs-git-authors-plugin", specifier = ">=0.10.0" },
     { name = "mkdocs-git-committers-plugin-2", specifier = ">=2.5.0" },
     { name = "mkdocs-git-revision-date-localized-plugin", specifier = ">=1.4.7" },
@@ -1333,13 +1338,6 @@ requires-dist = [
     { name = "mkdocs-include-markdown-plugin", specifier = ">=7.1.6" },
     { name = "mkdocs-material", specifier = ">=9.6.16" },
     { name = "mkdocs-minify-plugin", specifier = ">=0.8.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit" },
-    { name = "homeassistant-stubs", specifier = "==2025.7.3" },
-    { name = "marshmallow", specifier = "<5.0.0" },
     { name = "mypy" },
     { name = "pytest-homeassistant-custom-component", specifier = ">=0.13.263" },
     { name = "ruff", specifier = ">=0.12.5,<1.0.0" },
