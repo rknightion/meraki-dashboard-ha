@@ -121,7 +121,7 @@ graph TB
 ### Manual installation
 
 **Download and install files**
-1. Go to the [latest release page]({{ site.repository }}/releases)
+1. Go to the [latest release page](https://github.com/rknightion/meraki-dashboard-ha/releases)
 2. Download `meraki_dashboard.zip`
 3. Extract to `custom_components/meraki_dashboard/` in your Home Assistant config directory
 4. Restart Home Assistant
@@ -264,5 +264,5 @@ logger:
 
 <div class="alert alert-info" role="alert">
   <i class="bi bi-question-circle me-2"></i>
-  For additional help, check our <a href="faq" class="alert-link">FAQ</a> or report issues on <a href="{{ site.repository }}/issues" class="alert-link">GitHub Issues</a>.
+  For additional help, check our <a href="faq.md" class="alert-link">FAQ</a> or report issues on <a href="https://github.com/rknightion/meraki-dashboard-ha/issues" class="alert-link">GitHub Issues</a>.
 </div>

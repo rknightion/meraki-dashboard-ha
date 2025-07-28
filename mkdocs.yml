@@ -190,6 +190,7 @@ nav:
   - Reference:
     - Changelog: changelog.md
     - FAQ: faq.md
+  - "404": 404.md
 
 extra:
   social:

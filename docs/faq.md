@@ -10,7 +10,7 @@ Common questions and answers about the Meraki Dashboard integration's **multi-hu
 
 <div class="alert alert-success" role="alert">
   <i class="bi bi-check-circle me-2"></i>
-  <strong>Can't find what you're looking for?</strong> Check our <a href="troubleshooting" class="alert-link">Troubleshooting Guide</a> or <a href="{{ site.repository }}/issues" class="alert-link">ask a question on GitHub</a>.
+  <strong>Can't find what you're looking for?</strong> Check our <a href="faq.md#troubleshooting" class="alert-link">Troubleshooting section</a> or <a href="https://github.com/rknightion/meraki-dashboard-ha/issues" class="alert-link">ask a question on GitHub</a>.
 </div>
 
 ## General Questions
@@ -328,4 +328,4 @@ Yes! Node-RED can subscribe to entities from all hubs and create complex automat
 
 ---
 
-**Still need help?** Check our [Troubleshooting Guide](troubleshooting.md) or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) on GitHub.
+**Still need help?** Check the troubleshooting sections above or [open an issue](https://github.com/rknightion/meraki-dashboard-ha/issues) on GitHub.

@@ -10,7 +10,7 @@ All notable changes to this project are documented here. The format is based on 
 
 <div class="alert alert-info" role="alert">
   <i class="bi bi-info-circle me-2"></i>
-  <strong>Note:</strong> This changelog is automatically updated from our <a href="{{ site.repository }}/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.
+  <strong>Note:</strong> This changelog is automatically updated from our <a href="https://github.com/rknightion/meraki-dashboard-ha/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.
 </div>
 
 
@@ -288,12 +288,12 @@ proper hacky
 For releases prior to v0.22.0, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases).
 ## Support
 
-- **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
-- **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
-- **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
+- **Questions**: Check our [FAQ](faq.md) or see the troubleshooting section on the [main page](index.md)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/rknightion/meraki-dashboard-ha/issues)
+- **Discussions**: Join the conversation on [GitHub Discussions](https://github.com/rknightion/meraki-dashboard-ha/discussions)
 
 ## Links
 
-- **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
-- **[Releases]({{ site.repository }}/releases)** - Download specific versions
-- **[Release Notes]({{ site.repository }}/releases)** - Detailed release information
+- **[Full Changelog](https://github.com/rknightion/meraki-dashboard-ha/blob/main/CHANGELOG.md)** - Complete technical changelog
+- **[Releases](https://github.com/rknightion/meraki-dashboard-ha/releases)** - Download specific versions
+- **[Release Notes](https://github.com/rknightion/meraki-dashboard-ha/releases)** - Detailed release information
