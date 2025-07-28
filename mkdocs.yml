@@ -1,6 +1,6 @@
 site_name: Meraki Dashboard Home Assistant Integration
 site_description: A comprehensive Home Assistant custom integration for monitoring Cisco Meraki Dashboard devices with real-time metrics and hub-based architecture
-site_url: https://m7kni.io/meraki-dashboard-ha
+site_url: https://m7kni.io/meraki-dashboard-ha/
 repo_name: rknightion/meraki-dashboard-ha
 repo_url: https://github.com/rknightion/meraki-dashboard-ha
 edit_uri: edit/main/docs/
