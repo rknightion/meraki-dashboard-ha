@@ -1,6 +1,6 @@
 # Meraki Dashboard Integration for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/rknightion/meraki-dashboard-ha.svg?style=flat-square)](https://github.com/rknightion/meraki-dashboard-ha/releases)
 [![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
@@ -57,18 +57,16 @@ This integration follows Home Assistant best practices:
 
 ## Installation
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha)
-
 ### HACS Installation (Recommended)
 
 1. Open HACS in your Home Assistant instance
 2. Click on "Integrations"
-3. Click the three dots in the top right corner and select "Custom repositories"
-4. Add `https://github.com/rknightion/meraki-dashboard-ha` as a custom repository
-5. Select "Integration" as the category
-6. Click "Add"
-7. Search for "Meraki Dashboard" and install it
-8. Restart Home Assistant
+3. Click the "+ Explore & Download Repositories" button
+4. Search for "Meraki Dashboard"
+5. Click on the integration and then click "Download"
+6. Restart Home Assistant
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
 
 ### Manual Installation
 
@@ -299,7 +297,7 @@ For detailed instructions, see [docs/development.md](docs/development.md).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 - see the [LICENSE](LICENSE) file for details.
 
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha?ref=badge_large)

@@ -101,22 +101,19 @@ graph TB
 
 <div class="alert alert-info" role="alert">
   <i class="bi bi-lightbulb me-2"></i>
-  <strong>Recommended:</strong> Use HACS for automatic updates and easier management.
+  <strong>Available in HACS:</strong>
 </div>
 
-**Add custom repository**
-1. In HACS, select **Integrations**
-2. Select the three dots in the top right corner
-3. Select **Custom repositories**
-4. Add repository URL: `https://github.com/rknightion/meraki-dashboard-ha`
-5. Select **Integration** as category
-6. Select **Add**
-
 **Install the integration**
-1. Search for **Meraki Dashboard** in HACS
-2. Select the integration
-3. Select **Download**
-4. Restart Home Assistant
+1. Open HACS in your Home Assistant instance
+2. Click on **Integrations**
+3. Click the **+ Explore & Download Repositories** button
+4. Search for **Meraki Dashboard**
+5. Click on the integration
+6. Click **Download**
+7. Restart Home Assistant
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
 
 ### Manual installation
 
