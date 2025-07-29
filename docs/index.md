@@ -12,7 +12,7 @@ This custom integration connects your Meraki Dashboard with Home Assistant, prov
 
 The integration automatically creates multiple specialized hubs for optimal organization and performance:
 
-<div class="mermaid">
+```mermaid
 graph TB
     A["Organization Hub<br/>Acme Corp - Organisation"] --> B["Network Hub<br/>Main Office - MT"]
     A --> C["Network Hub<br/>Main Office - MR"]
@@ -40,7 +40,7 @@ graph TB
     class B,C,D,E networkHub
     class F,G,H,L device
     class I,J,K,M sensor
-</div>
+```
 
 **Key Benefits:**
 - **Automatic Organization**: Creates hubs only when devices exist
