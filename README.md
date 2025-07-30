@@ -102,7 +102,7 @@ After setup, you can modify options by clicking "Configure" on the integration:
 
 ## Documentation
 
-📚 **[Full Documentation](https://meraki.ha-components.m7kni.com)** - Comprehensive guides, API reference, and troubleshooting
+📚 **[Full Documentation](https://m7kni.io/meraki-dashboard-ha)** - Comprehensive guides, API reference, and troubleshooting
 
 ## Supported Devices
 
