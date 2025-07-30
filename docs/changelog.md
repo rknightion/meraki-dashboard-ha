@@ -17,6 +17,13 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.25.6] - 2025-07-30
+
+
+### 🐛 Bug Fixes
+- optimize energy calculation with data change detection
+
+
 ## [0.25.5] - 2025-07-30
 
 

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.25.6] - 2025-07-30
+
+
+### 🐛 Bug Fixes
+- optimize energy calculation with data change detection
+
+
 ## [0.25.5] - 2025-07-30
 
 
