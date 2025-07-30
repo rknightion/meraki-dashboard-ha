@@ -120,22 +120,6 @@
     },
     "abort": {
       "api_key_updated": "API key successfully updated"
-    },
-    "selector": {
-      "select": {
-        "options": {
-          "MT": "MT - Environmental Sensors",
-          "MR": "MR - Wireless Access Points",
-          "MS": "MS - Switches"
-        }
-      }
-    },
-    "config": {
-      "hub_specific": {
-        "auto_discovery": "Auto-discovery for {hub_name}",
-        "scan_interval": "Update interval for {hub_name} (minutes)",
-        "discovery_interval": "Discovery interval for {hub_name} (minutes)"
-      }
     }
   },
   "issues": {
