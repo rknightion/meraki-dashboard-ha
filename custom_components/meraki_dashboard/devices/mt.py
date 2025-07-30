@@ -280,6 +280,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
         self._energy_value = 0.0
         self._last_power_value: float | None = None
         self._last_power_timestamp: datetime.datetime | None = None
+        self._last_coordinator_data = None
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to hass."""
@@ -330,13 +331,22 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
         if not self.coordinator.data:
             return self._energy_value
 
+        # Only calculate energy if we have new data from the coordinator
+        if self.coordinator.data != self._last_coordinator_data:
+            self._calculate_energy()
+            self._last_coordinator_data = self.coordinator.data.copy()
+
+        return self._energy_value
+
+    def _calculate_energy(self) -> None:
+        """Calculate energy from power readings."""
         device_data = self.coordinator.data.get(self._device_serial)
         if not device_data:
-            return self._energy_value
+            return
 
         readings = device_data.get("readings", [])
         if not readings:
-            return self._energy_value
+            return
 
         # Find the power reading
         current_power = None
@@ -364,7 +374,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
                 break
 
         if current_power is None or current_timestamp is None:
-            return self._energy_value
+            return
 
         # Calculate energy using Riemann sum integration
         if (
@@ -382,11 +392,19 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
                 energy_delta = avg_power * time_delta / 3600  # Convert seconds to hours
                 self._energy_value += energy_delta
 
+                _LOGGER.debug(
+                    "Energy calculation for %s: power %.1fW -> %.1fW, time delta %.0fs, energy delta %.3fWh, total %.1fWh",
+                    self._device_serial,
+                    self._last_power_value,
+                    current_power,
+                    time_delta,
+                    energy_delta,
+                    self._energy_value,
+                )
+
         # Update last values
         self._last_power_value = current_power
         self._last_power_timestamp = current_timestamp
-
-        return self._energy_value
 
     @property
     def available(self) -> bool:
