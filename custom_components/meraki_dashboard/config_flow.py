@@ -13,6 +13,7 @@ from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.exceptions import ConfigValidationError
 from homeassistant.helpers import selector
+from homeassistant.helpers.selector import Selector
 from meraki.exceptions import APIError
 
 from .config import HubConfigurationManager
@@ -44,6 +45,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
+    DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
     DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES,
     MIN_DISCOVERY_INTERVAL_MINUTES,
@@ -461,7 +463,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> MerakiDashboardOptionsFlow:
         """Create the options flow."""
-        return MerakiDashboardOptionsFlow(config_entry)
+        return MerakiDashboardOptionsFlow()
 
     async def async_step_reauth(
         self, user_input: dict[str, Any] | None = None
@@ -577,47 +579,62 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Meraki Dashboard integration."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
+            # Check if user wants to update API key
+            if user_input.get("update_api_key"):
+                return await self.async_step_api_key()
+
             current_options = dict(self.config_entry.options or {})
-            hub_config_manager = HubConfigurationManager(current_options)
 
             # Get hub information for processing
             hubs_info = await self._get_available_hubs()
 
-            # Process user input using the hub configuration manager
-            hub_config_set = hub_config_manager.process_user_input(
-                user_input, hubs_info
-            )
+            # Process the new field naming scheme
+            options = {}
+            hub_scan_intervals = {}
+            hub_discovery_intervals = {}
+            hub_auto_discovery = {}
 
-            # Remove hub-specific keys from user input as they're processed separately
-            options = {
-                k: v
-                for k, v in user_input.items()
-                if not any(
-                    k.startswith(prefix)
-                    for prefix in [
-                        "scan_interval_",
-                        "discovery_interval_",
-                        "auto_discovery_",
-                    ]
+            # Process all user input
+            for key, value in user_input.items():
+                if key.startswith("hub_auto_discovery_"):
+                    hub_id = key.replace("hub_auto_discovery_", "")
+                    hub_auto_discovery[hub_id] = value
+                elif key.startswith("hub_scan_interval_"):
+                    hub_id = key.replace("hub_scan_interval_", "")
+                    hub_scan_intervals[hub_id] = value * 60  # Convert to seconds
+                elif key.startswith("hub_discovery_interval_"):
+                    hub_id = key.replace("hub_discovery_interval_", "")
+                    hub_discovery_intervals[hub_id] = value * 60  # Convert to seconds
+                else:
+                    # Regular options
+                    options[key] = value
+
+            # Store hub configurations
+            if hub_scan_intervals:
+                options[CONF_HUB_SCAN_INTERVALS] = hub_scan_intervals
+            if hub_discovery_intervals:
+                options[CONF_HUB_DISCOVERY_INTERVALS] = hub_discovery_intervals
+            if hub_auto_discovery:
+                options[CONF_HUB_AUTO_DISCOVERY] = hub_auto_discovery
+
+            # Convert tiered intervals from minutes to seconds
+            if CONF_STATIC_DATA_INTERVAL in options:
+                options[CONF_STATIC_DATA_INTERVAL] = (
+                    options[CONF_STATIC_DATA_INTERVAL] * 60
                 )
-            }
-
-            # Merge hub configuration with other options
-            options = hub_config_manager.merge_with_existing_options(
-                hub_config_set, options
-            )
-
-            # Convert legacy intervals from minutes to seconds
-            options = hub_config_manager.convert_legacy_intervals_to_seconds(options)
+            if CONF_SEMI_STATIC_DATA_INTERVAL in options:
+                options[CONF_SEMI_STATIC_DATA_INTERVAL] = (
+                    options[CONF_SEMI_STATIC_DATA_INTERVAL] * 60
+                )
+            if CONF_DYNAMIC_DATA_INTERVAL in options:
+                options[CONF_DYNAMIC_DATA_INTERVAL] = (
+                    options[CONF_DYNAMIC_DATA_INTERVAL] * 60
+                )
 
             # Validate the updated configuration
             try:
@@ -634,11 +651,10 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         hubs_info = await self._get_available_hubs()
         current_options = dict(self.config_entry.options or {})
 
-        # Use HubConfigurationManager to build the rest of the schema
-        hub_config_manager = HubConfigurationManager(current_options)
-        schema_dict = hub_config_manager.build_schema_dict(hubs_info)
+        # Create an ordered schema dictionary
+        schema_dict: dict[vol.Marker, Selector] = {}
 
-        # Add device type options at the top of the schema
+        # 1. Add device type options at the very top
         schema_dict[
             vol.Optional(
                 CONF_ENABLED_DEVICE_TYPES,
@@ -668,14 +684,198 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             )
         )
 
-        description_placeholders = hub_config_manager.build_description_placeholders(
-            hubs_info
+        # 2. Add update API key checkbox
+        schema_dict[vol.Optional("update_api_key", default=False)] = (
+            selector.BooleanSelector()
         )
+
+        # 3. Add tiered interval options (organization/network/device intervals)
+        hub_config_manager = HubConfigurationManager(current_options)
+        tiered_schema = hub_config_manager._build_tiered_refresh_intervals({})
+        schema_dict.update(tiered_schema)
+
+        # 4. Build hub-specific options if we have hubs
+        if hubs_info:
+            # Add settings for each hub
+            for hub_key, hub_info in sorted(hubs_info.items()):
+                hub_name = hub_info["network_name"]
+                device_type = hub_info["device_type"]
+                device_count = hub_info["device_count"]
+
+                # Use cleaner field names for the form
+                auto_discovery_key = f"hub_auto_discovery_{hub_key}"
+                scan_interval_key = f"hub_scan_interval_{hub_key}"
+                discovery_interval_key = f"hub_discovery_interval_{hub_key}"
+
+                # Auto-discovery toggle with custom label
+                schema_dict[
+                    vol.Optional(
+                        auto_discovery_key,
+                        default=current_options.get(CONF_HUB_AUTO_DISCOVERY, {}).get(
+                            hub_key, True
+                        ),
+                        description={
+                            "suggested_value": current_options.get(
+                                CONF_HUB_AUTO_DISCOVERY, {}
+                            ).get(hub_key, True)
+                        },
+                    )
+                ] = selector.BooleanSelector(
+                    selector.BooleanSelectorConfig(
+                        # This provides context in the UI
+                    )
+                )
+
+                # Scan interval with custom label
+                current_scan_minutes = (
+                    current_options.get(CONF_HUB_SCAN_INTERVALS, {}).get(
+                        hub_key,
+                        DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
+                    )
+                    // 60
+                )
+
+                schema_dict[
+                    vol.Optional(
+                        scan_interval_key,
+                        default=current_scan_minutes,
+                    )
+                ] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_SCAN_INTERVAL_MINUTES,
+                        max=60,
+                        step=1,
+                        unit_of_measurement="minutes",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                )
+
+                # Discovery interval
+                current_discovery_minutes = (
+                    current_options.get(CONF_HUB_DISCOVERY_INTERVALS, {}).get(
+                        hub_key, DEFAULT_DISCOVERY_INTERVAL
+                    )
+                    // 60
+                )
+
+                schema_dict[
+                    vol.Optional(
+                        discovery_interval_key,
+                        default=current_discovery_minutes,
+                    )
+                ] = selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
+                        max=1440,
+                        step=1,
+                        unit_of_measurement="minutes",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                )
+
+        # Build enhanced description placeholders
+        description_placeholders = {}
+
+        if hubs_info:
+            # Add hub information to placeholders
+            hub_details = []
+            for _hub_key, hub_info in sorted(hubs_info.items()):
+                hub_name = hub_info["network_name"]
+                device_type = hub_info["device_type"]
+                device_count = hub_info["device_count"]
+                hub_details.append(
+                    f"• **{hub_name}** ({device_type}): {device_count} devices"
+                )
+
+            description_placeholders["hub_list"] = "\n".join(hub_details)
+            description_placeholders["has_hubs"] = "true"
+            description_placeholders["hub_settings_explanation"] = (
+                "**Network-Specific Settings:**\n\n"
+                "Each network has its own configuration settings below:\n"
+                "• **Auto-Discovery**: Enable/disable automatic discovery of new devices\n"
+                "• **Update Interval**: How often to fetch sensor data (in minutes)\n"
+                "• **Discovery Interval**: How often to scan for new devices (in minutes)\n"
+            )
+        else:
+            description_placeholders["hub_list"] = "No hubs configured yet"
+            description_placeholders["has_hubs"] = "false"
+            description_placeholders["hub_settings_explanation"] = ""
+
+        # Add other placeholders
+        base_placeholders = hub_config_manager.build_description_placeholders(hubs_info)
+        description_placeholders.update(base_placeholders)
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema_dict),
             description_placeholders=description_placeholders,
+        )
+
+    async def async_step_api_key(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle API key update step."""
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            # Test the new API key
+            api_key = user_input[CONF_API_KEY]
+            base_url = self.config_entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL)
+
+            # Create a temporary client to test the API key
+            dashboard = meraki.DashboardAPI(
+                api_key=api_key,
+                base_url=base_url,
+                suppress_logging=True,
+                print_console=False,
+                output_log=False,
+            )
+
+            try:
+                # Test the API key by fetching organizations
+                organizations = await self.hass.async_add_executor_job(
+                    dashboard.organizations.getOrganizations
+                )
+
+                if organizations:
+                    # Valid API key - update the config entry
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={
+                            **self.config_entry.data,
+                            CONF_API_KEY: api_key,
+                        },
+                    )
+
+                    # Reload the integration to apply the new API key
+                    await self.hass.config_entries.async_reload(
+                        self.config_entry.entry_id
+                    )
+
+                    return self.async_abort(reason="api_key_updated")
+                else:
+                    errors["base"] = "no_organizations"
+
+            except APIError as err:
+                if err.status == 401:
+                    errors["base"] = "invalid_auth"
+                elif err.status == 403:
+                    errors["base"] = "invalid_permissions"
+                else:
+                    _LOGGER.error("API error during key update: %s", err)
+                    errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected error during API key update")
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="api_key",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): str,
+                }
+            ),
+            errors=errors,
         )
 
     async def _get_available_hubs(self) -> dict[str, dict[str, Any]]:

@@ -17,8 +17,8 @@ This guide will help you set up a development environment for contributing to th
 
 ### Prerequisites
 
-- Python 3.13+
-- Poetry
+- Python 3.13.2+
+- uv (recommended) or Poetry
 - Git
 
 ### Dev Setup

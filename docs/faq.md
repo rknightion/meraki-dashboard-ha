@@ -21,9 +21,10 @@ The integration now supports multiple device types with automatic hub creation:
 
 **Currently Supported:**
 - **MT Series Environmental Sensors**: MT10, MT12, MT14, MT15, MT20, MT30, MT40
-- **MR Series Wireless Access Points**: All MR models (proof of concept)
+- **MR Series Wireless Access Points**: All MR models with SSID and client metrics
+- **MS Series Switches**: All MS models with port and PoE monitoring
 
-**Coming Soon**: MS (switches) and MV (cameras) series devices - infrastructure is ready.
+**Coming Soon**: MV (cameras) series devices - infrastructure is ready.
 
 ### How does the multi-hub architecture work?
 
@@ -73,7 +74,7 @@ Check these common issues:
 ### No hubs are created during setup
 
 This usually means:
-- **No supported devices**: Only MT and MR series devices are currently supported
+- **No supported devices**: Only MT, MR, and MS series devices are currently supported
 - **Devices offline**: Check device status in Meraki Dashboard
 - **Network access**: Verify devices are in networks accessible by your API key
 - **Recent data**: Ensure devices have reported data recently
@@ -94,7 +95,8 @@ The integration now uses **optimized per-hub intervals**:
 - **MT Environmental Sensors**: 10 minutes (matches typical sensor reporting)
 - **MR Wireless Access Points**: 5 minutes (network changes are more frequent)
 - **Discovery**: 1 hour (how often to scan for new devices)
-- **MS/MV (Future)**: 5 minutes (infrastructure monitoring)
+- **MS Switches**: 5 minutes (port and PoE monitoring)
+- **MV Cameras (Future)**: 10 minutes (video analytics)
 
 ### Why did the intervals change from 20 minutes?
 

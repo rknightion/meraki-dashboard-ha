@@ -34,13 +34,24 @@ async def test_description_placeholders_defaults(hass: HomeAssistant):
 
 @pytest.mark.asyncio
 async def test_apikey_flow_async_step_init(hass: HomeAssistant, mock_config_entry):
-    with patch.object(hass.config_entries, "async_get_entry", return_value=mock_config_entry), patch.object(
-        hass.config_entries.flow, "async_init", AsyncMock(return_value=None)
-    ), patch("custom_components.meraki_dashboard.repairs.ir.async_delete_issue") as delete_issue:
+    with (
+        patch.object(
+            hass.config_entries, "async_get_entry", return_value=mock_config_entry
+        ),
+        patch.object(
+            hass.config_entries.flow, "async_init", AsyncMock(return_value=None)
+        ),
+        patch(
+            "custom_components.meraki_dashboard.repairs.ir.async_delete_issue"
+        ) as delete_issue,
+    ):
         flow = ApiKeyExpiredRepairFlow(
             hass,
             "api_key_expired_test",
-            {"config_entry_id": mock_config_entry.entry_id, "config_entry_title": "Test"},
+            {
+                "config_entry_id": mock_config_entry.entry_id,
+                "config_entry_title": "Test",
+            },
         )
         result = await flow.async_step_init(user_input={})
         delete_issue.assert_called_once_with(hass, DOMAIN, "api_key_expired_test")
@@ -49,10 +60,18 @@ async def test_apikey_flow_async_step_init(hass: HomeAssistant, mock_config_entr
 
 
 @pytest.mark.asyncio
-async def test_network_access_flow_async_step_init(hass: HomeAssistant, mock_config_entry):
-    with patch.object(hass.config_entries, "async_get_entry", return_value=mock_config_entry), patch.object(
-        hass.config_entries, "async_reload", AsyncMock(return_value=True)
-    ), patch("custom_components.meraki_dashboard.repairs.ir.async_delete_issue") as delete_issue:
+async def test_network_access_flow_async_step_init(
+    hass: HomeAssistant, mock_config_entry
+):
+    with (
+        patch.object(
+            hass.config_entries, "async_get_entry", return_value=mock_config_entry
+        ),
+        patch.object(hass.config_entries, "async_reload", AsyncMock(return_value=True)),
+        patch(
+            "custom_components.meraki_dashboard.repairs.ir.async_delete_issue"
+        ) as delete_issue,
+    ):
         flow = NetworkAccessLostRepairFlow(
             hass,
             "network_access_lost_test",
@@ -69,19 +88,25 @@ async def test_network_access_flow_async_step_init(hass: HomeAssistant, mock_con
 
 
 @pytest.mark.asyncio
-async def test_device_discovery_flow_async_step_init(hass: HomeAssistant, mock_config_entry):
+async def test_device_discovery_flow_async_step_init(
+    hass: HomeAssistant, mock_config_entry
+):
     hub = MagicMock()
     hub.hub_name = "Hub1"
     hub._async_discover_devices = AsyncMock()
     hass.data[DOMAIN] = {mock_config_entry.entry_id: {"network_hubs": {"hub1": hub}}}
-    with patch("custom_components.meraki_dashboard.repairs.ir.async_delete_issue") as delete_issue:
+    with patch(
+        "custom_components.meraki_dashboard.repairs.ir.async_delete_issue"
+    ) as delete_issue:
         flow = DeviceDiscoveryFailedRepairFlow(
             hass,
             "device_discovery_failed_test",
             {"config_entry_id": mock_config_entry.entry_id, "hub_name": "Hub1"},
         )
         result = await flow.async_step_init(user_input={})
-        delete_issue.assert_called_once_with(hass, DOMAIN, "device_discovery_failed_test")
+        delete_issue.assert_called_once_with(
+            hass, DOMAIN, "device_discovery_failed_test"
+        )
         hub._async_discover_devices.assert_awaited_once()
         assert result["type"] == "create_entry"
 

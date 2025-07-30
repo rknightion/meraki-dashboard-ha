@@ -134,5 +134,5 @@ If devices aren't appearing:
 ## Next Steps
 
 - [Entity Naming](naming-conventions.md) - Understanding entity IDs
-- [Configuration](configuration.md) - Optimizing device polling
+- [Getting Started](getting-started.md) - Installation and configuration
 - [FAQ](faq.md) - Common device-related questions

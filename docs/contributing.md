@@ -87,7 +87,7 @@ from homeassistant.components.sensor import SensorEntityDescription
 @dataclass
 class MVSensorDescriptions:
     """MV camera sensor descriptions."""
-    
+
     camera_status = SensorEntityDescription(
         key="camera_status",
         name="Camera Status",
@@ -126,15 +126,15 @@ async def async_get_data(self):
 ```python
 class TestMerakiSensor:
     """Test Meraki sensor functionality."""
-    
+
     async def test_sensor_creation(self, hass):
         """Test sensor is created correctly."""
         # Arrange
         device = DeviceBuilder().with_temperature(22.5).build()
-        
+
         # Act
         sensor = await create_sensor(hass, device)
-        
+
         # Assert
         assert sensor.state == 22.5
 ```
@@ -162,13 +162,13 @@ device = (MerakiDeviceBuilder()
 ```python
 def process_data(self, data: dict[str, Any]) -> list[dict]:
     """Process raw API data.
-    
+
     Args:
         data: Raw API response data
-        
+
     Returns:
         List of processed device dictionaries
-        
+
     Raises:
         DataError: If data format is invalid
     """
@@ -178,7 +178,7 @@ def process_data(self, data: dict[str, Any]) -> list[dict]:
 
 Update relevant docs when adding features:
 - `device-support.md` for new devices
-- `configuration.md` for new options
+- `getting-started.md` for new configuration options
 - `faq.md` for common issues
 
 ## Pull Request Process

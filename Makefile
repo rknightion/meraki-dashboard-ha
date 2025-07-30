@@ -1,6 +1,6 @@
 # Makefile for Meraki Dashboard Home Assistant Integration
 
-.PHONY: help install test lint format clean pre-commit hassfest docs check-all coverage test-file test-watch validate
+.PHONY: help install test lint format clean pre-commit hassfest docs docs-generate check-all coverage test-file test-watch validate
 
 # Default target
 help:
@@ -16,6 +16,7 @@ help:
 	@echo "  make pre-commit   Run pre-commit hooks on all files"
 	@echo "  make validate     Run all local validations"
 	@echo "  make docs         Build documentation"
+	@echo "  make docs-generate Generate entity documentation"
 	@echo "  make check-all    Run all checks (lint, test, validate)"
 
 # Install dependencies
@@ -138,6 +139,11 @@ docs:
 	@echo "Documentation is in README.md and CONTRIBUTING.md"
 	@echo "API docs: https://rknightion.github.io/meraki-dashboard-ha/"
 
+# Generate entity documentation
+docs-generate:
+	uv run python scripts/generate_docs.py
+	@echo "✅ Entity documentation generated in docs/supported-entities.md"
+
 # Run all checks
 check-all: lint test validate
 	@echo "✅ All checks passed!"
@@ -148,21 +154,6 @@ dev-server:
 	@echo "1. Copy custom_components/meraki_dashboard to your HA config directory"
 	@echo "2. Restart Home Assistant"
 	@echo "3. Add the integration via UI"
-
-# Create a release
-release:
-	@echo "Creating release..."
-	@if [ "$$(uname)" = "Darwin" ]; then \
-		read -p "Version number (e.g., 0.1.0): " version; \
-		sed -i '' "s/\"version\": \".*\"/\"version\": \"$$version\"/" custom_components/meraki_dashboard/manifest.json; \
-	else \
-		read -p "Version number (e.g., 0.1.0): " version; \
-		sed -i "s/\"version\": \".*\"/\"version\": \"$$version\"/" custom_components/meraki_dashboard/manifest.json; \
-	fi; \
-	git add custom_components/meraki_dashboard/manifest.json; \
-	git commit -m "chore: bump version to $$version"; \
-	git tag -a "v$$version" -m "Release version $$version"; \
-	echo "Release v$$version created. Push with: git push && git push --tags"
 
 # Update dependencies
 update-deps:

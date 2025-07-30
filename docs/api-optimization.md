@@ -9,11 +9,13 @@ The Meraki Dashboard integration implements a **tiered refresh system** and a su
 
 ## Tiered Refresh System
 
-The integration uses three tiers for data refresh:
+The integration uses device-specific refresh intervals optimized for each device type:
 
-- **Static Data (1 hour):** License info, org info, network topology
-- **Semi-Static Data (30 min):** Device statuses, network settings, device inventory
-- **Dynamic Data (5 min):** Alerts/events, sensor readings, wireless clients, network traffic
+- **Environmental Sensors (MT):** 10 minutes - temperature, humidity, air quality readings
+- **Wireless Access Points (MR):** 5 minutes - client counts, channel utilization, SSID status
+- **Switches (MS):** 5 minutes - port status, PoE usage, traffic statistics
+- **Cameras (MV):** 10 minutes - (coming soon)
+- **Device Discovery:** 1 hour - finds new devices and updates network topology
 
 ### Benefits
 - ~67% reduction in org-level API calls

@@ -172,25 +172,21 @@ markdown_extensions:
       - quote
 
 nav:
-  - Home:
-    - index.md
-    - Tags: tags.md
+  - Home: index.md
   - Getting Started:
     - getting-started.md
-    - Installation: installation.md
-    - Configuration: configuration.md
+    - FAQ: faq.md
   - Features:
     - Device Support: device-support.md
-    - Entity Naming: naming-conventions.md
-    - API Optimization: api-optimization.md
+    - Supported Entities: supported-entities.md
   - Development:
     - development.md
     - Architecture: architecture.md
+    - Entity Naming: naming-conventions.md
+    - API Optimization: api-optimization.md
     - Contributing: contributing.md
-  - Reference:
-    - Changelog: changelog.md
-    - FAQ: faq.md
-    
+  - Changelog: changelog.md
+
 extra:
   social:
     - icon: fontawesome/brands/github

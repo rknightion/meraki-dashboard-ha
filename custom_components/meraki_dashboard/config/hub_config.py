@@ -114,8 +114,11 @@ class HubConfigurationManager:
                 vol.Optional(
                     f"auto_discovery_{hub_display_name}",
                     default=current_hub_auto_discovery.get(hub_key, True),
+                    description={
+                        "suggested_value": current_hub_auto_discovery.get(hub_key, True)
+                    },
                 )
-            ] = bool
+            ] = selector.BooleanSelector()
 
             # Scan interval
             current_scan_minutes = (
@@ -162,7 +165,7 @@ class HubConfigurationManager:
 
     def _build_tiered_refresh_intervals(
         self, schema_dict: dict[vol.Marker, Any]
-    ) -> None:
+    ) -> dict[vol.Marker, Any]:
         """Build tiered refresh interval configuration."""
         # Static data interval
         current_static_interval = (
@@ -214,6 +217,8 @@ class HubConfigurationManager:
                 min=1, max=60, step=1, mode=selector.NumberSelectorMode.BOX
             )
         )
+
+        return schema_dict
 
     def process_user_input(
         self, user_input: dict[str, Any], hubs_info: dict[str, dict[str, Any]]

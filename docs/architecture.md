@@ -21,6 +21,46 @@ graph TD
     I --> J
 ```
 
+## Multi-Hub Architecture Details
+
+The integration automatically creates multiple specialized hubs for optimal organization and performance:
+
+```mermaid
+graph TB
+    A["Organization Hub<br/>Acme Corp - Organisation"] --> B["Network Hub<br/>Main Office - MT"]
+    A --> C["Network Hub<br/>Main Office - MR"]
+    A --> D["Network Hub<br/>Branch Office - MT"]
+    A --> E["Network Hub<br/>Remote Site - MR"]
+
+    B --> F["MT20 Temperature Sensor"]
+    B --> G["MT15 Water Sensor"]
+    B --> H["MT30 Air Quality Monitor"]
+
+    C --> I["SSID Count"]
+    C --> J["Enabled Networks"]
+    C --> K["Security Status"]
+
+    D --> L["MT40 Environmental Monitor"]
+
+    E --> M["Wireless Metrics"]
+
+    classDef orgHub fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
+    classDef networkHub fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef device fill:#e8f5e8,stroke:#388e3c,stroke-width:1px
+    classDef sensor fill:#fff3e0,stroke:#f57c00,stroke-width:1px
+
+    class A orgHub
+    class B,C,D,E networkHub
+    class F,G,H,L device
+    class I,J,K,M sensor
+```
+
+**Key Benefits:**
+- **Automatic Organization**: Creates hubs only when devices exist
+- **Per-Hub Intervals**: Optimize update frequency for each device type
+- **Scalable Performance**: Distribute API load across multiple hubs
+- **Device-Specific Features**: Tailored functionality per device type
+
 ## Core Components
 
 ### Hub Architecture

@@ -4,262 +4,61 @@ title: Home
 description: Connect your Cisco Meraki Dashboard with Home Assistant for comprehensive monitoring of environmental sensors and network infrastructure
 ---
 
-This custom integration connects your Meraki Dashboard with Home Assistant, providing real-time insights into your network devices and environmental sensors through a **scalable multi-hub architecture**.
+# Meraki Dashboard Home Assistant Integration
 
-## Overview
+Connect your Cisco Meraki Dashboard with Home Assistant to monitor environmental sensors, wireless access points, switches, and more - all from your smart home automation platform.
 
-### Multi-hub architecture
+## What is this integration?
 
-The integration automatically creates multiple specialized hubs for optimal organization and performance:
+This custom integration provides real-time monitoring of your Cisco Meraki devices directly within Home Assistant. Monitor temperature, humidity, air quality, network status, and device health across your entire Meraki infrastructure.
 
-```mermaid
-graph TB
-    A["Organization Hub<br/>Acme Corp - Organisation"] --> B["Network Hub<br/>Main Office - MT"]
-    A --> C["Network Hub<br/>Main Office - MR"]
-    A --> D["Network Hub<br/>Branch Office - MT"]
-    A --> E["Network Hub<br/>Remote Site - MR"]
+## Key Features
 
-    B --> F["MT20 Temperature Sensor"]
-    B --> G["MT15 Water Sensor"]
-    B --> H["MT30 Air Quality Monitor"]
+- **🌡️ Environmental Monitoring**: Track temperature, humidity, CO2, air quality, and more from MT sensors
+- **📡 Network Monitoring**: Monitor wireless access points, SSIDs, and network performance
+- **🔌 Switch Monitoring**: Keep tabs on switch ports, PoE usage, and traffic statistics
+- **🏢 Multi-Site Support**: Automatically organizes devices by network and location
+- **⚡ Fast Updates**: Configurable polling intervals for responsive monitoring
 
-    C --> I["SSID Count"]
-    C --> J["Enabled Networks"]
-    C --> K["Security Status"]
+## Supported Devices
 
-    D --> L["MT40 Environmental Monitor"]
+- **MT Series**: Environmental sensors (MT10, MT12, MT14, MT15, MT20, MT30, MT40)
+- **MR Series**: Wireless access points (all models)
+- **MS Series**: Managed switches (all models)
 
-    E --> M["Wireless Metrics"]
+## Quick Start
 
-    classDef orgHub fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
-    classDef networkHub fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef device fill:#e8f5e8,stroke:#388e3c,stroke-width:1px
-    classDef sensor fill:#fff3e0,stroke:#f57c00,stroke-width:1px
+Ready to get started? The setup process is simple:
 
-    class A orgHub
-    class B,C,D,E networkHub
-    class F,G,H,L device
-    class I,J,K,M sensor
-```
-
-**Key Benefits:**
-- **Automatic Organization**: Creates hubs only when devices exist
-- **Per-Hub Intervals**: Optimize update frequency for each device type
-- **Scalable Performance**: Distribute API load across multiple hubs
-- **Device-Specific Features**: Tailored functionality per device type
-
-### Supported devices
-
-**🌡️ MT Series Environmental Sensors**
-- **Models**: MT10, MT12, MT14, MT15, MT20, MT30, MT40
-- **Metrics**: Temperature, humidity, CO2, TVOC, PM2.5, noise, air quality, water detection, door sensors, battery levels, electrical measurements
-
-**📡 MR Series Wireless Access Points**
-- **Models**: All MR series
-- **Metrics**: SSID counts, enabled networks, security status
-
-## Prerequisites
-
-<div class="row">
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h6 class="card-title"><i class="bi bi-house me-2"></i>Home Assistant</h6>
-        <p class="card-text">Version 2024.1.0 or newer required</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h6 class="card-title"><i class="bi bi-cloud me-2"></i>Meraki Account</h6>
-        <p class="card-text">Dashboard account with API access enabled</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h6 class="card-title"><i class="bi bi-router me-2"></i>Meraki Devices</h6>
-        <p class="card-text">At least one MT or MR series device</p>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h6 class="card-title"><i class="bi bi-wifi me-2"></i>Network Access</h6>
-        <p class="card-text">Internet connection to reach Meraki API</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-## Installation
-
-### HACS installation (recommended)
-
-<div class="alert alert-info" role="alert">
-  <i class="bi bi-lightbulb me-2"></i>
-  <strong>Available in HACS:</strong>
-</div>
-
-**Install the integration**
-1. Open HACS in your Home Assistant instance
-2. Click on **Integrations**
-3. Click the **+ Explore & Download Repositories** button
-4. Search for **Meraki Dashboard**
-5. Click on the integration
-6. Click **Download**
-7. Restart Home Assistant
+1. **Install** the integration via HACS or manually
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
 
-### Manual installation
+2. **Configure** your Meraki API key
 
-**Download and install files**
-1. Go to the [latest release page](https://github.com/rknightion/meraki-dashboard-ha/releases)
-2. Download `meraki_dashboard.zip`
-3. Extract to `custom_components/meraki_dashboard/` in your Home Assistant config directory
-4. Restart Home Assistant
+<img src="./images/setup1.png" alt="setup1" style="zoom:30%;" />
 
-## Configuration
+3. **Select** your organizations and devices
 
-### Get your API key
 
-**Create API key in Meraki Dashboard**
-1. Log in to [Meraki Dashboard](https://dashboard.meraki.com)
-2. Go to **Organization → Settings → Dashboard API access**
-3. Select **Generate new API key**
-4. Enter description: "Home Assistant Integration"
-5. Select **Generate API key**
-6. Copy the key immediately (you won't see it again)
 
-### Add the integration
+<img src="./images/setup2.png" alt="setup2" style="zoom:30%;" />
 
-**Configure in Home Assistant**
-1. Go to **Settings → Devices & Services**
-2. Select **Add Integration**
-3. Search for **Meraki Dashboard**
-4. Enter your API key
-5. Select your organization
-6. Configure hub intervals (optional)
+<img src="./images/setup3.png" alt="setup3" style="zoom:30%;" />
 
-### Hub intervals
+4. **Monitor** your devices in Home Assistant
 
-Configure update intervals for optimal performance:
 
-- **MT Environmental Sensors**: 10 minutes (default)
-- **MR Wireless Access Points**: 5 minutes (default)
-- **Discovery**: 1 hour (default)
 
-**Per-hub configuration**
-1. Go to **Settings → Devices & Services → Meraki Dashboard → Configure**
-2. Set individual hub scan intervals
-3. Set hub discovery intervals
+<div class="hero-badges" style="text-align: center; margin: 2rem 0;">
+  <a href="getting-started" class="md-button md-button--primary md-button--stretch">
+    🚀 Get Started Now
+  </a>
+</div>
 
-## Usage
-
-### Device organization
-
-The integration creates a clear hierarchy:
-- **Organization Device**: Shows overall connection status
-- **Network Hub Devices**: One per network per device type
-- **Individual Devices**: Your actual sensors nested under hubs
-
-### Creating automations
-
-**Environmental monitoring automation**
-```yaml
-automation:
-  - alias: "High temperature alert"
-    trigger:
-      - platform: numeric_state
-        entity_id: sensor.mt20_office_temperature
-        above: 25
-    action:
-      - service: notify.notify
-        data:
-          message: "Office temperature is {{ states('sensor.mt20_office_temperature') }}°C"
-```
-
-**Water detection automation**
-```yaml
-automation:
-  - alias: "Water leak detected"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.mt15_basement_water_present
-        to: 'on'
-    action:
-      - service: notify.mobile_app_your_phone
-        data:
-          message: "Water detected in basement!"
-          data:
-            priority: high
-```
-
-### Building dashboards
-
-**Environmental dashboard card**
-```yaml
-type: entities
-title: Environmental Monitoring
-entities:
-  - sensor.mt20_office_temperature
-  - sensor.mt20_office_humidity
-  - sensor.mt20_office_co2
-  - binary_sensor.mt15_basement_water_present
-```
-
-**Network status card**
-```yaml
-type: entities
-title: Network Status
-entities:
-  - sensor.mr_main_office_ssid_count
-  - sensor.mr_main_office_enabled_ssids
-  - sensor.mr_main_office_open_ssids
-```
-
-## Troubleshooting
-
-### Common issues
-
-**Integration not found**
-- Ensure HACS is installed and configured
-- Restart Home Assistant after HACS installation
-- Clear browser cache and retry
-
-**Invalid API key errors**
-- Verify no extra spaces in the API key
-- Check API key hasn't expired in Meraki Dashboard
-- Ensure API key has organization read access
-
-**No devices discovered**
-- Verify devices are online in Meraki Dashboard
-- Check devices are supported (MT or MR series)
-- Ensure devices have recent data
-
-**Missing sensor data**
-- Different MT models support different sensors
-- Check device model specifications
-- Verify sensors are enabled in Meraki Dashboard
-
-### Debug logging
-
-Enable detailed logging for troubleshooting:
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.meraki_dashboard: debug
-```
-
-### Getting help
+---
 
 <div class="alert alert-info" role="alert">
   <i class="bi bi-question-circle me-2"></i>
-  For additional help, check our <a href="faq.md" class="alert-link">FAQ</a> or report issues on <a href="https://github.com/rknightion/meraki-dashboard-ha/issues" class="alert-link">GitHub Issues</a>.
+  For detailed installation instructions, configuration options, and troubleshooting help, check our <a href="getting-started.md" class="alert-link">Getting Started Guide</a>.
 </div>
