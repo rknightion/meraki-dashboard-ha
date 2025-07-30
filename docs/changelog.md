@@ -10,11 +10,47 @@ All notable changes to this project are documented here. The format is based on 
 
 <div class="alert alert-info" role="alert">
   <i class="bi bi-info-circle me-2"></i>
-  <strong>Note:</strong> This changelog is automatically updated from our <a href="https://github.com/rknightion/meraki-dashboard-ha/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.
+  <strong>Note:</strong> This changelog is automatically updated from our <a href="{{ site.repository }}/blob/main/CHANGELOG.md">main CHANGELOG.md</a> when releases are published.
 </div>
 
 
 ## [Unreleased]
+
+
+## [0.25.5] - 2025-07-30
+
+
+### 🧰 Maintenance
+ccd5ce9 refactor: remove unused translation strings
+61d8650 refactor(config): improve options flow UI and add API key update capability
+62191ac ci: add documentation sync workflow
+5a69c0a chore: update project name and domain pattern
+0167387 refactor: move MkDocs dependencies to dev requirements
+90f7bdb chore: change license from MIT to Apache 2.0
+
+### 📚 Documentation
+- update mermaid diagram syntax in documentation
+- fix documentation links and update Cloudflare domain
+
+### ✅ Tests
+- extend coverage for config migration
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/main'
+- Update README.md
+- docs updates
+- remove 404
+- build
+- fix
+- fix
+- fix missing /
+- fix site routing
+- fix route
+- fix wrangler proj name
+- remove polyfill
+- Merge pull request #57 from rknightion/codex/increase-test-coverage-for-custom-component
+- Merge branch 'main' into codex/increase-test-coverage-for-custom-component
+- Merge remote-tracking branch 'origin/main'
 
 
 ## [0.25.4] - 2025-07-27
@@ -288,12 +324,12 @@ proper hacky
 For releases prior to v0.22.0, see the [GitHub Releases page](https://github.com/rknightion/meraki-dashboard-ha/releases).
 ## Support
 
-- **Questions**: Check our [FAQ](faq.md) or see the troubleshooting section on the [main page](index.md)
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/rknightion/meraki-dashboard-ha/issues)
-- **Discussions**: Join the conversation on [GitHub Discussions](https://github.com/rknightion/meraki-dashboard-ha/discussions)
+- **Questions**: Check our [FAQ](faq) or see the troubleshooting section on the [main page](/)
+- **Issues**: Report bugs on [GitHub Issues]({{ site.repository }}/issues)
+- **Discussions**: Join the conversation on [GitHub Discussions]({{ site.repository }}/discussions)
 
 ## Links
 
-- **[Full Changelog](https://github.com/rknightion/meraki-dashboard-ha/blob/main/CHANGELOG.md)** - Complete technical changelog
-- **[Releases](https://github.com/rknightion/meraki-dashboard-ha/releases)** - Download specific versions
-- **[Release Notes](https://github.com/rknightion/meraki-dashboard-ha/releases)** - Detailed release information
+- **[Full Changelog]({{ site.repository }}/blob/main/CHANGELOG.md)** - Complete technical changelog
+- **[Releases]({{ site.repository }}/releases)** - Download specific versions
+- **[Release Notes]({{ site.repository }}/releases)** - Detailed release information

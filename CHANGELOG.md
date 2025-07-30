@@ -8,6 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.25.5] - 2025-07-30
+
+
+### 🧰 Maintenance
+ccd5ce9 refactor: remove unused translation strings
+61d8650 refactor(config): improve options flow UI and add API key update capability
+62191ac ci: add documentation sync workflow
+5a69c0a chore: update project name and domain pattern
+0167387 refactor: move MkDocs dependencies to dev requirements
+90f7bdb chore: change license from MIT to Apache 2.0
+
+### 📚 Documentation
+- update mermaid diagram syntax in documentation
+- fix documentation links and update Cloudflare domain
+
+### ✅ Tests
+- extend coverage for config migration
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/main'
+- Update README.md
+- docs updates
+- remove 404
+- build
+- fix
+- fix
+- fix missing /
+- fix site routing
+- fix route
+- fix wrangler proj name
+- remove polyfill
+- Merge pull request #57 from rknightion/codex/increase-test-coverage-for-custom-component
+- Merge branch 'main' into codex/increase-test-coverage-for-custom-component
+- Merge remote-tracking branch 'origin/main'
+
+
 ## [0.25.4] - 2025-07-27
 
 
