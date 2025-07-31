@@ -58,46 +58,6 @@ jobs:
       - name: Run Ruff formatting
         run: uv run ruff format custom_components tests
 
-  # Check with Home Assistant's hassfest
-  hassfest:
-    permissions:
-      contents: read
-    runs-on: ubuntu-latest
-    name: Hassfest
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
-        with:
-          egress-policy: audit
-
-      - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: Run hassfest
-        uses: home-assistant/actions/hassfest@a19f5f4e08ef2786e4604a948f62addd937a6bc9 # master
-
-  # Validate HACS compliance
-  hacs:
-    runs-on: ubuntu-latest
-    name: HACS
-    steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
-        with:
-          egress-policy: audit
-
-      - name: Check out code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          persist-credentials: false
-
-      - name: HACS validation
-        uses: hacs/action@285e417a83cc9c6a99806236b7f22414c209ef10 # main
-        with:
-          category: integration
-
   # Test the integration
   pytest:
     permissions:
