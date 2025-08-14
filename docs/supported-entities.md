@@ -40,7 +40,7 @@ MT devices provide comprehensive environmental monitoring capabilities:
 | Temperature | Temperature sensor | TEMPERATURE | CELSIUS | MEASUREMENT | - |
 | TVOC | TVOC sensor | VOLATILE_ORGANIC_COMPOUNDS | μg/m³ | MEASUREMENT | - |
 | Voltage | Voltage sensor | VOLTAGE | VOLT | MEASUREMENT | - |
-| Energy | Energy sensor | ENERGY | WATT_HOUR | TOTAL | - |
+| Energy | Energy sensor | ENERGY | WATT_HOUR | TOTAL_INCREASING | - |
 
 ### MR Wireless Access Point Sensors
 

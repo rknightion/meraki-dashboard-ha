@@ -658,9 +658,9 @@ class TestSensorDescriptions:
         assert energy_key in MT_ENERGY_SENSOR_DESCRIPTIONS
         energy_desc = MT_ENERGY_SENSOR_DESCRIPTIONS[energy_key]
         assert energy_desc.key == energy_key
-        # Verify that energy sensors use TOTAL state class (not TOTAL_INCREASING)
-        # This is required for sensors that have a last_reset property
-        assert energy_desc.state_class == SensorStateClass.TOTAL
+        # Verify that energy sensors use TOTAL_INCREASING state class
+        # This is correct for continuously accumulating energy meters
+        assert energy_desc.state_class == SensorStateClass.TOTAL_INCREASING
         # Verify that energy sensors use Wh as native unit (matching meross_lan approach)
         assert energy_desc.native_unit_of_measurement == UnitOfEnergy.WATT_HOUR
 

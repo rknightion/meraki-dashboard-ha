@@ -166,7 +166,7 @@ MT_ENERGY_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         key=f"{MT_SENSOR_REAL_POWER}_energy",
         name="Energy",
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL,
+        state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
         suggested_display_precision=1,
     ),
@@ -410,13 +410,6 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         return self.coordinator.last_update_success
-
-    @property
-    def last_reset(self) -> datetime.datetime | None:
-        """Return the time when the daily reset happened."""
-        # Energy sensors reset daily at midnight UTC
-        now = datetime.datetime.now(datetime.UTC)
-        return now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
