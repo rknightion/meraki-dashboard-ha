@@ -17,6 +17,43 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.26.0] - 2025-08-14
+
+
+### 🚀 Fixes
+- FIx energy total sensors to avoid energy dashboard negative usage
+- remove all-checks-pass job and update dependencies
+
+### 🧰 Maintenance
+87f66fb chore(deps): update development dependencies and format code
+27513de refactor(sensors): change MT energy sensor from TOTAL to TOTAL_INCREASING
+c9cb0ef chore(deps): bump astral-sh/setup-uv from 6.4.3 to 6.5.0
+a46b9bc chore(deps): bump homeassistant-stubs from 2025.8.0 to 2025.8.1
+df05769 chore(deps): update github/codeql-action action to v3.29.8
+b604f13 chore(deps): bump actions/ai-inference from 1.2.7 to 1.2.8
+60796d0 chore(deps): bump ruff from 0.12.7 to 0.12.8
+2379bc2 chore(deps): bump homeassistant-stubs from 2025.7.3 to 2025.8.0
+b8fcb12 chore(deps): bump actions/ai-inference from 1.2.4 to 1.2.7
+d1e1791 chore(deps): bump pytest-homeassistant-custom-component
+ee1930b chore(deps): bump actions/ai-inference from 1.2.3 to 1.2.4
+55db31b chore: remove deprecated guidelines and rules files
+ee22490 chore(deps): bump ruff from 0.12.5 to 0.12.7
+
+### 📋 Other Changes
+- Merge pull request #75 from rknightion/dependabot/github_actions/astral-sh/setup-uv-6.5.0
+- Merge pull request #72 from rknightion/dependabot/uv/homeassistant-stubs-2025.8.1
+- Merge pull request #58 from rknightion/renovate/github-codeql-action-3.x
+- Merge pull request #67 from rknightion/dependabot/github_actions/actions/ai-inference-1.2.8
+- Merge pull request #66 from rknightion/dependabot/uv/ruff-0.12.8
+- Merge pull request #65 from rknightion/dependabot/uv/homeassistant-stubs-2025.8.0
+- Merge pull request #64 from rknightion/dependabot/github_actions/actions/ai-inference-1.2.7
+- Merge pull request #63 from rknightion/dependabot/uv/pytest-homeassistant-custom-component-0.13.266
+- Merge pull request #62 from rknightion/dependabot/github_actions/actions/ai-inference-1.2.4
+- fix robot
+- add robots.txt
+- Merge pull request #59 from rknightion/dependabot/uv/ruff-0.12.7
+
+
 ## [0.25.6] - 2025-07-30
 
 
