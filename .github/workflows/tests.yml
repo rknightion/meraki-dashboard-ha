@@ -138,3 +138,18 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+  all-checks-pass:
+    runs-on: ubuntu-latest
+    name: All Checks Pass
+    if: success() # Only run this job if all dependencies succeed
+    needs:
+      - lint-and-scan
+      - pytest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
+      - name: All checks passed
+        run: echo "✅ All checks passed!"

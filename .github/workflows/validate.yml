@@ -34,3 +34,19 @@ jobs:
           category: integration
           # Remove this 'ignore' key when you have added brand images for your integration to https://github.com/home-assistant/brands
           ignore: brands
+
+  all-checks-pass:
+    runs-on: ubuntu-latest
+    name: All Checks Pass
+    if: success() # Only run this job if all dependencies succeed
+    needs:
+      - hassfest
+      - hacs
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+
+      - name: All checks passed
+        run: echo "✅ All checks passed!"
