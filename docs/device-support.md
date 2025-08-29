@@ -18,7 +18,38 @@ Environmental monitoring sensors providing real-time data about physical spaces.
 - Motion detection
 - Power metrics (voltage, current, power factor)
 
-**Common Models:** MT10, MT12, MT14, MT20, MT30
+**Common Models:** MT10, MT12, MT14, MT15, MT20, MT30, MT40
+
+#### MT Fast Refresh Mode (MT15 & MT40 Only)
+
+MT15 and MT40 devices support ultra-fast sensor updates through a special refresh API:
+
+**How It Works:**
+1. **Automatic Detection** - The integration detects MT15/MT40 devices at startup
+2. **Refresh Service** - Sends refresh commands every 5 seconds to trigger sensor updates
+3. **Data Polling** - Fetches updated data every 7.5 seconds
+4. **Smart Error Handling** - Tracks errors per device, only warns after 3 consecutive failures
+
+**Configuration:**
+- **With MT15/MT40**: Set update interval to 0.125 minutes (7.5 seconds)
+- **Without MT15/MT40**: Set update interval to 10 minutes
+- The refresh service starts automatically - no manual configuration needed
+
+**Performance Notes:**
+- Fast refresh increases API usage significantly (~3,600 calls/hour per MT15/MT40)
+- Monitor your Meraki Dashboard API rate limits
+- Consider using fast refresh only for critical sensors
+
+**Update Intervals by Model:**
+| Model | Fast Refresh | Standard Interval |
+|-------|--------------|-------------------|
+| MT15  | ✅ 7.5 seconds | 2-20 minutes |
+| MT40  | ✅ 7.5 seconds | 2-20 minutes |
+| MT10  | ❌ Not supported | 2-20 minutes |
+| MT12  | ❌ Not supported | 2-20 minutes |
+| MT14  | ❌ Not supported | 2-20 minutes |
+| MT20  | ❌ Not supported | 2-20 minutes |
+| MT30  | ❌ Not supported | 2-20 minutes |
 
 ### MR - Wireless Access Points
 

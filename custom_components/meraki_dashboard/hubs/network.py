@@ -24,6 +24,7 @@ from ..const import (
     SENSOR_TYPE_MT,
 )
 from ..services import MerakiEventService
+from ..services.mt_refresh_service import MTRefreshService
 from ..types import (
     MerakiDeviceData,
     MTDeviceData,
@@ -115,8 +116,10 @@ class MerakiNetworkHub:
         self._discovery_durations: list[float] = []
 
         # Initialize event service for MT devices
+        self.mt_refresh_service: MTRefreshService | None = None
         if device_type == SENSOR_TYPE_MT:
             self.event_service = MerakiEventService(self.hass)
+            self.mt_refresh_service = MTRefreshService(self.hass, self)
 
     @property
     def average_discovery_duration(self) -> float:
@@ -161,6 +164,20 @@ class MerakiNetworkHub:
 
             # Perform initial device discovery
             await self._async_discover_devices()
+
+            # Start MT refresh service for MT devices with MT15/MT40 models
+            if self.device_type == SENSOR_TYPE_MT and self.mt_refresh_service:
+                # Check if we have any MT15 or MT40 devices
+                has_mt15_mt40 = any(
+                    device.get("model", "").upper() in ("MT15", "MT40")
+                    for device in self.devices
+                )
+                if has_mt15_mt40:
+                    await self.mt_refresh_service.async_start()
+                    _LOGGER.info(
+                        "Started MT refresh service for %s with MT15/MT40 devices",
+                        self.hub_name,
+                    )
 
             # Set up periodic device discovery if enabled
             auto_discovery_key = f"{self.network_id}_{self.device_type}"
@@ -1641,3 +1658,8 @@ class MerakiNetworkHub:
         if self._discovery_unsub:
             self._discovery_unsub()
             self._discovery_unsub = None
+
+        # Stop MT refresh service if running
+        if self.mt_refresh_service and self.mt_refresh_service.is_running:
+            await self.mt_refresh_service.async_stop()
+            _LOGGER.debug("Stopped MT refresh service for %s", self.hub_name)

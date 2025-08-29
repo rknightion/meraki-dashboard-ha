@@ -164,6 +164,7 @@ If you encounter issues:
 
 ## Next Steps
 
-- [Device Support](device-support.md) - Learn about supported devices and metrics
+- [Device Support](device-support.md) - Learn about supported devices, metrics, and MT fast refresh
+- [API Optimization](api-optimization.md) - Performance and optimization details
 - [FAQ](faq.md) - Common questions and detailed troubleshooting
 - [Development](development.md) - Contributing to the integration

@@ -92,7 +92,9 @@ Try these steps:
 ### What are the new default intervals?
 
 The integration now uses **optimized per-hub intervals**:
-- **MT Environmental Sensors**: 10 minutes (matches typical sensor reporting)
+- **MT Environmental Sensors**: 
+  - With MT15/MT40 devices: 7.5 seconds (fast refresh mode)
+  - Without MT15/MT40 devices: 10 minutes recommended
 - **MR Wireless Access Points**: 5 minutes (network changes are more frequent)
 - **Discovery**: 1 hour (how often to scan for new devices)
 - **MS Switches**: 5 minutes (port and PoE monitoring)
@@ -124,14 +126,26 @@ Branch Office - MT: 15 minutes (less critical)
 ### How often do sensors actually update?
 
 **MT Sensors:**
-- Default reporting: Every 20 minutes (configurable in Meraki Dashboard)
-- Integration default: 10 minutes (polls more frequently for responsiveness)
+- MT15/MT40 devices: Every 7.5 seconds with fast refresh mode
+- Other MT models: Every 2-20 minutes (configurable in Meraki Dashboard)
+- Integration defaults:
+  - With MT15/MT40: 7.5 seconds (automatically sends refresh commands)
+  - Without MT15/MT40: 10 minutes recommended
 - You can adjust both the sensor reporting interval and integration polling
 
 **MR Devices:**
 - Network changes can happen anytime
 - Integration default: 5 minutes provides good network monitoring
 - Adjust based on how quickly you need to detect network changes
+
+### What is MT Fast Refresh Mode?
+
+For MT15 and MT40 devices only, the integration provides ultra-fast sensor updates:
+- **Automatic Detection**: Enabled automatically when MT15/MT40 devices are present
+- **Refresh Commands**: Sends API commands every 5 seconds to trigger sensor updates
+- **Data Polling**: Fetches updated data every 7.5 seconds
+- **Smart Error Handling**: Tracks errors per device to prevent log flooding
+- **No Manual Configuration**: Works out of the box with supported devices
 
 ### Can I change update intervals after setup?
 

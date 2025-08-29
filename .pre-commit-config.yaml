@@ -14,14 +14,14 @@ repos:
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     # Check for the latest ruff version
-    rev: v0.12.9
+    rev: v0.12.11
     hooks:
     -   id: ruff-check
         args: [--fix]
     -   id: ruff-format
 
 -   repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.12.0
+    rev: v1.12.1
     hooks:
     -   id: zizmor
         args: [--fix=all]
@@ -134,7 +134,7 @@ repos:
 
   # Validate GitHub Actions workflow files
 -   repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.33.2 # Keep updated
+    rev: 0.33.3 # Keep updated
     hooks:
     -   id: check-github-workflows
 

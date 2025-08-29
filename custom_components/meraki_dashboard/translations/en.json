@@ -82,7 +82,7 @@
         "data_description": {
           "enabled_device_types": "Select which types of Meraki devices to monitor",
           "update_api_key": "Check this box to update your Meraki API key",
-          "scan_interval": "How often to update sensor data (minutes)",
+          "scan_interval": "How often to update sensor data (minutes). MT sensors default to 0.125 (7.5 seconds) for MT15/MT40 fast refresh support",
           "discovery_interval": "How often to check for new devices (minutes)",
           "auto_discovery": "Automatically discover and add new devices",
           "selected_devices": "Monitor specific devices only (leave empty for all)",
@@ -90,7 +90,10 @@
           "semi_static_data_interval": "Update interval for network settings and device inventory (minutes)",
           "dynamic_data_interval": "Update interval for sensor readings and real-time metrics (minutes)",
           "hub_auto_discovery_*": "Automatically discover new devices in this network",
-          "hub_scan_interval_*": "How often to update sensor data for this network (minutes)",
+          "hub_scan_interval_*": "Update interval (minutes)",
+          "hub_scan_interval_*_MT": "MT sensor update interval (0.125 for MT15/MT40 fast refresh, 10 otherwise)",
+          "hub_scan_interval_*_MR": "MR wireless update interval (minutes)",
+          "hub_scan_interval_*_MS": "MS switch update interval (minutes)",
           "hub_discovery_interval_*": "How often to check for new devices in this network (minutes)"
         }
       },

@@ -165,7 +165,8 @@ class TestSensorTypes:
             SENSOR_TYPE_MV,
         ]:
             assert sensor_type in DEVICE_TYPE_SCAN_INTERVALS
-            assert isinstance(DEVICE_TYPE_SCAN_INTERVALS[sensor_type], int)
+            # Allow both int and float for scan intervals (MT uses 7.5 seconds)
+            assert isinstance(DEVICE_TYPE_SCAN_INTERVALS[sensor_type], (int, float))
             assert DEVICE_TYPE_SCAN_INTERVALS[sensor_type] > 0
 
     def test_default_scan_interval_minutes(self):
@@ -181,12 +182,13 @@ class TestSensorTypes:
         ]:
             assert sensor_type in DEFAULT_SCAN_INTERVAL_MINUTES
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
-            assert isinstance(minutes, int)
+            # Allow both int and float for minutes (MT uses 0.125 for 7.5 seconds)
+            assert isinstance(minutes, (int, float))
             assert minutes > 0
 
             # Should match corresponding seconds value
             seconds = DEVICE_TYPE_SCAN_INTERVALS[sensor_type]
-            assert minutes == seconds // 60
+            assert minutes == seconds / 60
 
     def test_device_type_mappings(self):
         """Test device type mappings structure."""
@@ -341,7 +343,8 @@ class TestConstantConsistency:
         ]:
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
             seconds = DEVICE_TYPE_SCAN_INTERVALS[sensor_type]
-            assert minutes * 60 == seconds
+            # Use approximate comparison for floating point values
+            assert abs(minutes * 60 - seconds) < 0.001
 
     def test_discovery_interval_consistency(self):
         """Test discovery interval constants are consistent."""
@@ -377,7 +380,7 @@ class TestConstantTypes:
         assert isinstance(MT_BINARY_SENSOR_METRICS, list)
 
     def test_numeric_constants(self):
-        """Test numeric constants are integers."""
+        """Test numeric constants are numbers (int or float)."""
         numeric_constants = [
             DEFAULT_SCAN_INTERVAL,
             MIN_SCAN_INTERVAL,
@@ -389,7 +392,8 @@ class TestConstantTypes:
         ]
 
         for constant in numeric_constants:
-            assert isinstance(constant, int)
+            # Allow both int and float since MIN_SCAN_INTERVAL_MINUTES is now 0.125
+            assert isinstance(constant, (int, float))
             assert constant > 0
 
     def test_string_constants_non_empty(self):

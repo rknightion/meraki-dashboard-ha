@@ -182,28 +182,31 @@ REGIONAL_BASE_URLS: Final = {
 
 # Scan intervals (in seconds)
 DEFAULT_SCAN_INTERVAL: Final = 300  # 5 minutes
-MIN_SCAN_INTERVAL: Final = 60  # 1 minute
+MIN_SCAN_INTERVAL: Final = 5  # 5 seconds (to support fast MT refresh)
 DEFAULT_DISCOVERY_INTERVAL: Final = 3600  # 1 hour
 MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes
 
 # Device type specific intervals (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS: Final = {
-    SENSOR_TYPE_MT: 600,  # 10 minutes for environmental sensors
+    SENSOR_TYPE_MT: 7.5,  # 7.5 seconds for environmental sensors (new fast refresh)
     SENSOR_TYPE_MR: 300,  # 5 minutes for wireless access points
     SENSOR_TYPE_MS: 300,  # 5 minutes for switches
     SENSOR_TYPE_MV: 600,  # 10 minutes for cameras
 }
 
+# MT refresh command interval for MT15/MT40 devices
+MT_REFRESH_COMMAND_INTERVAL: Final = 5  # 5 seconds for MT15/MT40 refresh commands
+
 # UI display intervals (in minutes)
 DEFAULT_SCAN_INTERVAL_MINUTES: Final = {
-    SENSOR_TYPE_MT: 10,
+    SENSOR_TYPE_MT: 0.125,  # 7.5 seconds = 0.125 minutes
     SENSOR_TYPE_MR: 5,
     SENSOR_TYPE_MS: 5,
     SENSOR_TYPE_MV: 10,
 }
 
 DEFAULT_DISCOVERY_INTERVAL_MINUTES: Final = 60  # 1 hour
-MIN_SCAN_INTERVAL_MINUTES: Final = 1
+MIN_SCAN_INTERVAL_MINUTES: Final = 0.125  # 7.5 seconds for MT fast refresh
 MIN_DISCOVERY_INTERVAL_MINUTES: Final = 5
 
 # Tiered refresh intervals (in seconds)

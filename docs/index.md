@@ -15,10 +15,11 @@ This custom integration provides real-time monitoring of your Cisco Meraki devic
 ## Key Features
 
 - **🌡️ Environmental Monitoring**: Track temperature, humidity, CO2, air quality, and more from MT sensors
+- **⚡ Ultra-Fast Updates**: 7.5-second refresh for MT15/MT40 devices with automatic refresh commands
 - **📡 Network Monitoring**: Monitor wireless access points, SSIDs, and network performance
 - **🔌 Switch Monitoring**: Keep tabs on switch ports, PoE usage, and traffic statistics
 - **🏢 Multi-Site Support**: Automatically organizes devices by network and location
-- **⚡ Fast Updates**: Configurable polling intervals for responsive monitoring
+- **⏱️ Smart Polling**: Device-specific update intervals optimized for each type
 
 ## Supported Devices
 

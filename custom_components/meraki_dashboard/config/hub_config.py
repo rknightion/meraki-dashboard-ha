@@ -21,7 +21,7 @@ CONF_STATIC_DATA_INTERVAL = "static_data_interval"
 
 # Default values and intervals (minutes converted to seconds where needed)
 DEFAULT_DISCOVERY_INTERVAL = 3600  # 1 hour in seconds
-MIN_SCAN_INTERVAL_MINUTES = 1
+MIN_SCAN_INTERVAL_MINUTES = 0.125  # 7.5 seconds for MT fast refresh
 MAX_SCAN_INTERVAL_MINUTES = 60
 MIN_DISCOVERY_INTERVAL_MINUTES = 1
 MAX_DISCOVERY_INTERVAL_MINUTES = 1440  # 24 hours

@@ -16,7 +16,6 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.selector import Selector
 from meraki.exceptions import APIError
 
-from .config import HubConfigurationManager
 from .config.schemas import (
     APIKeyConfig,
     BaseURLConfig,
@@ -29,7 +28,6 @@ from .const import (
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
-    CONF_DYNAMIC_DATA_INTERVAL,
     CONF_ENABLED_DEVICE_TYPES,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
@@ -37,8 +35,6 @@ from .const import (
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
-    CONF_SEMI_STATIC_DATA_INTERVAL,
-    CONF_STATIC_DATA_INTERVAL,
     DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL_MINUTES,
@@ -47,15 +43,12 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
-    DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES,
     MIN_DISCOVERY_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
     REGIONAL_BASE_URLS,
-    SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    STATIC_DATA_REFRESH_INTERVAL_MINUTES,
     USER_AGENT,
 )
 from .utils import sanitize_device_name
@@ -270,13 +263,6 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_HUB_SCAN_INTERVALS: {},
                         CONF_HUB_DISCOVERY_INTERVALS: {},
                         CONF_HUB_AUTO_DISCOVERY: {},
-                        # Initialize tiered refresh intervals with defaults
-                        CONF_STATIC_DATA_INTERVAL: STATIC_DATA_REFRESH_INTERVAL_MINUTES
-                        * 60,
-                        CONF_SEMI_STATIC_DATA_INTERVAL: SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES
-                        * 60,
-                        CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
-                        * 60,
                         CONF_ENABLED_DEVICE_TYPES: [
                             SENSOR_TYPE_MT,
                             SENSOR_TYPE_MR,
@@ -354,13 +340,6 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_HUB_SCAN_INTERVALS: {},
                     CONF_HUB_DISCOVERY_INTERVALS: {},
                     CONF_HUB_AUTO_DISCOVERY: {},
-                    # Initialize tiered refresh intervals with defaults
-                    CONF_STATIC_DATA_INTERVAL: STATIC_DATA_REFRESH_INTERVAL_MINUTES
-                    * 60,
-                    CONF_SEMI_STATIC_DATA_INTERVAL: SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES
-                    * 60,
-                    CONF_DYNAMIC_DATA_INTERVAL: DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES
-                    * 60,
                     CONF_ENABLED_DEVICE_TYPES: user_input.get(
                         CONF_ENABLED_DEVICE_TYPES,
                         [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
@@ -622,20 +601,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             if hub_auto_discovery:
                 options[CONF_HUB_AUTO_DISCOVERY] = hub_auto_discovery
 
-            # Convert tiered intervals from minutes to seconds
-            if CONF_STATIC_DATA_INTERVAL in options:
-                options[CONF_STATIC_DATA_INTERVAL] = (
-                    options[CONF_STATIC_DATA_INTERVAL] * 60
-                )
-            if CONF_SEMI_STATIC_DATA_INTERVAL in options:
-                options[CONF_SEMI_STATIC_DATA_INTERVAL] = (
-                    options[CONF_SEMI_STATIC_DATA_INTERVAL] * 60
-                )
-            if CONF_DYNAMIC_DATA_INTERVAL in options:
-                options[CONF_DYNAMIC_DATA_INTERVAL] = (
-                    options[CONF_DYNAMIC_DATA_INTERVAL] * 60
-                )
-
             # Validate the updated configuration
             try:
                 MerakiConfigSchema.from_config_entry(
@@ -689,12 +654,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             selector.BooleanSelector()
         )
 
-        # 3. Add tiered interval options (organization/network/device intervals)
-        hub_config_manager = HubConfigurationManager(current_options)
-        tiered_schema = hub_config_manager._build_tiered_refresh_intervals({})
-        schema_dict.update(tiered_schema)
-
-        # 4. Build hub-specific options if we have hubs
+        # 3. Build hub-specific options if we have hubs
         if hubs_info:
             # Add settings for each hub
             for hub_key, hub_info in sorted(hubs_info.items()):
@@ -732,8 +692,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         hub_key,
                         DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
                     )
-                    // 60
+                    / 60  # Use division instead of floor division to preserve decimals
                 )
+
+                # For MT devices, allow 0.125 minute intervals
+                step_value = 0.125 if device_type == SENSOR_TYPE_MT else 1
+                min_value = 0.125 if device_type == SENSOR_TYPE_MT else 1
 
                 schema_dict[
                     vol.Optional(
@@ -742,9 +706,9 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     )
                 ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
-                        min=MIN_SCAN_INTERVAL_MINUTES,
+                        min=min_value,
                         max=60,
-                        step=1,
+                        step=step_value,
                         unit_of_measurement="minutes",
                         mode=selector.NumberSelectorMode.BOX,
                     )
@@ -800,10 +764,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             description_placeholders["hub_list"] = "No hubs configured yet"
             description_placeholders["has_hubs"] = "false"
             description_placeholders["hub_settings_explanation"] = ""
-
-        # Add other placeholders
-        base_placeholders = hub_config_manager.build_description_placeholders(hubs_info)
-        description_placeholders.update(base_placeholders)
 
         return self.async_show_form(
             step_id="init",

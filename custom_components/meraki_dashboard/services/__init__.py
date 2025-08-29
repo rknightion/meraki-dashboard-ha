@@ -7,6 +7,7 @@ from .event_service import (
     EventThrottle,
     MerakiEventService,
 )
+from .mt_refresh_service import MTRefreshService
 
 __all__ = [
     "EventFilter",
@@ -14,4 +15,5 @@ __all__ = [
     "EventSubscriber",
     "EventThrottle",
     "MerakiEventService",
+    "MTRefreshService",
 ]
