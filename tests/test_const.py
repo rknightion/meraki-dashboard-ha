@@ -166,7 +166,7 @@ class TestSensorTypes:
         ]:
             assert sensor_type in DEVICE_TYPE_SCAN_INTERVALS
             # Allow both int and float for scan intervals (MT uses 7.5 seconds)
-            assert isinstance(DEVICE_TYPE_SCAN_INTERVALS[sensor_type], (int, float))
+            assert isinstance(DEVICE_TYPE_SCAN_INTERVALS[sensor_type], int | float)
             assert DEVICE_TYPE_SCAN_INTERVALS[sensor_type] > 0
 
     def test_default_scan_interval_minutes(self):
@@ -183,7 +183,7 @@ class TestSensorTypes:
             assert sensor_type in DEFAULT_SCAN_INTERVAL_MINUTES
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
             # Allow both int and float for minutes (MT uses 0.125 for 7.5 seconds)
-            assert isinstance(minutes, (int, float))
+            assert isinstance(minutes, int | float)
             assert minutes > 0
 
             # Should match corresponding seconds value
@@ -393,7 +393,7 @@ class TestConstantTypes:
 
         for constant in numeric_constants:
             # Allow both int and float since MIN_SCAN_INTERVAL_MINUTES is now 0.125
-            assert isinstance(constant, (int, float))
+            assert isinstance(constant, int | float)
             assert constant > 0
 
     def test_string_constants_non_empty(self):

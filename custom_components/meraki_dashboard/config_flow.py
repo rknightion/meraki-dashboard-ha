@@ -667,6 +667,14 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 scan_interval_key = f"hub_scan_interval_{hub_key}"
                 discovery_interval_key = f"hub_discovery_interval_{hub_key}"
 
+                # Create device-specific labels
+                device_type_labels = {
+                    SENSOR_TYPE_MT: "Environmental Sensors",
+                    SENSOR_TYPE_MR: "Wireless Access Points",
+                    SENSOR_TYPE_MS: "Switches",
+                }
+                device_label = device_type_labels.get(device_type, device_type)
+
                 # Auto-discovery toggle with custom label
                 schema_dict[
                     vol.Optional(
@@ -675,16 +683,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                             hub_key, True
                         ),
                         description={
+                            "name": f"[{device_label}] Auto-discover devices in {hub_name}",
                             "suggested_value": current_options.get(
                                 CONF_HUB_AUTO_DISCOVERY, {}
-                            ).get(hub_key, True)
+                            ).get(hub_key, True),
                         },
                     )
-                ] = selector.BooleanSelector(
-                    selector.BooleanSelectorConfig(
-                        # This provides context in the UI
-                    )
-                )
+                ] = selector.BooleanSelector(selector.BooleanSelectorConfig())
 
                 # Scan interval with custom label
                 current_scan_minutes = (
@@ -699,10 +704,19 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 step_value = 0.125 if device_type == SENSOR_TYPE_MT else 1
                 min_value = 0.125 if device_type == SENSOR_TYPE_MT else 1
 
+                # Create appropriate description based on device type
+                if device_type == SENSOR_TYPE_MT:
+                    interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices) - Use 0.125 minutes (7.5s) for MT15/MT40 fast refresh"
+                else:
+                    interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices)"
+
                 schema_dict[
                     vol.Optional(
                         scan_interval_key,
                         default=current_scan_minutes,
+                        description={
+                            "name": interval_description,
+                        },
                     )
                 ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
@@ -726,6 +740,9 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(
                         discovery_interval_key,
                         default=current_discovery_minutes,
+                        description={
+                            "name": f"[{device_label}] Discovery interval for {hub_name} - How often to check for new devices",
+                        },
                     )
                 ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(

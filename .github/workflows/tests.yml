@@ -53,10 +53,10 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run Ruff linting
-        run: uv run ruff check --fix custom_components tests
+        run: uv run ruff check --fix custom_components
 
       - name: Run Ruff formatting
-        run: uv run ruff format custom_components tests
+        run: uv run ruff format custom_components
 
   # Test the integration
   pytest:

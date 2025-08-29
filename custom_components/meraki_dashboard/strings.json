@@ -88,13 +88,7 @@
           "selected_devices": "Monitor specific devices only (leave empty for all)",
           "static_data_interval": "Update interval for organization info and licenses (minutes)",
           "semi_static_data_interval": "Update interval for network settings and device inventory (minutes)",
-          "dynamic_data_interval": "Update interval for sensor readings and real-time metrics (minutes)",
-          "hub_auto_discovery_*": "Automatically discover new devices in this network",
-          "hub_scan_interval_*": "Update interval (minutes)",
-          "hub_scan_interval_*_MT": "MT sensor update interval (0.125 for MT15/MT40 fast refresh, 10 otherwise)",
-          "hub_scan_interval_*_MR": "MR wireless update interval (minutes)",
-          "hub_scan_interval_*_MS": "MS switch update interval (minutes)",
-          "hub_discovery_interval_*": "How often to check for new devices in this network (minutes)"
+          "dynamic_data_interval": "Update interval for sensor readings and real-time metrics (minutes)"
         }
       },
       "api_key": {
