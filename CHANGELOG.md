@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.28.0] - 2025-08-29
+
+
+### 🚀 Features
+- increase MR and MS device refresh intervals to 10 minutes (it's what they were previously and it reduces the chance of getting rate limited with the increased MT polling frequency)
+
+
 ## [0.27.2] - 2025-08-29
 
 
