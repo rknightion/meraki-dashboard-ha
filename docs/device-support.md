@@ -26,12 +26,12 @@ MT15 and MT40 devices support ultra-fast sensor updates through a special refres
 
 **How It Works:**
 1. **Automatic Detection** - The integration detects MT15/MT40 devices at startup
-2. **Refresh Service** - Sends refresh commands every 5 seconds to trigger sensor updates
-3. **Data Polling** - Fetches updated data every 7.5 seconds
+2. **Refresh Service** - Sends refresh commands every 30 seconds to trigger sensor updates
+3. **Data Polling** - Fetches updated data every 30 seconds
 4. **Smart Error Handling** - Tracks errors per device, only warns after 3 consecutive failures
 
 **Configuration:**
-- **With MT15/MT40**: Set update interval to 0.125 minutes (7.5 seconds)
+- **With MT15/MT40**: Set update interval to 0.5 minutes (30 seconds)
 - **Without MT15/MT40**: Set update interval to 10 minutes
 - The refresh service starts automatically - no manual configuration needed
 
@@ -43,8 +43,8 @@ MT15 and MT40 devices support ultra-fast sensor updates through a special refres
 **Update Intervals by Model:**
 | Model | Fast Refresh | Standard Interval |
 |-------|--------------|-------------------|
-| MT15  | ✅ 7.5 seconds | 2-20 minutes |
-| MT40  | ✅ 7.5 seconds | 2-20 minutes |
+| MT15  | ✅ 30 seconds | 2-20 minutes |
+| MT40  | ✅ 30 seconds | 2-20 minutes |
 | MT10  | ❌ Not supported | 2-20 minutes |
 | MT12  | ❌ Not supported | 2-20 minutes |
 | MT14  | ❌ Not supported | 2-20 minutes |

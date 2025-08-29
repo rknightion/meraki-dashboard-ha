@@ -12,7 +12,7 @@ The Meraki Dashboard integration implements a **tiered refresh system** and a su
 The integration uses device-specific refresh intervals optimized for each device type:
 
 - **Environmental Sensors (MT):** 
-  - With MT15/MT40 devices: 7.5 seconds - fast refresh mode with automatic refresh commands
+  - With MT15/MT40 devices: 30 seconds - fast refresh mode with automatic refresh commands
   - Without MT15/MT40 devices: 10 minutes recommended - standard temperature, humidity, air quality readings
 - **Wireless Access Points (MR):** 5 minutes - client counts, channel utilization, SSID status
 - **Switches (MS):** 5 minutes - port status, PoE usage, traffic statistics
@@ -21,8 +21,8 @@ The integration uses device-specific refresh intervals optimized for each device
 
 ### MT Fast Refresh Mode
 For MT15 and MT40 devices, the integration provides ultra-fast sensor updates:
-- **Data Updates:** Every 7.5 seconds via standard API polling
-- **Refresh Commands:** Automatic refresh commands sent every 5 seconds to MT15/MT40 devices
+- **Data Updates:** Every 30 seconds via standard API polling
+- **Refresh Commands:** Automatic refresh commands sent every 30 seconds to MT15/MT40 devices
 - **Smart Error Handling:** Per-device error tracking prevents log flooding
 - **Automatic Detection:** Refresh service only runs when MT15/MT40 devices are present
 

@@ -700,13 +700,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     / 60  # Use division instead of floor division to preserve decimals
                 )
 
-                # For MT devices, allow 0.125 minute intervals
-                step_value = 0.125 if device_type == SENSOR_TYPE_MT else 1
-                min_value = 0.125 if device_type == SENSOR_TYPE_MT else 1
+                # For MT devices, allow 0.5 minute intervals (30 seconds)
+                step_value = 0.5 if device_type == SENSOR_TYPE_MT else 1
+                min_value = 0.5 if device_type == SENSOR_TYPE_MT else 1
 
                 # Create appropriate description based on device type
                 if device_type == SENSOR_TYPE_MT:
-                    interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices) - Use 0.125 minutes (7.5s) for MT15/MT40 fast refresh"
+                    interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices) - Use 0.5 minutes (30s) for MT15/MT40 fast refresh"
                 else:
                     interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices)"
 

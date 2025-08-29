@@ -82,7 +82,7 @@
         "data_description": {
           "enabled_device_types": "Select which types of Meraki devices to monitor",
           "update_api_key": "Check this box to update your Meraki API key",
-          "scan_interval": "How often to update sensor data (minutes). MT sensors default to 0.125 (7.5 seconds) for MT15/MT40 fast refresh support",
+          "scan_interval": "How often to update sensor data (minutes). MT sensors default to 0.5 (30 seconds) for MT15/MT40 fast refresh support",
           "discovery_interval": "How often to check for new devices (minutes)",
           "auto_discovery": "Automatically discover and add new devices",
           "selected_devices": "Monitor specific devices only (leave empty for all)",
