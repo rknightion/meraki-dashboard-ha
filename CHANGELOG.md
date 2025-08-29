@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.27.2] - 2025-08-29
+
+
+### 🐛 Bug Fixes
+- increase minimum update interval from 7.5s to 30s
+
+
 ## [0.27.1] - 2025-08-29
 
 
