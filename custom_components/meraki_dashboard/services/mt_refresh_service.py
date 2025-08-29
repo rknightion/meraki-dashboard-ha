@@ -30,6 +30,9 @@ class MTRefreshService:
     This service runs every 5 seconds and sends refresh commands to MT15 and MT40
     devices to ensure they update their readings more frequently than the default
     Meraki update interval.
+
+    Uses the official Meraki SDK's createDeviceSensorCommand method with the
+    'refreshData' operation to trigger immediate sensor data uploads.
     """
 
     def __init__(
@@ -212,56 +215,28 @@ class MTRefreshService:
 
         Returns:
             API response dictionary
+
+        Raises:
+            Exception: Any API errors are allowed to propagate to the caller
+                      for proper failure counting
         """
         if self.dashboard is None:
             raise RuntimeError("Dashboard API not initialized")
 
-        # Call the sensor commands endpoint
-        # The Meraki Python SDK likely doesn't have this endpoint yet,
-        # so we'll make a raw API call using the SDK's internal session
-        try:
-            # Use the SDK's internal API call mechanism
-            # The endpoint expects operation=refreshData as a query parameter
-            endpoint = f"devices/{serial}/sensor/commands"
+        # Use the SDK's createDeviceSensorCommand method
+        # This sends the refreshData operation to MT15/MT40 devices
+        # Let any exceptions bubble up to the caller for proper error handling
+        result = self.dashboard.sensor.createDeviceSensorCommand(
+            serial=serial, operation="refreshData"
+        )
 
-            # Make the POST request with the operation parameter
-            # The SDK's _session handles authentication and base URL
-            if hasattr(self.dashboard, "_session"):
-                # Use the internal session's request method
-                response = self.dashboard._session.request(
-                    "POST", endpoint, params={"operation": "refreshData"}
-                )
-
-                # Parse the response
-                if response and hasattr(response, "json"):
-                    return response.json()
-                else:
-                    return response
-            else:
-                # If _session is not available, try alternative approach
-                # This might happen with different SDK versions
-                _LOGGER.warning(
-                    "Cannot access dashboard._session, refresh command not available"
-                )
-                return {"errors": ["MT refresh API not available in this SDK version"]}
-
-        except Exception as e:
-            # Check if it's a 201 response (which is success for this endpoint)
-            if hasattr(e, "response") and hasattr(e.response, "status_code"):
-                if e.response.status_code == 201:
-                    # This is actually a success
-                    try:
-                        return e.response.json()
-                    except Exception:
-                        return {"commandId": "unknown", "status": "pending"}
-
-            # Return error in expected format
-            error_msg = str(e)
-            if "already running" in error_msg.lower():
-                # This is an expected error when a command is already in progress
-                return {"errors": [error_msg]}
-
-            return {"errors": [str(e)]}
+        # The SDK returns the command object on success
+        # It should always be a dict, but be defensive
+        if result and isinstance(result, dict):
+            return result
+        else:
+            # Shouldn't happen with the SDK, but handle it gracefully
+            return {"commandId": "unknown", "status": "pending"}
 
     def _handle_refresh_error(
         self, serial: str, model: str, result: dict[str, Any] | None
