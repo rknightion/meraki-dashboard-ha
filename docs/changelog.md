@@ -17,6 +17,13 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.27.1] - 2025-08-29
+
+
+### 🧰 Maintenance
+2564a0e refactor(sensor): update MT refresh service to use official SDK method
+
+
 ## [0.27.0] - 2025-08-29
 
 
