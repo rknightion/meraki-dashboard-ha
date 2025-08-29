@@ -14,8 +14,8 @@ The integration uses device-specific refresh intervals optimized for each device
 - **Environmental Sensors (MT):** 
   - With MT15/MT40 devices: 30 seconds - fast refresh mode with automatic refresh commands
   - Without MT15/MT40 devices: 10 minutes recommended - standard temperature, humidity, air quality readings
-- **Wireless Access Points (MR):** 5 minutes - client counts, channel utilization, SSID status
-- **Switches (MS):** 5 minutes - port status, PoE usage, traffic statistics
+- **Wireless Access Points (MR):** 10 minutes - client counts, channel utilization, SSID status
+- **Switches (MS):** 10 minutes - port status, PoE usage, traffic statistics
 - **Cameras (MV):** 10 minutes - (coming soon)
 - **Device Discovery:** 1 hour - finds new devices and updates network topology
 

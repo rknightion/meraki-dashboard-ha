@@ -41,15 +41,15 @@ MT15 and MT40 devices support ultra-fast sensor updates through a special refres
 - Consider using fast refresh only for critical sensors
 
 **Update Intervals by Model:**
-| Model | Fast Refresh | Standard Interval |
-|-------|--------------|-------------------|
-| MT15  | ✅ 30 seconds | 2-20 minutes |
-| MT40  | ✅ 30 seconds | 2-20 minutes |
-| MT10  | ❌ Not supported | 2-20 minutes |
-| MT12  | ❌ Not supported | 2-20 minutes |
-| MT14  | ❌ Not supported | 2-20 minutes |
-| MT20  | ❌ Not supported | 2-20 minutes |
-| MT30  | ❌ Not supported | 2-20 minutes |
+| Model | Fast Refresh | Recommended Interval |
+|-------|--------------|---------------------|
+| MT15  | ✅ 30 seconds | 30 seconds (with fast refresh) |
+| MT40  | ✅ 30 seconds | 30 seconds (with fast refresh) |
+| MT10  | ❌ Not supported | 10 minutes |
+| MT12  | ❌ Not supported | 10 minutes |
+| MT14  | ❌ Not supported | 10 minutes |
+| MT20  | ❌ Not supported | 10 minutes |
+| MT30  | ❌ Not supported | 10 minutes |
 
 ### MR - Wireless Access Points
 

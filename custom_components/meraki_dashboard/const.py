@@ -189,8 +189,8 @@ MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes
 # Device type specific intervals (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS: Final = {
     SENSOR_TYPE_MT: 30,  # 30 seconds for environmental sensors (with fast refresh)
-    SENSOR_TYPE_MR: 300,  # 5 minutes for wireless access points
-    SENSOR_TYPE_MS: 300,  # 5 minutes for switches
+    SENSOR_TYPE_MR: 600,  # 10 minutes for wireless access points
+    SENSOR_TYPE_MS: 600,  # 10 minutes for switches
     SENSOR_TYPE_MV: 600,  # 10 minutes for cameras
 }
 
@@ -200,9 +200,9 @@ MT_REFRESH_COMMAND_INTERVAL: Final = 30  # 30 seconds for MT15/MT40 refresh comm
 # UI display intervals (in minutes)
 DEFAULT_SCAN_INTERVAL_MINUTES: Final = {
     SENSOR_TYPE_MT: 0.5,  # 30 seconds = 0.5 minutes
-    SENSOR_TYPE_MR: 5,
-    SENSOR_TYPE_MS: 5,
-    SENSOR_TYPE_MV: 10,
+    SENSOR_TYPE_MR: 10,  # 10 minutes
+    SENSOR_TYPE_MS: 10,  # 10 minutes
+    SENSOR_TYPE_MV: 10,  # 10 minutes
 }
 
 DEFAULT_DISCOVERY_INTERVAL_MINUTES: Final = 60  # 1 hour

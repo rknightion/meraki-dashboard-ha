@@ -95,18 +95,18 @@ The integration now uses **optimized per-hub intervals**:
 - **MT Environmental Sensors**: 
   - With MT15/MT40 devices: 30 seconds (fast refresh mode)
   - Without MT15/MT40 devices: 10 minutes recommended
-- **MR Wireless Access Points**: 5 minutes (network changes are more frequent)
+- **MR Wireless Access Points**: 10 minutes (balanced performance and API usage)
 - **Discovery**: 1 hour (how often to scan for new devices)
-- **MS Switches**: 5 minutes (port and PoE monitoring)
+- **MS Switches**: 10 minutes (port and PoE monitoring)
 - **MV Cameras (Future)**: 10 minutes (video analytics)
 
 ### Why did the intervals change from 20 minutes?
 
 The new system provides better optimization:
-- **MT sensors**: 10 minutes provides more responsive monitoring while still being efficient
-- **MR devices**: 5 minutes captures network changes more effectively
+- **MT sensors**: 30 seconds with fast refresh for MT15/MT40, 10 minutes for others
+- **MR/MS devices**: 10 minutes balances monitoring needs with API usage
 - **Per-hub control**: Different device types have different optimal intervals
-- **Better defaults**: Balanced performance and API usage
+- **Better defaults**: Optimized for both performance and API efficiency
 
 ### Can I configure different intervals for each hub?
 
@@ -117,10 +117,10 @@ Yes! You can set **individual hub intervals**:
 
 Example configuration:
 ```
-Main Office - MT: 10 minutes
-Main Office - MR: 5 minutes
-Data Center - MT: 5 minutes (critical monitoring)
-Branch Office - MT: 15 minutes (less critical)
+Main Office - MT: 0.5 minutes (30 seconds with MT15/MT40)
+Main Office - MR: 10 minutes
+Data Center - MS: 5 minutes (critical switch monitoring)
+Branch Office - MT: 10 minutes (standard monitoring)
 ```
 
 ### How often do sensors actually update?
@@ -135,8 +135,13 @@ Branch Office - MT: 15 minutes (less critical)
 
 **MR Devices:**
 - Network changes can happen anytime
-- Integration default: 5 minutes provides good network monitoring
-- Adjust based on how quickly you need to detect network changes
+- Integration default: 10 minutes provides balanced monitoring
+- Adjust to 5 minutes for more frequent updates if needed
+
+**MS Switches:**
+- Port and PoE status monitoring
+- Integration default: 10 minutes for standard monitoring
+- Adjust to 5 minutes for critical infrastructure
 
 ### What is MT Fast Refresh Mode?
 
