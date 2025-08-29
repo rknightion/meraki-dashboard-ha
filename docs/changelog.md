@@ -17,6 +17,54 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.27.0] - 2025-08-29
+
+
+### 🚀 Features
+- improve device-specific configuration UI
+- implement fast refresh mode for MT15/MT40 devices which will force them to get much more realtime data (~15 second polling)
+
+### 🧰 Maintenance
+351a508 chore(deps): update actions/dependency-review-action action to v4.7.3 (#96)
+87eb4d5 chore(deps): update actions/ai-inference action to v2.0.1 (#95)
+e5d3f12 chore(deps): lock file maintenance (#94)
+a920082 chore(deps): update github/codeql-action action to v3.29.11 (#81)
+74f882e chore(deps): pin dependencies (#93)
+4300718 chore(deps): update home-assistant/actions digest to 72e1db9 (#80)
+2c39a24 chore(deps): bump astral-sh/setup-uv from 6.5.0 to 6.6.0
+3e95716 chore(deps): bump mkdocs-material from 9.6.17 to 9.6.18
+d35def3 chore(deps): bump homeassistant-stubs from 2025.8.2 to 2025.8.3
+372d112 chore(deps): bump ruff from 0.12.9 to 0.12.10
+7fcb027 chore(deps): bump codecov/codecov-action from 5.4.3 to 5.5.0
+c0665b0 chore(deps): bump homeassistant-stubs from 2025.8.1 to 2025.8.2
+ade020f chore(deps): bump actions/dependency-review-action from 4.7.1 to 4.7.2
+26fb0e8 chore(deps): bump mkdocs-material from 9.6.16 to 9.6.17
+57b1564 chore(deps): bump actions/ai-inference from 1.2.8 to 2.0.0
+fc22186 chore(deps): bump zizmorcore/zizmor-action from 0.1.1 to 0.1.2
+26072b6 chore(deps): update zizmorcore/zizmor-action action to v0.1.2
+2b37db0 chore(deps): update github/codeql-action action to v3.29.9
+3016abf chore(deps): bump actions/checkout from 4 to 5
+
+### 📋 Other Changes
+- set all-checks job
+- disable dependabot
+- update renovate config
+- Merge pull request #92 from rknightion/dependabot/github_actions/astral-sh/setup-uv-6.6.0
+- Merge pull request #91 from rknightion/dependabot/uv/mkdocs-material-9.6.18
+- Merge pull request #90 from rknightion/dependabot/uv/homeassistant-stubs-2025.8.3
+- Merge pull request #89 from rknightion/dependabot/uv/ruff-0.12.10
+- Merge pull request #87 from rknightion/dependabot/github_actions/codecov/codecov-action-5.5.0
+- Merge pull request #85 from rknightion/dependabot/uv/homeassistant-stubs-2025.8.2
+- Merge pull request #83 from rknightion/dependabot/github_actions/actions/dependency-review-action-4.7.2
+- Merge pull request #79 from rknightion/dependabot/uv/mkdocs-material-9.6.17
+- Merge remote-tracking branch 'origin/dependabot/github_actions/actions/ai-inference-2.0.0'
+- Merge remote-tracking branch 'origin/main'
+- Merge remote-tracking branch 'origin/dependabot/github_actions/zizmorcore/zizmor-action-0.1.2'
+- Merge remote-tracking branch 'origin/dependabot/github_actions/actions/checkout-5'
+- Merge remote-tracking branch 'origin/renovate/github-codeql-action-3.x'
+- Merge remote-tracking branch 'origin/renovate/zizmorcore-zizmor-action-0.x'
+
+
 ## [0.26.0] - 2025-08-14
 
 
