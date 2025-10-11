@@ -22,7 +22,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "homeassistant-stubs==2025.10.1",
+    "homeassistant-stubs==2025.10.2",
     "ruff<1.0.0,>=0.12.5",
     "mypy",
     "bandit",
