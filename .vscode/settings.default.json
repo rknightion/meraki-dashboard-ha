@@ -1,0 +1,31 @@
+{
+  // Minimal VS Code settings for Meraki Dashboard HA Integration development
+  // Copy this file to settings.json and customize as needed
+  // https://code.visualstudio.com/docs/python/testing#_pytest-configuration-settings
+  "python.testing.pytestArgs": ["tests", "--no-cov"],
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  // https://code.visualstudio.com/docs/python/linting#_general-settings
+  "pylint.importStrategy": "fromEnvironment",
+  // Manifest schema validation for custom components
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "custom_components/*/manifest.json"
+      ],
+      "url": "https://schemas.home-assistant.io/integration_manifest.json"
+    }
+  ],
+  // YAML file associations for Home Assistant
+  "files.associations": {
+    "*.yaml": "home-assistant",
+    "*.yml": "home-assistant"
+  },
+  // Home Assistant config schema validation
+  "yaml.schemas": {
+    "https://schemas.home-assistant.io/config_schema.json": [
+      "configuration.yaml",
+      "config/*.yaml"
+    ]
+  }
+}
