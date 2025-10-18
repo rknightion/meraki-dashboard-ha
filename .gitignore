@@ -200,9 +200,12 @@ __pycache__
 
 # misc
 .coverage
-.vscode
 coverage.xml
 .ruff_cache
+
+# VS Code - track defaults, ignore user customizations
+.vscode/settings.json
+!.vscode/settings.default.json
 
 
 # Home Assistant configuration
