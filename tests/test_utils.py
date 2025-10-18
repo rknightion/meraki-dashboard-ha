@@ -669,7 +669,7 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT11 devices."""
         capabilities = create_device_capability_filter("MT11", "MT")
 
-        expected_capabilities = {"temperature"}  # MT11 is temperature only
+        expected_capabilities = {"temperature", "battery"}  # MT11 is temperature probe
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt12(self):
@@ -677,22 +677,20 @@ class TestDeviceCapabilityFilter:
         capabilities = create_device_capability_filter("MT12", "MT")
 
         expected_capabilities = {
-            "temperature",
-            "humidity",
-        }  # MT12 has temp and humidity
+            "water",
+            "battery",
+        }  # MT12 is water leak detection
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt14(self):
         """Test capability filter for MT14 devices."""
         capabilities = create_device_capability_filter("MT14", "MT")
 
-        # MT14 is a door sensor with full environmental monitoring
+        # MT14 is indoor air quality sensor
         expected_capabilities = {
             "temperature",
             "humidity",
             "battery",
-            "door",
-            "indoorAirQuality",
             "tvoc",
             "noise",
             "pm25",
@@ -703,15 +701,10 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT20 devices."""
         capabilities = create_device_capability_filter("MT20", "MT")
 
-        # MT20 is full environmental monitoring
+        # MT20 is door/open-close sensor
         expected_capabilities = {
-            "temperature",
-            "humidity",
-            "co2",
-            "tvoc",
-            "pm25",
-            "noise",
-            "indoorAirQuality",
+            "door",
+            "battery",
         }
         assert capabilities == expected_capabilities
 
@@ -719,8 +712,8 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for MT30 devices."""
         capabilities = create_device_capability_filter("MT30", "MT")
 
-        # MT30 is smart camera with AI features
-        expected_capabilities = {"temperature", "humidity", "battery", "button"}
+        # MT30 is smart automation button
+        expected_capabilities = {"button", "battery"}
         assert capabilities == expected_capabilities
 
     def test_create_device_capability_filter_mt40(self):
@@ -744,8 +737,8 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for unknown MT device."""
         capabilities = create_device_capability_filter("MT99", "MT")
 
-        # Unknown MT models get default capabilities
-        assert capabilities == {"temperature", "humidity"}
+        # Unknown MT models get default capabilities (with battery)
+        assert capabilities == {"temperature", "humidity", "battery"}
 
     def test_create_device_capability_filter_mr_device(self):
         """Test capability filter for MR devices."""

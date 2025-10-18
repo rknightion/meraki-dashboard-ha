@@ -22,7 +22,6 @@ help:
 # Install dependencies
 install:
 	uv sync --all-extras
-	uv run pre-commit install
 	@echo "Development environment setup complete!"
 
 # Run tests with coverage

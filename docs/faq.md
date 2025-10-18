@@ -198,11 +198,14 @@ Currently, you can't disable individual hubs, but you can:
 ### Why are some sensors missing from my MT device?
 
 Not all MT models support all sensor types:
-- **MT10/MT12**: Basic temperature/humidity + battery
-- **MT14/MT15**: Adds water detection and door sensors
-- **MT20**: Adds CO2, noise, and indoor air quality
-- **MT30**: Adds TVOC and PM2.5
-- **MT40**: Adds electrical measurements (voltage, current, power)
+- **MT10**: Temperature, humidity, and battery
+- **MT11**: Temperature probe (external) and battery
+- **MT12**: Water leak detection and battery
+- **MT14**: Indoor air quality (temperature, humidity, PM2.5, TVOC, noise, battery)
+- **MT15**: Indoor air quality with CO2 (temperature, humidity, CO2, PM2.5, TVOC, noise, battery)
+- **MT20**: Door/open-close sensor and battery
+- **MT30**: Smart automation button and battery
+- **MT40**: Smart power controller (electrical measurements: voltage, current, power, frequency, power factor)
 
 Check your device model specifications in the Meraki Dashboard.
 

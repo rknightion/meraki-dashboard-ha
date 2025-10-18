@@ -1,0 +1,35 @@
+# Set default line ending behavior to auto-detect
+* text=auto
+
+# Ensure bash scripts always use LF line endings (Unix-style)
+*.sh text eol=lf
+scripts/* text eol=lf
+
+# Python files
+*.py text eol=lf
+
+# YAML and JSON
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
+# Markdown
+*.md text eol=lf
+
+# Configuration files
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+Makefile text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary

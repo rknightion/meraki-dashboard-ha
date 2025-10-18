@@ -20,6 +20,19 @@ Environmental monitoring sensors providing real-time data about physical spaces.
 
 **Common Models:** MT10, MT12, MT14, MT15, MT20, MT30, MT40
 
+#### MT Model Specifications
+
+| Model | Type | Sensors |
+|-------|------|---------|
+| MT10  | Temperature & Humidity | Temperature, Humidity, Battery |
+| MT11  | Temperature Probe | Temperature (external probe), Battery |
+| MT12  | Water Leak Detection | Water Detection, Battery |
+| MT14  | Indoor Air Quality | Temperature, Humidity, PM2.5, TVOC, Noise, Battery |
+| MT15  | Indoor Air Quality + CO2 | Temperature, Humidity, CO2, PM2.5, TVOC, Noise, Battery |
+| MT20  | Door/Open-Close Sensor | Door Status (Open/Closed), Battery |
+| MT30  | Smart Automation Button | Button Press Events, Battery |
+| MT40  | Smart Power Controller | Real Power, Apparent Power, Voltage, Current, Frequency, Power Factor, Downstream Power, Remote Lockout Switch |
+
 #### MT Fast Refresh Mode (MT15 & MT40 Only)
 
 MT15 and MT40 devices support ultra-fast sensor updates through a special refresh API:

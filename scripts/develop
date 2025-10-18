@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Create config dir if not present
+if [[ ! -d "${PWD}/config" ]]; then
+    echo "Creating Home Assistant config directory..."
+    mkdir -p "${PWD}/config"
+
+    # Check if hass command is available
+    if command -v hass &> /dev/null; then
+        hass --config "${PWD}/config" --script ensure_config
+    else
+        echo "Warning: 'hass' command not found. Creating basic configuration.yaml..."
+        cat > "${PWD}/config/configuration.yaml" <<EOF
+# Home Assistant Development Configuration
+# See https://www.home-assistant.io/docs/configuration/
+
+default_config:
+
+logger:
+  default: info
+  logs:
+    custom_components.meraki_dashboard: debug
+
+# Enable custom component development
+custom_components:
+
+# Example Meraki Dashboard configuration (uncomment and configure):
+# meraki_dashboard:
+#   api_key: !secret meraki_api_key
+#   organizations:
+#     - organization_id: "123456"
+EOF
+
+        # Create secrets.yaml
+        cat > "${PWD}/config/secrets.yaml" <<EOF
+# Secrets for development
+# Add your Meraki API key here:
+# meraki_api_key: "your_api_key_here"
+EOF
+    fi
+fi
+
+# Set the path to custom_components
+# This allows us to have the structure <root>/custom_components/meraki_dashboard
+# while at the same time have Home Assistant configuration inside <root>/config
+export PYTHONPATH="${PYTHONPATH}:${PWD}"
+
+echo "Starting Home Assistant in development mode..."
+echo "Custom components path: ${PWD}/custom_components"
+echo "Config directory: ${PWD}/config"
+echo ""
+echo "After starting, Home Assistant will be available at:"
+echo "  http://localhost:8123"
+echo ""
+echo "Press Ctrl+C to stop"
+echo ""
+
+# Check if hass command is available
+if command -v hass &> /dev/null; then
+    # Start Home Assistant
+    hass --config "${PWD}/config" --debug
+else
+    echo "Error: 'hass' command not found!"
+    echo ""
+    echo "Please install Home Assistant:"
+    echo "  uv pip install homeassistant"
+    echo ""
+    echo "Or install it in your virtual environment:"
+    echo "  pip install homeassistant"
+    echo ""
+    exit 1
+fi

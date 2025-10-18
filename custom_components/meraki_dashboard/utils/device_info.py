@@ -362,55 +362,47 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
     if device_type == "MT":
         # MT (Environmental) sensors have model-specific capabilities
         # These keys must match the API metric names, not the sensor description keys
-        if device_model in ["MT10", "MT12"]:
-            # Temperature and humidity only
-            return {"temperature", "humidity"}
+        if device_model == "MT10":
+            # Temperature and humidity sensor
+            return {"temperature", "humidity", "battery"}
         elif device_model == "MT11":
-            # Temperature only
-            return {"temperature"}
-        elif device_model == "MT13":
-            # Motion sensor with environmental monitoring
-            return {"temperature", "humidity", "battery", "motion"}
+            # Temperature probe sensor (external probe)
+            return {"temperature", "battery"}
+        elif device_model == "MT12":
+            # Water leak detection sensor
+            return {"water", "battery"}
         elif device_model == "MT14":
-            # Door sensor with full environmental monitoring
+            # Indoor air quality sensor
             return {
                 "temperature",
                 "humidity",
                 "battery",
-                "door",
-                "indoorAirQuality",
                 "tvoc",
                 "noise",
                 "pm25",
             }
         elif device_model == "MT15":
-            # Environmental monitoring sensor
+            # Indoor air quality with CO2 sensor
             return {
                 "temperature",
                 "humidity",
                 "battery",
-                "indoorAirQuality",
                 "pm25",
                 "noise",
                 "tvoc",
                 "co2",
             }
         elif device_model == "MT20":
-            # Full environmental monitoring - using API metric names
+            # Door/open-close sensor
             return {
-                "temperature",
-                "humidity",
-                "co2",
-                "tvoc",
-                "pm25",
-                "noise",  # API uses "noise.ambient.level" but we check for "noise" prefix
-                "indoorAirQuality",
+                "door",
+                "battery",
             }
         elif device_model == "MT30":
-            # Smart camera with AI features
-            return {"temperature", "humidity", "battery", "button"}
+            # Smart automation button
+            return {"button", "battery"}
         elif device_model == "MT40":
-            # Power monitoring sensor (energy switch) with binary sensors
+            # Smart power controller (energy switch) with binary sensors
             return {
                 "realPower",
                 "apparentPower",
@@ -423,7 +415,7 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             }
         else:
             # Default MT sensors - only basic environmental
-            return {"temperature", "humidity"}
+            return {"temperature", "humidity", "battery"}
 
     elif device_type == "MR":
         # MR (Wireless) devices all have similar metrics
