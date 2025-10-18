@@ -17,6 +17,67 @@ All notable changes to this project are documented here. The format is based on 
 ## [Unreleased]
 
 
+## [0.28.1] - 2025-10-18
+
+
+### 🐛 Bug Fixes
+- correct MT device model capabilities mapping
+
+### 🧰 Maintenance
+70293a4 chore(deps): update dependency homeassistant-stubs to v2025.10.3
+121f936 chore(deps): update github/codeql-action digest to 16140ae (#145)
+3860490 chore(deps): update github/codeql-action action to v4.30.9
+c059a47 chore(deps): lock file maintenance (#142)
+05914bc chore(deps): update astral-sh/setup-uv action to v7.1.0 (#141)
+b9513cd chore(deps): update dependency homeassistant-stubs to v2025.10.2 (#140)
+faa74cb chore(deps): update actions/dependency-review-action action to v4.8.1 (#139)
+3bbd594 chore(deps): update github/codeql-action action to v4.30.8 (#138)
+61ad7ac chore(deps): update github/codeql-action digest to f443b60 (#137)
+3b0209d chore(deps): update github/codeql-action action to v4 (#136)
+d538ae6 chore(deps): update astral-sh/setup-uv action to v7 (#135)
+e9e1be4 chore(deps): update github/codeql-action action to v3.30.7 (#134)
+7026902 chore(deps): update github/codeql-action digest to a8d1ac4 (#133)
+c438dc3 chore(deps): update home-assistant/actions digest to e5c9826 (#131)
+030331e chore(deps): lock file maintenance (#130)
+e1b8b89 chore(deps): update dependency homeassistant-stubs to v2025.10.1 (#126)
+04cc8b8 chore(deps): update actions/stale action to v10.1.0 (#129)
+fdb636d chore(deps): update github/codeql-action action to v3.30.6 (#128)
+22aa593 chore(deps): update github/codeql-action digest to 64d10c1 (#127)
+09f3d01 chore(deps): update peter-evans/repository-dispatch action to v4 (#125)
+4d52988 chore(deps): update ossf/scorecard-action action to v2.4.3 (#124)
+35f2ca0 chore(deps): update astral-sh/setup-uv action to v6.8.0 (#123)
+a1e82cb chore(deps): lock file maintenance (#122)
+53816de chore(deps): update actions/dependency-review-action action to v4.8.0 (#121)
+d902fc0 chore(deps): update github/codeql-action action to v3.30.5 (#120)
+abd45c0 chore(deps): update github/codeql-action digest to 3599b3b (#119)
+07ed54c chore(deps): update github/codeql-action action to v3.30.4 (#118)
+7a64d5b chore(deps): update github/codeql-action digest to 303c0ae (#117)
+476a173 chore(deps): lock file maintenance (#116)
+ed6db0d chore(deps): update dependency homeassistant-stubs to v2025.9.4 (#115)
+a6b5e06 chore(deps): update zizmorcore/zizmor-action action to v0.2.0 (#114)
+ed52957 chore(deps): lock file maintenance (#113)
+2a310b3 chore(deps): update dependency homeassistant-stubs to v2025.9.3 (#111)
+95e3f17 chore(deps): update astral-sh/setup-uv action to v6.7.0 (#112)
+9ac1dae chore(deps): update home-assistant/actions digest to 342664e (#110)
+3dc4602 chore(deps): update github/codeql-action action to v3.30.3 (#109)
+151b383 chore(deps): update github/codeql-action digest to 192325c (#108)
+296e4e0 chore(deps): update step-security/harden-runner action to v2.13.1 (#107)
+ca9576b chore(deps): update github/codeql-action action to v3.30.2 (#106)
+89eabd3 chore(deps): update github/codeql-action digest to d3678e2 (#105)
+cfc04a5 chore(deps): lock file maintenance (#104)
+97e549a chore(deps): update actions/stale action to v10 (#103)
+cb8422c chore(deps): update actions/setup-python action to v6 (#102)
+2353fd6 chore(deps): update github/codeql-action action to v3.30.1 (#101)
+cf3fe02 chore(deps): update dependency homeassistant-stubs to v2025.9.1 (#100)
+3e7ec1a chore(deps): update codecov/codecov-action action to v5.5.1 (#99)
+ea8cf9d chore(deps): update astral-sh/setup-uv action to v6.6.1 (#98)
+217b5ad chore(deps): update github/codeql-action digest to f1f6e5f (#97)
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/renovate/homeassistant-stubs-2025.x'
+- Merge pull request #146 from rknightion/renovate/github-codeql-action-4.x
+
+
 ## [0.28.0] - 2025-08-29
 
 
