@@ -1,18 +1,21 @@
 # Home Assistant Development Configuration
 # See https://www.home-assistant.io/docs/configuration/
 
+# Load default integrations
 default_config:
 
+# Enable Home Assistant debug mode
+homeassistant:
+  debug: true
+
+# Configure logging for development
 logger:
   default: info
   logs:
     custom_components.meraki_dashboard: debug
 
-# Enable custom component development
-custom_components:
-
-# Example Meraki Dashboard configuration (uncomment and configure):
+# Example Meraki Dashboard configuration (configure in secrets.yaml):
 # meraki_dashboard:
 #   api_key: !secret meraki_api_key
 #   organizations:
-#     - organization_id: "123456"
+#     - organization_id: "your_org_id"
