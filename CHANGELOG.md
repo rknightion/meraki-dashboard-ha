@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.28.2] - 2025-10-18
+
+
+
+### 🐛 Bug Fixes
+- fox indoor air quality support and expand fallback capabilities
+
+### 🧰 Maintenance
+e19a9e1 chore: update project dependencies to latest versions
+e79ae2b refactor: modernize development script to use uv and improve Home Assistant setup
+4f1c016 build: add Home Assistant as development dependency
+d5a89cd refactor: streamline VS Code extensions and tasks configuration
+4b02b62 chore: update gitignore to track VS Code defaults while ignoring user settings
+
+### 🚀 Dev Features
+- enhance Home Assistant development configuration
+- add VS Code workspace settings template for Home Assistant development
+- add comprehensive VS Code debug configurations for Home Assistant development
+
+### 📋 Other Changes
+- Merge remote-tracking branch 'origin/main'
+
+
 ## [0.28.1] - 2025-10-18
 
 
