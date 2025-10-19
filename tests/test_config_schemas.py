@@ -13,14 +13,59 @@ from custom_components.meraki_dashboard.config.schemas import (
     MerakiConfigSchema,
     OrganizationIDConfig,
     TieredRefreshConfig,
+    safe_int_conversion,
     validate_config_migration,
 )
 from custom_components.meraki_dashboard.const import (
     DEFAULT_BASE_URL,
     DEFAULT_SCAN_INTERVAL,
+    MT_REFRESH_COMMAND_INTERVAL,
+    MT_REFRESH_MAX_INTERVAL,
+    MT_REFRESH_MIN_INTERVAL,
     REGIONAL_BASE_URLS,
 )
 from custom_components.meraki_dashboard.exceptions import ConfigurationError
+
+
+class TestSafeIntConversion:
+    """Test safe_int_conversion helper function."""
+
+    def test_converts_integer_unchanged(self):
+        """Test that integers pass through unchanged."""
+        assert safe_int_conversion(30, "test_field") == 30
+        assert safe_int_conversion(600, "test_field") == 600
+        assert safe_int_conversion(0, "test_field") == 0
+
+    def test_converts_whole_number_float_to_int(self):
+        """Test that whole number floats are converted to ints."""
+        assert safe_int_conversion(30.0, "test_field") == 30
+        assert safe_int_conversion(600.0, "test_field") == 600
+        assert safe_int_conversion(0.0, "test_field") == 0
+
+    def test_rejects_fractional_float(self):
+        """Test that fractional floats raise ConfigurationError."""
+        with pytest.raises(
+            ConfigurationError, match="test_field must be a whole number"
+        ):
+            safe_int_conversion(30.5, "test_field")
+
+        with pytest.raises(
+            ConfigurationError, match="test_field must be a whole number"
+        ):
+            safe_int_conversion(0.1, "test_field")
+
+    def test_rejects_invalid_type(self):
+        """Test that non-numeric types raise ConfigurationError."""
+        with pytest.raises(ConfigurationError, match="test_field must be numeric"):
+            safe_int_conversion("30", "test_field")  # type: ignore[arg-type]
+
+        with pytest.raises(ConfigurationError, match="test_field must be numeric"):
+            safe_int_conversion(None, "test_field")  # type: ignore[arg-type]
+
+    def test_field_name_in_error_message(self):
+        """Test that field name appears in error messages."""
+        with pytest.raises(ConfigurationError, match="custom_field_name"):
+            safe_int_conversion(1.5, "custom_field_name")
 
 
 class TestIntervalConfig:
@@ -51,10 +96,33 @@ class TestIntervalConfig:
         with pytest.raises(ConfigurationError, match="at most 86400 seconds"):
             IntervalConfig(100000)
 
-    def test_interval_not_integer(self):
-        """Test non-integer interval."""
-        with pytest.raises(ConfigurationError, match="must be an integer"):
-            IntervalConfig("300")
+    def test_interval_invalid_type(self):
+        """Test invalid interval type (string)."""
+        with pytest.raises(ConfigurationError, match="must be numeric"):
+            IntervalConfig("300")  # type: ignore[arg-type]
+
+    def test_interval_accepts_whole_number_float(self):
+        """Test that whole number floats are auto-converted to ints."""
+        config = IntervalConfig(300.0)  # type: ignore[arg-type]
+        assert config.value == 300
+        assert isinstance(config.value, int)
+
+    def test_interval_converts_ui_float_values(self):
+        """Test conversion of float values from UI selectors."""
+        # Simulates 0.5 minutes * 60 = 30.0 seconds from UI
+        config = IntervalConfig(30.0, min_seconds=30, max_seconds=3600)  # type: ignore[arg-type]
+        assert config.value == 30
+        assert isinstance(config.value, int)
+
+        # Simulates 10 minutes * 60 = 600.0 seconds from UI
+        config = IntervalConfig(600.0)  # type: ignore[arg-type]
+        assert config.value == 600
+        assert isinstance(config.value, int)
+
+    def test_interval_rejects_fractional_float(self):
+        """Test that fractional floats are rejected."""
+        with pytest.raises(ConfigurationError, match="must be a whole number"):
+            IntervalConfig(300.5)  # type: ignore[arg-type]
 
     def test_custom_boundaries(self):
         """Test custom min/max boundaries."""
@@ -265,10 +333,11 @@ class TestHubIntervalConfig:
         with pytest.raises(ConfigurationError, match="non-empty string"):
             HubIntervalConfig(hub_id="")
 
-    def test_invalid_scan_interval(self):
-        """Test invalid scan interval."""
-        with pytest.raises(ConfigurationError):
-            HubIntervalConfig(hub_id="test", scan_interval=30)
+    def test_invalid_scan_interval_for_non_mt_hub(self):
+        """Test that non-MT hubs require 60 second minimum."""
+        # MR hub should require 60 seconds minimum
+        with pytest.raises(ConfigurationError, match="at least 60 seconds"):
+            HubIntervalConfig(hub_id="network_123_MR", scan_interval=30, min_scan_seconds=60)
 
     def test_invalid_discovery_interval(self):
         """Test invalid discovery interval."""
@@ -279,6 +348,60 @@ class TestHubIntervalConfig:
         """Test non-boolean auto discovery."""
         with pytest.raises(ConfigurationError, match="must be a boolean"):
             HubIntervalConfig(hub_id="test", auto_discovery="yes")
+
+    def test_mt_hub_accepts_1_second_interval(self):
+        """Test that MT hubs can use 1-second intervals."""
+        config = HubIntervalConfig(
+            hub_id="network_123_MT",
+            scan_interval=1,
+            min_scan_seconds=1,
+        )
+        assert config.scan_interval == 1
+
+    def test_mt_hub_accepts_30_second_interval(self):
+        """Test that MT hubs can use 30-second intervals."""
+        config = HubIntervalConfig(
+            hub_id="network_123_MT",
+            scan_interval=30,
+            min_scan_seconds=1,
+        )
+        assert config.scan_interval == 30
+
+    def test_mr_hub_requires_60_second_minimum(self):
+        """Test that MR hubs enforce 60-second minimum."""
+        # Valid: 60 seconds
+        config = HubIntervalConfig(
+            hub_id="network_456_MR",
+            scan_interval=60,
+            min_scan_seconds=60,
+        )
+        assert config.scan_interval == 60
+
+        # Invalid: 30 seconds
+        with pytest.raises(ConfigurationError, match="at least 60 seconds"):
+            HubIntervalConfig(
+                hub_id="network_456_MR",
+                scan_interval=30,
+                min_scan_seconds=60,
+            )
+
+    def test_ms_hub_requires_60_second_minimum(self):
+        """Test that MS hubs enforce 60-second minimum."""
+        # Valid: 60 seconds
+        config = HubIntervalConfig(
+            hub_id="network_789_MS",
+            scan_interval=60,
+            min_scan_seconds=60,
+        )
+        assert config.scan_interval == 60
+
+        # Invalid: 30 seconds
+        with pytest.raises(ConfigurationError, match="at least 60 seconds"):
+            HubIntervalConfig(
+                hub_id="network_789_MS",
+                scan_interval=30,
+                min_scan_seconds=60,
+            )
 
 
 class TestMerakiConfigSchema:
@@ -362,6 +485,50 @@ class TestMerakiConfigSchema:
                 selected_devices="Q2AB-1234-5678",
             )
 
+    def test_hub_scan_intervals_device_specific_minimums(self):
+        """Test that hub scan intervals enforce device-specific minimums."""
+        # MT hub with 1 second interval should be valid
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            hub_scan_intervals={
+                "network_123_MT": 1,  # MT can go as low as 1 second
+                "network_456_MR": 60,  # MR requires 60 seconds minimum
+                "network_789_MS": 60,  # MS requires 60 seconds minimum
+            },
+        )
+        assert config.hub_scan_intervals["network_123_MT"] == 1
+        assert config.hub_scan_intervals["network_456_MR"] == 60
+        assert config.hub_scan_intervals["network_789_MS"] == 60
+
+    def test_hub_scan_intervals_mt_30_seconds(self):
+        """Test that MT hubs can use 30-second intervals (regression test)."""
+        # This was the original bug - MT hubs should accept 30 seconds
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            hub_scan_intervals={"network_123_MT": 30},
+        )
+        assert config.hub_scan_intervals["network_123_MT"] == 30
+
+    def test_hub_scan_intervals_mr_rejects_low_values(self):
+        """Test that MR hubs reject intervals below 60 seconds."""
+        with pytest.raises(ConfigurationError, match="at least 60 seconds"):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                hub_scan_intervals={"network_456_MR": 30},
+            )
+
+    def test_hub_scan_intervals_ms_rejects_low_values(self):
+        """Test that MS hubs reject intervals below 60 seconds."""
+        with pytest.raises(ConfigurationError, match="at least 60 seconds"):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                hub_scan_intervals={"network_789_MS": 30},
+            )
+
 
 class TestConfigMigration:
     """Test configuration migration validation."""
@@ -422,3 +589,201 @@ class TestConfigMigration:
             ConfigurationError, match="Invalid configuration after migration"
         ):
             validate_config_migration(old_config, new_config)
+
+
+class TestMTRefreshConfig:
+    """Test MT refresh configuration validation."""
+
+    def test_valid_mt_refresh_enabled_true(self):
+        """Test valid MT refresh enabled configuration."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            mt_refresh_enabled=True,
+            mt_refresh_interval=30,
+        )
+        assert config.mt_refresh_enabled is True
+        assert config.mt_refresh_interval == 30
+
+    def test_valid_mt_refresh_enabled_false(self):
+        """Test valid MT refresh disabled configuration."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            mt_refresh_enabled=False,
+            mt_refresh_interval=30,
+        )
+        assert config.mt_refresh_enabled is False
+
+    def test_mt_refresh_interval_min_boundary(self):
+        """Test MT refresh interval at minimum boundary."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            mt_refresh_interval=MT_REFRESH_MIN_INTERVAL,
+        )
+        assert config.mt_refresh_interval == MT_REFRESH_MIN_INTERVAL
+
+    def test_mt_refresh_interval_max_boundary(self):
+        """Test MT refresh interval at maximum boundary."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            mt_refresh_interval=MT_REFRESH_MAX_INTERVAL,
+        )
+        assert config.mt_refresh_interval == MT_REFRESH_MAX_INTERVAL
+
+    def test_mt_refresh_interval_default_value(self):
+        """Test MT refresh interval defaults to correct value."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+        )
+        assert config.mt_refresh_interval == MT_REFRESH_COMMAND_INTERVAL
+
+    def test_mt_refresh_enabled_default_value(self):
+        """Test MT refresh enabled defaults to True."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+        )
+        assert config.mt_refresh_enabled is True
+
+    def test_mt_refresh_interval_below_minimum(self):
+        """Test MT refresh interval below minimum fails."""
+        with pytest.raises(
+            ConfigurationError,
+            match=f"MT refresh interval must be at least {MT_REFRESH_MIN_INTERVAL}",
+        ):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                mt_refresh_interval=0,
+            )
+
+    def test_mt_refresh_interval_above_maximum(self):
+        """Test MT refresh interval above maximum fails."""
+        with pytest.raises(
+            ConfigurationError,
+            match=f"MT refresh interval must be at most {MT_REFRESH_MAX_INTERVAL}",
+        ):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                mt_refresh_interval=100,
+            )
+
+    def test_mt_refresh_enabled_not_boolean(self):
+        """Test MT refresh enabled must be boolean."""
+        with pytest.raises(
+            ConfigurationError, match="MT refresh enabled must be a boolean"
+        ):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                mt_refresh_enabled="true",  # String instead of bool
+            )
+
+    def test_mt_refresh_interval_accepts_whole_number_float(self):
+        """Test MT refresh interval auto-converts whole number floats."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            mt_refresh_interval=30.0,  # type: ignore[arg-type]
+        )
+        assert config.mt_refresh_interval == 30
+        assert isinstance(config.mt_refresh_interval, int)
+
+    def test_mt_refresh_interval_rejects_fractional_float(self):
+        """Test MT refresh interval rejects fractional floats."""
+        with pytest.raises(
+            ConfigurationError, match="MT refresh interval must be a whole number"
+        ):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                mt_refresh_interval=30.5,  # type: ignore[arg-type]
+            )
+
+    def test_mt_refresh_interval_invalid_type(self):
+        """Test MT refresh interval rejects invalid types."""
+        with pytest.raises(ConfigurationError, match="must be numeric"):
+            MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                mt_refresh_interval="30",  # type: ignore[arg-type]
+            )
+
+    def test_mt_refresh_from_config_entry_with_defaults(self):
+        """Test MT refresh configuration from config entry with defaults."""
+        config_data = {
+            "api_key": "a1b2c3d4e5f6789012345678901234567890abcd",
+            "organization_id": "123456",
+        }
+        config_options = {}
+
+        config = MerakiConfigSchema.from_config_entry(config_data, config_options)
+
+        assert config.mt_refresh_enabled is True
+        assert config.mt_refresh_interval == MT_REFRESH_COMMAND_INTERVAL
+
+    def test_mt_refresh_from_config_entry_with_custom_values(self):
+        """Test MT refresh configuration from config entry with custom values."""
+        config_data = {
+            "api_key": "a1b2c3d4e5f6789012345678901234567890abcd",
+            "organization_id": "123456",
+        }
+        config_options = {
+            "mt_refresh_enabled": False,
+            "mt_refresh_interval": 15,
+        }
+
+        config = MerakiConfigSchema.from_config_entry(config_data, config_options)
+
+        assert config.mt_refresh_enabled is False
+        assert config.mt_refresh_interval == 15
+
+    def test_mt_refresh_to_dict(self):
+        """Test MT refresh configuration serialization to dict."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            organization_id="123456",
+            mt_refresh_enabled=False,
+            mt_refresh_interval=10,
+        )
+
+        config_dict = config.to_dict()
+
+        assert config_dict["mt_refresh_enabled"] is False
+        assert config_dict["mt_refresh_interval"] == 10
+
+    def test_mt_refresh_various_valid_intervals(self):
+        """Test MT refresh with various valid interval values."""
+        valid_intervals = [1, 5, 10, 15, 30, 45, 60]
+
+        for interval in valid_intervals:
+            config = MerakiConfigSchema(
+                api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+                organization_id="123456",
+                mt_refresh_interval=interval,
+            )
+            assert config.mt_refresh_interval == interval
+
+    def test_complete_config_with_mt_refresh(self):
+        """Test complete configuration including MT refresh settings."""
+        config = MerakiConfigSchema(
+            api_key="a1b2c3d4e5f6789012345678901234567890abcd",
+            base_url=DEFAULT_BASE_URL,
+            organization_id="123456",
+            scan_interval=DEFAULT_SCAN_INTERVAL,
+            auto_discovery=True,
+            discovery_interval=3600,
+            selected_devices=["Q2XX-ABCD-1234"],
+            enabled_device_types=["MT", "MR"],
+            mt_refresh_enabled=True,
+            mt_refresh_interval=20,
+        )
+
+        assert config.api_key == "a1b2c3d4e5f6789012345678901234567890abcd"
+        assert config.mt_refresh_enabled is True
+        assert config.mt_refresh_interval == 20
