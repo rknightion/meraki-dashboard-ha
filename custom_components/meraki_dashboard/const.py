@@ -30,6 +30,10 @@ CONF_HUB_SCAN_INTERVALS: Final = "hub_scan_intervals"
 CONF_HUB_DISCOVERY_INTERVALS: Final = "hub_discovery_intervals"
 CONF_HUB_AUTO_DISCOVERY: Final = "hub_auto_discovery"
 
+# MT refresh service configuration
+CONF_MT_REFRESH_ENABLED: Final = "mt_refresh_enabled"
+CONF_MT_REFRESH_INTERVAL: Final = "mt_refresh_interval"
+
 # Tiered refresh configuration
 CONF_STATIC_DATA_INTERVAL: Final = "static_data_interval"
 CONF_SEMI_STATIC_DATA_INTERVAL: Final = "semi_static_data_interval"
@@ -194,8 +198,18 @@ DEVICE_TYPE_SCAN_INTERVALS: Final = {
     SENSOR_TYPE_MV: 600,  # 10 minutes for cameras
 }
 
+# Device type specific minimum scan intervals (in seconds)
+DEVICE_TYPE_MIN_SCAN_INTERVALS: Final = {
+    SENSOR_TYPE_MT: 1,  # 1 second minimum for MT (supports fast refresh)
+    SENSOR_TYPE_MR: 60,  # 1 minute minimum for MR
+    SENSOR_TYPE_MS: 60,  # 1 minute minimum for MS
+    SENSOR_TYPE_MV: 60,  # 1 minute minimum for MV
+}
+
 # MT refresh command interval for MT15/MT40 devices
 MT_REFRESH_COMMAND_INTERVAL: Final = 30  # 30 seconds for MT15/MT40 refresh commands
+MT_REFRESH_MIN_INTERVAL: Final = 1  # Minimum interval: 1 second
+MT_REFRESH_MAX_INTERVAL: Final = 60  # Maximum interval: 60 seconds
 
 # UI display intervals (in minutes)
 DEFAULT_SCAN_INTERVAL_MINUTES: Final = {
