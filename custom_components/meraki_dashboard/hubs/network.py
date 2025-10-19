@@ -16,9 +16,12 @@ from ..const import (
     CONF_DISCOVERY_INTERVAL,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
+    CONF_MT_REFRESH_ENABLED,
+    CONF_MT_REFRESH_INTERVAL,
     CONF_SELECTED_DEVICES,
     DEFAULT_DISCOVERY_INTERVAL,
     DOMAIN,
+    MT_REFRESH_COMMAND_INTERVAL,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
@@ -167,17 +170,37 @@ class MerakiNetworkHub:
 
             # Start MT refresh service for MT devices with MT15/MT40 models
             if self.device_type == SENSOR_TYPE_MT and self.mt_refresh_service:
-                # Check if we have any MT15 or MT40 devices
-                has_mt15_mt40 = any(
-                    device.get("model", "").upper() in ("MT15", "MT40")
-                    for device in self.devices
+                # Check configuration
+                mt_refresh_enabled = self.config_entry.options.get(
+                    CONF_MT_REFRESH_ENABLED, True
                 )
-                if has_mt15_mt40:
-                    await self.mt_refresh_service.async_start()
-                    _LOGGER.info(
-                        "Started MT refresh service for %s with MT15/MT40 devices",
-                        self.hub_name,
+
+                if mt_refresh_enabled:
+                    # Check if we have any MT15 or MT40 devices
+                    has_mt15_mt40 = any(
+                        device.get("model", "").upper() in ("MT15", "MT40")
+                        for device in self.devices
                     )
+                    if has_mt15_mt40:
+                        # Get interval from config
+                        refresh_interval = self.config_entry.options.get(
+                            CONF_MT_REFRESH_INTERVAL, MT_REFRESH_COMMAND_INTERVAL
+                        )
+                        await self.mt_refresh_service.async_start(
+                            interval=refresh_interval
+                        )
+                        _LOGGER.info(
+                            "Started MT refresh service for %s with %d second interval (found MT15/MT40 devices)",
+                            self.hub_name,
+                            refresh_interval,
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "MT refresh enabled but no MT15/MT40 devices found in %s",
+                            self.hub_name,
+                        )
+                else:
+                    _LOGGER.debug("MT refresh service disabled for %s", self.hub_name)
 
             # Set up periodic device discovery if enabled
             auto_discovery_key = f"{self.network_id}_{self.device_type}"

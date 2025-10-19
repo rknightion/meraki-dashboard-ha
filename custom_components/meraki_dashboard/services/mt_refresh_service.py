@@ -39,16 +39,21 @@ class MTRefreshService:
         self,
         hass: HomeAssistant,
         network_hub: MerakiNetworkHub,
+        interval: int = MT_REFRESH_COMMAND_INTERVAL,
     ) -> None:
         """Initialize the MT refresh service.
 
         Args:
             hass: Home Assistant instance
             network_hub: Network hub managing the MT devices
+            interval: Refresh interval in seconds (default: MT_REFRESH_COMMAND_INTERVAL)
         """
         self.hass = hass
         self.network_hub = network_hub
         self.dashboard = network_hub.dashboard
+
+        # Refresh interval configuration
+        self._refresh_interval = interval
 
         # Track consecutive failures per device serial
         self._failure_counts: dict[str, int] = defaultdict(int)
@@ -68,28 +73,42 @@ class MTRefreshService:
         self._failed_refreshes = 0
 
         _LOGGER.debug(
-            "MT Refresh Service initialized for network %s", network_hub.network_name
+            "MT Refresh Service initialized for network %s with %d second interval",
+            network_hub.network_name,
+            self._refresh_interval,
         )
 
-    async def async_start(self) -> None:
-        """Start the refresh service."""
+    async def async_start(self, interval: int | None = None) -> None:
+        """Start the refresh service.
+
+        Args:
+            interval: Optional refresh interval in seconds. If provided, updates the service interval.
+        """
         if self._running:
             _LOGGER.debug("MT Refresh Service already running")
             return
 
+        # Update interval if provided
+        if interval is not None:
+            self._refresh_interval = interval
+            _LOGGER.debug(
+                "MT Refresh Service interval updated to %d seconds",
+                self._refresh_interval,
+            )
+
         self._running = True
 
-        # Schedule the refresh timer to run every 5 seconds
+        # Schedule the refresh timer to run at the configured interval
         self._refresh_timer = async_track_time_interval(
             self.hass,
             self._async_refresh_devices,
-            timedelta(seconds=MT_REFRESH_COMMAND_INTERVAL),
+            timedelta(seconds=self._refresh_interval),
         )
 
         _LOGGER.info(
             "MT Refresh Service started for network %s with %d second interval",
             self.network_hub.network_name,
-            MT_REFRESH_COMMAND_INTERVAL,
+            self._refresh_interval,
         )
 
         # Run initial refresh immediately
@@ -117,8 +136,8 @@ class MTRefreshService:
     async def _async_refresh_devices(self, _now: datetime | None = None) -> None:
         """Refresh MT15 and MT40 devices.
 
-        This method is called every 5 seconds and sends refresh commands to all
-        MT15 and MT40 devices in the network.
+        This method is called at the configured interval and sends refresh commands
+        to all MT15 and MT40 devices in the network.
         """
         if not self._running:
             return
