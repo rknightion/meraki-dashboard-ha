@@ -32,6 +32,8 @@ from .const import (
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
+    CONF_MT_REFRESH_ENABLED,
+    CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
@@ -41,10 +43,14 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
+    DEVICE_TYPE_MIN_SCAN_INTERVALS,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
     MIN_DISCOVERY_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
+    MT_REFRESH_COMMAND_INTERVAL,
+    MT_REFRESH_MAX_INTERVAL,
+    MT_REFRESH_MIN_INTERVAL,
     REGIONAL_BASE_URLS,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
@@ -268,6 +274,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             SENSOR_TYPE_MR,
                             SENSOR_TYPE_MS,
                         ],
+                        # MT refresh service defaults
+                        CONF_MT_REFRESH_ENABLED: True,
+                        CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
                     },
                 )
 
@@ -325,16 +334,20 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_ORGANIZATION_ID: self._organization_id,
                 }
                 config_options = {
-                    CONF_SCAN_INTERVAL: user_input.get(
-                        CONF_SCAN_INTERVAL,
-                        DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT],
-                    )
-                    * 60,  # Convert minutes to seconds
+                    CONF_SCAN_INTERVAL: int(
+                        user_input.get(
+                            CONF_SCAN_INTERVAL,
+                            DEFAULT_SCAN_INTERVAL_MINUTES[SENSOR_TYPE_MT],
+                        )
+                        * 60  # Convert minutes to seconds (float → int)
+                    ),
                     CONF_AUTO_DISCOVERY: user_input.get(CONF_AUTO_DISCOVERY, True),
-                    CONF_DISCOVERY_INTERVAL: user_input.get(
-                        CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL_MINUTES
-                    )
-                    * 60,  # Convert minutes to seconds
+                    CONF_DISCOVERY_INTERVAL: int(
+                        user_input.get(
+                            CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL_MINUTES
+                        )
+                        * 60  # Convert minutes to seconds (float → int)
+                    ),
                     CONF_SELECTED_DEVICES: selected_devices,
                     # Initialize empty hub-specific intervals (will be populated when hubs are created)
                     CONF_HUB_SCAN_INTERVALS: {},
@@ -344,6 +357,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_ENABLED_DEVICE_TYPES,
                         [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
                     ),
+                    # MT refresh service defaults
+                    CONF_MT_REFRESH_ENABLED: True,
+                    CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
                 }
 
                 # Validate the complete configuration
@@ -585,10 +601,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     hub_auto_discovery[hub_id] = value
                 elif key.startswith("hub_scan_interval_"):
                     hub_id = key.replace("hub_scan_interval_", "")
-                    hub_scan_intervals[hub_id] = value * 60  # Convert to seconds
+                    # Value is already in seconds, ensure integer type
+                    hub_scan_intervals[hub_id] = int(value)
                 elif key.startswith("hub_discovery_interval_"):
                     hub_id = key.replace("hub_discovery_interval_", "")
-                    hub_discovery_intervals[hub_id] = value * 60  # Convert to seconds
+                    # Convert minutes to seconds, ensure integer type
+                    hub_discovery_intervals[hub_id] = int(value * 60)
                 else:
                     # Regular options
                     options[key] = value
@@ -649,12 +667,40 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             )
         )
 
-        # 2. Add update API key checkbox
+        # 2. Add MT refresh service configuration
+        schema_dict[
+            vol.Optional(
+                CONF_MT_REFRESH_ENABLED,
+                default=current_options.get(CONF_MT_REFRESH_ENABLED, True),
+            )
+        ] = selector.BooleanSelector()
+
+        # Only show interval selector if MT refresh is enabled
+        mt_refresh_enabled = current_options.get(CONF_MT_REFRESH_ENABLED, True)
+        if mt_refresh_enabled:
+            schema_dict[
+                vol.Optional(
+                    CONF_MT_REFRESH_INTERVAL,
+                    default=current_options.get(
+                        CONF_MT_REFRESH_INTERVAL, MT_REFRESH_COMMAND_INTERVAL
+                    ),
+                )
+            ] = selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=MT_REFRESH_MIN_INTERVAL,
+                    max=MT_REFRESH_MAX_INTERVAL,
+                    step=1,
+                    unit_of_measurement="seconds",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            )
+
+        # 3. Add update API key checkbox
         schema_dict[vol.Optional("update_api_key", default=False)] = (
             selector.BooleanSelector()
         )
 
-        # 3. Build hub-specific options if we have hubs
+        # 4. Build hub-specific options if we have hubs
         if hubs_info:
             # Add settings for each hub
             for hub_key, hub_info in sorted(hubs_info.items()):
@@ -675,55 +721,39 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 }
                 device_label = device_type_labels.get(device_type, device_type)
 
-                # Auto-discovery toggle with custom label
+                # Auto-discovery toggle
                 schema_dict[
                     vol.Optional(
                         auto_discovery_key,
                         default=current_options.get(CONF_HUB_AUTO_DISCOVERY, {}).get(
                             hub_key, True
                         ),
-                        description={
-                            "name": f"[{device_label}] Auto-discover devices in {hub_name}",
-                            "suggested_value": current_options.get(
-                                CONF_HUB_AUTO_DISCOVERY, {}
-                            ).get(hub_key, True),
-                        },
                     )
                 ] = selector.BooleanSelector(selector.BooleanSelectorConfig())
 
-                # Scan interval with custom label
-                current_scan_minutes = (
-                    current_options.get(CONF_HUB_SCAN_INTERVALS, {}).get(
-                        hub_key,
-                        DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
-                    )
-                    / 60  # Use division instead of floor division to preserve decimals
+                # Scan interval (in seconds)
+                current_scan_seconds = current_options.get(CONF_HUB_SCAN_INTERVALS, {}).get(
+                    hub_key,
+                    DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
                 )
 
-                # For MT devices, allow 0.5 minute intervals (30 seconds)
-                step_value = 0.5 if device_type == SENSOR_TYPE_MT else 1
-                min_value = 0.5 if device_type == SENSOR_TYPE_MT else 1
-
-                # Create appropriate description based on device type
-                if device_type == SENSOR_TYPE_MT:
-                    interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices) - Use 0.5 minutes (30s) for MT15/MT40 fast refresh"
-                else:
-                    interval_description = f"[{device_label}] Update interval for {hub_name} ({device_count} devices)"
+                # Device-specific minimums: MT can go as low as 1 second, others 60 seconds
+                min_value = DEVICE_TYPE_MIN_SCAN_INTERVALS.get(device_type, 60)
+                # For MT devices, allow 1-second steps; others use 10-second steps for usability
+                step_value = 1 if device_type == SENSOR_TYPE_MT else 10
+                max_value = 3600  # 1 hour maximum
 
                 schema_dict[
                     vol.Optional(
                         scan_interval_key,
-                        default=current_scan_minutes,
-                        description={
-                            "name": interval_description,
-                        },
+                        default=current_scan_seconds,
                     )
                 ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
                         min=min_value,
-                        max=60,
+                        max=max_value,
                         step=step_value,
-                        unit_of_measurement="minutes",
+                        unit_of_measurement="seconds",
                         mode=selector.NumberSelectorMode.BOX,
                     )
                 )
@@ -740,9 +770,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(
                         discovery_interval_key,
                         default=current_discovery_minutes,
-                        description={
-                            "name": f"[{device_label}] Discovery interval for {hub_name} - How often to check for new devices",
-                        },
                     )
                 ] = selector.NumberSelector(
                     selector.NumberSelectorConfig(
@@ -758,27 +785,50 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         description_placeholders = {}
 
         if hubs_info:
-            # Add hub information to placeholders
+            # Add hub information to placeholders with detailed field mapping
             hub_details = []
-            for _hub_key, hub_info in sorted(hubs_info.items()):
+            hub_field_mapping = []
+
+            for hub_key, hub_info in sorted(hubs_info.items()):
                 hub_name = hub_info["network_name"]
                 device_type = hub_info["device_type"]
                 device_count = hub_info["device_count"]
+
+                # Device type label
+                device_type_labels = {
+                    SENSOR_TYPE_MT: "MT - Environmental Sensors",
+                    SENSOR_TYPE_MR: "MR - Wireless Access Points",
+                    SENSOR_TYPE_MS: "MS - Switches",
+                }
+                device_label = device_type_labels.get(device_type, device_type)
+
+                # Add to hub list
                 hub_details.append(
-                    f"• **{hub_name}** ({device_type}): {device_count} devices"
+                    f"• **{hub_name}** ({device_label}): {device_count} devices"
+                )
+
+                # Add field mapping explanation
+                hub_field_mapping.append(
+                    f"\n**{hub_name}** ({device_label}):\n"
+                    f"  • `hub_auto_discovery_{hub_key}` - Enable automatic discovery of new devices\n"
+                    f"  • `hub_scan_interval_{hub_key}` - How often to update sensor data (minutes)\n"
+                    f"  • `hub_discovery_interval_{hub_key}` - How often to scan for new devices (minutes)"
                 )
 
             description_placeholders["hub_list"] = "\n".join(hub_details)
             description_placeholders["has_hubs"] = "true"
             description_placeholders["hub_settings_explanation"] = (
                 "**Network-Specific Settings:**\n\n"
-                "Each network has its own configuration settings below:\n"
-                "• **Auto-Discovery**: Enable/disable automatic discovery of new devices\n"
-                "• **Update Interval**: How often to fetch sensor data (in minutes)\n"
-                "• **Discovery Interval**: How often to scan for new devices (in minutes)\n"
+                "Each network below has three configuration options:\n"
+                "• **Auto-Discovery** - Automatically detect and add new devices\n"
+                "• **Update Interval** - How frequently to fetch data from devices (minutes)\n"
+                "• **Discovery Interval** - How often to scan for new devices (minutes)\n"
+                + "\n".join(hub_field_mapping)
             )
         else:
-            description_placeholders["hub_list"] = "No hubs configured yet"
+            description_placeholders["hub_list"] = (
+                "No networks configured yet. Networks will appear here after initial setup."
+            )
             description_placeholders["has_hubs"] = "false"
             description_placeholders["hub_settings_explanation"] = ""
 

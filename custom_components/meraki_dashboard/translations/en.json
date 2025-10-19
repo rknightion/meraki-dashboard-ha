@@ -2,71 +2,83 @@
   "config": {
     "step": {
       "user": {
-        "title": "Meraki Dashboard",
-        "description": "Set up the Meraki Dashboard integration",
+        "title": "Meraki Dashboard Integration",
+        "description": "Connect your Cisco Meraki Dashboard to Home Assistant to monitor your Meraki devices.\n\n**You will need:**\n• A Meraki Dashboard API key (generate one at: Organization > Settings > Dashboard API access)\n• Your Meraki Organization ID (found in the Dashboard URL or API settings)\n\nThe integration supports MT (Environmental Sensors), MR (Wireless Access Points), and MS (Switches).",
         "data": {
           "api_key": "API Key",
           "organization_id": "Organization ID",
           "base_url": "Base URL (optional)"
+        },
+        "data_description": {
+          "api_key": "Your Meraki Dashboard API key. Generate one from: Dashboard > Organization > Settings > Dashboard API access. The API key should have full read access to your organization.",
+          "organization_id": "Your Meraki Organization ID. You can find this in your Dashboard URL (e.g., https://dashboard.meraki.com/o/XXXXX) or in the API settings page.",
+          "base_url": "Optional: Custom Meraki API base URL. Leave blank to use the default (https://api.meraki.com/api/v1). Only change this if using a special Meraki instance or testing environment."
         }
       },
       "organization": {
         "title": "Select Organization",
-        "description": "Select the Meraki organization to monitor.",
+        "description": "Select the Meraki organization you want to monitor in Home Assistant.\n\nIf you have multiple organizations associated with your API key, choose the one containing the networks and devices you want to integrate.",
         "data": {
           "organization_id": "Organization",
           "name": "Integration Name"
         },
         "data_description": {
-          "organization_id": "The Meraki organization containing your networks and devices.",
-          "name": "Name for this integration instance (optional)."
+          "organization_id": "The Meraki organization containing your networks and devices. All networks and devices in this organization will be available for monitoring.",
+          "name": "Optional: Custom name for this integration instance. If not provided, the organization name will be used. Useful if you have multiple organizations or want a more descriptive name."
         }
       },
       "device_selection": {
         "title": "Configure Devices and Options",
-        "description": "Found {device_count} MT sensor device(s). Select which devices to monitor or leave empty to monitor all devices.",
+        "description": "Configure which Meraki devices to monitor and how often to update their data.\n\nFound {device_count} device(s) in your organization.",
         "data": {
           "name": "Integration Name",
-          "selected_devices": "Select Devices to Monitor",
-          "scan_interval": "Update Interval (seconds)",
+          "enabled_device_types": "Device Types to Monitor",
+          "selected_devices": "Select Specific Devices",
+          "scan_interval": "Update Interval",
           "auto_discovery": "Enable Auto-Discovery",
-          "discovery_interval": "Device Discovery Interval (seconds)"
+          "discovery_interval": "Discovery Interval"
         },
         "data_description": {
-          "name": "Name for this integration instance.",
-          "selected_devices": "Choose specific devices to monitor. Leave empty to monitor all devices and automatically discover new ones.",
-          "scan_interval": "How often to fetch sensor data. Meraki MT sensors update every 20 minutes by default.",
-          "auto_discovery": "Automatically discover and add new MT devices.",
-          "discovery_interval": "How often to scan for new devices when auto-discovery is enabled."
+          "name": "Optional: Custom name for this integration instance. If not provided, will use your organization name.",
+          "enabled_device_types": "Choose which types of Meraki devices you want to monitor. You can select multiple types: MT (Environmental Sensors), MR (Wireless Access Points), and MS (Switches).",
+          "selected_devices": "Optional: Select specific devices to monitor. Leave empty to automatically monitor all devices of the selected types and discover new ones as they're added.",
+          "scan_interval": "How often to fetch updated data from your devices (in minutes). MT sensors default to 0.5 minutes (30 seconds) to support the MT15/MT40 fast refresh feature. Other device types default to 5-10 minutes.",
+          "auto_discovery": "When enabled, the integration will automatically discover and add new devices as they're added to your Meraki networks. Recommended: enabled.",
+          "discovery_interval": "How often to scan for new devices when auto-discovery is enabled (in minutes). Default is 60 minutes. Lower values find new devices faster but increase API usage."
         }
       },
       "reauth": {
         "title": "Reauthenticate Meraki Dashboard",
-        "description": "Please provide your updated API key",
+        "description": "Your Meraki Dashboard API key has expired or is no longer valid.\n\nPlease provide an updated API key to restore connectivity. You can generate a new API key from your Meraki Dashboard under Organization > Settings > Dashboard API access.",
         "data": {
-          "api_key": "API Key"
+          "api_key": "New API Key"
+        },
+        "data_description": {
+          "api_key": "Your new Meraki Dashboard API key. This will replace the expired or invalid key. The integration will automatically reconnect once the new key is validated."
         }
       }
     },
     "error": {
-      "invalid_auth": "Invalid authentication",
-      "invalid_organization": "Invalid organization ID",
-      "cannot_connect": "Failed to connect",
-      "unknown": "Unexpected error occurred"
+      "invalid_auth": "Invalid API key. Please check that your API key is correct and has not expired.",
+      "invalid_organization": "Invalid organization ID. Please verify the organization ID and ensure your API key has access to it.",
+      "cannot_connect": "Failed to connect to Meraki API. Please check your internet connection and try again.",
+      "unknown": "An unexpected error occurred. Please check the Home Assistant logs for more details."
     },
     "abort": {
-      "already_configured": "Organization is already configured",
-      "reauth_successful": "Re-authentication was successful",
-      "api_key_updated": "API key successfully updated"
+      "already_configured": "This Meraki organization is already configured in Home Assistant. You cannot add the same organization twice.",
+      "reauth_successful": "Re-authentication was successful! Your Meraki Dashboard connection has been restored.",
+      "api_key_updated": "API key successfully updated! The integration has been reloaded with the new credentials."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Meraki Dashboard Options",
-        "description": "Configure your Meraki Dashboard integration settings.\n\n**Configured Networks:**\n{hub_list}\n\n{hub_settings_explanation}",
+        "description": "Configure your Meraki Dashboard integration settings.\n\n**MT15/MT40 Fast Refresh:**\nThis feature sends refresh commands to MT15 and MT40 sensors to get data more frequently than Meraki's default 20-minute interval. Note: This may occasionally trigger rate limit warnings from the Meraki API.\n\n**Configured Networks:**\n{hub_list}\n\n{hub_settings_explanation}",
         "data": {
           "enabled_device_types": "Device Types to Monitor",
+          "mt_refresh_enabled": "Enable MT15/MT40 Fast Refresh",
+          "mt_refresh_interval": "MT Refresh Interval",
           "update_api_key": "Update API Key",
           "scan_interval": "Update Interval",
           "discovery_interval": "Discovery Interval",
@@ -76,47 +88,57 @@
           "semi_static_data_interval": "Network Configuration Interval",
           "dynamic_data_interval": "Device Metrics Interval",
           "hub_auto_discovery_*": "Auto-Discovery",
-          "hub_scan_interval_*": "Update Interval",
+          "hub_scan_interval_*": "Update Interval (seconds)",
           "hub_discovery_interval_*": "Discovery Interval"
         },
         "data_description": {
-          "enabled_device_types": "Select which types of Meraki devices to monitor",
-          "update_api_key": "Check this box to update your Meraki API key",
-          "scan_interval": "How often to update sensor data (minutes). MT sensors default to 0.5 (30 seconds) for MT15/MT40 fast refresh support",
-          "discovery_interval": "How often to check for new devices (minutes)",
-          "auto_discovery": "Automatically discover and add new devices",
-          "selected_devices": "Monitor specific devices only (leave empty for all)",
-          "static_data_interval": "Update interval for organization info and licenses (minutes)",
-          "semi_static_data_interval": "Update interval for network settings and device inventory (minutes)",
-          "dynamic_data_interval": "Update interval for sensor readings and real-time metrics (minutes)"
+          "enabled_device_types": "Choose which types of Meraki devices to monitor in your networks. You can select MT (Environmental Sensors), MR (Wireless Access Points), and/or MS (Switches). Only selected device types will appear in Home Assistant.",
+          "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending refresh commands every few seconds. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Note: May occasionally trigger rate limit warnings from Meraki API. Recommended: enabled (default).",
+          "mt_refresh_interval": "How often to send refresh commands to MT15/MT40 devices (1-60 seconds). Default is 30 seconds. Lower intervals provide faster updates but increase API usage and may trigger rate limits. Only applies when MT15/MT40 fast refresh is enabled above.",
+          "update_api_key": "Check this box to update your Meraki Dashboard API key. You will be prompted to enter the new key in the next step.",
+          "scan_interval": "How often to update sensor data (in seconds). Examples: 30 = 30s, 60 = 1 min, 300 = 5 min, 600 = 10 min. MT sensors can go as low as 1 second with fast refresh enabled. Other device types minimum is 60 seconds (1 minute).",
+          "discovery_interval": "How often to scan for new devices in your networks (in minutes). Default is 60 minutes. Lower values find new devices faster but increase API usage.",
+          "auto_discovery": "When enabled, automatically discover and add new devices as they appear in your Meraki networks. Recommended: enabled.",
+          "selected_devices": "Optional: Select specific devices to monitor. Leave empty to monitor all devices of the enabled types.",
+          "static_data_interval": "How often to update organization-level information like licenses and admin details (in minutes). This data changes infrequently, so longer intervals are recommended. Default: 240 minutes (4 hours).",
+          "semi_static_data_interval": "How often to update network configuration and device inventory (in minutes). This includes network settings and device models. Default: 60 minutes (1 hour).",
+          "dynamic_data_interval": "How often to update real-time sensor readings and device metrics (in minutes). This includes temperature, humidity, client counts, etc. Default: 5-10 minutes depending on device type."
         }
       },
       "api_key": {
         "title": "Update API Key",
-        "description": "Enter your new Meraki Dashboard API key",
+        "description": "Enter your new Meraki Dashboard API key. You can generate a new API key from your Meraki Dashboard under Organization > Settings > Dashboard API access.\n\nThe integration will be reloaded automatically after the key is updated.",
         "data": {
-          "api_key": "API Key"
+          "api_key": "Meraki Dashboard API Key"
+        },
+        "data_description": {
+          "api_key": "Your Meraki Dashboard API key. This key is used to authenticate all requests to the Meraki API. Keep this key secure and do not share it."
         }
       },
       "hub_intervals": {
-        "title": "Hub-Specific Intervals",
-        "description": "Configure individual scan intervals for each hub. MT sensor intervals are capped at 20 minutes (1200 seconds) to ensure complete historical data capture.",
+        "title": "Network-Specific Configuration",
+        "description": "Configure update intervals and discovery settings for each network individually.\n\nEach network (hub) manages devices of a specific type (MT, MR, or MS) and can have its own configuration.\n\n**Note:** MT sensor intervals are capped at 20 minutes (1200 seconds) to ensure complete historical data capture from the Meraki cloud.",
         "data": {
-          "hub_scan_intervals": "Hub scan intervals (seconds)",
-          "hub_discovery_intervals": "Hub discovery intervals (seconds)",
-          "hub_auto_discovery": "Hub auto-discovery settings"
+          "hub_scan_intervals": "Network Update Intervals",
+          "hub_discovery_intervals": "Network Discovery Intervals",
+          "hub_auto_discovery": "Network Auto-Discovery Settings"
+        },
+        "data_description": {
+          "hub_scan_intervals": "How often to fetch data from devices in each network (in seconds). Lower values provide more frequent updates but increase API usage.",
+          "hub_discovery_intervals": "How often to scan for new devices in each network (in seconds). Typically set higher than scan intervals.",
+          "hub_auto_discovery": "Enable or disable automatic device discovery for each network individually."
         }
       }
     },
     "error": {
-      "invalid_auth": "Invalid authentication",
-      "invalid_permissions": "API key lacks required permissions",
-      "cannot_connect": "Failed to connect to Meraki API",
-      "no_organizations": "No organizations found for this API key",
-      "unknown": "Unexpected error occurred"
+      "invalid_auth": "Invalid API key. Please check that your API key is correct and has not expired. You can generate a new API key from your Meraki Dashboard under Organization > Settings > Dashboard API access.",
+      "invalid_permissions": "API key lacks required permissions. Please ensure your API key has full read access to your Meraki organization. Generate a new API key with proper permissions if needed.",
+      "cannot_connect": "Failed to connect to Meraki API. Please check your internet connection and verify that the Meraki API is accessible. If using a custom base URL, verify it is correct.",
+      "no_organizations": "No organizations found for this API key. Please verify that your API key is associated with a Meraki organization and has the necessary permissions.",
+      "unknown": "An unexpected error occurred while connecting to the Meraki API. Please check the Home Assistant logs for more details and try again."
     },
     "abort": {
-      "api_key_updated": "API key successfully updated"
+      "api_key_updated": "API key successfully updated! The integration has been reloaded with the new credentials."
     }
   },
   "issues": {
