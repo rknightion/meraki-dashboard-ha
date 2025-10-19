@@ -1,0 +1,174 @@
+[
+  {
+    "portId": "1",
+    "name": "AP-Garage",
+    "tags": [],
+    "enabled": true,
+    "poeEnabled": true,
+    "type": "trunk",
+    "vlan": 100,
+    "voiceVlan": null,
+    "allowedVlans": "all",
+    "activeVlans": "1-4094",
+    "isolationEnabled": false,
+    "rstpEnabled": true,
+    "stpGuard": "disabled",
+    "linkNegotiation": "Auto negotiate",
+    "portScheduleId": null,
+    "schedule": null,
+    "udld": "Alert only",
+    "linkNegotiationCapabilities": [
+      "Auto negotiate",
+      "1 Gigabit full duplex (forced)",
+      "100 Megabit (auto)",
+      "100 Megabit half duplex (forced)",
+      "100 Megabit full duplex (forced)",
+      "10 Megabit (auto)",
+      "10 Megabit half duplex (forced)",
+      "10 Megabit full duplex (forced)"
+    ],
+    "accessPolicyType": "Open",
+    "daiTrusted": false,
+    "profile": {
+      "enabled": true,
+      "id": "676102894058997299",
+      "iname": null
+    },
+    "stormControlEnabled": true,
+    "module": {
+      "model": null
+    },
+    "mirror": {
+      "mode": "Not mirroring traffic"
+    }
+  },
+  {
+    "portId": "5",
+    "name": "UPLINK",
+    "tags": [],
+    "enabled": true,
+    "poeEnabled": true,
+    "type": "trunk",
+    "vlan": 1,
+    "voiceVlan": null,
+    "allowedVlans": "all",
+    "activeVlans": "1-4094",
+    "isolationEnabled": false,
+    "rstpEnabled": true,
+    "stpGuard": "disabled",
+    "linkNegotiation": "Auto negotiate",
+    "portScheduleId": null,
+    "schedule": null,
+    "udld": "Alert only",
+    "linkNegotiationCapabilities": [
+      "Auto negotiate",
+      "1 Gigabit full duplex (forced)",
+      "100 Megabit (auto)",
+      "100 Megabit half duplex (forced)",
+      "100 Megabit full duplex (forced)",
+      "10 Megabit (auto)",
+      "10 Megabit half duplex (forced)",
+      "10 Megabit full duplex (forced)"
+    ],
+    "accessPolicyType": "Open",
+    "daiTrusted": false,
+    "profile": {
+      "enabled": false,
+      "id": "",
+      "iname": null
+    },
+    "stormControlEnabled": true,
+    "module": {
+      "model": null
+    },
+    "mirror": {
+      "mode": "Not mirroring traffic"
+    }
+  },
+  {
+    "portId": "8",
+    "name": "CAM",
+    "tags": [],
+    "enabled": true,
+    "poeEnabled": true,
+    "type": "access",
+    "vlan": 25,
+    "voiceVlan": null,
+    "allowedVlans": "all",
+    "activeVlans": "1-4094",
+    "isolationEnabled": false,
+    "rstpEnabled": true,
+    "stpGuard": "disabled",
+    "linkNegotiation": "Auto negotiate",
+    "portScheduleId": null,
+    "schedule": null,
+    "udld": "Alert only",
+    "linkNegotiationCapabilities": [
+      "Auto negotiate",
+      "1 Gigabit full duplex (forced)",
+      "100 Megabit (auto)",
+      "100 Megabit half duplex (forced)",
+      "100 Megabit full duplex (forced)",
+      "10 Megabit (auto)",
+      "10 Megabit half duplex (forced)",
+      "10 Megabit full duplex (forced)"
+    ],
+    "accessPolicyType": "Open",
+    "daiTrusted": false,
+    "profile": {
+      "enabled": true,
+      "id": "676102894058996769",
+      "iname": null
+    },
+    "stormControlEnabled": true,
+    "module": {
+      "model": null
+    },
+    "mirror": {
+      "mode": "Not mirroring traffic"
+    }
+  },
+  {
+    "portId": "24",
+    "name": "VDSL BRIDGE",
+    "tags": [],
+    "enabled": true,
+    "poeEnabled": false,
+    "type": "access",
+    "vlan": 10,
+    "voiceVlan": null,
+    "allowedVlans": "all",
+    "activeVlans": "1-4094",
+    "isolationEnabled": false,
+    "rstpEnabled": false,
+    "stpGuard": "disabled",
+    "linkNegotiation": "Auto negotiate",
+    "portScheduleId": null,
+    "schedule": null,
+    "udld": "Alert only",
+    "linkNegotiationCapabilities": [
+      "Auto negotiate",
+      "1 Gigabit full duplex (forced)",
+      "100 Megabit (auto)",
+      "100 Megabit half duplex (forced)",
+      "100 Megabit full duplex (forced)",
+      "10 Megabit (auto)",
+      "10 Megabit half duplex (forced)",
+      "10 Megabit full duplex (forced)"
+    ],
+    "accessPolicyType": "Open",
+    "daiTrusted": false,
+    "profile": {
+      "enabled": false,
+      "id": "",
+      "iname": null
+    },
+    "stormControlEnabled": false,
+    "module": {
+      "model": null
+    },
+    "mirror": {
+      "mode": "Not mirroring traffic"
+    }
+  }
+]

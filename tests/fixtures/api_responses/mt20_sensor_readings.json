@@ -1,0 +1,25 @@
+[
+  {
+    "serial": "Q3CC-HV6P-H5XK",
+    "network": {
+      "id": "L_676102894059012345",
+      "name": "Elm Street Lab"
+    },
+    "readings": [
+      {
+        "ts": "2025-10-19T15:29:44.000000Z",
+        "metric": "door",
+        "door": {
+          "open": false
+        }
+      },
+      {
+        "ts": "2025-10-19T15:09:43.000000Z",
+        "metric": "battery",
+        "battery": {
+          "percentage": 92
+        }
+      }
+    ]
+  }
+]

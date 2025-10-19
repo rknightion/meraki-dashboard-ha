@@ -1,0 +1,13 @@
+{
+  "status": "OK",
+  "expirationDate": "Mar 13, 2027 UTC",
+  "licensedDeviceCounts": {
+    "MT": 8,
+    "MV": 2,
+    "MS220-8P": 2,
+    "MS250-24P": 1,
+    "MR-ADV": 3,
+    "MS120-8LP": 1,
+    "SM": 10
+  }
+}

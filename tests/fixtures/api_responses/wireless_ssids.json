@@ -1,0 +1,77 @@
+[
+  {
+    "number": 0,
+    "name": "The Cubhouse",
+    "enabled": true,
+    "splashPage": "None",
+    "ssidAdminAccessible": false,
+    "authMode": "psk",
+    "psk": "**REDACTED**",
+    "dot11w": {
+      "enabled": true,
+      "required": true
+    },
+    "dot11r": {
+      "enabled": true,
+      "adaptive": false
+    },
+    "encryptionMode": "wpa",
+    "wpaEncryptionMode": "WPA3 only",
+    "ipAssignmentMode": "Bridge mode",
+    "useVlanTagging": false,
+    "minBitrate": 11,
+    "bandSelection": "Dual band operation",
+    "perClientBandwidthLimitUp": 0,
+    "perClientBandwidthLimitDown": 0,
+    "perSsidBandwidthLimitUp": 0,
+    "perSsidBandwidthLimitDown": 0,
+    "mandatoryDhcpEnabled": false,
+    "lanIsolationEnabled": false,
+    "visible": true,
+    "availableOnAllAps": true,
+    "availabilityTags": [
+      "cubhouse"
+    ],
+    "speedBurst": {
+      "enabled": false
+    }
+  },
+  {
+    "number": 1,
+    "name": "Cubhouse IOT",
+    "enabled": true,
+    "splashPage": "None",
+    "ssidAdminAccessible": false,
+    "authMode": "psk",
+    "psk": "**REDACTED**",
+    "dot11w": {
+      "enabled": true,
+      "required": false
+    },
+    "dot11r": {
+      "enabled": false,
+      "adaptive": false
+    },
+    "encryptionMode": "wpa",
+    "wpaEncryptionMode": "WPA2 only",
+    "ipAssignmentMode": "Bridge mode",
+    "useVlanTagging": true,
+    "defaultVlanId": 50,
+    "minBitrate": 11,
+    "bandSelection": "Dual band operation",
+    "perClientBandwidthLimitUp": 0,
+    "perClientBandwidthLimitDown": 0,
+    "perSsidBandwidthLimitUp": 0,
+    "perSsidBandwidthLimitDown": 0,
+    "mandatoryDhcpEnabled": false,
+    "lanIsolationEnabled": false,
+    "visible": true,
+    "availableOnAllAps": true,
+    "availabilityTags": [
+      "iot"
+    ],
+    "speedBurst": {
+      "enabled": false
+    }
+  }
+]

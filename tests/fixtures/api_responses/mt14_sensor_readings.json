@@ -1,0 +1,71 @@
+[
+  {
+    "serial": "Q3CG-P4W4-QXP2",
+    "network": {
+      "id": "L_676102894059012345",
+      "name": "Elm Street Lab"
+    },
+    "readings": [
+      {
+        "ts": "2025-10-19T15:41:45.000000Z",
+        "metric": "pm25",
+        "pm25": {
+          "concentration": 5
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:44.000000Z",
+        "metric": "tvoc",
+        "tvoc": {
+          "concentration": 15
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:44.000000Z",
+        "metric": "indoorAirQuality",
+        "indoorAirQuality": {
+          "score": 77
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:43.000000Z",
+        "metric": "noise",
+        "noise": {
+          "ambient": {
+            "level": 36
+          }
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:42.000000Z",
+        "metric": "rawTemperature",
+        "rawTemperature": {
+          "fahrenheit": 63.8,
+          "celsius": 17.67
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:42.000000Z",
+        "metric": "humidity",
+        "humidity": {
+          "relativePercentage": 79
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:42.000000Z",
+        "metric": "temperature",
+        "temperature": {
+          "fahrenheit": 63.8,
+          "celsius": 17.67
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:22.000000Z",
+        "metric": "co2",
+        "co2": {
+          "concentration": 426
+        }
+      }
+    ]
+  }
+]

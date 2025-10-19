@@ -1,0 +1,67 @@
+[
+  {
+    "serial": "Q3CJ-MRNC-F7XJ",
+    "network": {
+      "id": "L_676102894059012345",
+      "name": "Elm Street Lab"
+    },
+    "readings": [
+      {
+        "ts": "2025-10-19T15:41:44.000000Z",
+        "metric": "downstreamPower",
+        "downstreamPower": {
+          "enabled": true
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:44.000000Z",
+        "metric": "remoteLockoutSwitch",
+        "remoteLockoutSwitch": {
+          "locked": false
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:37.000000Z",
+        "metric": "current",
+        "current": {
+          "draw": 0.08
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:37.000000Z",
+        "metric": "apparentPower",
+        "apparentPower": {
+          "draw": 19.2
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:37.000000Z",
+        "metric": "powerFactor",
+        "powerFactor": {
+          "percentage": 53
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:37.000000Z",
+        "metric": "frequency",
+        "frequency": {
+          "level": 50.0
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:37.000000Z",
+        "metric": "realPower",
+        "realPower": {
+          "draw": 10.2
+        }
+      },
+      {
+        "ts": "2025-10-19T15:41:37.000000Z",
+        "metric": "voltage",
+        "voltage": {
+          "level": 240.8
+        }
+      }
+    ]
+  }
+]

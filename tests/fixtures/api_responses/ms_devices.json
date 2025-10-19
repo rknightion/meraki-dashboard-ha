@@ -1,32 +1,78 @@
 [
   {
-    "serial": "Q2LM-XXXX-XXXX",
-    "model": "MS120-8",
-    "name": "Access Switch - Closet A",
-    "networkId": "N_123456789",
-    "lat": 37.4419,
-    "lng": -122.1419,
-    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
-    "notes": "IDF closet A switch",
-    "tags": ["switch", "access"],
-    "mac": "88:15:44:11:22:33",
-    "lanIp": "192.168.1.20",
-    "firmware": "switch-14-33",
+    "lat": 51.5072,
+    "lng": -0.1276,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q2MW-42Z2-JE5T",
+    "mac": "cc:9c:3e:02:94:60",
+    "lanIp": "10.0.100.10",
+    "tags": [
+      "recently-added"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-s/n/9ACizbjd/manage/nodes/new_list/224971427320928",
+    "networkId": "L_676102894059012345",
+    "name": "odin",
+    "details": [],
+    "model": "MS250-24P",
+    "switchProfileId": null,
+    "firmware": "switch-18-1-2",
     "floorPlanId": null
   },
   {
-    "serial": "Q2LM-YYYY-YYYY",
-    "model": "MS225-24P",
-    "name": "PoE Switch - Floor 1",
-    "networkId": "N_123456789",
-    "lat": 37.4419,
-    "lng": -122.1419,
-    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
-    "notes": "PoE distribution switch",
-    "tags": ["switch", "poe"],
-    "mac": "88:15:44:44:55:66",
-    "lanIp": "192.168.1.21",
-    "firmware": "switch-14-33",
+    "lat": 51.5070,
+    "lng": -0.1282,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q2HP-F6VX-M24J",
+    "mac": "88:15:44:e3:40:47",
+    "lanIp": "10.0.100.21",
+    "tags": [
+      "recently-added"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-s/n/9ACizbjd/manage/nodes/new_list/149624931434567",
+    "networkId": "L_676102894059012345",
+    "name": "coldroom-switch",
+    "details": [],
+    "model": "MS220-8P",
+    "switchProfileId": null,
+    "firmware": "Not running configured version",
+    "floorPlanId": null
+  },
+  {
+    "lat": 51.5068,
+    "lng": -0.1284,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q2BX-Q43Y-RR5C",
+    "mac": "f8:9e:28:41:d5:4e",
+    "lanIp": "10.0.100.14",
+    "tags": [
+      "recently-added"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-s/n/9ACizbjd/manage/nodes/new_list/273358163924302",
+    "networkId": "L_676102894059012345",
+    "name": "LoungeSW",
+    "details": [],
+    "model": "MS120-8LP",
+    "switchProfileId": null,
+    "firmware": "switch-18-1-2",
+    "floorPlanId": null
+  },
+  {
+    "lat": 51.5066,
+    "lng": -0.1286,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q2HP-K4VW-87YT",
+    "mac": "e0:55:3d:d0:b3:5a",
+    "lanIp": "10.0.100.13",
+    "tags": [
+      "recently-added"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-s/n/9ACizbjd/manage/nodes/new_list/246656713929562",
+    "networkId": "L_676102894059012345",
+    "name": "OfficeSW",
+    "details": [],
+    "model": "MS220-8P",
+    "switchProfileId": null,
+    "firmware": "Not running configured version",
     "floorPlanId": null
   }
 ]

@@ -1,0 +1,10 @@
+{
+  "counts": {
+    "byStatus": {
+      "online": 25,
+      "alerting": 0,
+      "offline": 0,
+      "dormant": 0
+    }
+  }
+}

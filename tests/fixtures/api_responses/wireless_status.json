@@ -1,0 +1,52 @@
+{
+  "basicServiceSets": [
+    {
+      "ssidName": "The Cubhouse",
+      "ssidNumber": 0,
+      "enabled": true,
+      "band": "2.4 GHz",
+      "bssid": "a8:46:9d:32:08:da",
+      "channel": 1,
+      "channelWidth": "20 MHz",
+      "power": "10 dBm",
+      "visible": true,
+      "broadcasting": true
+    },
+    {
+      "ssidName": "The Cubhouse",
+      "ssidNumber": 0,
+      "enabled": true,
+      "band": "5 GHz",
+      "bssid": "aa:46:8d:32:08:da",
+      "channel": 108,
+      "channelWidth": "80 MHz",
+      "power": "10 dBm",
+      "visible": true,
+      "broadcasting": true
+    },
+    {
+      "ssidName": "Cubhouse IOT",
+      "ssidNumber": 1,
+      "enabled": true,
+      "band": "2.4 GHz",
+      "bssid": "ae:46:9d:32:08:da",
+      "channel": 1,
+      "channelWidth": "20 MHz",
+      "power": "10 dBm",
+      "visible": true,
+      "broadcasting": true
+    },
+    {
+      "ssidName": "Cubhouse IOT",
+      "ssidNumber": 1,
+      "enabled": true,
+      "band": "5 GHz",
+      "bssid": "ae:46:8d:32:08:da",
+      "channel": 108,
+      "channelWidth": "80 MHz",
+      "power": "10 dBm",
+      "visible": true,
+      "broadcasting": true
+    }
+  ]
+}

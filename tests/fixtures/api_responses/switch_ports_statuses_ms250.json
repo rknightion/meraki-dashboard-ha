@@ -1,0 +1,250 @@
+[
+  {
+    "portId": "1",
+    "enabled": true,
+    "status": "Connected",
+    "isUplink": false,
+    "errors": [],
+    "warnings": [],
+    "speed": "1 Gbps",
+    "duplex": "full",
+    "securePort": {
+      "enabled": false,
+      "active": false,
+      "authenticationStatus": "Disabled",
+      "configOverrides": {}
+    },
+    "spanningTree": {
+      "statuses": [
+        "Forwarding",
+        "Is edge",
+        "Is peer-to-peer"
+      ]
+    },
+    "poe": {
+      "isAllocated": true
+    },
+    "activeProfile": {
+      "id": "676102894058997299",
+      "name": "Access Points",
+      "iname": null,
+      "source": {
+        "type": "static"
+      }
+    },
+    "usageInKb": {
+      "total": 2558555,
+      "sent": 94770,
+      "recv": 2463785
+    },
+    "cdp": {
+      "platform": "Meraki MR56 Cloud Managed Indoor AP",
+      "deviceId": "e455a812a23c",
+      "portId": "Port 0",
+      "address": "10.0.100.15",
+      "version": "1",
+      "capabilities": "Router, Switch"
+    },
+    "lldp": {
+      "systemName": "Meraki MR56 - GarageAP",
+      "systemDescription": "Meraki MR56 Cloud Managed Indoor AP",
+      "chassisId": "e4:55:a8:12:a2:3c",
+      "portId": "0",
+      "portDescription": "eth0",
+      "systemCapabilities": "Two-port MAC Relay"
+    },
+    "clientCount": 12,
+    "powerUsageInWh": 8.4,
+    "trafficInKbps": {
+      "total": 5822.2,
+      "sent": 215.7,
+      "recv": 5606.5
+    }
+  },
+  {
+    "portId": "2",
+    "enabled": false,
+    "status": "Disabled",
+    "isUplink": false,
+    "errors": [
+      "Port disabled",
+      "Port disconnected"
+    ],
+    "warnings": [],
+    "speed": "",
+    "duplex": "",
+    "securePort": {
+      "enabled": false,
+      "active": false,
+      "authenticationStatus": "Disabled",
+      "configOverrides": {}
+    },
+    "spanningTree": {
+      "statuses": []
+    },
+    "poe": {
+      "isAllocated": false
+    },
+    "usageInKb": {
+      "total": 0,
+      "sent": 0,
+      "recv": 0
+    },
+    "clientCount": 0,
+    "powerUsageInWh": 0.0,
+    "trafficInKbps": {
+      "total": 0.0,
+      "sent": 0.0,
+      "recv": 0.0
+    }
+  },
+  {
+    "portId": "5",
+    "enabled": true,
+    "status": "Connected",
+    "isUplink": true,
+    "errors": [],
+    "warnings": [],
+    "speed": "1 Gbps",
+    "duplex": "full",
+    "securePort": {
+      "enabled": false,
+      "active": false,
+      "authenticationStatus": "Disabled",
+      "configOverrides": {}
+    },
+    "spanningTree": {
+      "statuses": [
+        "Forwarding",
+        "Is edge",
+        "Is peer-to-peer"
+      ]
+    },
+    "poe": {
+      "isAllocated": false
+    },
+    "usageInKb": {
+      "total": 9174964,
+      "sent": 4253365,
+      "recv": 4921599
+    },
+    "cdp": {
+      "platform": "FreeBSD",
+      "deviceId": "opnsense",
+      "portId": "LAN (lan)",
+      "address": "10.0.0.254",
+      "version": "FreeBSD 14.3-RELEASE-p4 FreeBSD 14.3-RELEASE-p4 stable/25.7-n271708-85edba454cf9 SMP amd64",
+      "capabilities": "Router, Host"
+    },
+    "lldp": {
+      "systemName": "opnsense",
+      "systemDescription": "FreeBSD 14.3-RELEASE-p4 FreeBSD 14.3-RELEASE-p4 stable/25.7-n271708-85edba454cf9 SMP amd64",
+      "chassisId": "a0:36:9f:07:16:50",
+      "portId": "igb0",
+      "managementAddress": "10.0.0.254",
+      "portDescription": "LAN (lan)",
+      "systemCapabilities": "S-VLAN Component of a VLAN Bridge, Two-port MAC Relay"
+    },
+    "clientCount": 0,
+    "powerUsageInWh": 0.0,
+    "trafficInKbps": {
+      "total": 20878.2,
+      "sent": 9678.8,
+      "recv": 11199.4
+    }
+  },
+  {
+    "portId": "8",
+    "enabled": true,
+    "status": "Connected",
+    "isUplink": false,
+    "errors": [],
+    "warnings": [],
+    "speed": "1 Gbps",
+    "duplex": "full",
+    "securePort": {
+      "enabled": false,
+      "active": false,
+      "authenticationStatus": "Disabled",
+      "configOverrides": {}
+    },
+    "spanningTree": {
+      "statuses": []
+    },
+    "poe": {
+      "isAllocated": true
+    },
+    "activeProfile": {
+      "id": "676102894058996769",
+      "name": "CAM",
+      "iname": null,
+      "source": {
+        "type": "static"
+      }
+    },
+    "usageInKb": {
+      "total": 7750,
+      "sent": 3857,
+      "recv": 3893
+    },
+    "cdp": {
+      "platform": "Meraki MV32 Cloud Managed Security Came",
+      "deviceId": "cc9c3e59089b",
+      "portId": "Port 0",
+      "address": "10.0.25.30",
+      "version": "1",
+      "capabilities": ""
+    },
+    "lldp": {
+      "systemName": "server-room",
+      "systemDescription": "Meraki MV32 Cloud Managed Security Camera",
+      "chassisId": "cc:9c:3e:59:08:9b",
+      "portId": "0",
+      "managementAddress": "10.0.25.30",
+      "portDescription": "wired0",
+      "systemCapabilities": ""
+    },
+    "clientCount": 1,
+    "powerUsageInWh": 4.1,
+    "trafficInKbps": {
+      "total": 17.7,
+      "sent": 8.8,
+      "recv": 8.9
+    }
+  },
+  {
+    "portId": "25",
+    "enabled": true,
+    "status": "Connected",
+    "isUplink": false,
+    "errors": [],
+    "warnings": [],
+    "speed": "10 Gbps",
+    "duplex": "full",
+    "securePort": {
+      "enabled": false,
+      "active": false,
+      "authenticationStatus": "Disabled",
+      "configOverrides": {}
+    },
+    "spanningTree": {
+      "statuses": [
+        "Disabled"
+      ]
+    },
+    "poe": {
+      "isAllocated": false
+    },
+    "usageInKb": {
+      "total": 2426121,
+      "sent": 1052879,
+      "recv": 1373242
+    },
+    "clientCount": 2,
+    "trafficInKbps": {
+      "total": 5520.8,
+      "sent": 2395.9,
+      "recv": 3124.9
+    }
+  }
+]

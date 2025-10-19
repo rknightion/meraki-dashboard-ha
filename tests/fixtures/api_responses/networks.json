@@ -1,24 +1,23 @@
 [
   {
-    "id": "N_123456789",
-    "organizationId": "123456",
-    "name": "Main Office",
-    "productTypes": ["sensor", "wireless", "switch"],
-    "timeZone": "America/Los_Angeles",
-    "tags": ["production"],
-    "enrollmentString": null,
-    "url": "https://dashboard.meraki.com/Main_Office/n/abc123/manage/nodes/list",
-    "notes": "Primary office location"
-  },
-  {
-    "id": "N_987654321",
-    "organizationId": "123456",
-    "name": "Branch Office",
-    "productTypes": ["sensor", "wireless"],
-    "timeZone": "America/New_York",
-    "tags": ["branch"],
-    "enrollmentString": null,
-    "url": "https://dashboard.meraki.com/Branch_Office/n/xyz789/manage/nodes/list",
-    "notes": "East coast branch"
+    "id": "L_676102894059012345",
+    "organizationId": "1019781",
+    "name": "Elm Street Lab",
+    "productTypes": [
+      "camera",
+      "sensor",
+      "switch",
+      "systemsManager",
+      "wireless"
+    ],
+    "timeZone": "Europe/London",
+    "tags": [
+      "CiscoSpaces"
+    ],
+    "enrollmentString": "knight",
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-c/n/Gs0vfdjd/manage/clients",
+    "notes": "",
+    "isBoundToConfigTemplate": false,
+    "isVirtual": false
   }
 ]

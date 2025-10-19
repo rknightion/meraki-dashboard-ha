@@ -1,0 +1,27 @@
+{
+  "id": "1019781",
+  "name": "Knight",
+  "url": "https://n201.dashboard.meraki.com/o/78qpCa/manage/organization/overview",
+  "api": {
+    "enabled": true
+  },
+  "licensing": {
+    "model": "co-term"
+  },
+  "cloud": {
+    "region": {
+      "name": "Europe",
+      "host": {
+        "name": "Europe"
+      }
+    }
+  },
+  "management": {
+    "details": [
+      {
+        "name": "customer number",
+        "value": "54991965"
+      }
+    ]
+  }
+}

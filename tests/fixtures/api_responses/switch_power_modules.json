@@ -1,0 +1,24 @@
+{
+  "slots": [
+    {
+      "serial": "Q2BS-PDPL-X9BK",
+      "model": "PWR-MS320-640WAC",
+      "status": "powering",
+      "slot": 1,
+      "poe": {
+        "unit": "watts",
+        "maximum": 370
+      }
+    },
+    {
+      "serial": "",
+      "model": "",
+      "status": "disconnected",
+      "slot": 2,
+      "poe": {
+        "unit": "watts",
+        "maximum": 0
+      }
+    }
+  ]
+}

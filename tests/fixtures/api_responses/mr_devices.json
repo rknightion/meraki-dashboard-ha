@@ -1,32 +1,74 @@
 [
   {
-    "serial": "Q2GD-AAAA-AAAA",
-    "model": "MR46",
-    "name": "Office AP - Floor 1",
-    "networkId": "N_123456789",
-    "lat": 37.4419,
-    "lng": -122.1419,
-    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
-    "notes": "First floor wireless AP",
-    "tags": ["wireless", "floor1"],
-    "mac": "88:15:44:AA:BB:CC",
-    "lanIp": "192.168.1.10",
-    "firmware": "wireless-28-7",
-    "floorPlanId": null
+    "lat": 51.5074,
+    "lng": -0.1278,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q3AB-VDXT-R59K",
+    "mac": "a8:46:9d:32:08:da",
+    "lanIp": "10.0.100.17",
+    "tags": [
+      "CiscoSpaces",
+      "cubhouse"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-w/n/uQzdrcjd/manage/nodes/new_list/185021238479066",
+    "networkId": "L_676102894059012345",
+    "name": "LoungeAP",
+    "details": [],
+    "beaconIdParams": {
+      "uuid": "a84beaf6-0884-47d1-b287-c027efec9b58",
+      "major": 0,
+      "minor": 3
+    },
+    "model": "MR56",
+    "firmware": "wireless-32-1-4",
+    "floorPlanId": "g_676102894059002232"
   },
   {
-    "serial": "Q2GD-BBBB-BBBB",
+    "lat": 51.5076,
+    "lng": -0.1280,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q3AB-QLZS-GCWH",
+    "mac": "a8:46:9d:32:2e:e3",
+    "lanIp": "10.0.100.16",
+    "tags": [
+      "CiscoSpaces",
+      "cubhouse"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-w/n/uQzdrcjd/manage/nodes/new_list/185021238488803",
+    "networkId": "L_676102894059012345",
+    "name": "OfficeAP",
+    "details": [],
+    "beaconIdParams": {
+      "uuid": "a84beaf6-0884-47d1-b287-c027efec9b58",
+      "major": 0,
+      "minor": 2
+    },
     "model": "MR56",
-    "name": "Office AP - Floor 2",
-    "networkId": "N_123456789",
-    "lat": 37.4419,
-    "lng": -122.1419,
-    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
-    "notes": "Second floor wireless AP",
-    "tags": ["wireless", "floor2"],
-    "mac": "88:15:44:DD:EE:FF",
-    "lanIp": "192.168.1.11",
-    "firmware": "wireless-28-7",
-    "floorPlanId": null
+    "firmware": "wireless-32-1-4",
+    "floorPlanId": "g_676102894059002233"
+  },
+  {
+    "lat": 51.5078,
+    "lng": -0.1275,
+    "address": "42 Elm Street, Smallville, Greater London, SW1A 1AA",
+    "serial": "Q3AB-US5S-CTQZ",
+    "mac": "e4:55:a8:12:a2:3c",
+    "lanIp": "10.0.100.15",
+    "tags": [
+      "CiscoSpaces",
+      "iot"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-w/n/uQzdrcjd/manage/nodes/new_list/251056543146556",
+    "networkId": "L_676102894059012345",
+    "name": "GarageAP",
+    "details": [],
+    "beaconIdParams": {
+      "uuid": "a84beaf6-0884-47d1-b287-c027efec9b58",
+      "major": 0,
+      "minor": 4
+    },
+    "model": "MR56",
+    "firmware": "wireless-32-1-4",
+    "floorPlanId": "g_676102894059002232"
   }
 ]

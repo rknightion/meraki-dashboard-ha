@@ -1,0 +1,41 @@
+[
+  {
+    "id": "676102894105533661",
+    "mac": "c4:8b:a3:fc:5f:f6",
+    "networkId": "L_676102894059012345",
+    "name": null,
+    "deviceName": "unknown",
+    "manufacturer": "Cisco Meraki",
+    "lastSeen": 1760888545,
+    "seenByDeviceMac": "a8:46:9d:32:08:da",
+    "inSightAlert": false,
+    "outOfSightAlert": false,
+    "tags": []
+  },
+  {
+    "id": "676102894105534434",
+    "mac": "c4:8b:a3:fc:59:59",
+    "networkId": "L_676102894059012345",
+    "name": null,
+    "deviceName": "unknown",
+    "manufacturer": "Cisco Meraki",
+    "lastSeen": 1760888404,
+    "seenByDeviceMac": "a8:46:9d:32:2e:e3",
+    "inSightAlert": false,
+    "outOfSightAlert": false,
+    "tags": []
+  },
+  {
+    "id": "676102894362665034",
+    "mac": "00:c3:f4:0c:19:27",
+    "networkId": "L_676102894059012345",
+    "name": null,
+    "deviceName": "unknown",
+    "manufacturer": "Samsung",
+    "lastSeen": 1760865498,
+    "seenByDeviceMac": "e4:55:a8:12:a2:3c",
+    "inSightAlert": false,
+    "outOfSightAlert": false,
+    "tags": []
+  }
+]

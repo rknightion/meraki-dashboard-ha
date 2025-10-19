@@ -1,0 +1,48 @@
+[
+  {
+    "lat": 51.5064,
+    "lng": -0.1288,
+    "address": "42 Elm Street",
+    "serial": "Q2PV-HMH3-5TS8",
+    "mac": "cc:9c:3e:59:08:9b",
+    "lanIp": "10.0.25.30",
+    "tags": [
+      "recently-added"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-c/n/Gs0vfdjd/manage/nodes/new_list/224971432986779",
+    "networkId": "L_676102894059012345",
+    "name": "server-room",
+    "details": [
+      {
+        "name": "Running software version",
+        "value": "MV 7.1.1"
+      }
+    ],
+    "model": "MV32",
+    "firmware": "camera-7-1-1",
+    "floorPlanId": null
+  },
+  {
+    "lat": 51.5062,
+    "lng": -0.1290,
+    "address": "42 Elm Street",
+    "serial": "Q2PV-VS4U-362T",
+    "mac": "cc:9c:3e:59:09:b2",
+    "lanIp": "10.0.25.31",
+    "tags": [
+      "recently-added"
+    ],
+    "url": "https://n201.dashboard.meraki.com/Elm-Street-Lab-c/n/Gs0vfdjd/manage/nodes/new_list/224971432987058",
+    "networkId": "L_676102894059012345",
+    "name": "office-ceiling",
+    "details": [
+      {
+        "name": "Running software version",
+        "value": "MV 7.1.1"
+      }
+    ],
+    "model": "MV32",
+    "firmware": "camera-7-1-1",
+    "floorPlanId": null
+  }
+]
