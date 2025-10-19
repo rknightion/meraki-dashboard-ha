@@ -416,7 +416,27 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             }
         else:
             # Return everything as a fallback
-            return {"temperature", "humidity", "battery", "water", "indoorAirQuality", "tvoc", "noise", "pm25", "co2", "door", "button", "realPower", "apparentPower", "voltage", "current", "frequency", "powerFactor", "downstreamPower", "remoteLockoutSwitch"}
+            return {
+                "temperature",
+                "humidity",
+                "battery",
+                "water",
+                "indoorAirQuality",
+                "tvoc",
+                "noise",
+                "pm25",
+                "co2",
+                "door",
+                "button",
+                "realPower",
+                "apparentPower",
+                "voltage",
+                "current",
+                "frequency",
+                "powerFactor",
+                "downstreamPower",
+                "remoteLockoutSwitch",
+            }
 
     elif device_type == "MR":
         # MR (Wireless) devices all have similar metrics
