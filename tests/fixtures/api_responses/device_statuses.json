@@ -1,0 +1,79 @@
+[
+  {
+    "serial": "Q2HP-XXXX-XXXX",
+    "name": "Conference Room Sensor",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:05:00Z",
+    "lanIp": null,
+    "gateway": null,
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "sensor"
+  },
+  {
+    "serial": "Q2JD-YYYY-YYYY",
+    "name": "Server Room Monitor",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:04:30Z",
+    "lanIp": null,
+    "gateway": null,
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "sensor"
+  },
+  {
+    "serial": "Q2LK-ZZZZ-ZZZZ",
+    "name": "Warehouse Door Sensor",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:03:45Z",
+    "lanIp": null,
+    "gateway": null,
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "sensor"
+  },
+  {
+    "serial": "Q2GD-AAAA-AAAA",
+    "name": "Office AP - Floor 1",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:06:00Z",
+    "lanIp": "192.168.1.10",
+    "gateway": "192.168.1.1",
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "wireless"
+  },
+  {
+    "serial": "Q2GD-BBBB-BBBB",
+    "name": "Office AP - Floor 2",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:05:45Z",
+    "lanIp": "192.168.1.11",
+    "gateway": "192.168.1.1",
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "wireless"
+  },
+  {
+    "serial": "Q2LM-XXXX-XXXX",
+    "name": "Access Switch - Closet A",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:06:15Z",
+    "lanIp": "192.168.1.20",
+    "gateway": "192.168.1.1",
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "switch"
+  },
+  {
+    "serial": "Q2LM-YYYY-YYYY",
+    "name": "PoE Switch - Floor 1",
+    "status": "online",
+    "lastReportedAt": "2024-01-15T12:06:10Z",
+    "lanIp": "192.168.1.21",
+    "gateway": "192.168.1.1",
+    "publicIp": "203.0.113.10",
+    "networkId": "N_123456789",
+    "productType": "switch"
+  }
+]

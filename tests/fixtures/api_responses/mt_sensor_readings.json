@@ -1,0 +1,87 @@
+[
+  {
+    "serial": "Q2HP-XXXX-XXXX",
+    "network": {
+      "id": "N_123456789",
+      "name": "Main Office"
+    },
+    "readings": [
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "temperature",
+        "temperature": {
+          "celsius": 22.5,
+          "fahrenheit": 72.5
+        }
+      },
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "humidity",
+        "humidity": {
+          "relativePercentage": 45.2
+        }
+      },
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "co2",
+        "co2": {
+          "concentration": 420
+        }
+      }
+    ]
+  },
+  {
+    "serial": "Q2JD-YYYY-YYYY",
+    "network": {
+      "id": "N_123456789",
+      "name": "Main Office"
+    },
+    "readings": [
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "temperature",
+        "temperature": {
+          "celsius": 18.0,
+          "fahrenheit": 64.4
+        }
+      },
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "humidity",
+        "humidity": {
+          "relativePercentage": 32.1
+        }
+      },
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "battery",
+        "battery": {
+          "percentage": 95
+        }
+      }
+    ]
+  },
+  {
+    "serial": "Q2LK-ZZZZ-ZZZZ",
+    "network": {
+      "id": "N_123456789",
+      "name": "Main Office"
+    },
+    "readings": [
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "door",
+        "door": {
+          "open": false
+        }
+      },
+      {
+        "ts": "2024-01-15T12:00:00Z",
+        "metric": "battery",
+        "battery": {
+          "percentage": 88
+        }
+      }
+    ]
+  }
+]

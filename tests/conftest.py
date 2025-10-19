@@ -1,5 +1,7 @@
 """Global test fixtures for Meraki Dashboard integration."""
 
+import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -208,3 +210,94 @@ def api_error_500():
     error = APIError(metadata="500 Internal Server Error", response=response_mock)
     error.status = 500
     return error
+
+
+@pytest.fixture(name="api_error_429")
+def api_error_429():
+    """Mock 429 Rate Limit API error."""
+    from meraki.exceptions import APIError
+
+    response_mock = MagicMock()
+    response_mock.status_code = 429
+    response_mock.headers = {"Retry-After": "60"}
+    metadata = {"tags": ["429 Too Many Requests"], "operation": "test_operation"}
+    error = APIError(metadata=metadata, response=response_mock)
+    error.status = 429
+    return error
+
+
+@pytest.fixture
+def load_json_fixture():
+    """Load a JSON fixture file from tests/fixtures/api_responses."""
+
+    def _load_fixture(filename: str) -> dict:
+        """Load JSON fixture file.
+
+        Args:
+            filename: Name of the fixture file (e.g., 'organizations.json')
+
+        Returns:
+            dict: Parsed JSON data
+
+        """
+        fixture_path = Path(__file__).parent / "fixtures" / "api_responses" / filename
+        if not fixture_path.exists():
+            raise FileNotFoundError(f"Fixture file not found: {fixture_path}")
+
+        with open(fixture_path) as f:
+            return json.load(f)
+
+    return _load_fixture
+
+
+@pytest.fixture
+def mock_aioclient():
+    """Provide aioclient_mock from pytest-homeassistant-custom-component.
+
+    This fixture can be used to mock HTTP requests made by aiohttp.
+    It's already provided by pytest-homeassistant-custom-component but
+    we document it here for convenience.
+
+    Usage:
+        def test_something(mock_aioclient):
+            mock_aioclient.get(
+                "https://api.meraki.com/api/v1/organizations",
+                json={"data": "test"}
+            )
+    """
+    # Note: The actual fixture is provided by pytest-homeassistant-custom-component
+    # This is just documentation
+    pass
+
+
+@pytest.fixture
+def mock_meraki_api_responses(load_json_fixture):
+    """Provide common Meraki API response mocks.
+
+    Returns a dict of common API responses that can be used in tests.
+    """
+    return {
+        "organizations": load_json_fixture("organizations.json")
+        if Path(__file__).parent.joinpath(
+            "fixtures/api_responses/organizations.json"
+        ).exists()
+        else [
+            {
+                "id": "test_org_123",
+                "name": "Test Organization",
+                "url": "https://dashboard.meraki.com/o/test_org_123/manage/organization/overview",
+            }
+        ],
+        "networks": load_json_fixture("networks.json")
+        if Path(__file__).parent.joinpath(
+            "fixtures/api_responses/networks.json"
+        ).exists()
+        else [
+            {
+                "id": "test_network_1",
+                "name": "Test Network 1",
+                "organizationId": "test_org_123",
+                "productTypes": ["sensor"],
+            }
+        ],
+    }

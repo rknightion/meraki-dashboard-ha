@@ -1,0 +1,47 @@
+[
+  {
+    "serial": "Q2HP-XXXX-XXXX",
+    "model": "MT11",
+    "name": "Conference Room Sensor",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "Main conference room",
+    "tags": ["sensor", "conference"],
+    "mac": "00:11:22:33:44:55",
+    "lanIp": null,
+    "firmware": "mt-1-0-11",
+    "floorPlanId": null
+  },
+  {
+    "serial": "Q2JD-YYYY-YYYY",
+    "model": "MT14",
+    "name": "Server Room Monitor",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "Temperature and humidity monitoring",
+    "tags": ["sensor", "critical"],
+    "mac": "00:11:22:33:44:66",
+    "lanIp": null,
+    "firmware": "mt-1-0-11",
+    "floorPlanId": null
+  },
+  {
+    "serial": "Q2LK-ZZZZ-ZZZZ",
+    "model": "MT40",
+    "name": "Warehouse Door Sensor",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "Loading dock door sensor",
+    "tags": ["sensor", "door"],
+    "mac": "00:11:22:33:44:77",
+    "lanIp": null,
+    "firmware": "mt-1-0-11",
+    "floorPlanId": null
+  }
+]

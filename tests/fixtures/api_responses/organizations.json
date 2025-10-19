@@ -1,0 +1,34 @@
+[
+  {
+    "id": "123456",
+    "name": "Test Organization",
+    "url": "https://dashboard.meraki.com/o/123456/manage/organization/overview",
+    "api": {
+      "enabled": true
+    },
+    "licensing": {
+      "model": "co-term"
+    },
+    "cloud": {
+      "region": {
+        "name": "North America"
+      }
+    }
+  },
+  {
+    "id": "789012",
+    "name": "Demo Organization",
+    "url": "https://dashboard.meraki.com/o/789012/manage/organization/overview",
+    "api": {
+      "enabled": true
+    },
+    "licensing": {
+      "model": "per-device"
+    },
+    "cloud": {
+      "region": {
+        "name": "Europe"
+      }
+    }
+  }
+]

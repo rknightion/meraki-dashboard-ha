@@ -10,27 +10,27 @@ The integration uses Home Assistant's translation system, which relies on JSON f
 
 ### File Locations
 
-- **Source English translations**: `custom_components/meraki_dashboard/translations/en.json`
-- **New language translations**: `custom_components/meraki_dashboard/translations/<language_code>.json`
-- **Fallback file**: `custom_components/meraki_dashboard/strings.json` (must match `en.json`)
+-   **Source English translations**: `custom_components/meraki_dashboard/translations/en.json`
+-   **New language translations**: `custom_components/meraki_dashboard/translations/<language_code>.json`
+-   **Fallback file**: `custom_components/meraki_dashboard/strings.json` (must match `en.json`)
 
 ### Language Codes
 
 Use the ISO 639-1 two-letter language codes:
 
-- English: `en`
-- French: `fr`
-- German: `de`
-- Spanish: `es`
-- Italian: `it`
-- Portuguese: `pt`
-- Dutch: `nl`
-- Polish: `pl`
-- Russian: `ru`
-- Chinese (Simplified): `zh-Hans`
-- Chinese (Traditional): `zh-Hant`
-- Japanese: `ja`
-- Korean: `ko`
+-   English: `en`
+-   French: `fr`
+-   German: `de`
+-   Spanish: `es`
+-   Italian: `it`
+-   Portuguese: `pt`
+-   Dutch: `nl`
+-   Polish: `pl`
+-   Russian: `ru`
+-   Chinese (Simplified): `zh-Hans`
+-   Chinese (Traditional): `zh-Hant`
+-   Japanese: `ja`
+-   Korean: `ko`
 
 Full list: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 
@@ -63,38 +63,40 @@ Open your new language file and translate **only the text values**, not the keys
 ### Example
 
 **English (`en.json`):**
+
 ```json
 {
-  "config": {
-    "step": {
-      "user": {
-        "title": "Meraki Dashboard Integration",
-        "description": "Connect your Cisco Meraki Dashboard to Home Assistant.\n\n**You will need:**\n• An API key\n• Your Organization ID",
-        "data": {
-          "api_key": "API Key",
-          "organization_id": "Organization ID"
+    "config": {
+        "step": {
+            "user": {
+                "title": "Meraki Dashboard Integration",
+                "description": "Connect your Cisco Meraki Dashboard to Home Assistant.\n\n**You will need:**\n• An API key\n• Your Organization ID",
+                "data": {
+                    "api_key": "API Key",
+                    "organization_id": "Organization ID"
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 
 **French (`fr.json`):**
+
 ```json
 {
-  "config": {
-    "step": {
-      "user": {
-        "title": "Intégration Meraki Dashboard",
-        "description": "Connectez votre Cisco Meraki Dashboard à Home Assistant.\n\n**Vous aurez besoin de:**\n• Une clé API\n• Votre ID d'organisation",
-        "data": {
-          "api_key": "Clé API",
-          "organization_id": "ID de l'organisation"
+    "config": {
+        "step": {
+            "user": {
+                "title": "Intégration Meraki Dashboard",
+                "description": "Connectez votre Cisco Meraki Dashboard à Home Assistant.\n\n**Vous aurez besoin de:**\n• Une clé API\n• Votre ID d'organisation",
+                "data": {
+                    "api_key": "Clé API",
+                    "organization_id": "ID de l'organisation"
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 
@@ -104,115 +106,127 @@ Use this checklist to ensure complete translation:
 
 ### Configuration Flow (`config` section)
 
-- [ ] `config.step.user` - Initial setup screen
-  - [ ] Title
-  - [ ] Description
-  - [ ] All field labels (`data`)
-  - [ ] All field descriptions (`data_description`)
+-   [ ] `config.step.user` - Initial setup screen
 
-- [ ] `config.step.organization` - Organization selection
-  - [ ] Title
-  - [ ] Description
-  - [ ] Field labels
-  - [ ] Field descriptions
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] All field labels (`data`)
+    -   [ ] All field descriptions (`data_description`)
 
-- [ ] `config.step.device_selection` - Device configuration
-  - [ ] Title
-  - [ ] Description
-  - [ ] Field labels (7 fields)
-  - [ ] Field descriptions (7 descriptions)
+-   [ ] `config.step.organization` - Organization selection
 
-- [ ] `config.step.reauth` - Re-authentication screen
-  - [ ] Title
-  - [ ] Description
-  - [ ] Field labels
-  - [ ] Field descriptions
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] Field labels
+    -   [ ] Field descriptions
 
-- [ ] `config.error` - Error messages (5 messages)
-  - [ ] `invalid_auth`
-  - [ ] `invalid_organization`
-  - [ ] `cannot_connect`
-  - [ ] `unknown`
+-   [ ] `config.step.device_selection` - Device configuration
 
-- [ ] `config.abort` - Completion messages (3 messages)
-  - [ ] `already_configured`
-  - [ ] `reauth_successful`
-  - [ ] `api_key_updated`
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] Field labels (7 fields)
+    -   [ ] Field descriptions (7 descriptions)
+
+-   [ ] `config.step.reauth` - Re-authentication screen
+
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] Field labels
+    -   [ ] Field descriptions
+
+-   [ ] `config.error` - Error messages (5 messages)
+
+    -   [ ] `invalid_auth`
+    -   [ ] `invalid_organization`
+    -   [ ] `cannot_connect`
+    -   [ ] `unknown`
+
+-   [ ] `config.abort` - Completion messages (3 messages)
+    -   [ ] `already_configured`
+    -   [ ] `reauth_successful`
+    -   [ ] `api_key_updated`
 
 ### Options Flow (`options` section)
 
-- [ ] `options.step.init` - Main options screen
-  - [ ] Title
-  - [ ] Description (includes MT15/MT40 explanation)
-  - [ ] Field labels (14 fields)
-  - [ ] Field descriptions (11 descriptions)
+-   [ ] `options.step.init` - Main options screen
 
-- [ ] `options.step.api_key` - API key update
-  - [ ] Title
-  - [ ] Description
-  - [ ] Field labels
-  - [ ] Field descriptions
+    -   [ ] Title
+    -   [ ] Description (includes MT15/MT40 explanation)
+    -   [ ] Field labels (14 fields)
+    -   [ ] Field descriptions (11 descriptions)
 
-- [ ] `options.step.hub_intervals` - Network configuration
-  - [ ] Title
-  - [ ] Description
-  - [ ] Field labels (3 fields)
-  - [ ] Field descriptions (3 descriptions)
+-   [ ] `options.step.api_key` - API key update
 
-- [ ] `options.error` - Error messages (5 messages)
-- [ ] `options.abort` - Completion messages (1 message)
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] Field labels
+    -   [ ] Field descriptions
+
+-   [ ] `options.step.hub_intervals` - Network configuration
+
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] Field labels (3 fields)
+    -   [ ] Field descriptions (3 descriptions)
+
+-   [ ] `options.error` - Error messages (5 messages)
+-   [ ] `options.abort` - Completion messages (1 message)
 
 ### Issues & Services
 
-- [ ] `issues` - Issue notifications (3 types)
-  - [ ] `api_key_expired`
-  - [ ] `network_access_lost`
-  - [ ] `device_discovery_failed`
+-   [ ] `issues` - Issue notifications (3 types)
 
-- [ ] `services` - Service descriptions (4 services)
-  - [ ] `update_hub_data`
-  - [ ] `discover_devices`
-  - [ ] `update_all_hubs`
-  - [ ] `discover_all_devices`
+    -   [ ] `api_key_expired`
+    -   [ ] `network_access_lost`
+    -   [ ] `device_discovery_failed`
+
+-   [ ] `services` - Service descriptions (4 services)
+    -   [ ] `update_hub_data`
+    -   [ ] `discover_devices`
+    -   [ ] `update_all_hubs`
+    -   [ ] `discover_all_devices`
 
 ## Important Placeholders
 
 These placeholders are dynamically replaced at runtime. **Never translate them:**
 
-- `{hub_list}` - List of configured networks
-- `{hub_settings_explanation}` - Network settings explanation
-- `{device_count}` - Number of devices found
-- `{config_entry_title}` - Integration name
-- `{network_name}` - Network name
-- `{hub_name}` - Hub identifier
-- `{organization_name}` - Organization name
+-   `{hub_list}` - List of configured networks
+-   `{hub_settings_explanation}` - Network settings explanation
+-   `{device_count}` - Number of devices found
+-   `{config_entry_title}` - Integration name
+-   `{network_name}` - Network name
+-   `{hub_name}` - Hub identifier
+-   `{organization_name}` - Organization name
 
 ## Technical Terms
 
 ### Keep These Terms Consistent
 
 **Product Names** (do not translate):
-- Meraki Dashboard
-- Home Assistant
-- Cisco Meraki
-- MT (Environmental Sensors)
-- MR (Wireless Access Points)
-- MS (Switches)
-- MT15, MT40 (sensor models)
+
+-   Meraki Dashboard
+-   Home Assistant
+-   Cisco Meraki
+-   MT (Environmental Sensors)
+-   MR (Wireless Access Points)
+-   MS (Switches)
+-   MT15, MT40 (sensor models)
 
 **Technical Terms** (translate appropriately for your language):
-- API Key → Clé API (French), API-Schlüssel (German)
-- Organization → Organisation (French), Organisation (German)
-- Network → Réseau (French), Netzwerk (German)
-- Device → Appareil (French), Gerät (German)
-- Sensor → Capteur (French), Sensor (German)
-- Auto-Discovery → Découverte automatique (French), Automatische Erkennung (German)
-- Update Interval → Intervalle de mise à jour (French), Aktualisierungsintervall (German)
+
+-   API Key → Clé API (French), API-Schlüssel (German)
+-   Organization → Organisation (French), Organisation (German)
+-   Network → Réseau (French), Netzwerk (German)
+-   Device → Appareil (French), Gerät (German)
+-   Sensor → Capteur (French), Sensor (German)
+-   Auto-Discovery → Découverte automatique (French), Automatische Erkennung (German)
+-   Update Interval → Intervalle de mise à jour (French), Aktualisierungsintervall (German)
 
 **URLs and Paths** (never translate):
-- `https://api.meraki.com/api/v1`
-- `https://dashboard.meraki.com/o/XXXXX`
-- Organization > Settings > Dashboard API access
+
+-   `https://api.meraki.com/api/v1`
+-   `https://dashboard.meraki.com/o/XXXXX`
+-   Organization > Settings > Dashboard API access
 
 ## Formatting Preservation
 
@@ -296,10 +310,10 @@ cp <language_code>.json ~/.homeassistant/custom_components/meraki_dashboard/tran
 3. Search for "Meraki Dashboard"
 4. Verify all text appears in your language
 5. Check for:
-   - Proper text rendering
-   - No missing translations (English fallback)
-   - Correct formatting
-   - Proper use of plurals (if applicable)
+    - Proper text rendering
+    - No missing translations (English fallback)
+    - Correct formatting
+    - Proper use of plurals (if applicable)
 
 ### 4. Test Options Flow
 
@@ -373,23 +387,23 @@ Don't translate "API" as different terms throughout the file. Pick one translati
 
 Include this information in your PR:
 
-- Language name (English and native)
-- Language code (ISO 639-1)
-- Your name or username (for credits)
-- Any special considerations for your translation
+-   Language name (English and native)
+-   Language code (ISO 639-1)
+-   Your name or username (for credits)
+-   Any special considerations for your translation
 
 ## Quality Assurance
 
 Before submitting:
 
-- [ ] JSON is valid (no syntax errors)
-- [ ] All keys from `en.json` are present
-- [ ] All placeholders are preserved
-- [ ] Markdown formatting is intact
-- [ ] Technical terms are consistent
-- [ ] Tested in Home Assistant
-- [ ] No untranslated English text (except technical terms)
-- [ ] Natural phrasing for native speakers
+-   [ ] JSON is valid (no syntax errors)
+-   [ ] All keys from `en.json` are present
+-   [ ] All placeholders are preserved
+-   [ ] Markdown formatting is intact
+-   [ ] Technical terms are consistent
+-   [ ] Tested in Home Assistant
+-   [ ] No untranslated English text (except technical terms)
+-   [ ] Natural phrasing for native speakers
 
 ## Getting Help
 
@@ -404,10 +418,10 @@ If you need help with translation:
 
 Translations may need updates when:
 
-- New features are added
-- Field descriptions change
-- Error messages are improved
-- New configuration options are added
+-   New features are added
+-   Field descriptions change
+-   Error messages are improved
+-   New configuration options are added
 
 ### Update Process
 
@@ -434,10 +448,10 @@ Consult Home Assistant's internationalization docs for advanced features.
 
 For RTL languages (Arabic, Hebrew, etc.):
 
-- JSON structure stays the same
-- Text is written in RTL
-- Markdown bullets may need adjustment
-- Test carefully in Home Assistant
+-   JSON structure stays the same
+-   Text is written in RTL
+-   Markdown bullets may need adjustment
+-   Test carefully in Home Assistant
 
 ### Character Encoding
 
@@ -481,17 +495,17 @@ cp es.json ~/.homeassistant/custom_components/meraki_dashboard/translations/
 
 ## Resources
 
-- **Home Assistant Translations**: https://developers.home-assistant.io/docs/internationalization
-- **JSON Validator**: https://jsonlint.com/
-- **Markdown Guide**: https://www.markdownguide.org/basic-syntax/
-- **ISO Language Codes**: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+-   **Home Assistant Translations**: https://developers.home-assistant.io/docs/internationalization
+-   **JSON Validator**: https://jsonlint.com/
+-   **Markdown Guide**: https://www.markdownguide.org/basic-syntax/
+-   **ISO Language Codes**: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 
 ## Contact
 
 For translation questions or issues:
 
-- Open a GitHub Issue
-- Start a GitHub Discussion
-- Check existing translations for examples
+-   Open a GitHub Issue
+-   Start a GitHub Discussion
+-   Check existing translations for examples
 
 Thank you for helping make the Meraki Dashboard integration accessible to users worldwide!

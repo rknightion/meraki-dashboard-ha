@@ -732,7 +732,9 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 ] = selector.BooleanSelector(selector.BooleanSelectorConfig())
 
                 # Scan interval (in seconds)
-                current_scan_seconds = current_options.get(CONF_HUB_SCAN_INTERVALS, {}).get(
+                current_scan_seconds = current_options.get(
+                    CONF_HUB_SCAN_INTERVALS, {}
+                ).get(
                     hub_key,
                     DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
                 )

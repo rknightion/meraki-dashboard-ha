@@ -1,0 +1,32 @@
+[
+  {
+    "serial": "Q2GD-AAAA-AAAA",
+    "model": "MR46",
+    "name": "Office AP - Floor 1",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "First floor wireless AP",
+    "tags": ["wireless", "floor1"],
+    "mac": "88:15:44:AA:BB:CC",
+    "lanIp": "192.168.1.10",
+    "firmware": "wireless-28-7",
+    "floorPlanId": null
+  },
+  {
+    "serial": "Q2GD-BBBB-BBBB",
+    "model": "MR56",
+    "name": "Office AP - Floor 2",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "Second floor wireless AP",
+    "tags": ["wireless", "floor2"],
+    "mac": "88:15:44:DD:EE:FF",
+    "lanIp": "192.168.1.11",
+    "firmware": "wireless-28-7",
+    "floorPlanId": null
+  }
+]

@@ -1,0 +1,32 @@
+[
+  {
+    "serial": "Q2LM-XXXX-XXXX",
+    "model": "MS120-8",
+    "name": "Access Switch - Closet A",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "IDF closet A switch",
+    "tags": ["switch", "access"],
+    "mac": "88:15:44:11:22:33",
+    "lanIp": "192.168.1.20",
+    "firmware": "switch-14-33",
+    "floorPlanId": null
+  },
+  {
+    "serial": "Q2LM-YYYY-YYYY",
+    "model": "MS225-24P",
+    "name": "PoE Switch - Floor 1",
+    "networkId": "N_123456789",
+    "lat": 37.4419,
+    "lng": -122.1419,
+    "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+    "notes": "PoE distribution switch",
+    "tags": ["switch", "poe"],
+    "mac": "88:15:44:44:55:66",
+    "lanIp": "192.168.1.21",
+    "firmware": "switch-14-33",
+    "floorPlanId": null
+  }
+]

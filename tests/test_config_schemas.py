@@ -57,10 +57,10 @@ class TestSafeIntConversion:
     def test_rejects_invalid_type(self):
         """Test that non-numeric types raise ConfigurationError."""
         with pytest.raises(ConfigurationError, match="test_field must be numeric"):
-            safe_int_conversion("30", "test_field")  # type: ignore[arg-type]
+            safe_int_conversion("30", "test_field")
 
         with pytest.raises(ConfigurationError, match="test_field must be numeric"):
-            safe_int_conversion(None, "test_field")  # type: ignore[arg-type]
+            safe_int_conversion(None, "test_field")
 
     def test_field_name_in_error_message(self):
         """Test that field name appears in error messages."""
@@ -99,30 +99,30 @@ class TestIntervalConfig:
     def test_interval_invalid_type(self):
         """Test invalid interval type (string)."""
         with pytest.raises(ConfigurationError, match="must be numeric"):
-            IntervalConfig("300")  # type: ignore[arg-type]
+            IntervalConfig("300")
 
     def test_interval_accepts_whole_number_float(self):
         """Test that whole number floats are auto-converted to ints."""
-        config = IntervalConfig(300.0)  # type: ignore[arg-type]
+        config = IntervalConfig(300.0)
         assert config.value == 300
         assert isinstance(config.value, int)
 
     def test_interval_converts_ui_float_values(self):
         """Test conversion of float values from UI selectors."""
         # Simulates 0.5 minutes * 60 = 30.0 seconds from UI
-        config = IntervalConfig(30.0, min_seconds=30, max_seconds=3600)  # type: ignore[arg-type]
+        config = IntervalConfig(30.0, min_seconds=30, max_seconds=3600)
         assert config.value == 30
         assert isinstance(config.value, int)
 
         # Simulates 10 minutes * 60 = 600.0 seconds from UI
-        config = IntervalConfig(600.0)  # type: ignore[arg-type]
+        config = IntervalConfig(600.0)
         assert config.value == 600
         assert isinstance(config.value, int)
 
     def test_interval_rejects_fractional_float(self):
         """Test that fractional floats are rejected."""
         with pytest.raises(ConfigurationError, match="must be a whole number"):
-            IntervalConfig(300.5)  # type: ignore[arg-type]
+            IntervalConfig(300.5)
 
     def test_custom_boundaries(self):
         """Test custom min/max boundaries."""
@@ -689,7 +689,7 @@ class TestMTRefreshConfig:
         config = MerakiConfigSchema(
             api_key="a1b2c3d4e5f6789012345678901234567890abcd",
             organization_id="123456",
-            mt_refresh_interval=30.0,  # type: ignore[arg-type]
+            mt_refresh_interval=30.0,
         )
         assert config.mt_refresh_interval == 30
         assert isinstance(config.mt_refresh_interval, int)
@@ -702,7 +702,7 @@ class TestMTRefreshConfig:
             MerakiConfigSchema(
                 api_key="a1b2c3d4e5f6789012345678901234567890abcd",
                 organization_id="123456",
-                mt_refresh_interval=30.5,  # type: ignore[arg-type]
+                mt_refresh_interval=30.5,
             )
 
     def test_mt_refresh_interval_invalid_type(self):
@@ -711,7 +711,7 @@ class TestMTRefreshConfig:
             MerakiConfigSchema(
                 api_key="a1b2c3d4e5f6789012345678901234567890abcd",
                 organization_id="123456",
-                mt_refresh_interval="30",  # type: ignore[arg-type]
+                mt_refresh_interval="30",
             )
 
     def test_mt_refresh_from_config_entry_with_defaults(self):

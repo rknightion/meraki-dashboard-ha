@@ -62,9 +62,7 @@ def safe_int_conversion(value: int | float, field_name: str) -> int:
                 converted,
             )
             return converted
-        raise ConfigurationError(
-            f"{field_name} must be a whole number, got {value}"
-        )
+        raise ConfigurationError(f"{field_name} must be a whole number, got {value}")
 
     raise ConfigurationError(
         f"{field_name} must be numeric, got {type(value).__name__}"
@@ -87,7 +85,7 @@ class IntervalConfig:
         """Validate and normalize interval after initialization."""
         # Convert float to int if it's a whole number (e.g., 30.0 → 30)
         # This handles cases where UI number selectors return floats
-        converted_value = safe_int_conversion(self.value, "Interval")  # type: ignore[arg-type]
+        converted_value = safe_int_conversion(self.value, "Interval")
 
         # Update the value if type conversion occurred (float → int)
         if not isinstance(self.value, int) or converted_value != self.value:
@@ -251,9 +249,7 @@ class HubIntervalConfig:
 
         if self.scan_interval is not None:
             IntervalConfig(
-                self.scan_interval,
-                min_seconds=self.min_scan_seconds,
-                max_seconds=3600
+                self.scan_interval, min_seconds=self.min_scan_seconds, max_seconds=3600
             )
 
         if self.discovery_interval is not None:
@@ -326,7 +322,9 @@ class MerakiConfigSchema:
             # Use the last part after splitting by underscore as device type
             device_type = hub_id.split("_")[-1] if "_" in hub_id else "MT"
             min_interval = DEVICE_TYPE_MIN_SCAN_INTERVALS.get(device_type, 60)
-            HubIntervalConfig(hub_id, scan_interval=interval, min_scan_seconds=min_interval)
+            HubIntervalConfig(
+                hub_id, scan_interval=interval, min_scan_seconds=min_interval
+            )
 
         for hub_id, interval in self.hub_discovery_intervals.items():
             HubIntervalConfig(hub_id, discovery_interval=interval)
@@ -359,10 +357,14 @@ class MerakiConfigSchema:
         # Convert MT refresh interval from float to int if needed
         # (UI number selectors may return floats)
         converted_interval = safe_int_conversion(
-            self.mt_refresh_interval, "MT refresh interval"  # type: ignore[arg-type]
+            self.mt_refresh_interval,
+            "MT refresh interval",
         )
         # Update if type conversion occurred (float → int)
-        if not isinstance(self.mt_refresh_interval, int) or converted_interval != self.mt_refresh_interval:
+        if (
+            not isinstance(self.mt_refresh_interval, int)
+            or converted_interval != self.mt_refresh_interval
+        ):
             object.__setattr__(self, "mt_refresh_interval", converted_interval)
 
         if self.mt_refresh_interval < MT_REFRESH_MIN_INTERVAL:

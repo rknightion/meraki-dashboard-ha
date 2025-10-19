@@ -691,6 +691,7 @@ class TestDeviceCapabilityFilter:
             "temperature",
             "humidity",
             "battery",
+            "indoorAirQuality",
             "tvoc",
             "noise",
             "pm25",
@@ -737,8 +738,28 @@ class TestDeviceCapabilityFilter:
         """Test capability filter for unknown MT device."""
         capabilities = create_device_capability_filter("MT99", "MT")
 
-        # Unknown MT models get default capabilities (with battery)
-        assert capabilities == {"temperature", "humidity", "battery"}
+        # Unknown MT models get all capabilities as fallback
+        assert capabilities == {
+            "temperature",
+            "humidity",
+            "battery",
+            "water",
+            "indoorAirQuality",
+            "tvoc",
+            "noise",
+            "pm25",
+            "co2",
+            "door",
+            "button",
+            "realPower",
+            "apparentPower",
+            "voltage",
+            "current",
+            "frequency",
+            "powerFactor",
+            "downstreamPower",
+            "remoteLockoutSwitch",
+        }
 
     def test_create_device_capability_filter_mr_device(self):
         """Test capability filter for MR devices."""
@@ -847,17 +868,18 @@ class TestShouldCreateEntity:
     def test_should_create_entity_no_coordinator_data(self):
         """Test entity creation without coordinator data."""
         device = {
-            "model": "MT30",  # MT30 is smart camera with temp, humidity, battery, button
+            "model": "MT30",  # MT30 is smart automation button (button + battery only)
             "serial": "Q2XX-XXXX-XXXX",
             "productType": "mt",
         }
 
         # Should create entity based on capability alone
         assert should_create_entity(device, "button") is True
-        assert should_create_entity(device, "temperature") is True
-        assert should_create_entity(device, "humidity") is True
+        assert should_create_entity(device, "battery") is True
 
         # Should not create unsupported entities
+        assert should_create_entity(device, "temperature") is False
+        assert should_create_entity(device, "humidity") is False
         assert should_create_entity(device, "water") is False
 
     def test_should_create_entity_missing_device_info(self):
@@ -896,15 +918,16 @@ class TestShouldCreateEntity:
     def test_should_create_entity_binary_sensors(self):
         """Test entity creation for binary sensors."""
         device = {
-            "model": "MT12",  # MT12 supports temperature and humidity
+            "model": "MT12",  # MT12 is water leak detection sensor
             "serial": "Q2XX-XXXX-XXXX",
             "productType": "mt",
         }
 
-        # MT12 supports temperature and humidity, not water
-        assert should_create_entity(device, "water") is False
-        assert should_create_entity(device, "temperature") is True
-        assert should_create_entity(device, "humidity") is True
+        # MT12 supports water and battery, not temperature/humidity
+        assert should_create_entity(device, "water") is True
+        assert should_create_entity(device, "temperature") is False
+        assert should_create_entity(device, "humidity") is False
+        assert should_create_entity(device, "battery") is True
 
         # MT11 doesn't support water detection either
         device["model"] = "MT11"
