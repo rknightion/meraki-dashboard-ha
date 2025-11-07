@@ -10,8 +10,6 @@ permissions: {}
 
 jobs:
   zizmor:
-    # Skip on pull requests - will run on push to main
-    if: github.event_name != 'pull_request'
     name: Run zizmor 🌈
     runs-on: ubuntu-latest
     permissions:
