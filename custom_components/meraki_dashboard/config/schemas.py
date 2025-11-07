@@ -302,7 +302,7 @@ class MerakiConfigSchema:
             OrganizationIDConfig(self.organization_id)
 
         # Validate global intervals
-        IntervalConfig(self.scan_interval, min_seconds=60, max_seconds=3600)
+        IntervalConfig(self.scan_interval, min_seconds=30, max_seconds=3600)
         IntervalConfig(self.discovery_interval, min_seconds=300, max_seconds=86400)
 
         # Validate auto discovery
