@@ -230,7 +230,11 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             )
 
                             for device in devices:
-                                if device.get("model", "").startswith(SENSOR_TYPE_MT):
+                                model = device.get("model", "")
+                                # Include all supported device types for selection
+                                if (model.startswith(SENSOR_TYPE_MT) or
+                                    model.startswith(SENSOR_TYPE_MR) or
+                                    model.startswith(SENSOR_TYPE_MS)):
                                     # Store network name for display
                                     device["network_name"] = network["name"]
                                     self._available_devices.append(device)
@@ -241,10 +245,10 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             )
 
                     if self._available_devices:
+                        # Store name for use in device selection step
+                        self._name = user_input.get(CONF_NAME, organization["name"])
                         # Show device selection step
-                        return await self.async_step_device_selection(
-                            {CONF_NAME: user_input.get(CONF_NAME, organization["name"])}
-                        )
+                        return await self.async_step_device_selection()
 
                 except Exception:  # pylint: disable=broad-except
                     _LOGGER.exception("Failed to get devices, using auto-discovery")
@@ -400,7 +404,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="device_selection",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+                    vol.Optional(CONF_NAME, default=getattr(self, "_name", DEFAULT_NAME)): str,
                     vol.Optional(
                         CONF_ENABLED_DEVICE_TYPES,
                         default=[SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
