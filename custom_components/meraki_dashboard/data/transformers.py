@@ -839,7 +839,7 @@ class TransformerRegistry:
     - Decorator-based registration for easy extension
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the transformer registry."""
         self._device_transformers: dict[str, DataTransformer] = {}
         self._entity_transformers: dict[str, Callable[[Any], Any]] = {}

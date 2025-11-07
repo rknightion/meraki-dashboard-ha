@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import functools
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 
@@ -445,7 +445,7 @@ class MerakiNetworkHub:
                     if not device_serial:
                         continue
 
-                    device_info = {
+                    device_info: dict[str, Any] = {
                         "serial": device_serial,
                         "name": get_device_display_name(device),
                         "model": device.get("model"),
@@ -598,7 +598,7 @@ class MerakiNetworkHub:
             self.organization_hub.failed_api_calls += 1
 
     async def _async_get_channel_utilization(
-        self, wireless_devices: list[dict[str, Any]]
+        self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get channel utilization data for wireless devices.
 
@@ -720,7 +720,7 @@ class MerakiNetworkHub:
                         continue
 
                     device_name = get_device_display_name(device)
-                    device_info = {
+                    device_info: dict[str, Any] = {
                         "serial": device_serial,
                         "name": device_name,
                         "model": device.get("model"),
@@ -1313,7 +1313,7 @@ class MerakiNetworkHub:
         return f"{device_name}: {description}"
 
     async def _async_get_connection_stats(
-        self, wireless_devices: list[dict[str, Any]]
+        self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get connection statistics for MR devices.
 
@@ -1362,7 +1362,7 @@ class MerakiNetworkHub:
         return connection_stats
 
     async def _async_get_packet_loss(
-        self, wireless_devices: list[dict[str, Any]]
+        self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get packet loss statistics for MR devices.
 
@@ -1411,7 +1411,7 @@ class MerakiNetworkHub:
         return packet_loss
 
     async def _async_get_cpu_load(
-        self, wireless_devices: list[dict[str, Any]]
+        self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get CPU load history for MR devices.
 
@@ -1468,7 +1468,7 @@ class MerakiNetworkHub:
         return cpu_load
 
     async def _async_get_packet_statistics(
-        self, switch_devices: list[dict[str, Any]]
+        self, switch_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get packet statistics for MS devices.
 
@@ -1517,7 +1517,7 @@ class MerakiNetworkHub:
         return packet_statistics
 
     async def _async_get_stp_priorities(
-        self, switch_devices: list[dict[str, Any]]
+        self, switch_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, int]:
         """Get STP priorities for MS devices.
 

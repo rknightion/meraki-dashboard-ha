@@ -320,7 +320,7 @@ def create_device_info(
     )
 
 
-def get_device_display_name(device: dict[str, Any]) -> str:
+def get_device_display_name(device: dict[str, Any] | MerakiDeviceData) -> str:
     """Get the best available display name for a device.
 
     Prioritizes API-provided names, falls back to serial number or MAC address.
@@ -334,7 +334,7 @@ def get_device_display_name(device: dict[str, Any]) -> str:
     # Try various name fields in order of preference
     name = device.get("name") or device.get("deviceName")
 
-    if name and name.strip():
+    if name and isinstance(name, str) and name.strip():
         return name.strip()
 
     # Fall back to serial number

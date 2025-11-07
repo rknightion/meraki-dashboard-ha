@@ -473,22 +473,22 @@ class TestConfigFlowReauth:
                     "source": config_entries.SOURCE_REAUTH,
                     "entry_id": config_entry.entry_id,
                 },
-                data=config_entry.data,
             )
 
             assert result["type"] == FlowResultType.FORM
             assert result["step_id"] == "reauth"
 
             # Submit new API key
+            new_api_key = "9999999999999999999999999999999999999999"
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
-                {CONF_API_KEY: "9999999999999999999999999999999999999999"},
+                {CONF_API_KEY: new_api_key},
             )
 
             assert result["type"] == FlowResultType.ABORT
             assert result["reason"] == "reauth_successful"
             # Verify API key was updated
-            assert config_entry.data[CONF_API_KEY] == "new_api_key_12345678901234567890abcd"
+            assert config_entry.data[CONF_API_KEY] == new_api_key
 
     async def test_reauth_with_same_key(
         self, hass: HomeAssistant, load_json_fixture
@@ -522,8 +522,10 @@ class TestConfigFlowReauth:
                     "source": config_entries.SOURCE_REAUTH,
                     "entry_id": config_entry.entry_id,
                 },
-                data=config_entry.data,
             )
+
+            assert result["type"] == FlowResultType.FORM
+            assert result["step_id"] == "reauth"
 
             # Try to reauth with same key
             result = await hass.config_entries.flow.async_configure(
