@@ -404,7 +404,8 @@ class TestBinarySensorStateTransitions:
             device["serial"]: {
                 "readings": [
                     {"metric": "water", "water": {"wet": False}},
-                ]
+                ],
+                "water": False,  # Add the transformed value
             }
         }
         coordinator.last_update_success = True
@@ -426,7 +427,8 @@ class TestBinarySensorStateTransitions:
         coordinator.data[device["serial"]] = {
             "readings": [
                 {"metric": "water", "water": {"wet": True}},
-            ]
+            ],
+            "water": True,  # Add the transformed value
         }
 
         # Now wet
