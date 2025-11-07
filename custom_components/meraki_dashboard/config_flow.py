@@ -468,8 +468,17 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle reauthentication flow when API key becomes invalid."""
-        reauth_entry = self.context.get("source_config_entry")
-        if not isinstance(reauth_entry, config_entries.ConfigEntry):
+        entry_id = self.context.get("entry_id")
+        if not entry_id:
+            return self.async_abort(reason="reauth_failed")
+
+        reauth_entry = None
+        for entry in self.hass.config_entries.async_entries(DOMAIN):
+            if entry.entry_id == entry_id:
+                reauth_entry = entry
+                break
+
+        if not reauth_entry:
             return self.async_abort(reason="reauth_failed")
 
         if user_input is not None:
