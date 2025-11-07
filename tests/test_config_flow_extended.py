@@ -75,7 +75,7 @@ class TestConfigFlowDeviceSelection:
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
-                    CONF_API_KEY: "test_api_key_12345678901234567890abcd",
+                    CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 },
             )
@@ -121,7 +121,7 @@ class TestConfigFlowDeviceSelection:
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
-                    CONF_API_KEY: "test_api_key_12345678901234567890abcd",
+                    CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 },
             )
@@ -159,7 +159,7 @@ class TestConfigFlowOptionsFlow:
             domain=DOMAIN,
             title="Test Organization",
             data={
-                CONF_API_KEY: "test_api_key",
+                CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                 CONF_ORGANIZATION_ID: "123456",
                 CONF_BASE_URL: DEFAULT_BASE_URL,
             },
@@ -184,7 +184,7 @@ class TestConfigFlowOptionsFlow:
             domain=DOMAIN,
             title="Test Organization",
             data={
-                CONF_API_KEY: "test_api_key",
+                CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                 CONF_ORGANIZATION_ID: "123456",
                 CONF_BASE_URL: DEFAULT_BASE_URL,
             },
@@ -211,9 +211,6 @@ class TestConfigFlowOptionsFlow:
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
-                CONF_SCAN_INTERVAL: 300,  # 5 minutes
-                CONF_AUTO_DISCOVERY: False,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,
                 CONF_ENABLED_DEVICE_TYPES: ["MT", "MR"],
             },
         )
@@ -226,12 +223,12 @@ class TestConfigFlowOptionsFlow:
             domain=DOMAIN,
             title="Test Organization",
             data={
-                CONF_API_KEY: "test_api_key",
+                CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                 CONF_ORGANIZATION_ID: "123456",
                 CONF_BASE_URL: DEFAULT_BASE_URL,
             },
             options={
-                CONF_MT_REFRESH_ENABLED: False,
+                CONF_MT_REFRESH_ENABLED: True,
             },
             entry_id="test_entry",
         )
@@ -254,9 +251,6 @@ class TestConfigFlowOptionsFlow:
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
-                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL // 60,
-                CONF_AUTO_DISCOVERY: True,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,
                 CONF_ENABLED_DEVICE_TYPES: ["MT"],
                 CONF_MT_REFRESH_ENABLED: True,
                 CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
@@ -273,7 +267,7 @@ class TestConfigFlowOptionsFlow:
             domain=DOMAIN,
             title="Test Organization",
             data={
-                CONF_API_KEY: "test_api_key",
+                CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                 CONF_ORGANIZATION_ID: "123456",
                 CONF_BASE_URL: DEFAULT_BASE_URL,
             },
@@ -302,9 +296,6 @@ class TestConfigFlowOptionsFlow:
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
-                CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL // 60,
-                CONF_AUTO_DISCOVERY: True,
-                CONF_DISCOVERY_INTERVAL: DEFAULT_DISCOVERY_INTERVAL // 60,
                 CONF_ENABLED_DEVICE_TYPES: ["MT", "MR"],
             },
         )
@@ -332,7 +323,7 @@ class TestConfigFlowErrorHandling:
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
-                    CONF_API_KEY: "test_api_key_12345678901234567890abcd",
+                    CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 },
             )
@@ -356,7 +347,7 @@ class TestConfigFlowErrorHandling:
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
-                    CONF_API_KEY: "test_api_key_12345678901234567890abcd",
+                    CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 },
             )
@@ -384,7 +375,7 @@ class TestConfigFlowErrorHandling:
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
-                    CONF_API_KEY: "test_api_key_12345678901234567890abcd",
+                    CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 },
             )
@@ -414,7 +405,8 @@ class TestConfigFlowErrorHandling:
             response_mock = MagicMock()
             response_mock.status_code = 500
             api_instance.networks.getNetworkDevices.side_effect = APIError(
-                metadata="Internal Server Error", response=response_mock
+                metadata={"tags": ["Internal Server Error"], "operation": "getNetworkDevices"},
+                response=response_mock
             )
             mock_api.return_value = api_instance
 
@@ -425,7 +417,7 @@ class TestConfigFlowErrorHandling:
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
                 {
-                    CONF_API_KEY: "test_api_key_12345678901234567890abcd",
+                    CONF_API_KEY: "0123456789abcdef0123456789abcdef01234567",
                     CONF_BASE_URL: DEFAULT_BASE_URL,
                 },
             )
@@ -459,11 +451,12 @@ class TestConfigFlowReauth:
             domain=DOMAIN,
             title="Test Organization",
             data={
-                CONF_API_KEY: "old_api_key",
+                CONF_API_KEY: "0123456789abcdef0123456789abcdef89abcdef",
                 CONF_ORGANIZATION_ID: orgs[0]["id"],
                 CONF_BASE_URL: DEFAULT_BASE_URL,
             },
             entry_id="test_entry",
+            version=2,
         )
         config_entry.add_to_hass(hass)
 
@@ -489,7 +482,7 @@ class TestConfigFlowReauth:
             # Submit new API key
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
-                {CONF_API_KEY: "new_api_key_12345678901234567890abcd"},
+                {CONF_API_KEY: "9999999999999999999999999999999999999999"},
             )
 
             assert result["type"] == FlowResultType.ABORT
@@ -507,11 +500,12 @@ class TestConfigFlowReauth:
             domain=DOMAIN,
             title="Test Organization",
             data={
-                CONF_API_KEY: "existing_api_key_123456789012345678",
+                CONF_API_KEY: "fedcba9876543210fedcba9876543210fedcba98",
                 CONF_ORGANIZATION_ID: orgs[0]["id"],
                 CONF_BASE_URL: DEFAULT_BASE_URL,
             },
             entry_id="test_entry",
+            version=2,
         )
         config_entry.add_to_hass(hass)
 
@@ -534,7 +528,7 @@ class TestConfigFlowReauth:
             # Try to reauth with same key
             result = await hass.config_entries.flow.async_configure(
                 result["flow_id"],
-                {CONF_API_KEY: "existing_api_key_123456789012345678"},
+                {CONF_API_KEY: "fedcba9876543210fedcba9876543210fedcba98"},
             )
 
             # Should still succeed (same key is valid)
