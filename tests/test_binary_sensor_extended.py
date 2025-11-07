@@ -269,7 +269,8 @@ class TestBinarySensorStates:
             device["serial"]: {
                 "readings": [
                     {"metric": "water", "water": {"wet": True}},
-                ]
+                ],
+                "water": True,  # Add the transformed value
             }
         }
         coordinator.last_update_success = True
