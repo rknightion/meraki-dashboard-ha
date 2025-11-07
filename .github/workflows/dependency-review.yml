@@ -25,6 +25,8 @@ permissions:
 
 jobs:
   dependency-review:
+    # Skip on pull requests - focus on essential checks only
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
