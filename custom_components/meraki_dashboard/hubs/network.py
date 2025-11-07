@@ -828,54 +828,6 @@ class MerakiNetworkHub:
                             power_err,
                         )
 
-                    # Get port statistics for error/discard counters
-                    try:
-                        # Get port statistics once per device, not per port
-                        if not self.dashboard:
-                            continue
-                        dashboard = self.dashboard  # Store in local variable for mypy
-                        port_stats = await self.hass.async_add_executor_job(
-                            functools.partial(
-                                dashboard.switch.getDeviceSwitchPortsStatuses,
-                                device_serial,
-                                timespan=3600,  # 1 hour for statistics
-                            )
-                        )
-                        self.organization_hub.total_api_calls += 1
-
-                        # Update all ports for this device with statistics
-                        for stat_port in port_stats:
-                            stat_port_id = stat_port.get("portId")
-                            if stat_port_id:
-                                # Find the corresponding port in all_ports_status and update it
-                                for port in all_ports_status:
-                                    if (
-                                        port.get("device_serial") == device_serial
-                                        and port.get("portId") == stat_port_id
-                                    ):
-                                        port.update(
-                                            {
-                                                "packets_sent": stat_port.get(
-                                                    "packetsTotal", {}
-                                                ).get("sent", 0),
-                                                "packets_recv": stat_port.get(
-                                                    "packetsTotal", {}
-                                                ).get("recv", 0),
-                                                "errors": stat_port.get("errors", 0),
-                                                "discards": stat_port.get(
-                                                    "discards", 0
-                                                ),
-                                            }
-                                        )
-                                        break
-
-                    except Exception as stats_err:
-                        _LOGGER.debug(
-                            "Could not get port statistics for %s: %s",
-                            device_serial,
-                            stats_err,
-                        )
-
                     # Update device-level aggregated info from port data
                     if ports_status:
                         device_info["port_count"] = len(ports_status)
