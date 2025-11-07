@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.30.0] - 2025-11-07
+
+
+### 🚀 Features
+- add organization-level ethernet status caching for wireless devices
+- enhance user interface strings with detailed descriptions and MT sensor support
+- implement configurable MT refresh service with interval support
+- enhance config flow with MT refresh settings and improved UX
+- add MT refresh service configuration and interval validation
+
+### 🧰 Maintenance
+747f1dc refactor: migrate MT refresh service from per-device to batch API
+ac98af7 chore: update ruff pre-commit hook to v0.14.4
+c6e63c6 refactor: replace direct API calls with organization hub cache for ethernet status
+
+### 📚 Documentation
+- restructure documentation with focused CLAUDE.md guidance
+
+### ✅ Tests
+- update transformer tests to reflect actual behavior
+- fix wireless data transformer client count assertion
+- add test fixtures and unit tests for wireless ethernet status functionality
+- replace mock fixtures with real API response data
+- add comprehensive test suite with fixtures and coverage improvements
+- expand configuration schema tests with MT refresh validation
+- add comprehensive MT refresh service test coverage
+
+### 📋 Other Changes
+- (i18n): add German, Spanish, and French translations
+
+
 ## [0.28.2] - 2025-10-18
 
 
