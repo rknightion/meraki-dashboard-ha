@@ -19,6 +19,8 @@ env:
 jobs:
   # Run all linting, formatting, and static analysis checks via pre-commit
   lint-and-scan:
+    # Skip on pull requests - will run on push to main
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
@@ -143,7 +145,6 @@ jobs:
     name: All Checks Pass
     if: success() # Only run this job if all dependencies succeed
     needs:
-      - lint-and-scan
       - pytest
     steps:
       - name: Harden the runner (Audit all outbound calls)

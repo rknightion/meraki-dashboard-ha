@@ -25,6 +25,8 @@ permissions:
 
 jobs:
   bandit:
+    # Skip on pull requests - will run on push to main and schedule
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
