@@ -59,10 +59,10 @@ jobs:
 
           # Create the zip file
           cd /tmp
-          zip -r "meraki_dashboard-${VERSION}.zip" meraki_dashboard/
+          zip -r "meraki_dashboard.zip" meraki_dashboard/
 
           # Move zip back to workspace
-          mv "meraki_dashboard-${VERSION}.zip" "${GITHUB_WORKSPACE}/"
+          mv "meraki_dashboard.zip" "${GITHUB_WORKSPACE}/"
 
       - name: Upload zip to release
         env:
@@ -70,7 +70,7 @@ jobs:
         run: |
           VERSION="${{ needs.release-please.outputs.version }}"
           TAG_NAME="${{ needs.release-please.outputs.tag_name }}"
-          ZIP_FILE="meraki_dashboard-${VERSION}.zip"
+          ZIP_FILE="meraki_dashboard.zip"
 
           echo "Uploading ${ZIP_FILE} to release ${TAG_NAME}"
 
@@ -91,7 +91,7 @@ jobs:
 
           ## Installation
 
-          Download \`meraki_dashboard-${VERSION}.zip\` and extract to your Home Assistant \`custom_components\` directory.
+          Download \`meraki_dashboard.zip\` and extract to your Home Assistant \`custom_components\` directory.
 
           Or use HACS to install this integration.
           EOF
