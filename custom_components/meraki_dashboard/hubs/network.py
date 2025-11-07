@@ -514,10 +514,30 @@ class MerakiNetworkHub:
                 wireless_devices
             )
 
-            # Get ethernet status for wireless devices
-            ethernet_status_data = await self._async_get_ethernet_status(
-                wireless_devices
-            )
+            # Get ethernet status from organization hub cache
+            ethernet_status_data: dict[str, dict[str, Any]] = {}
+            if (
+                hasattr(self, "organization_hub")
+                and self.organization_hub
+                and hasattr(self.organization_hub, "device_ethernet_status")
+                and isinstance(self.organization_hub.device_ethernet_status, dict)
+            ):
+                for device in wireless_devices:
+                    device_serial = device.get("serial")
+                    if device_serial and device_serial in self.organization_hub.device_ethernet_status:
+                        eth_data = self.organization_hub.device_ethernet_status[device_serial]
+                        # Convert org hub format to expected format
+                        ethernet_status_data[device_serial] = {
+                            "power": {
+                                "ac": {"isConnected": eth_data.get("power_ac_connected", False)},
+                                "poe": {"isConnected": eth_data.get("power_poe_connected", False)},
+                                "mode": eth_data.get("power_mode", "unknown"),
+                        },
+                            "aggregation": {
+                                "enabled": eth_data.get("aggregation_enabled", False),
+                                "speed": eth_data.get("aggregation_speed", 0),
+                            },
+                        }
 
             # Get packet loss metrics
             packet_loss_data = await self._async_get_packet_loss(wireless_devices)
@@ -1414,49 +1434,6 @@ class MerakiNetworkHub:
                 continue
 
         return connection_stats
-
-    async def _async_get_ethernet_status(
-        self, wireless_devices: list[dict[str, Any]]
-    ) -> dict[str, dict[str, Any]]:
-        """Get ethernet and power status for MR devices.
-
-        Args:
-            wireless_devices: List of wireless device dictionaries
-
-        Returns:
-            Dictionary mapping device serial to ethernet status data
-        """
-        ethernet_status: dict[str, dict[str, Any]] = {}
-
-        if not self.dashboard:
-            return ethernet_status
-
-        for device in wireless_devices:
-            device_serial = device.get("serial")
-            if not device_serial:
-                continue
-
-            try:
-                _LOGGER.debug("Getting ethernet status for device %s", device_serial)
-
-                # Get current ethernet status
-                result = await self.hass.async_add_executor_job(
-                    self.dashboard.wireless.getDeviceWirelessEthernetStatus,
-                    device_serial,
-                )
-
-                self.organization_hub.total_api_calls += 1
-
-                if result:
-                    ethernet_status[device_serial] = result
-
-            except Exception as err:
-                _LOGGER.debug(
-                    "Error getting ethernet status for %s: %s", device_serial, err
-                )
-                continue
-
-        return ethernet_status
 
     async def _async_get_packet_loss(
         self, wireless_devices: list[dict[str, Any]]
