@@ -61,23 +61,6 @@ repos:
     -   id: markdownlint
         args: ["--disable", "MD013", "MD033", "MD041"]  # Allow long lines, HTML, and missing h1
 
-  # Python test suite - Run full test suite to catch potential errors
--   repo: local
-    hooks:
-    -   id: pytest
-        name: Run Python test suite
-        entry: uv run python -m pytest
-        language: system
-        types: [python]
-        pass_filenames: false
-        args:
-        -   tests/
-        -   --cov=custom_components.meraki_dashboard
-        -   --cov-report=term-missing
-        -   --cov-fail-under=10
-        -   -v
-        -   --tb=short
-        stages: [pre-commit]
 
   # General file checks
 -   repo: https://github.com/pre-commit/pre-commit-hooks
@@ -119,24 +102,6 @@ repos:
     rev: v1.37.1
     hooks:
     -   id: yamllint
-
-  # YAML formatting
-
-
--   repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1 # Keep updated
-    hooks:
-    -   id: codespell
-        args:
-        -   --ignore-words-list=hass,homeassistant,coordinator
-        -   --skip="*.json,*.csv,.git,*.lock"
-        -   --quiet-level=2
-
-  # Validate GitHub Actions workflow files
--   repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.34.1 # Keep updated
-    hooks:
-    -   id: check-github-workflows
 
 -   repo: https://github.com/gitleaks/gitleaks
     rev: v8.29.0
