@@ -380,7 +380,10 @@ class MTSensorDataTransformer(DataTransformer):
             return bool(metric_data.get("enabled", False))
         elif metric == "remoteLockoutSwitch":
             return bool(metric_data.get("locked", False))
-        elif metric in ["door", "water", "button"]:
+        elif metric == "water":
+            # Water sensors use "wet" field
+            return bool(metric_data.get("wet", False))
+        elif metric in ["door", "button"]:
             # These use either "open" or "detected" fields
             return bool(metric_data.get("open", metric_data.get("detected", False)))
 
@@ -467,6 +470,12 @@ class MRWirelessDataTransformer(DataTransformer):
         cpu_data = raw_data.get("cpu", {})
         cpu_load_raw = cpu_data.get("cpuLoad5", 0)
         transformed["cpu_load_5min"] = cpu_load_raw / 100.0
+
+        # Memory usage
+        performance_data = raw_data.get("performance", {})
+        transformed["memory_usage"] = SafeExtractor.safe_float(
+            performance_data.get("memoryUtilization", 0)
+        )
 
         return transformed
 
@@ -620,6 +629,12 @@ class MSSwitchDataTransformer(DataTransformer):
             transformed["stp_priority"] = SafeExtractor.safe_int(
                 raw_data.get("stp_priority", 32768)
             )
+
+        # Memory usage
+        performance_data = raw_data.get("performance", {})
+        transformed["memory_usage"] = SafeExtractor.safe_float(
+            performance_data.get("memoryUtilization", 0)
+        )
 
         return transformed
 
