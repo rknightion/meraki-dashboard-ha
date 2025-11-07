@@ -1003,3 +1003,96 @@ class TestOrganizationHubEdgeCases:
         # Should count licenses expiring within 90 days (license1 only, since license2 expires in 92 days and license3 is already expired)
         assert organization_hub.licenses_expiring_count == 1
         assert organization_hub.licenses_info["total_licenses"] == 3
+
+    async def test_fetch_wireless_ethernet_statuses(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test fetching wireless ethernet statuses."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        # Mock wireless ethernet statuses data
+        ethernet_statuses = [
+            {
+                "serial": "Q3AB-TEST-0001",
+                "name": "TestAP1",
+                "network": {"id": "N_12345"},
+                "power": {
+                    "mode": "full",
+                    "ac": {"isConnected": False},
+                    "poe": {"isConnected": True},
+                },
+                "aggregation": {"enabled": False, "speed": 0},
+                "ports": [],
+            },
+            {
+                "serial": "Q3AB-TEST-0002",
+                "name": "TestAP2",
+                "network": {"id": "N_12345"},
+                "power": {
+                    "mode": "full",
+                    "ac": {"isConnected": True},
+                    "poe": {"isConnected": False},
+                },
+                "aggregation": {"enabled": True, "speed": 2000},
+                "ports": [],
+            },
+        ]
+
+        mock_dashboard_api.wireless = Mock()
+        mock_dashboard_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = (
+            Mock(return_value=ethernet_statuses)
+        )
+
+        await organization_hub._fetch_wireless_ethernet_statuses()
+
+        # Verify data was processed correctly
+        assert len(organization_hub.device_ethernet_status) == 2
+        assert "Q3AB-TEST-0001" in organization_hub.device_ethernet_status
+        assert "Q3AB-TEST-0002" in organization_hub.device_ethernet_status
+
+        # Check device 1 data
+        device1 = organization_hub.device_ethernet_status["Q3AB-TEST-0001"]
+        assert device1["power_ac_connected"] is False
+        assert device1["power_poe_connected"] is True
+        assert device1["aggregation_enabled"] is False
+        assert device1["aggregation_speed"] == 0
+
+        # Check device 2 data
+        device2 = organization_hub.device_ethernet_status["Q3AB-TEST-0002"]
+        assert device2["power_ac_connected"] is True
+        assert device2["power_poe_connected"] is False
+        assert device2["aggregation_enabled"] is True
+        assert device2["aggregation_speed"] == 2000
+
+    async def test_fetch_wireless_ethernet_statuses_no_data(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test fetching wireless ethernet statuses with no data."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        mock_dashboard_api.wireless = Mock()
+        mock_dashboard_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = (
+            Mock(return_value=[])
+        )
+
+        await organization_hub._fetch_wireless_ethernet_statuses()
+
+        # Should have empty dict but not fail
+        assert organization_hub.device_ethernet_status == {}
+
+    async def test_fetch_wireless_ethernet_statuses_api_error(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test fetching wireless ethernet statuses with API error."""
+        organization_hub.dashboard = mock_dashboard_api
+
+        mock_dashboard_api.wireless = Mock()
+        mock_dashboard_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = (
+            Mock(side_effect=Exception("API Error"))
+        )
+
+        await organization_hub._fetch_wireless_ethernet_statuses()
+
+        # Should handle error gracefully
+        assert organization_hub.device_ethernet_status == {}
+        assert organization_hub.failed_api_calls == 1

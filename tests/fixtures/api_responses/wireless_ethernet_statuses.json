@@ -1,0 +1,98 @@
+[
+  {
+    "serial": "Q3AB-VDXT-R59K",
+    "name": "LoungeAP",
+    "network": {
+      "id": "L_676102894059012345"
+    },
+    "power": {
+      "mode": "full",
+      "ac": {
+        "isConnected": false
+      },
+      "poe": {
+        "isConnected": true
+      }
+    },
+    "ports": [
+      {
+        "name": "Ethernet 0",
+        "poe": {
+          "standard": "802.3at"
+        },
+        "linkNegotiation": {
+          "duplex": "full",
+          "speed": 1000
+        }
+      }
+    ],
+    "aggregation": {
+      "enabled": false,
+      "speed": 0
+    }
+  },
+  {
+    "serial": "Q3AB-QLZS-GCWH",
+    "name": "OfficeAP",
+    "network": {
+      "id": "L_676102894059012345"
+    },
+    "power": {
+      "mode": "full",
+      "ac": {
+        "isConnected": false
+      },
+      "poe": {
+        "isConnected": true
+      }
+    },
+    "ports": [
+      {
+        "name": "Ethernet 0",
+        "poe": {
+          "standard": "802.3at"
+        },
+        "linkNegotiation": {
+          "duplex": "full",
+          "speed": 1000
+        }
+      }
+    ],
+    "aggregation": {
+      "enabled": false,
+      "speed": 0
+    }
+  },
+  {
+    "serial": "Q3AB-US5S-CTQZ",
+    "name": "GarageAP",
+    "network": {
+      "id": "L_676102894059012345"
+    },
+    "power": {
+      "mode": "full",
+      "ac": {
+        "isConnected": true
+      },
+      "poe": {
+        "isConnected": false
+      }
+    },
+    "ports": [
+      {
+        "name": "Ethernet 0",
+        "poe": {
+          "standard": null
+        },
+        "linkNegotiation": {
+          "duplex": "full",
+          "speed": 1000
+        }
+      }
+    ],
+    "aggregation": {
+      "enabled": true,
+      "speed": 2000
+    }
+  }
+]
