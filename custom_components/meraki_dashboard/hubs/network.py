@@ -107,6 +107,7 @@ class MerakiNetworkHub:
         self._selected_devices: set[str] = set()
         self._last_discovery_time: datetime | None = None
         self._discovery_in_progress = False
+        self._discovery_interval: int = DEFAULT_DISCOVERY_INTERVAL
 
         # Device type specific data storage
         self.wireless_data: dict[str, Any] = {}  # For MR devices
@@ -220,6 +221,9 @@ class MerakiNetworkHub:
                         CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL
                     ),
                 )
+
+                # Store the discovery interval for cache TTL
+                self._discovery_interval = discovery_interval
 
                 _LOGGER.debug(
                     "Setting up periodic discovery for %s every %d seconds",
@@ -368,8 +372,10 @@ class MerakiNetworkHub:
                     # Keep the device as is (don't use sanitize_device_attributes here)
                     processed_devices.append(device)
 
-                # Cache the processed devices for 10 minutes
-                cache_api_response(cache_key, processed_devices, ttl=600)
+                # Cache the processed devices for the discovery interval duration
+                cache_api_response(
+                    cache_key, processed_devices, ttl=self._discovery_interval
+                )
 
             # Update device list
             previous_count = len(self.devices)
@@ -423,34 +429,14 @@ class MerakiNetworkHub:
             if self.dashboard is None:
                 return
 
-            # Check cache first for wireless data
-            cache_key = f"wireless_data_{self.network_id}"
-            cached_data = get_cached_api_response(cache_key)
-
-            if cached_data is not None:
-                _LOGGER.debug(
-                    "Using cached wireless data for network %s",
-                    self.network_name,
-                )
-                self.wireless_data = cached_data
-                return
-
             # Get wireless SSIDs for this network
             ssids = await self.hass.async_add_executor_job(
                 self.dashboard.wireless.getNetworkWirelessSsids, self.network_id
             )
             self.organization_hub.total_api_calls += 1
 
-            # Get wireless devices in this network for additional metrics
-            devices = await self.hass.async_add_executor_job(
-                self.dashboard.networks.getNetworkDevices, self.network_id
-            )
-            self.organization_hub.total_api_calls += 1
-
-            # Filter for wireless devices and gather additional info
-            wireless_devices = [
-                device for device in devices if device.get("model", "").startswith("MR")
-            ]
+            # Use already discovered and filtered wireless devices
+            wireless_devices = self.devices
 
             devices_info = []
             for device in wireless_devices:
@@ -600,9 +586,6 @@ class MerakiNetworkHub:
                 "last_updated": datetime.now(UTC).isoformat(),
             }
 
-            # Cache the wireless data for 5 minutes
-            cache_api_response(cache_key, self.wireless_data, ttl=300)
-
             _LOGGER.debug(
                 "Retrieved %d SSIDs and %d wireless devices for network %s",
                 len(ssids),
@@ -715,28 +698,8 @@ class MerakiNetworkHub:
             if self.dashboard is None:
                 return
 
-            # Check cache first for switch data
-            cache_key = f"switch_data_{self.network_id}"
-            cached_data = get_cached_api_response(cache_key)
-
-            if cached_data is not None:
-                _LOGGER.debug(
-                    "Using cached switch data for network %s",
-                    self.network_name,
-                )
-                self.switch_data = cached_data
-                return
-
-            # Get switch devices in this network
-            devices = await self.hass.async_add_executor_job(
-                self.dashboard.networks.getNetworkDevices, self.network_id
-            )
-            self.organization_hub.total_api_calls += 1
-
-            # Filter for switch devices
-            switch_devices = [
-                device for device in devices if device.get("model", "").startswith("MS")
-            ]
+            # Use already discovered and filtered switch devices
+            switch_devices = self.devices
 
             if not switch_devices:
                 _LOGGER.debug(
@@ -1032,9 +995,6 @@ class MerakiNetworkHub:
                 "network_name": self.network_name,
                 "last_updated": datetime.now(UTC).isoformat(),
             }
-
-            # Cache the switch data for 5 minutes
-            cache_api_response(cache_key, self.switch_data, ttl=300)
 
             _LOGGER.debug(
                 "Retrieved %d switch devices with %d ports, %d power modules for network %s",
