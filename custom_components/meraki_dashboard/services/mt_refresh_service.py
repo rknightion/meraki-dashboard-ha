@@ -227,7 +227,10 @@ class MTRefreshService:
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=30)
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
                     response_text = await response.text()
 
