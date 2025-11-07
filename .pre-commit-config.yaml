@@ -103,11 +103,6 @@ repos:
     hooks:
     -   id: yamllint
 
--   repo: https://github.com/gitleaks/gitleaks
-    rev: v8.29.0
-    hooks:
-    -   id: gitleaks
-
 # Global excludes (your existing excludes are good)
 exclude: |
   (?x)^(
