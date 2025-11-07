@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.30.0...v0.31.0) (2025-11-07)
+
+
+### Features
+
+* expand device type support in device selection flow ([231b5f6](https://github.com/rknightion/meraki-dashboard-ha/commit/231b5f685923d5b03dbe4cc0a790a618049ba8e7))
+
+
+### Bug Fixes
+
+* adjust minimum scan interval to 30 seconds for better responsiveness ([6ff4d0c](https://github.com/rknightion/meraki-dashboard-ha/commit/6ff4d0c41fbe8df0754efd1c332928f69a6bb032))
+* correct water sensor data extraction and add memory usage metrics ([b5f90f8](https://github.com/rknightion/meraki-dashboard-ha/commit/b5f90f83cdbfce7ebb1b6ffcb98d52511622bc6a))
+* improve reauth flow entry lookup mechanism ([f5a2353](https://github.com/rknightion/meraki-dashboard-ha/commit/f5a235349c3bb8c10b9ca9b008df2051ba4db3a9))
+
+
+### Performance Improvements
+
+* optimize caching strategy in network hub data retrieval ([2dbc5e4](https://github.com/rknightion/meraki-dashboard-ha/commit/2dbc5e46114013aca6cd227bd0be2d0311493f9c))
+
+
+### Miscellaneous Chores
+
+* add secrets baseline configuration for security scanning ([a1936f4](https://github.com/rknightion/meraki-dashboard-ha/commit/a1936f4d10a63b320eda3dd0619e1bd4b55e4ecc))
+* **deps:** lock file maintenance ([9645394](https://github.com/rknightion/meraki-dashboard-ha/commit/9645394596fe51af2e52c60f692e7c5d4a63e44d))
+* **deps:** lock file maintenance ([bde285b](https://github.com/rknightion/meraki-dashboard-ha/commit/bde285b628e0fe3b293bed45aea7542636135196))
+* **deps:** update actions/upload-artifact action to v5 ([24a3fdd](https://github.com/rknightion/meraki-dashboard-ha/commit/24a3fdd7eb6b7e91e2128f1aeb65d3b323e45994))
+* **deps:** update actions/upload-artifact action to v5 ([1b4c9eb](https://github.com/rknightion/meraki-dashboard-ha/commit/1b4c9eb5145c1c5eeffd22fc2a80b4efe752ec73))
+* **deps:** update astral-sh/setup-uv action to v7.1.2 ([e0e79c3](https://github.com/rknightion/meraki-dashboard-ha/commit/e0e79c35632e99bb98fd7901841aa669dcb761c9))
+* **deps:** update astral-sh/setup-uv action to v7.1.2 ([82a77a1](https://github.com/rknightion/meraki-dashboard-ha/commit/82a77a132619479ed8c2daffb96cb4c8decde4ee))
+* **deps:** update dependency homeassistant-stubs to v2025.11.0 ([c8feb18](https://github.com/rknightion/meraki-dashboard-ha/commit/c8feb1829203312e602141a49e314ff059d0a662))
+* **deps:** update dependency homeassistant-stubs to v2025.11.0 ([f4a5e03](https://github.com/rknightion/meraki-dashboard-ha/commit/f4a5e031bfd7d457c25371f5e3d054fcbbf35c65))
+* **deps:** update github/codeql-action action to v4.31.2 ([#152](https://github.com/rknightion/meraki-dashboard-ha/issues/152)) ([694c7d8](https://github.com/rknightion/meraki-dashboard-ha/commit/694c7d808720df4f9f10624a2f045d510b9632ca))
+* **deps:** update github/codeql-action digest to 0499de3 ([#151](https://github.com/rknightion/meraki-dashboard-ha/issues/151)) ([f93d596](https://github.com/rknightion/meraki-dashboard-ha/commit/f93d59609665fa9c8bfafc65e96dae40106a52bc))
+* **deps:** update googleapis/release-please-action action to v4.4.0 ([#160](https://github.com/rknightion/meraki-dashboard-ha/issues/160)) ([d30e330](https://github.com/rknightion/meraki-dashboard-ha/commit/d30e330edad76387b41793f5f30668cf5ff503e8))
+* **deps:** update home-assistant/actions digest to 8ca6e13 ([#155](https://github.com/rknightion/meraki-dashboard-ha/issues/155)) ([e263b81](https://github.com/rknightion/meraki-dashboard-ha/commit/e263b81dbce49571801a08bb8167f3056282b643))
+* **deps:** update mcr.microsoft.com/devcontainers/python docker tag to v3.14 ([64be4d5](https://github.com/rknightion/meraki-dashboard-ha/commit/64be4d532f3935384cd1cd7066a340d467f01e17))
+* **deps:** update mcr.microsoft.com/devcontainers/python docker tag to v3.14 ([a696e5b](https://github.com/rknightion/meraki-dashboard-ha/commit/a696e5bcfc9a2464dfa3a124d57fc9cb68fa8be1))
+* **deps:** update step-security/harden-runner action to v2.13.2 ([1bf5877](https://github.com/rknightion/meraki-dashboard-ha/commit/1bf5877ec59df2c48f6f43b41a92cfb76c6f8376))
+* **deps:** update step-security/harden-runner action to v2.13.2 ([f9f32aa](https://github.com/rknightion/meraki-dashboard-ha/commit/f9f32aa3044151fefd444f9cb4fda63a8c0f01f1))
+* improve type safety and code quality ([fd2602e](https://github.com/rknightion/meraki-dashboard-ha/commit/fd2602ead2f3697132640ca06d530290c6bb52e4))
+* **release:** remove pull request header from config ([5595d0c](https://github.com/rknightion/meraki-dashboard-ha/commit/5595d0cb3ba8252ffdba023f1c4c8262c9f6a35a))
+* remove redundant pre-commit hooks ([1d92d86](https://github.com/rknightion/meraki-dashboard-ha/commit/1d92d8683f3edc4e32f70bfe356c07865b598cf3))
+* replace custom release workflow with release-please ([e40a2b9](https://github.com/rknightion/meraki-dashboard-ha/commit/e40a2b94a3f5fc51639251813a22e3fa1562dbff))
+* replace custom release workflow with release-please ([9c2e808](https://github.com/rknightion/meraki-dashboard-ha/commit/9c2e808be48acb24802eaeeeefacad15f8a15f3f))
+
+
+### Code Refactoring
+
+* remove unused port statistics collection for switch devices ([6a9976c](https://github.com/rknightion/meraki-dashboard-ha/commit/6a9976c0fda438fd26c718608720fa2a0391a696))
+
 ## [Unreleased]
 
 
