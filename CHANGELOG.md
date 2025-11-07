@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.32.0...v0.32.1) (2025-11-07)
+
+
+### Miscellaneous Chores
+
+* deps ([3ac803a](https://github.com/rknightion/meraki-dashboard-ha/commit/3ac803a3eab7003de620ae20ad953106d89572eb))
+
 ## [0.32.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.31.0...v0.32.0) (2025-11-07)
 
 
