@@ -45,9 +45,9 @@ class TestMTRefreshService:
         assert service.dashboard == mock_network_hub.dashboard
         assert service._refresh_interval == MT_REFRESH_COMMAND_INTERVAL
         assert service._running is False
-        assert service._total_refresh_attempts == 0
-        assert service._successful_refreshes == 0
-        assert service._failed_refreshes == 0
+        assert service._batch_attempts == 0
+        assert service._batch_successes == 0
+        assert service._batch_failures == 0
 
     def test_init_custom_interval(self, hass: HomeAssistant, mock_network_hub):
         """Test initialization with custom interval."""
@@ -147,138 +147,45 @@ class TestMTRefreshService:
         # Should not raise an error
         assert service._running is False
 
-    async def test_send_refresh_command_success(
-        self, mt_refresh_service: MTRefreshService, mock_network_hub
-    ):
-        """Test sending refresh command successfully."""
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand = Mock(
-            return_value={"commandId": "cmd_123", "status": "pending"}
-        )
-
-        result = mt_refresh_service._send_refresh_command("Q2XX-TEST-0001")
-
-        assert result == {"commandId": "cmd_123", "status": "pending"}
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand.assert_called_once_with(
-            serial="Q2XX-TEST-0001", operation="refreshData"
-        )
-
-    async def test_send_refresh_command_no_dashboard(
-        self, hass: HomeAssistant, mock_network_hub
-    ):
-        """Test sending refresh command when dashboard is None."""
-        mock_network_hub.dashboard = None
-        service = MTRefreshService(hass, mock_network_hub)
-
-        with pytest.raises(RuntimeError, match="Dashboard API not initialized"):
-            service._send_refresh_command("Q2XX-TEST-0001")
-
-    async def test_async_refresh_single_device_success(
-        self, mt_refresh_service: MTRefreshService, mock_network_hub
-    ):
-        """Test refreshing a single device successfully."""
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand = Mock(
-            return_value={"commandId": "cmd_123", "status": "pending"}
-        )
-
-        device = {"serial": "Q2XX-TEST-0001", "model": "MT15"}
-        await mt_refresh_service._async_refresh_single_device(device)
-
-        assert mt_refresh_service._total_refresh_attempts == 1
-        assert mt_refresh_service._successful_refreshes == 1
-        assert mt_refresh_service._failed_refreshes == 0
-        assert mt_refresh_service._failure_counts["Q2XX-TEST-0001"] == 0
-
-    async def test_async_refresh_single_device_failure(
-        self, mt_refresh_service: MTRefreshService, mock_network_hub
-    ):
-        """Test handling refresh command failure."""
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand = Mock(
-            side_effect=Exception("API Error")
-        )
-
-        device = {"serial": "Q2XX-TEST-0001", "model": "MT15"}
-        await mt_refresh_service._async_refresh_single_device(device)
-
-        assert mt_refresh_service._total_refresh_attempts == 1
-        assert mt_refresh_service._successful_refreshes == 0
-        assert mt_refresh_service._failed_refreshes == 1
-        assert mt_refresh_service._failure_counts["Q2XX-TEST-0001"] == 1
-
-    async def test_async_refresh_single_device_missing_serial(
-        self, mt_refresh_service: MTRefreshService
-    ):
-        """Test refreshing a device with missing serial."""
-        device = {"model": "MT15"}  # No serial
-        await mt_refresh_service._async_refresh_single_device(device)
-
-        # Should not increment counters
-        assert mt_refresh_service._total_refresh_attempts == 0
-
-    async def test_handle_refresh_error_threshold(
-        self, mt_refresh_service: MTRefreshService
-    ):
-        """Test error handling after hitting failure threshold."""
-        serial = "Q2XX-TEST-0001"
-
-        # First few failures (below threshold)
-        for i in range(CONSECUTIVE_FAILURE_THRESHOLD - 1):
-            mt_refresh_service._handle_refresh_error(
-                serial, "MT15", {"errors": ["Error"]}
-            )
-            assert mt_refresh_service._failure_counts[serial] == i + 1
-
-        # Threshold failure should trigger warning (tested via logging)
-        mt_refresh_service._handle_refresh_error(serial, "MT15", {"errors": ["Error"]})
-        assert (
-            mt_refresh_service._failure_counts[serial] == CONSECUTIVE_FAILURE_THRESHOLD
-        )
-
-    async def test_handle_refresh_error_reset_on_success(
-        self, mt_refresh_service: MTRefreshService, mock_network_hub
-    ):
-        """Test that failure count resets on success."""
-        serial = "Q2XX-TEST-0001"
-
-        # Simulate some failures
-        mt_refresh_service._failure_counts[serial] = 2
-
-        # Simulate success
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand = Mock(
-            return_value={"commandId": "cmd_123", "status": "pending"}
-        )
-
-        device = {"serial": serial, "model": "MT15"}
-        await mt_refresh_service._async_refresh_single_device(device)
-
-        assert mt_refresh_service._failure_counts[serial] == 0
+    # NOTE: The following tests were removed because the implementation changed
+    # from per-device refresh to batch-based refresh using Action Batches API.
+    # The old methods _send_refresh_command, _async_refresh_single_device, and
+    # _handle_refresh_error no longer exist.
 
     async def test_async_refresh_devices(
         self, mt_refresh_service: MTRefreshService, mock_network_hub
     ):
-        """Test refreshing all MT15/MT40 devices."""
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand = Mock(
-            return_value={"commandId": "cmd_123", "status": "pending"}
-        )
+        """Test refreshing all MT15/MT40 devices using batch API."""
+        # Mock the organization hub for batch API
+        org_hub = Mock()
+        org_hub._api_key = "test_api_key"
+        org_hub.organization_id = "test_org"
+        org_hub.base_url = "https://api.meraki.com/api/v1"
+        mock_network_hub.organization_hub = org_hub
 
         mt_refresh_service._running = True
-        await mt_refresh_service._async_refresh_devices(datetime.now(UTC))
 
-        # Should have attempted to refresh 2 devices (MT15 and MT40)
-        assert mt_refresh_service._total_refresh_attempts == 2
-        assert mt_refresh_service._successful_refreshes == 2
+        # Mock the _send_action_batch method to simulate successful batch
+        async def mock_send_batch(devices):
+            mt_refresh_service._batch_attempts += 1
+            mt_refresh_service._batch_successes += 1
+
+        with patch.object(mt_refresh_service, '_send_action_batch', side_effect=mock_send_batch):
+            await mt_refresh_service._async_refresh_devices(datetime.now(UTC))
+
+        # Should have attempted one batch with 2 devices (MT15 and MT40)
+        assert mt_refresh_service._batch_attempts == 1
+        assert mt_refresh_service._batch_successes == 1
 
     async def test_async_refresh_devices_not_running(
         self, mt_refresh_service: MTRefreshService, mock_network_hub
     ):
         """Test that refresh doesn't happen when service is not running."""
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand = Mock()
-
         mt_refresh_service._running = False
         await mt_refresh_service._async_refresh_devices(datetime.now(UTC))
 
-        # Should not have called the API
-        mock_network_hub.dashboard.sensor.createDeviceSensorCommand.assert_not_called()
-        assert mt_refresh_service._total_refresh_attempts == 0
+        # Should not have attempted any batches
+        assert mt_refresh_service._batch_attempts == 0
 
     async def test_async_refresh_devices_no_dashboard(
         self, hass: HomeAssistant, mock_network_hub
@@ -291,7 +198,7 @@ class TestMTRefreshService:
         await service._async_refresh_devices(datetime.now(UTC))
 
         # Should not crash, just return early
-        assert service._total_refresh_attempts == 0
+        assert service._batch_attempts == 0
 
     async def test_async_refresh_devices_no_mt_devices(
         self, hass: HomeAssistant, mock_network_hub
@@ -304,7 +211,7 @@ class TestMTRefreshService:
         await service._async_refresh_devices(datetime.now(UTC))
 
         # Should not attempt any refreshes
-        assert service._total_refresh_attempts == 0
+        assert service._batch_attempts == 0
 
     def test_success_rate_no_attempts(self, mt_refresh_service: MTRefreshService):
         """Test success rate calculation with no attempts."""
@@ -312,17 +219,17 @@ class TestMTRefreshService:
 
     def test_success_rate_partial_success(self, mt_refresh_service: MTRefreshService):
         """Test success rate calculation with partial success."""
-        mt_refresh_service._total_refresh_attempts = 10
-        mt_refresh_service._successful_refreshes = 7
-        mt_refresh_service._failed_refreshes = 3
+        mt_refresh_service._batch_attempts = 10
+        mt_refresh_service._batch_successes = 7
+        mt_refresh_service._batch_failures = 3
 
         assert mt_refresh_service.success_rate == 70.0
 
     def test_success_rate_all_failures(self, mt_refresh_service: MTRefreshService):
         """Test success rate calculation with all failures."""
-        mt_refresh_service._total_refresh_attempts = 5
-        mt_refresh_service._successful_refreshes = 0
-        mt_refresh_service._failed_refreshes = 5
+        mt_refresh_service._batch_attempts = 5
+        mt_refresh_service._batch_successes = 0
+        mt_refresh_service._batch_failures = 5
 
         assert mt_refresh_service.success_rate == 0.0
 
@@ -348,7 +255,7 @@ class TestMTRefreshServiceIntegration:
         pass
 
     async def test_concurrent_refresh_commands(self, hass: HomeAssistant):
-        """Test that multiple refresh commands are sent concurrently."""
+        """Test that batch refresh command is sent for multiple devices."""
         # Create a fresh mock hub
         mock_hub = Mock()
         mock_hub.network_name = "Test Network"
@@ -356,15 +263,25 @@ class TestMTRefreshServiceIntegration:
             {"serial": f"Q2XX-TEST-{i:04d}", "model": "MT15"} for i in range(10)
         ]
         mock_hub.dashboard = Mock()
-        mock_hub.dashboard.sensor.createDeviceSensorCommand = Mock(
-            return_value={"commandId": "cmd_123", "status": "pending"}
-        )
+
+        # Mock the organization hub for batch API
+        org_hub = Mock()
+        org_hub._api_key = "test_api_key"
+        org_hub.organization_id = "test_org"
+        org_hub.base_url = "https://api.meraki.com/api/v1"
+        mock_hub.organization_hub = org_hub
 
         service = MTRefreshService(hass, mock_hub)
         service._running = True
 
-        await service._async_refresh_devices(datetime.now(UTC))
+        # Mock the _send_action_batch method to simulate successful batch
+        async def mock_send_batch(devices):
+            service._batch_attempts += 1
+            service._batch_successes += 1
 
-        # Should have attempted 10 refreshes
-        assert service._total_refresh_attempts == 10
-        assert mock_hub.dashboard.sensor.createDeviceSensorCommand.call_count == 10
+        with patch.object(service, '_send_action_batch', side_effect=mock_send_batch):
+            await service._async_refresh_devices(datetime.now(UTC))
+
+        # Should have attempted one batch with 10 devices
+        assert service._batch_attempts == 1
+        assert service._batch_successes == 1
