@@ -240,9 +240,11 @@ class TestMerakiDashboardConfigFlow:
         # Set up reauth context
         mock_config_flow.context = {
             "source": config_entries.SOURCE_REAUTH,
-            "source_config_entry": mock_config_entry,
+            "entry_id": mock_config_entry.entry_id,
             "unique_id": "test_org_123",
         }
+        mock_config_flow.hass = hass
+        hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
         result = await mock_config_flow.async_step_reauth()
 
@@ -257,9 +259,11 @@ class TestMerakiDashboardConfigFlow:
         # Set up reauth context
         mock_config_flow.context = {
             "source": config_entries.SOURCE_REAUTH,
-            "source_config_entry": mock_config_entry,
+            "entry_id": mock_config_entry.entry_id,
             "unique_id": "test_org_123",
         }
+        mock_config_flow.hass = hass
+        hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
         with patch(
             "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
@@ -291,9 +295,11 @@ class TestMerakiDashboardConfigFlow:
         # Set up reauth context
         mock_config_flow.context = {
             "source": config_entries.SOURCE_REAUTH,
-            "source_config_entry": mock_config_entry,
+            "entry_id": mock_config_entry.entry_id,
             "unique_id": "test_org_123",
         }
+        mock_config_flow.hass = hass
+        hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
         with patch(
             "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
