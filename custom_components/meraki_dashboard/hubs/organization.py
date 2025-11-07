@@ -166,6 +166,9 @@ class MerakiOrganizationHub:
         # Device memory usage data
         self.device_memory_usage: dict[str, MemoryUsageData] = {}
 
+        # Device ethernet status data (for MR devices)
+        self.device_ethernet_status: dict[str, dict[str, Any]] = {}
+
         # Organization data update timer
         self._organization_data_unsub: Callable[[], None] | None = None
 
@@ -176,6 +179,7 @@ class MerakiOrganizationHub:
         self._last_clients_update: datetime | None = None
         self._last_bluetooth_clients_update: datetime | None = None
         self._last_memory_usage_update: datetime | None = None
+        self._last_ethernet_status_update: datetime | None = None
 
         # Tiered refresh unsubscribe handlers
         self._static_data_unsub: Callable[[], None] | None = None
@@ -349,7 +353,7 @@ class MerakiOrganizationHub:
                     timedelta(seconds=static_interval),
                 )
 
-                # Semi-static data (device statuses, memory usage) - configurable interval (default: every 30 minutes)
+                # Semi-static data (device statuses, memory usage, ethernet status) - configurable interval (default: every 30 minutes)
                 async def _update_semi_static_data(
                     _now: datetime | None = None,
                 ) -> None:
@@ -359,8 +363,11 @@ class MerakiOrganizationHub:
                     await self._fetch_memory_usage()
                     self._last_memory_usage_update = datetime.now(UTC)
 
+                    await self._fetch_wireless_ethernet_statuses()
+                    self._last_ethernet_status_update = datetime.now(UTC)
+
                     _LOGGER.debug(
-                        "Updated semi-static organization data (device statuses, memory usage)"
+                        "Updated semi-static organization data (device statuses, memory usage, ethernet status)"
                     )
 
                 self._semi_static_data_unsub = async_track_time_interval(
@@ -410,6 +417,9 @@ class MerakiOrganizationHub:
 
             await self._fetch_memory_usage()
             self._last_memory_usage_update = datetime.now(UTC)
+
+            await self._fetch_wireless_ethernet_statuses()
+            self._last_ethernet_status_update = datetime.now(UTC)
 
             # Track setup completion time
             self._last_setup_time = datetime.now(UTC)
@@ -1241,6 +1251,119 @@ class MerakiOrganizationHub:
 
             # Set fallback on error
             self.device_memory_usage = {}
+
+    @with_standard_retries("realtime")
+    async def _fetch_wireless_ethernet_statuses(self) -> None:
+        """Fetch ethernet status data for MR devices across the organization.
+
+        Uses the getOrganizationWirelessDevicesEthernetStatuses API endpoint
+        to get power (AC/PoE) and aggregation data for all wireless devices.
+        """
+        if not self.dashboard:
+            return
+
+        assert self.dashboard is not None  # Type guard  # nosec B101
+
+        try:
+            _LOGGER.debug("Fetching wireless ethernet statuses from API...")
+
+            # Check if the method exists on the dashboard
+            if not hasattr(
+                self.dashboard.wireless,
+                "getOrganizationWirelessDevicesEthernetStatuses",
+            ):
+                _LOGGER.debug(
+                    "API method getOrganizationWirelessDevicesEthernetStatuses not available"
+                )
+                self.device_ethernet_status = {}
+                return
+
+            try:
+                ethernet_data = await self.hass.async_add_executor_job(
+                    self.dashboard.wireless.getOrganizationWirelessDevicesEthernetStatuses,
+                    self.organization_id,
+                )
+                self.total_api_calls += 1
+            except Exception as api_err:
+                self.failed_api_calls += 1
+                self.last_api_call_error = str(api_err)
+                _LOGGER.debug("Error calling ethernet status API: %s", api_err)
+                self.device_ethernet_status = {}
+                return
+
+            # Process the ethernet status data
+            processed_ethernet_data: dict[str, dict[str, Any]] = {}
+
+            # Handle response structure
+            device_list = []
+            if ethernet_data:
+                if isinstance(ethernet_data, list):
+                    device_list = ethernet_data
+                elif isinstance(ethernet_data, dict):
+                    # Check for paginated response
+                    if "data" in ethernet_data:
+                        device_list = ethernet_data["data"]
+                    elif "devices" in ethernet_data:
+                        device_list = ethernet_data["devices"]
+
+            _LOGGER.debug("Processing %d wireless device records", len(device_list))
+
+            if device_list:
+                for device_data in device_list:
+                    device_serial = device_data.get("serial")
+
+                    if not device_serial:
+                        _LOGGER.debug("Skipping device with no serial")
+                        continue
+
+                    # Extract power status
+                    power_info = device_data.get("power", {})
+                    ac_info = power_info.get("ac", {})
+                    poe_info = power_info.get("poe", {})
+
+                    # Extract aggregation info
+                    aggregation_info = device_data.get("aggregation", {})
+
+                    # Store processed ethernet data
+                    processed_ethernet_data[device_serial] = {
+                        "serial": device_serial,
+                        "name": device_data.get("name", "Unknown"),
+                        "network": device_data.get("network", {}),
+                        "power_ac_connected": ac_info.get("isConnected", False),
+                        "power_poe_connected": poe_info.get("isConnected", False),
+                        "power_mode": power_info.get("mode", "unknown"),
+                        "aggregation_enabled": aggregation_info.get("enabled", False),
+                        "aggregation_speed": aggregation_info.get("speed", 0),
+                        "ports": device_data.get("ports", []),
+                    }
+
+                    _LOGGER.debug(
+                        "Successfully processed ethernet data for device %s: AC=%s, PoE=%s, Aggregation=%s",
+                        device_serial,
+                        ac_info.get("isConnected", False),
+                        poe_info.get("isConnected", False),
+                        aggregation_info.get("enabled", False),
+                    )
+            else:
+                _LOGGER.debug("No ethernet status data returned from API")
+
+            self.device_ethernet_status = processed_ethernet_data
+            self._last_ethernet_status_update = datetime.now(UTC)
+
+            _LOGGER.debug(
+                "Fetched ethernet status data for %d wireless devices",
+                len(processed_ethernet_data),
+            )
+
+        except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            _LOGGER.debug(
+                "Could not fetch device ethernet status data: %s", err
+            )
+
+            # Set fallback on error
+            self.device_ethernet_status = {}
 
     @with_standard_retries("discovery")
     async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:
