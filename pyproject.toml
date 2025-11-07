@@ -3,7 +3,7 @@ name = "meraki-dashboard-ha"
 version = "0.1.0"
 description = "Meraki Dashboard integration for Home Assistant"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "rknightion", email = "12484127+rknightion@users.noreply.github.com"}
 ]
 license = {text = "Apache-2.0"}
 readme = "README.md"
