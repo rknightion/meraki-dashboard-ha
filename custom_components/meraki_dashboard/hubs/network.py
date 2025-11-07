@@ -524,15 +524,29 @@ class MerakiNetworkHub:
             ):
                 for device in wireless_devices:
                     device_serial = device.get("serial")
-                    if device_serial and device_serial in self.organization_hub.device_ethernet_status:
-                        eth_data = self.organization_hub.device_ethernet_status[device_serial]
+                    if (
+                        device_serial
+                        and device_serial
+                        in self.organization_hub.device_ethernet_status
+                    ):
+                        eth_data = self.organization_hub.device_ethernet_status[
+                            device_serial
+                        ]
                         # Convert org hub format to expected format
                         ethernet_status_data[device_serial] = {
                             "power": {
-                                "ac": {"isConnected": eth_data.get("power_ac_connected", False)},
-                                "poe": {"isConnected": eth_data.get("power_poe_connected", False)},
+                                "ac": {
+                                    "isConnected": eth_data.get(
+                                        "power_ac_connected", False
+                                    )
+                                },
+                                "poe": {
+                                    "isConnected": eth_data.get(
+                                        "power_poe_connected", False
+                                    )
+                                },
                                 "mode": eth_data.get("power_mode", "unknown"),
-                        },
+                            },
                             "aggregation": {
                                 "enabled": eth_data.get("aggregation_enabled", False),
                                 "speed": eth_data.get("aggregation_speed", 0),

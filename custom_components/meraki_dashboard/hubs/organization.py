@@ -1358,9 +1358,7 @@ class MerakiOrganizationHub:
         except Exception as err:
             self.failed_api_calls += 1
             self.last_api_call_error = str(err)
-            _LOGGER.debug(
-                "Could not fetch device ethernet status data: %s", err
-            )
+            _LOGGER.debug("Could not fetch device ethernet status data: %s", err)
 
             # Set fallback on error
             self.device_ethernet_status = {}
