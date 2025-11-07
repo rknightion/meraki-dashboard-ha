@@ -47,7 +47,7 @@ async def test_mt_devices_loaded_from_real_fixtures():
         assert "model" in device
         assert "name" in device
         assert "networkId" in device
-        assert device["networkId"] == "L_676102894059017611"  # Real network ID
+        assert device["networkId"] == "L_676102894059012345"  # Real network ID
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ async def test_mt40_power_monitoring_real_data():
 
     # Verify it's the correct device
     assert mt40_data["serial"] == "Q3CJ-MRNC-F7XJ"
-    assert mt40_data["network"]["id"] == "L_676102894059017611"
+    assert mt40_data["network"]["id"] == "L_676102894059012345"
 
     # Get all metric types
     metrics = [reading["metric"] for reading in mt40_data["readings"]]
@@ -245,8 +245,8 @@ async def test_fixture_loader_convenience_methods():
     # Test loading networks
     networks = loader.load_networks()
     assert len(networks) == 1
-    assert networks[0]["id"] == "L_676102894059017611"
-    assert networks[0]["name"] == "Mitchell Drive"
+    assert networks[0]["id"] == "L_676102894059012345"
+    assert networks[0]["name"] == "Elm Street Lab"
     assert "sensor" in networks[0]["productTypes"]
     assert "wireless" in networks[0]["productTypes"]
     assert "switch" in networks[0]["productTypes"]

@@ -136,7 +136,7 @@ validate: lint pre-commit
 # Build documentation
 docs:
 	@echo "Documentation is in README.md and CONTRIBUTING.md"
-	@echo "API docs: https://rknightion.github.io/meraki-dashboard-ha/"
+	@echo "API docs: https:/m7kni.io/meraki-dashboard-ha/"
 
 # Generate entity documentation
 docs-generate:

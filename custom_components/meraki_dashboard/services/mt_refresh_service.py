@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
+import json
 import logging
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
+import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_track_time_interval
 
@@ -25,14 +26,13 @@ CONSECUTIVE_FAILURE_THRESHOLD = 3
 
 
 class MTRefreshService:
-    """Service to manage MT15/MT40 device refresh commands.
+    """Service to manage MT15/MT40 device refresh commands using Action Batches.
 
-    This service runs every 5 seconds and sends refresh commands to MT15 and MT40
-    devices to ensure they update their readings more frequently than the default
-    Meraki update interval.
+    This service sends batched refresh commands to MT15 and MT40 devices to ensure
+    they update their readings more frequently than the default Meraki update interval.
 
-    Uses the official Meraki SDK's createDeviceSensorCommand method with the
-    'refreshData' operation to trigger immediate sensor data uploads.
+    Uses Meraki's Action Batches API to send refresh commands efficiently in a single
+    API call, minimizing API usage while maintaining fast sensor updates.
     """
 
     def __init__(
@@ -55,11 +55,8 @@ class MTRefreshService:
         # Refresh interval configuration
         self._refresh_interval = interval
 
-        # Track consecutive failures per device serial
+        # Track consecutive failures per device serial (for logging only)
         self._failure_counts: dict[str, int] = defaultdict(int)
-
-        # Track last failure messages to avoid duplicate logging
-        self._last_failure_messages: dict[str, str] = {}
 
         # Timer for refresh commands
         self._refresh_timer: Callable[[], None] | None = None
@@ -67,10 +64,10 @@ class MTRefreshService:
         # Track if service is running
         self._running = False
 
-        # Track refresh statistics
-        self._total_refresh_attempts = 0
-        self._successful_refreshes = 0
-        self._failed_refreshes = 0
+        # Track batch statistics
+        self._batch_attempts = 0
+        self._batch_successes = 0
+        self._batch_failures = 0
 
         _LOGGER.debug(
             "MT Refresh Service initialized for network %s with %d second interval",
@@ -126,18 +123,18 @@ class MTRefreshService:
             self._refresh_timer = None
 
         _LOGGER.info(
-            "MT Refresh Service stopped for network %s (stats: %d attempts, %d successful, %d failed)",
+            "MT Refresh Service stopped for network %s (batches: %d attempts, %d successful, %d failed)",
             self.network_hub.network_name,
-            self._total_refresh_attempts,
-            self._successful_refreshes,
-            self._failed_refreshes,
+            self._batch_attempts,
+            self._batch_successes,
+            self._batch_failures,
         )
 
     async def _async_refresh_devices(self, _now: datetime | None = None) -> None:
-        """Refresh MT15 and MT40 devices.
+        """Refresh MT15 and MT40 devices using Action Batches.
 
-        This method is called at the configured interval and sends refresh commands
-        to all MT15 and MT40 devices in the network.
+        This method is called at the configured interval and sends a batched refresh
+        command to all MT15 and MT40 devices in the network.
         """
         if not self._running:
             return
@@ -159,13 +156,8 @@ class MTRefreshService:
             [d["serial"] for d in mt_devices],
         )
 
-        # Create refresh tasks for all devices (run concurrently)
-        refresh_tasks = [
-            self._async_refresh_single_device(device) for device in mt_devices
-        ]
-
-        # Execute all refresh commands concurrently
-        await asyncio.gather(*refresh_tasks, return_exceptions=True)
+        # Send action batch
+        await self._send_action_batch(mt_devices)
 
     def _get_mt15_mt40_devices(self) -> list[MerakiDeviceData]:
         """Get all MT15 and MT40 devices from the network hub.
@@ -183,133 +175,142 @@ class MTRefreshService:
 
         return mt_devices
 
-    async def _async_refresh_single_device(self, device: MerakiDeviceData) -> None:
-        """Send refresh command to a single MT device.
+    async def _send_action_batch(self, mt_devices: list[MerakiDeviceData]) -> None:
+        """Send action batch to refresh MT devices.
 
         Args:
-            device: Device dictionary containing serial and model information
+            mt_devices: List of MT15/MT40 devices to refresh
         """
-        serial = device.get("serial")
-        model = device.get("model", "unknown")
-
-        if not serial:
-            _LOGGER.warning("Device missing serial number: %s", device)
+        if not mt_devices:
             return
 
-        self._total_refresh_attempts += 1
+        self._batch_attempts += 1
 
         try:
-            # Make the refresh API call
-            # Using the sensor commands endpoint with refreshData operation
-            result = await self.hass.async_add_executor_job(
-                self._send_refresh_command, serial
+            # Get organization hub for API key and org ID
+            org_hub = self.network_hub.organization_hub
+            api_key = org_hub._api_key  # noqa: SLF001
+            org_id = org_hub.organization_id
+            base_url = org_hub.base_url
+
+            # Build action batch payload
+            actions = []
+            for device in mt_devices:
+                serial = device.get("serial")
+                if not serial:
+                    continue
+
+                actions.append(
+                    {
+                        "resource": f"/devices/{serial}/sensor/commands",
+                        "operation": "create",
+                        "body": {"operation": "refreshData"},
+                    }
+                )
+
+            if not actions:
+                _LOGGER.warning("No valid devices to batch refresh")
+                return
+
+            payload = {"confirmed": True, "synchronous": False, "actions": actions}
+
+            # Make the API call
+            url = f"{base_url}/organizations/{org_id}/actionBatches"
+            headers = {
+                "X-Cisco-Meraki-API-Key": api_key,
+                "Content-Type": "application/json",
+            }
+
+            _LOGGER.debug(
+                "Sending action batch with %d sensor refresh commands", len(actions)
             )
 
-            # Check if command was created successfully
-            if result and result.get("commandId"):
-                # Success - reset failure count for this device
-                if serial in self._failure_counts:
-                    self._failure_counts[serial] = 0
-                self._successful_refreshes += 1
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    response_text = await response.text()
 
-                _LOGGER.debug(
-                    "Refresh command sent successfully for %s (%s): commandId=%s",
-                    serial,
-                    model,
-                    result.get("commandId"),
-                )
-            else:
-                # Handle error response
-                self._handle_refresh_error(serial, model, result)
+                    if response.status == 201:
+                        # Success
+                        self._batch_successes += 1
 
+                        # Reset failure counts for all devices
+                        for device in mt_devices:
+                            serial = device.get("serial")
+                            if serial and serial in self._failure_counts:
+                                self._failure_counts[serial] = 0
+
+                        try:
+                            result = json.loads(response_text)
+                            batch_id = result.get("id", "unknown")
+                            _LOGGER.info(
+                                "Action batch successful: %d sensor refresh commands queued (batchId=%s)",
+                                len(actions),
+                                batch_id,
+                            )
+                        except json.JSONDecodeError:
+                            _LOGGER.info(
+                                "Action batch successful: %d sensor refresh commands queued",
+                                len(actions),
+                            )
+                    else:
+                        # Batch failed - log and continue
+                        self._batch_failures += 1
+
+                        # Increment failure counts for all devices
+                        for device in mt_devices:
+                            serial = device.get("serial")
+                            if serial:
+                                self._failure_counts[serial] += 1
+
+                        _LOGGER.error(
+                            "Action batch failed with status %d: %s. Will retry in %d seconds.",
+                            response.status,
+                            response_text[:500],
+                            self._refresh_interval,
+                        )
+
+        except TimeoutError:
+            self._batch_failures += 1
+
+            # Increment failure counts for all devices
+            for device in mt_devices:
+                serial = device.get("serial")
+                if serial:
+                    self._failure_counts[serial] += 1
+
+            _LOGGER.error(
+                "Action batch timed out after 30 seconds. Will retry in %d seconds.",
+                self._refresh_interval,
+            )
         except Exception as err:
-            # Handle API exception
-            self._handle_refresh_error(serial, model, {"errors": [str(err)]})
+            self._batch_failures += 1
 
-    def _send_refresh_command(self, serial: str) -> dict[str, Any]:
-        """Send the refresh command to the Meraki API.
+            # Increment failure counts for all devices
+            for device in mt_devices:
+                serial = device.get("serial")
+                if serial:
+                    self._failure_counts[serial] += 1
 
-        Args:
-            serial: Device serial number
-
-        Returns:
-            API response dictionary
-
-        Raises:
-            Exception: Any API errors are allowed to propagate to the caller
-                      for proper failure counting
-        """
-        if self.dashboard is None:
-            raise RuntimeError("Dashboard API not initialized")
-
-        # Use the SDK's createDeviceSensorCommand method
-        # This sends the refreshData operation to MT15/MT40 devices
-        # Let any exceptions bubble up to the caller for proper error handling
-        result = self.dashboard.sensor.createDeviceSensorCommand(
-            serial=serial, operation="refreshData"
-        )
-
-        # The SDK returns the command object on success
-        # It should always be a dict, but be defensive
-        if result and isinstance(result, dict):
-            return result
-        else:
-            # Shouldn't happen with the SDK, but handle it gracefully
-            return {"commandId": "unknown", "status": "pending"}
-
-    def _handle_refresh_error(
-        self, serial: str, model: str, result: dict[str, Any] | None
-    ) -> None:
-        """Handle refresh command error.
-
-        Args:
-            serial: Device serial number
-            model: Device model
-            result: API response or None if request failed
-        """
-        self._failed_refreshes += 1
-        self._failure_counts[serial] += 1
-
-        errors = []
-        if result and "errors" in result:
-            errors = result["errors"]
-
-        error_message = ", ".join(errors) if errors else "Unknown error"
-
-        # Only log warning if we've hit the consecutive failure threshold
-        if self._failure_counts[serial] >= CONSECUTIVE_FAILURE_THRESHOLD:
-            # Only log if the error message has changed or it's been a while
-            last_message = self._last_failure_messages.get(serial)
-            if last_message != error_message:
-                _LOGGER.warning(
-                    "MT refresh failed %d times for %s (%s): %s",
-                    self._failure_counts[serial],
-                    serial,
-                    model,
-                    error_message,
-                )
-                self._last_failure_messages[serial] = error_message
-        else:
-            # Just debug log for non-consecutive failures
-            _LOGGER.debug(
-                "MT refresh failed for %s (%s) [attempt %d]: %s",
-                serial,
-                model,
-                self._failure_counts[serial],
-                error_message,
+            _LOGGER.error(
+                "Action batch failed with exception: %s. Will retry in %d seconds.",
+                err,
+                self._refresh_interval,
+                exc_info=True,
             )
 
     @property
     def success_rate(self) -> float:
-        """Get the success rate of refresh commands.
+        """Get the success rate of batch refresh commands.
 
         Returns:
             Success rate as a percentage (0-100)
         """
-        if self._total_refresh_attempts == 0:
+        if self._batch_attempts == 0:
             return 100.0
 
-        return (self._successful_refreshes / self._total_refresh_attempts) * 100
+        return (self._batch_successes / self._batch_attempts) * 100
 
     @property
     def is_running(self) -> bool:

@@ -360,22 +360,22 @@ class TestTransformerRegistry:
 
     def test_get_transformer_mt(self):
         """Test getting MT transformer from registry."""
-        transformer = transformer_registry.get_transformer("MT")
+        transformer = transformer_registry.get_device_transformer("MT")
         assert isinstance(transformer, MTSensorDataTransformer)
 
     def test_get_transformer_mr(self):
         """Test getting MR transformer from registry."""
-        transformer = transformer_registry.get_transformer("MR")
+        transformer = transformer_registry.get_device_transformer("MR")
         assert isinstance(transformer, MRWirelessDataTransformer)
 
     def test_get_transformer_ms(self):
         """Test getting MS transformer from registry."""
-        transformer = transformer_registry.get_transformer("MS")
+        transformer = transformer_registry.get_device_transformer("MS")
         assert isinstance(transformer, MSSwitchDataTransformer)
 
     def test_get_transformer_organization(self):
         """Test getting Organization transformer from registry."""
-        transformer = transformer_registry.get_transformer("Organization")
+        transformer = transformer_registry.get_device_transformer("organization")
         assert isinstance(transformer, OrganizationDataTransformer)
 
     def test_transform_device_data_mt(self, load_json_fixture):

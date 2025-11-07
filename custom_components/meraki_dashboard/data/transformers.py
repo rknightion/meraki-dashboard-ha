@@ -276,29 +276,39 @@ class MTSensorDataTransformer(DataTransformer):
 
     def _extract_temperature_value(self, reading: dict[str, Any]) -> float | None:
         """Extract temperature value from API format."""
-        temp_data = reading.get("temperature", {})
+        temp_data = reading.get("temperature")
+        if temp_data is None or not isinstance(temp_data, dict):
+            return None
         return SafeExtractor.safe_float(temp_data.get("celsius"))
 
     def _extract_humidity_value(self, reading: dict[str, Any]) -> float | None:
         """Extract humidity value from API format."""
-        humidity_data = reading.get("humidity", {})
+        humidity_data = reading.get("humidity")
+        if humidity_data is None or not isinstance(humidity_data, dict):
+            return None
         return SafeExtractor.safe_float(humidity_data.get("relativePercentage"))
 
     def _extract_co2_value(self, reading: dict[str, Any]) -> float | None:
         """Extract CO2 value from API format."""
-        co2_data = reading.get("co2", {})
+        co2_data = reading.get("co2")
+        if co2_data is None or not isinstance(co2_data, dict):
+            return None
         return SafeExtractor.safe_float(co2_data.get("concentration"))
 
     def _extract_battery_value(self, reading: dict[str, Any]) -> float | None:
         """Extract battery value from API format."""
-        battery_data = reading.get("battery", {})
+        battery_data = reading.get("battery")
+        if battery_data is None or not isinstance(battery_data, dict):
+            return None
         return SafeExtractor.safe_float(battery_data.get("percentage"))
 
     def _extract_concentration_value(
         self, reading: dict[str, Any], metric: str
     ) -> float | None:
         """Extract concentration value for metrics like PM2.5, TVOC."""
-        metric_data = reading.get(metric, {})
+        metric_data = reading.get(metric)
+        if metric_data is None or not isinstance(metric_data, dict):
+            return None
         return SafeExtractor.safe_float(metric_data.get("concentration"))
 
     def _extract_noise_value(
@@ -306,8 +316,12 @@ class MTSensorDataTransformer(DataTransformer):
     ) -> float | None:
         """Extract noise value from API format."""
         # API returns noise as nested structure: {"ambient": {"level": 48}}
-        noise_data = reading.get("noise", {})
-        ambient_data = noise_data.get("ambient", {})
+        noise_data = reading.get("noise")
+        if noise_data is None or not isinstance(noise_data, dict):
+            return None
+        ambient_data = noise_data.get("ambient")
+        if ambient_data is None or not isinstance(ambient_data, dict):
+            return None
         return SafeExtractor.safe_float(ambient_data.get("level"))
 
     def _extract_power_value(
@@ -315,14 +329,18 @@ class MTSensorDataTransformer(DataTransformer):
     ) -> float | None:
         """Extract power value from API format."""
         # API returns power metrics with "draw" field in watts
-        power_data = reading.get(metric, {})
+        power_data = reading.get(metric)
+        if power_data is None or not isinstance(power_data, dict):
+            return None
         return SafeExtractor.safe_float(power_data.get("draw"))
 
     def _extract_electrical_value(
         self, reading: dict[str, Any], metric: str
     ) -> float | None:
         """Extract electrical metrics value from API format."""
-        metric_data = reading.get(metric, {})
+        metric_data = reading.get(metric)
+        if metric_data is None or not isinstance(metric_data, dict):
+            return None
 
         # Different metrics use different field names
         if metric in ["voltage", "frequency"]:
@@ -339,17 +357,23 @@ class MTSensorDataTransformer(DataTransformer):
 
     def _extract_iaq_value(self, reading: dict[str, Any]) -> float | None:
         """Extract indoor air quality score from API format."""
-        iaq_data = reading.get("indoorAirQuality", {})
+        iaq_data = reading.get("indoorAirQuality")
+        if iaq_data is None or not isinstance(iaq_data, dict):
+            return None
         return SafeExtractor.safe_float(iaq_data.get("score"))
 
     def _extract_motion_value(self, reading: dict[str, Any]) -> bool:
         """Extract motion sensor value from API format."""
-        motion_data = reading.get("motion", {})
+        motion_data = reading.get("motion")
+        if motion_data is None or not isinstance(motion_data, dict):
+            return False
         return bool(motion_data.get("detected", False))
 
     def _extract_binary_value(self, reading: dict[str, Any], metric: str) -> bool:
         """Extract binary sensor values from API format."""
-        metric_data = reading.get(metric, {})
+        metric_data = reading.get(metric)
+        if metric_data is None or not isinstance(metric_data, dict):
+            return False
 
         # Each binary sensor has specific field names
         if metric == "downstreamPower":

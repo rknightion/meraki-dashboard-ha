@@ -93,7 +93,7 @@
         },
         "data_description": {
           "enabled_device_types": "Choose which types of Meraki devices to monitor in your networks. You can select MT (Environmental Sensors), MR (Wireless Access Points), and/or MS (Switches). Only selected device types will appear in Home Assistant.",
-          "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending refresh commands every few seconds. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Note: May occasionally trigger rate limit warnings from Meraki API. Recommended: enabled (default).",
+          "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending batched refresh commands. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Uses Meraki's Action Batches API to minimize API usage. Recommended: enabled (default).",
           "mt_refresh_interval": "How often to send refresh commands to MT15/MT40 devices (1-60 seconds). Default is 30 seconds. Lower intervals provide faster updates but increase API usage and may trigger rate limits. Only applies when MT15/MT40 fast refresh is enabled above.",
           "update_api_key": "Check this box to update your Meraki Dashboard API key. You will be prompted to enter the new key in the next step.",
           "scan_interval": "How often to update sensor data (in seconds). Examples: 30 = 30s, 60 = 1 min, 300 = 5 min, 600 = 10 min. MT sensors can go as low as 1 second with fast refresh enabled. Other device types minimum is 60 seconds (1 minute).",

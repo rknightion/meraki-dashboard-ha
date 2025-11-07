@@ -90,7 +90,7 @@ class TestBinarySensorPlatformSetup:
         # Track added entities
         added_entities = []
 
-        async def async_add_entities(entities, update_before_add=False):
+        def async_add_entities(entities, update_before_add=False):
             added_entities.extend(entities)
 
         # Set up binary sensor platform
@@ -145,7 +145,7 @@ class TestBinarySensorPlatformSetup:
 
         added_entities = []
 
-        async def async_add_entities(entities, update_before_add=False):
+        def async_add_entities(entities, update_before_add=False):
             added_entities.extend(entities)
 
         await async_setup_entry(hass, config_entry, async_add_entities)
@@ -190,7 +190,7 @@ class TestBinarySensorPlatformSetup:
 
         added_entities = []
 
-        async def async_add_entities(entities, update_before_add=False):
+        def async_add_entities(entities, update_before_add=False):
             added_entities.extend(entities)
 
         await async_setup_entry(hass, config_entry, async_add_entities)

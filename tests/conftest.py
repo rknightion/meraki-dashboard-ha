@@ -207,7 +207,8 @@ def api_error_500():
 
     response_mock = MagicMock()
     response_mock.status_code = 500
-    error = APIError(metadata="500 Internal Server Error", response=response_mock)
+    metadata = {"tags": ["500 Internal Server Error"], "operation": "test_operation"}
+    error = APIError(metadata=metadata, response=response_mock)
     error.status = 500
     return error
 

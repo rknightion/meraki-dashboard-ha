@@ -44,7 +44,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/rknightion/meraki-dashboard-ha"
-Documentation = "https://rknightion.github.io/meraki-dashboard-ha"
+Documentation = "https://m7kni.io/meraki-dashboard-ha"
 Repository = "https://github.com/rknightion/meraki-dashboard-ha"
 "Bug Tracker" = "https://github.com/rknightion/meraki-dashboard-ha/issues"
 

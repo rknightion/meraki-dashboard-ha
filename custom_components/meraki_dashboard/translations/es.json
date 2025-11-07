@@ -1,0 +1,176 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Integración de Meraki Dashboard",
+        "description": "Conecta tu Cisco Meraki Dashboard con Home Assistant para supervisar tus dispositivos Meraki.\n\n**Necesitarás:**\n• Una clave API de Meraki Dashboard (genérala en: Organization > Settings > Dashboard API access)\n• Tu ID de organización de Meraki (lo encontrarás en la URL del Dashboard o en la configuración de la API)\n\nLa integración es compatible con MT (sensores ambientales), MR (puntos de acceso inalámbricos) y MS (conmutadores).",
+        "data": {
+          "api_key": "Clave API",
+          "organization_id": "ID de organización",
+          "base_url": "URL base (opcional)"
+        },
+        "data_description": {
+          "api_key": "Tu clave API de Meraki Dashboard. Genérala en: Dashboard > Organization > Settings > Dashboard API access. La clave API debe disponer de acceso de solo lectura completo a tu organización.",
+          "organization_id": "Tu ID de organización de Meraki. Puedes encontrarlo en la URL del Dashboard (p. ej., https://dashboard.meraki.com/o/XXXXX) o en la página de configuración de la API.",
+          "base_url": "Opcional: URL base personalizada de la API de Meraki. Déjala en blanco para usar la predeterminada (https://api.meraki.com/api/v1). Solo cámbiala si utilizas una instancia especial de Meraki o un entorno de pruebas."
+        }
+      },
+      "organization": {
+        "title": "Seleccionar organización",
+        "description": "Selecciona la organización de Meraki que quieres supervisar en Home Assistant.\n\nSi tu clave API está asociada a varias organizaciones, elige la que contiene las redes y dispositivos que deseas integrar.",
+        "data": {
+          "organization_id": "Organización",
+          "name": "Nombre de la integración"
+        },
+        "data_description": {
+          "organization_id": "La organización de Meraki que contiene tus redes y dispositivos. Todas las redes y dispositivos de esta organización estarán disponibles para su supervisión.",
+          "name": "Opcional: Nombre personalizado para esta instancia de la integración. Si no se proporciona, se usará el nombre de la organización. Útil si tienes varias organizaciones o quieres un nombre más descriptivo."
+        }
+      },
+      "device_selection": {
+        "title": "Configurar dispositivos y opciones",
+        "description": "Configura qué dispositivos Meraki supervisar y con qué frecuencia actualizar sus datos.\n\nSe encontraron {device_count} dispositivo(s) en tu organización.",
+        "data": {
+          "name": "Nombre de la integración",
+          "enabled_device_types": "Tipos de dispositivo a supervisar",
+          "selected_devices": "Seleccionar dispositivos específicos",
+          "scan_interval": "Intervalo de actualización",
+          "auto_discovery": "Habilitar descubrimiento automático",
+          "discovery_interval": "Intervalo de descubrimiento"
+        },
+        "data_description": {
+          "name": "Opcional: Nombre personalizado para esta instancia de la integración. Si no se indica, se utilizará el nombre de tu organización.",
+          "enabled_device_types": "Elige qué tipos de dispositivos Meraki quieres supervisar. Puedes seleccionar varios tipos: MT (sensores ambientales), MR (puntos de acceso inalámbricos) y MS (conmutadores).",
+          "selected_devices": "Opcional: Selecciona dispositivos específicos para supervisar. Déjalo vacío para supervisar automáticamente todos los dispositivos de los tipos seleccionados y descubrir nuevos cuando se añadan.",
+          "scan_interval": "Frecuencia con la que se obtienen datos actualizados de tus dispositivos (en minutos). Los sensores MT se actualizan por defecto cada 0,5 minutos (30 segundos) para admitir la función de actualización rápida MT15/MT40. Otros tipos de dispositivo se actualizan por defecto cada 5-10 minutos.",
+          "auto_discovery": "Cuando está habilitado, la integración descubrirá y añadirá automáticamente nuevos dispositivos a medida que se incorporen a tus redes Meraki. Recomendado: habilitado.",
+          "discovery_interval": "Frecuencia con la que se buscan nuevos dispositivos cuando el descubrimiento automático está habilitado (en minutos). El valor predeterminado es 60 minutos. Valores inferiores encuentran dispositivos más rápido pero aumentan el uso de la API."
+        }
+      },
+      "reauth": {
+        "title": "Volver a autenticar Meraki Dashboard",
+        "description": "Tu clave API de Meraki Dashboard ha caducado o ya no es válida.\n\nProporciona una clave API actualizada para restablecer la conectividad. Puedes generar una nueva clave API en tu Meraki Dashboard en Organization > Settings > Dashboard API access.",
+        "data": {
+          "api_key": "Nueva clave API"
+        },
+        "data_description": {
+          "api_key": "Tu nueva clave API de Meraki Dashboard. Sustituirá a la clave caducada o no válida. La integración se reconectará automáticamente cuando se valide la nueva clave."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Clave API no válida. Verifica que tu clave API sea correcta y no haya caducado.",
+      "invalid_organization": "ID de organización no válido. Comprueba el ID de organización y asegúrate de que tu clave API tenga acceso.",
+      "cannot_connect": "No se pudo conectar con la API de Meraki. Verifica tu conexión a Internet e inténtalo de nuevo.",
+      "unknown": "Se produjo un error inesperado. Consulta los registros de Home Assistant para más detalles."
+    },
+    "abort": {
+      "already_configured": "Esta organización de Meraki ya está configurada en Home Assistant. No puedes añadir la misma organización dos veces.",
+      "reauth_successful": "¡La reautenticación se completó correctamente! Se ha restablecido la conexión con Meraki Dashboard.",
+      "api_key_updated": "¡Clave API actualizada correctamente! La integración se ha recargado con las nuevas credenciales."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de Meraki Dashboard",
+        "description": "Configura los ajustes de tu integración de Meraki Dashboard.\n\n**Actualización rápida MT15/MT40:**\nEsta función envía comandos de actualización a los sensores MT15 y MT40 para obtener datos con más frecuencia que el intervalo predeterminado de 20 minutos de Meraki. Nota: puede generar avisos ocasionales de límites de velocidad en la API de Meraki.\n\n**Redes configuradas:**\n{hub_list}\n\n{hub_settings_explanation}",
+        "data": {
+          "enabled_device_types": "Tipos de dispositivo a supervisar",
+          "mt_refresh_enabled": "Habilitar actualización rápida MT15/MT40",
+          "mt_refresh_interval": "Intervalo de actualización MT",
+          "update_api_key": "Actualizar clave API",
+          "scan_interval": "Intervalo de actualización",
+          "discovery_interval": "Intervalo de descubrimiento",
+          "auto_discovery": "Descubrimiento automático",
+          "selected_devices": "Dispositivos seleccionados",
+          "static_data_interval": "Intervalo de datos de la organización",
+          "semi_static_data_interval": "Intervalo de configuración de red",
+          "dynamic_data_interval": "Intervalo de métricas de los dispositivos",
+          "hub_auto_discovery_*": "Descubrimiento automático",
+          "hub_scan_interval_*": "Intervalo de actualización (segundos)",
+          "hub_discovery_interval_*": "Intervalo de descubrimiento"
+        },
+        "data_description": {
+          "enabled_device_types": "Elige qué tipos de dispositivos Meraki supervisar en tus redes. Puedes seleccionar MT (sensores ambientales), MR (puntos de acceso inalámbricos) y/o MS (conmutadores). Solo los tipos seleccionados aparecerán en Home Assistant.",
+          "mt_refresh_enabled": "Habilita actualizaciones rápidas para los sensores ambientales MT15 y MT40 enviando comandos de actualización cada pocos segundos. Esto permite datos casi en tiempo real en lugar de esperar el intervalo predeterminado de 20 minutos de Meraki. Nota: puede generar avisos ocasionales de límite de velocidad en la API de Meraki. Recomendado: habilitado (predeterminado).",
+          "mt_refresh_interval": "Frecuencia con la que se envían comandos de actualización a los dispositivos MT15/MT40 (1-60 segundos). El valor predeterminado es 30 segundos. Intervalos más bajos ofrecen actualizaciones más rápidas pero aumentan el uso de la API y pueden activar límites de velocidad. Solo se aplica cuando la actualización rápida MT15/MT40 está habilitada arriba.",
+          "update_api_key": "Marca esta casilla para actualizar tu clave API de Meraki Dashboard. Se te pedirá la nueva clave en el siguiente paso.",
+          "scan_interval": "Frecuencia con la que se actualizan los datos de los sensores (en segundos). Ejemplos: 30 = 30 s, 60 = 1 min, 300 = 5 min, 600 = 10 min. Los sensores MT pueden llegar hasta 1 segundo con la actualización rápida habilitada. Otros tipos de dispositivo tienen un mínimo de 60 segundos (1 minuto).",
+          "discovery_interval": "Frecuencia con la que se buscan nuevos dispositivos en tus redes (en minutos). El valor predeterminado es 60 minutos. Valores más bajos encuentran dispositivos más rápido pero aumentan el uso de la API.",
+          "auto_discovery": "Cuando está habilitado, descubre y añade automáticamente nuevos dispositivos a medida que aparecen en tus redes Meraki. Recomendado: habilitado.",
+          "selected_devices": "Opcional: Selecciona dispositivos específicos para supervisar. Déjalo vacío para supervisar todos los dispositivos de los tipos habilitados.",
+          "static_data_interval": "Frecuencia con la que se actualiza la información a nivel de organización, como licencias y datos de administradores (en minutos). Estos datos cambian rara vez, por lo que se recomiendan intervalos más largos. Predeterminado: 240 minutos (4 horas).",
+          "semi_static_data_interval": "Frecuencia con la que se actualizan la configuración de red y el inventario de dispositivos (en minutos). Incluye configuraciones de red y modelos de dispositivo. Predeterminado: 60 minutos (1 hora).",
+          "dynamic_data_interval": "Frecuencia con la que se actualizan las lecturas en tiempo real de los sensores y las métricas de los dispositivos (en minutos). Incluye temperatura, humedad, conteo de clientes, etc. Predeterminado: 5-10 minutos según el tipo de dispositivo."
+        }
+      },
+      "api_key": {
+        "title": "Actualizar clave API",
+        "description": "Introduce tu nueva clave API de Meraki Dashboard. Puedes generar una nueva clave API en tu Meraki Dashboard en Organization > Settings > Dashboard API access.\n\nLa integración se recargará automáticamente después de actualizar la clave.",
+        "data": {
+          "api_key": "Clave API de Meraki Dashboard"
+        },
+        "data_description": {
+          "api_key": "Tu clave API de Meraki Dashboard. Esta clave se utiliza para autenticar todas las solicitudes a la API de Meraki. Mantén esta clave segura y no la compartas."
+        }
+      },
+      "hub_intervals": {
+        "title": "Configuración específica de la red",
+        "description": "Configura los intervalos de actualización y las opciones de descubrimiento para cada red de forma individual.\n\nCada red (hub) gestiona dispositivos de un tipo específico (MT, MR o MS) y puede tener su propia configuración.\n\n**Nota:** Los intervalos de los sensores MT se limitan a 20 minutos (1200 segundos) para garantizar la captura completa de datos históricos desde la nube de Meraki.",
+        "data": {
+          "hub_scan_intervals": "Intervalos de actualización de la red",
+          "hub_discovery_intervals": "Intervalos de descubrimiento de la red",
+          "hub_auto_discovery": "Configuración de descubrimiento automático de la red"
+        },
+        "data_description": {
+          "hub_scan_intervals": "Frecuencia con la que se obtienen datos de los dispositivos en cada red (en segundos). Valores más bajos proporcionan actualizaciones más frecuentes pero aumentan el uso de la API.",
+          "hub_discovery_intervals": "Frecuencia con la que se buscan nuevos dispositivos en cada red (en segundos). Normalmente se configura con un valor superior al de los intervalos de actualización.",
+          "hub_auto_discovery": "Habilita o deshabilita el descubrimiento automático de dispositivos para cada red individualmente."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Clave API no válida. Verifica que tu clave API sea correcta y no haya caducado. Puedes generar una nueva clave API en tu Meraki Dashboard en Organization > Settings > Dashboard API access.",
+      "invalid_permissions": "La clave API no tiene los permisos necesarios. Asegúrate de que tu clave API tenga acceso de lectura completo a tu organización de Meraki. Genera una nueva clave API con los permisos adecuados si es necesario.",
+      "cannot_connect": "No se pudo conectar con la API de Meraki. Verifica tu conexión a Internet y asegúrate de que la API de Meraki sea accesible. Si usas una URL base personalizada, confirma que sea correcta.",
+      "no_organizations": "No se encontraron organizaciones para esta clave API. Verifica que tu clave API esté asociada a una organización de Meraki y cuente con los permisos necesarios.",
+      "unknown": "Se produjo un error inesperado al conectar con la API de Meraki. Consulta los registros de Home Assistant para más detalles e inténtalo de nuevo."
+    },
+    "abort": {
+      "api_key_updated": "¡Clave API actualizada correctamente! La integración se ha recargado con las nuevas credenciales."
+    }
+  },
+  "issues": {
+    "api_key_expired": {
+      "title": "Clave API de Meraki caducada",
+      "description": "Tu clave API de Meraki Dashboard para \"{config_entry_title}\" ha caducado o no es válida. Reconfigura la integración para actualizar tu clave API."
+    },
+    "network_access_lost": {
+      "title": "Acceso a la red perdido",
+      "description": "Se perdió el acceso a la red \"{network_name}\" en \"{config_entry_title}\". Esto puede deberse a cambios en la configuración de la red o a problemas temporales de conectividad. Revisa la configuración de tu red en Meraki Dashboard."
+    },
+    "device_discovery_failed": {
+      "title": "Error en el descubrimiento de dispositivos",
+      "description": "No se pudieron descubrir dispositivos en el hub \"{hub_name}\" para \"{config_entry_title}\". Esto puede deberse a límites de la API o a problemas temporales de red. El descubrimiento de dispositivos se volverá a intentar automáticamente."
+    }
+  },
+  "services": {
+    "update_hub_data": {
+      "name": "Actualizar datos del hub",
+      "description": "Forzar la actualización inmediata de datos para un hub específico con recopilación de datos históricos"
+    },
+    "discover_devices": {
+      "name": "Descubrir dispositivos",
+      "description": "Buscar nuevos dispositivos en un hub específico"
+    },
+    "update_all_hubs": {
+      "name": "Actualizar todos los hubs",
+      "description": "Forzar la actualización inmediata de datos para todos los hubs con recopilación de datos históricos"
+    },
+    "discover_all_devices": {
+      "name": "Descubrir todos los dispositivos",
+      "description": "Buscar nuevos dispositivos en todas las redes"
+    }
+  }
+}

@@ -20,7 +20,7 @@ def mock_mr_events():
     return [
         {
             "occurredAt": "2025-07-04T14:27:45.671663Z",
-            "networkId": "L_676102894059017611",
+            "networkId": "L_676102894059012345",
             "type": "wpa_auth",
             "description": "WPA authentication",
             "clientId": "k91fe58",
@@ -35,7 +35,7 @@ def mock_mr_events():
         },
         {
             "occurredAt": "2025-07-04T14:27:45.665867Z",
-            "networkId": "L_676102894059017611",
+            "networkId": "L_676102894059012345",
             "type": "association",
             "description": "802.11 association",
             "clientId": "k91fe58",
@@ -50,7 +50,7 @@ def mock_mr_events():
         },
         {
             "occurredAt": "2025-07-04T14:24:01.765568Z",
-            "networkId": "L_676102894059017611",
+            "networkId": "L_676102894059012345",
             "type": "disassociation",
             "description": "802.11 disassociation",
             "clientId": "k91fe58",
@@ -80,7 +80,7 @@ def mock_ms_events():
     return [
         {
             "occurredAt": "2025-07-04T10:50:27.545181Z",
-            "networkId": "L_676102894059017611",
+            "networkId": "L_676102894059012345",
             "type": "mac_flap_detected",
             "description": "MAC address flapping",
             "clientId": None,
@@ -101,7 +101,7 @@ def mock_ms_events():
         },
         {
             "occurredAt": "2025-07-04T10:49:20.600722Z",
-            "networkId": "L_676102894059017611",
+            "networkId": "L_676102894059012345",
             "type": "mac_flap_detected",
             "description": "MAC address flapping",
             "clientId": None,
@@ -280,7 +280,7 @@ async def test_duplicate_event_filtering(hass: HomeAssistant, mock_mr_events):
     # Third fetch with new event
     new_event = {
         "occurredAt": "2025-07-04T14:30:00.000000Z",
-        "networkId": "L_676102894059017611",
+        "networkId": "L_676102894059012345",
         "type": "association",
         "description": "802.11 association",
         "clientId": "k91fe59",
