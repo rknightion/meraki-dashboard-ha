@@ -51,15 +51,9 @@ jobs:
           VERSION="${{ needs.release-please.outputs.version }}"
           echo "Creating zip for version ${VERSION}"
 
-          # Create a temporary directory for the integration
-          mkdir -p /tmp/meraki_dashboard
-
-          # Copy integration files
-          cp -r custom_components/meraki_dashboard /tmp/
-
-          # Create the zip file
-          cd /tmp
-          zip -r "meraki_dashboard.zip" meraki_dashboard/
+          # Create zip from inside the integration directory
+          cd "${{ github.workspace }}/custom_components/meraki_dashboard"
+          zip -r "meraki_dashboard.zip" ./ -x "*.pyc" "*/__pycache__/*" "*/.DS_Store"
 
           # Move zip back to workspace
           mv "meraki_dashboard.zip" "${GITHUB_WORKSPACE}/"
