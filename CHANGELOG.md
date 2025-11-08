@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.3](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.32.2...v0.32.3) (2025-11-08)
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency homeassistant-stubs to v2025.11.1 ([#164](https://github.com/rknightion/meraki-dashboard-ha/issues/164)) ([c0264f0](https://github.com/rknightion/meraki-dashboard-ha/commit/c0264f0c70257b546d0f4e0eff00e97e08373dc2))
+
+
+### Code Refactoring
+
+* **ci:** fix zip creation process in release workflow ([43fcd0a](https://github.com/rknightion/meraki-dashboard-ha/commit/43fcd0ab38d178e860b10ae4a51ba4f425451c07))
+
 ## [0.32.2](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.32.1...v0.32.2) (2025-11-08)
 
 
