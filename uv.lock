@@ -745,15 +745,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/f1/2a/8c3ac3d8bc94e6de8
 
 [[package]]
 name = "dbus-fast"
-version = "2.44.5"
+version = "2.44.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/1b/f9/3952e3514244417a33643087bc5dc134aff546606d5f66f796018cb7fdfc/dbus_fast-2.44.5.tar.gz", hash = "sha256:e9d738e3898e2d505d7f2d5d21949bd705d7cd3d7240dda5481bb1c5fd5e3da8", size = 72474, upload-time = "2025-10-04T20:05:34.741Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/54/cbe8df6240b7881d2da3176f7717cf8d127700f5d2d4f10253548be48da6/dbus_fast-2.44.6.tar.gz", hash = "sha256:37abdba63ad017dcfa4b7d11078ea47ff2831a61bc8bf15eabd40594b9d573b4", size = 72475, upload-time = "2025-11-08T06:30:53.838Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/ad/17eadd06e533e2828b0f9b16da25b11d47629d4e2da3e817fa4cdffb96b5/dbus_fast-2.44.5-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:44d3232fd70f4deffa509b9aec8b1143895382554cda6513c34f70fa0b2ccb0c", size = 868405, upload-time = "2025-10-04T20:15:16.056Z" },
-    { url = "https://files.pythonhosted.org/packages/24/29/71d5a77e04a7a44ff46a6adaeaaf1f3cdb0b1ac3486e05cf079724f2799e/dbus_fast-2.44.5-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0b247075d035c4f33a24ee35a81c1313c46a7712ebad959fa8850654d3d6d64f", size = 948188, upload-time = "2025-10-04T20:15:17.847Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/24/39261f09d4fef3a57b45b71842cbdfc0a532b259236c1347fc2df3629936/dbus_fast-2.44.5-cp313-cp313-manylinux_2_36_x86_64.whl", hash = "sha256:b5fea7b5ea19f83220752c8560c3b4c3b9ee79976cc02dec7be21f57c01c1338", size = 891815, upload-time = "2025-10-04T20:05:32.868Z" },
-    { url = "https://files.pythonhosted.org/packages/91/48/685e3e846b8f7a7e9dec679763fde808c2443e6201a2c6eab45b48dec456/dbus_fast-2.44.5-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:8546604aebd57f3928647b0e1ea32912c80ddcf7119a35dd57606bf3a38b8571", size = 873356, upload-time = "2025-10-04T20:15:19.405Z" },
-    { url = "https://files.pythonhosted.org/packages/3d/ff/9798912b8c6eb6dac6504dd1db4391c7b48ed21123ea55832c754ba92dd7/dbus_fast-2.44.5-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:46ca373a4eb8f036597d25787f4410af7822ab37c5db7c44ac4bc18bb25b9d6f", size = 957077, upload-time = "2025-10-04T20:15:21.608Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/8c/f2fd1f77ee6b957b68941fdfba96d13996478bcf55054cb6f18238172158/dbus_fast-2.44.6-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:0d719b9b9b25dc8431a28ba71132e3b6b9442cf9d65c765b8906970f198c2cfd", size = 868408, upload-time = "2025-11-08T06:40:20.138Z" },
+    { url = "https://files.pythonhosted.org/packages/45/33/cb954b355781e927b36c9d6a5eb65510120bbb90915368d2a9fe023f2ef6/dbus_fast-2.44.6-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6ca8043afe5a5559758a30965874fac2b4b84043d09f059d3c2d13604487a629", size = 948186, upload-time = "2025-11-08T06:40:21.713Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/80/af73662495454b4f3a1e7239e607ae8a8b329f8d577fefdd7cd2d07338ab/dbus_fast-2.44.6-cp313-cp313-manylinux_2_36_x86_64.whl", hash = "sha256:e8bebc0bd751bba529fb7dacbed0a201fcbd5f208223f8aef99bb98da924a502", size = 891814, upload-time = "2025-11-08T06:30:52.127Z" },
+    { url = "https://files.pythonhosted.org/packages/77/aa/e0a100290d936b8743ab8b502a0d7424e5eb4f9895e7d18a27c621a05497/dbus_fast-2.44.6-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:44d195e1f155bc2bc55e598fa6ede48acc69f41d95dca48d92c8bf9a4e38a60a", size = 873354, upload-time = "2025-11-08T06:40:23.396Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/79/b20e554bfdae48f3cc6c56dfa0ed55432c3202dd7581e3e3ce3db9a0001e/dbus_fast-2.44.6-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:29d57c90213246a10384b1976d55b0c222478648e8601cf1067f632c70f5f744", size = 957073, upload-time = "2025-11-08T06:40:25.008Z" },
 ]
 
 [[package]]
