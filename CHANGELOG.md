@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.4](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.32.3...v0.32.4) (2025-11-15)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#167](https://github.com/rknightion/meraki-dashboard-ha/issues/167)) ([48a1af0](https://github.com/rknightion/meraki-dashboard-ha/commit/48a1af01ec11e724b020a35a9b14c04315feb338))
+* **deps:** update actions/dependency-review-action action to v4.8.2 ([#169](https://github.com/rknightion/meraki-dashboard-ha/issues/169)) ([d4a04a3](https://github.com/rknightion/meraki-dashboard-ha/commit/d4a04a38124770e172de8126e0d1126423d6b3e2))
+* **deps:** update astral-sh/setup-uv action to v7.1.3 ([#170](https://github.com/rknightion/meraki-dashboard-ha/issues/170)) ([36799a2](https://github.com/rknightion/meraki-dashboard-ha/commit/36799a280adae6bf91a95cc4ab236a183f6348bf))
+* **deps:** update dependency homeassistant-stubs to v2025.11.2 ([#174](https://github.com/rknightion/meraki-dashboard-ha/issues/174)) ([5bd8162](https://github.com/rknightion/meraki-dashboard-ha/commit/5bd8162e207eacc7d6048726dfa755f6d2361b28))
+* **deps:** update github/codeql-action action to v4.31.3 ([#172](https://github.com/rknightion/meraki-dashboard-ha/issues/172)) ([faf682a](https://github.com/rknightion/meraki-dashboard-ha/commit/faf682aea77e689ace7821b42ed768308c9169cd))
+* **deps:** update github/codeql-action digest to 014f16e ([#171](https://github.com/rknightion/meraki-dashboard-ha/issues/171)) ([432ba25](https://github.com/rknightion/meraki-dashboard-ha/commit/432ba25417d1649ccc089be3163bd2a41949bb83))
+* **deps:** update peter-evans/repository-dispatch digest to 28959ce ([#173](https://github.com/rknightion/meraki-dashboard-ha/issues/173)) ([c0797c7](https://github.com/rknightion/meraki-dashboard-ha/commit/c0797c7a2a0f9fc7d5ea54ec9fb99ca72e3b201b))
+
 ## [0.32.3](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.32.2...v0.32.3) (2025-11-08)
 
 
