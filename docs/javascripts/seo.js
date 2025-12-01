@@ -1,4 +1,12 @@
-/* SEO enhancements for Meraki Dashboard Exporter documentation */
+/* SEO enhancements for Meraki Dashboard Home Assistant Integration */
+
+const SITE = {
+  name: 'Meraki Dashboard Home Assistant Integration',
+  description: 'Monitor Cisco Meraki environmental sensors, Wi-Fi, and switch infrastructure directly in Home Assistant.',
+  url: 'https://m7kni.io/meraki-dashboard-ha/',
+  image: 'https://m7kni.io/meraki-dashboard-ha/assets/social-card.png',
+  twitter: '@rknightion',
+};
 
 document.addEventListener('DOMContentLoaded', function() {
   addStructuredData();
@@ -8,176 +16,131 @@ document.addEventListener('DOMContentLoaded', function() {
   addCanonicalURL();
 });
 
-// Add JSON-LD structured data
 function addStructuredData() {
   const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Meraki Dashboard Exporter",
-    "applicationCategory": "Network Monitoring Software",
-    "operatingSystem": "Linux, Docker",
-    "description": "A high-performance Prometheus exporter for Cisco Meraki Dashboard API metrics with comprehensive monitoring capabilities and OpenTelemetry support",
-    "url": "https:/m7kni.io/meraki-dashboard-exporter/",
-    "downloadUrl": "https://github.com/rknightion/meraki-dashboard-exporter",
-    "softwareVersion": "latest",
-    "programmingLanguage": "Python",
-    "license": "https://github.com/rknightion/meraki-dashboard-exporter/blob/main/LICENSE",
-    "author": {
-      "@type": "Person",
-      "name": "Rob Knighton",
-      "url": "https://github.com/rknightion"
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: SITE.name,
+    applicationCategory: 'Home Automation Software',
+    operatingSystem: 'Home Assistant',
+    description: SITE.description,
+    url: SITE.url,
+    downloadUrl: 'https://github.com/rknightion/meraki-dashboard-ha',
+    softwareVersion: 'latest',
+    programmingLanguage: 'Python',
+    license: 'https://github.com/rknightion/meraki-dashboard-ha/blob/main/LICENSE',
+    author: {
+      '@type': 'Person',
+      name: 'Rob Knighton',
+      url: 'https://github.com/rknightion',
     },
-    "maintainer": {
-      "@type": "Person",
-      "name": "Rob Knighton",
-      "url": "https://github.com/rknightion"
+    maintainer: {
+      '@type': 'Person',
+      name: 'Rob Knighton',
+      url: 'https://github.com/rknightion',
     },
-    "codeRepository": "https://github.com/rknightion/meraki-dashboard-exporter",
-    "programmingLanguage": [
-      "Python",
-      "Docker",
-      "YAML"
+    codeRepository: 'https://github.com/rknightion/meraki-dashboard-ha',
+    runtimePlatform: ['Home Assistant'],
+    applicationSubCategory: [
+      'Cisco Meraki',
+      'Environmental Monitoring',
+      'Network Monitoring',
+      'Home Assistant Integration',
     ],
-    "runtimePlatform": [
-      "Docker",
-      "Kubernetes",
-      "Linux"
-    ],
-    "applicationSubCategory": [
-      "Network Monitoring",
-      "Prometheus Exporter",
-      "Cisco Meraki",
-      "Observability"
-    ],
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
     },
-    "screenshot": "https:/m7kni.io/meraki-dashboard-exporter/assets/dashboard-preview.png",
-    "featureList": [
-      "Multi-tier metric collection system",
-      "27+ specialized collectors for Meraki devices",
-      "OpenTelemetry support",
-      "Docker container deployment",
-      "Comprehensive error handling",
-      "Rate limiting and API optimization",
-      "Production-ready monitoring"
-    ]
+    screenshot: SITE.image,
+    featureList: [
+      'Fast MT sensor updates for Meraki environmental hardware',
+      'Network performance metrics for MR and MS devices',
+      'Per-device polling tuned for Meraki hardware',
+      'Multi-organisation support with network grouping',
+      'Native Home Assistant entities and services',
+    ],
   };
 
-  // Add documentation-specific structured data
   const docData = {
-    "@context": "https://schema.org",
-    "@type": "TechArticle",
-    "headline": document.title,
-    "description": document.querySelector('meta[name="description"]')?.content || "Meraki Dashboard Exporter documentation",
-    "url": window.location.href,
-    "datePublished": document.querySelector('meta[name="date"]')?.content,
-    "dateModified": document.querySelector('meta[name="git-revision-date-localized"]')?.content,
-    "author": {
-      "@type": "Person",
-      "name": "Rob Knighton"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Meraki Dashboard Exporter",
-      "url": "https:/m7kni.io/meraki-dashboard-exporter/"
-    },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": window.location.href
-    },
-    "articleSection": getDocumentationSection(),
-    "keywords": getPageKeywords(),
-    "about": {
-      "@type": "SoftwareApplication",
-      "name": "Meraki Dashboard Exporter"
-    }
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: document.title,
+    description: document.querySelector('meta[name=\"description\"]')?.content || SITE.description,
+    url: window.location.href,
+    datePublished: document.querySelector('meta[name=\"date\"]')?.content,
+    dateModified: document.querySelector('meta[name=\"git-revision-date-localized\"]')?.content,
+    author: { '@type': 'Person', name: 'Rob Knighton' },
+    publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': window.location.href },
+    articleSection: getDocumentationSection(),
+    keywords: getPageKeywords(),
+    about: { '@type': 'SoftwareApplication', name: SITE.name },
   };
 
-  // Insert structured data
-  const script1 = document.createElement('script');
-  script1.type = 'application/ld+json';
-  script1.textContent = JSON.stringify(structuredData);
-  document.head.appendChild(script1);
-
-  const script2 = document.createElement('script');
-  script2.type = 'application/ld+json';
-  script2.textContent = JSON.stringify(docData);
-  document.head.appendChild(script2);
+  addJsonLd(structuredData);
+  addJsonLd(docData);
 }
 
-// Enhance existing meta tags
+function addJsonLd(data) {
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(data);
+  document.head.appendChild(script);
+}
+
 function enhanceMetaTags() {
-  // Add robots meta if not present
-  if (!document.querySelector('meta[name="robots"]')) {
+  if (!document.querySelector('meta[name=\"robots\"]')) {
     addMetaTag('name', 'robots', 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1');
   }
 
-  // Add language meta
   addMetaTag('name', 'language', 'en');
-
-  // Add content type
   addMetaTag('http-equiv', 'Content-Type', 'text/html; charset=utf-8');
 
-  // Add viewport if not present (should be handled by Material theme)
-  if (!document.querySelector('meta[name="viewport"]')) {
-    addMetaTag('name', 'viewport', 'width=device-width, initial-scale=1');
-  }
-
-  // Add keywords based on page content
   const keywords = getPageKeywords();
   if (keywords) {
     addMetaTag('name', 'keywords', keywords);
   }
 
-  // Add article tags for documentation pages
   if (isDocumentationPage()) {
-    addMetaTag('name', 'article:tag', 'prometheus');
-    addMetaTag('name', 'article:tag', 'monitoring');
     addMetaTag('name', 'article:tag', 'cisco-meraki');
+    addMetaTag('name', 'article:tag', 'home-assistant');
+    addMetaTag('name', 'article:tag', 'environmental-sensors');
     addMetaTag('name', 'article:tag', 'network-monitoring');
   }
 }
 
-// Add Open Graph tags
 function addOpenGraphTags() {
-  const title = document.title || 'Meraki Dashboard Exporter';
-  const description = document.querySelector('meta[name="description"]')?.content ||
-    'High-performance Prometheus exporter for Cisco Meraki Dashboard API metrics';
+  const title = document.title || SITE.name;
+  const description = document.querySelector('meta[name=\"description\"]')?.content || SITE.description;
   const url = window.location.href;
-  const siteName = 'Meraki Dashboard Exporter Documentation';
 
   addMetaTag('property', 'og:type', 'website');
-  addMetaTag('property', 'og:site_name', siteName);
+  addMetaTag('property', 'og:site_name', SITE.name);
   addMetaTag('property', 'og:title', title);
   addMetaTag('property', 'og:description', description);
   addMetaTag('property', 'og:url', url);
   addMetaTag('property', 'og:locale', 'en_US');
-  addMetaTag('property', 'og:image', 'https:/m7kni.io/meraki-dashboard-exporter/assets/og-image.png');
+  addMetaTag('property', 'og:image', SITE.image);
   addMetaTag('property', 'og:image:width', '1200');
   addMetaTag('property', 'og:image:height', '630');
-  addMetaTag('property', 'og:image:alt', 'Meraki Dashboard Exporter - Prometheus metrics for Cisco Meraki');
+  addMetaTag('property', 'og:image:alt', `${SITE.name} documentation social preview`);
 }
 
-// Add Twitter Card tags
 function addTwitterCardTags() {
-  const title = document.title || 'Meraki Dashboard Exporter';
-  const description = document.querySelector('meta[name="description"]')?.content ||
-    'High-performance Prometheus exporter for Cisco Meraki Dashboard API metrics';
+  const title = document.title || SITE.name;
+  const description = document.querySelector('meta[name=\"description\"]')?.content || SITE.description;
 
   addMetaTag('name', 'twitter:card', 'summary_large_image');
   addMetaTag('name', 'twitter:title', title);
   addMetaTag('name', 'twitter:description', description);
-  addMetaTag('name', 'twitter:image', 'https:/m7kni.io/meraki-dashboard-exporter/assets/twitter-card.png');
-  addMetaTag('name', 'twitter:creator', '@rknightion');
-  addMetaTag('name', 'twitter:site', '@rknightion');
+  addMetaTag('name', 'twitter:image', SITE.image);
+  addMetaTag('name', 'twitter:creator', SITE.twitter);
+  addMetaTag('name', 'twitter:site', SITE.twitter);
 }
 
-// Add canonical URL
 function addCanonicalURL() {
-  if (!document.querySelector('link[rel="canonical"]')) {
+  if (!document.querySelector('link[rel=\"canonical\"]')) {
     const canonical = document.createElement('link');
     canonical.rel = 'canonical';
     canonical.href = window.location.href;
@@ -185,9 +148,8 @@ function addCanonicalURL() {
   }
 }
 
-// Helper functions
 function addMetaTag(attribute, name, content) {
-  if (!document.querySelector(`meta[${attribute}="${name}"]`)) {
+  if (!document.querySelector(`meta[${attribute}=\"${name}\"]`)) {
     const meta = document.createElement('meta');
     meta.setAttribute(attribute, name);
     meta.content = content;
@@ -197,41 +159,31 @@ function addMetaTag(attribute, name, content) {
 
 function getDocumentationSection() {
   const path = window.location.pathname;
-  if (path.includes('/metrics/')) return 'Metrics Reference';
-  if (path.includes('/collectors/')) return 'Collector Reference';
-  if (path.includes('/config/')) return 'Configuration';
-  if (path.includes('/deployment/')) return 'Deployment';
-  if (path.includes('/adr/')) return 'Architecture Decisions';
-  if (path.includes('/patterns/')) return 'Development Patterns';
+  if (path.includes('/getting-started')) return 'Getting Started';
+  if (path.includes('/device-support')) return 'Device Support';
+  if (path.includes('/supported-entities')) return 'Entities';
+  if (path.includes('/development')) return 'Development';
+  if (path.includes('/api-optimization')) return 'API Optimization';
+  if (path.includes('/faq')) return 'FAQ';
   return 'Documentation';
 }
 
 function getPageKeywords() {
   const path = window.location.pathname;
-  const title = document.title.toLowerCase();
   const content = document.body.textContent.toLowerCase();
 
-  let keywords = ['meraki', 'prometheus', 'exporter', 'monitoring', 'cisco'];
+  const keywords = ['meraki', 'home assistant', 'integration', 'sensors', 'network monitoring', 'cisco'];
 
-  // Add path-specific keywords
-  if (path.includes('/metrics/')) keywords.push('metrics', 'telemetry', 'observability');
-  if (path.includes('/collectors/')) keywords.push('collectors', 'data collection', 'api');
-  if (path.includes('/config/')) keywords.push('configuration', 'environment variables', 'setup');
-  if (path.includes('/deployment/')) keywords.push('deployment', 'docker', 'kubernetes', 'production');
-  if (path.includes('/getting-started/')) keywords.push('installation', 'quick start', 'tutorial');
-
-  // Add device type keywords if mentioned
-  if (content.includes('wireless') || content.includes('access point')) keywords.push('wireless', 'access-points', 'mr');
-  if (content.includes('switch')) keywords.push('switches', 'ms');
-  if (content.includes('security appliance')) keywords.push('security-appliances', 'mx');
-  if (content.includes('sensor')) keywords.push('sensors', 'mt', 'environmental');
-  if (content.includes('camera')) keywords.push('cameras', 'mv', 'security');
-  if (content.includes('cellular')) keywords.push('cellular', 'mg', 'gateway');
+  if (path.includes('/device-support')) keywords.push('device compatibility', 'hardware support');
+  if (path.includes('/supported-entities')) keywords.push('entities', 'sensor entities', 'binary sensors');
+  if (path.includes('/api-optimization')) keywords.push('api rate limits', 'polling intervals', 'performance');
+  if (content.includes('mt1') || content.includes('mt15') || content.includes('mt40')) keywords.push('environmental sensors', 'mt series');
+  if (content.includes('mr') || content.includes('ssid')) keywords.push('wireless', 'mr access points');
+  if (content.includes('ms ')) keywords.push('switches', 'ms switches');
 
   return keywords.join(', ');
 }
 
 function isDocumentationPage() {
-  return !window.location.pathname.endsWith('/') ||
-         window.location.pathname.includes('/docs/');
+  return !window.location.pathname.endsWith('/') || window.location.pathname.includes('/docs/');
 }

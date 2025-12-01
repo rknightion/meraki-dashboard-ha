@@ -3,14 +3,15 @@ Allow: /
 
 # Encourage indexing of documentation
 Allow: /getting-started/
-Allow: /config/
-Allow: /deployment-operations/
-Allow: /integration-dashboards/
-Allow: /metrics/
-Allow: /collectors/
-Allow: /extending-collectors/
-Allow: /adr/
-Allow: /patterns/
+Allow: /faq/
+Allow: /device-support/
+Allow: /supported-entities/
+Allow: /architecture/
+Allow: /development/
+Allow: /api-optimization/
+Allow: /naming-conventions/
+Allow: /contributing/
+Allow: /changelog/
 
 # Static assets
 Allow: /assets/

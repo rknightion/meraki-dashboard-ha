@@ -2,6 +2,7 @@
 layout: default
 title: Home
 description: Connect your Cisco Meraki Dashboard with Home Assistant for comprehensive monitoring of environmental sensors and network infrastructure
+image: assets/social-card.png
 ---
 
 # Meraki Dashboard Home Assistant Integration

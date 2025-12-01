@@ -1,6 +1,7 @@
 site_name: Meraki Dashboard Home Assistant Integration
 site_description: A comprehensive Home Assistant custom integration for monitoring Cisco Meraki Dashboard devices with real-time metrics and hub-based architecture
 site_url: https://m7kni.io/meraki-dashboard-ha/
+site_author: Rob Knighton
 repo_name: rknightion/meraki-dashboard-ha
 repo_url: https://github.com/rknightion/meraki-dashboard-ha
 edit_uri: edit/main/docs/
@@ -8,6 +9,7 @@ edit_uri: edit/main/docs/
 theme:
   name: material
   language: en
+  custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme)"
       toggle:
@@ -69,6 +71,9 @@ plugins:
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
       lang: en
+  - sitemap:
+      changefreq: weekly
+      priority: 0.75
   - meta:
       meta_file: '**/.meta.yml'
   - tags
@@ -188,9 +193,21 @@ nav:
   - Changelog: changelog.md
 
 extra:
+  social_image: assets/social-card.png
+  social_image_alt: Meraki Dashboard Home Assistant social preview card
+  twitter_site: "@rknightion"
+  twitter_creator: "@rknightion"
+  theme_color: "#3f51b5"
+  keywords:
+    - meraki
+    - home assistant
+    - environmental sensors
+    - network monitoring
+    - smart home
+    - custom integration
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/rknightion/autopi-ha
+      link: https://github.com/rknightion/meraki-dashboard-ha
       name: GitHub Repository
     - icon: material/home-assistant
       link: https://www.home-assistant.io
