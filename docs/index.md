@@ -32,9 +32,9 @@ This custom integration provides real-time monitoring of your Cisco Meraki devic
 
 Ready to get started? The setup process is simple:
 
-1. **Install** the integration via HACS or manually
+1. **Install** the integration via HACS (available in the default repository) or manually
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
+[![Open your Home Assistant instance to install the Meraki Dashboard integration from HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
 
 2. **Configure** your Meraki API key
 

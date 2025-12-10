@@ -54,14 +54,13 @@ No, this integration requires **Meraki Dashboard** (enterprise/business Meraki),
 
 ### Why can't I find the integration in Home Assistant?
 
-The integration needs to be installed through HACS first:
-1. Install HACS if you haven't already
-2. Open HACS and click on "Integrations"
-3. Click the "+ Explore & Download Repositories" button
-4. Search for "Meraki Dashboard"
-5. Click on the integration and then click "Download"
-6. Restart Home Assistant
-7. Then add the integration through Settings → Devices & Services
+The integration ships in the **default HACS repository**:
+1. Install and configure HACS if you haven't already
+2. Open HACS → Integrations
+3. Click "+ Explore & Download Repositories"
+4. Search for "Meraki Dashboard" (no custom repo needed)
+5. Download the integration and restart Home Assistant
+6. Add the integration through Settings → Devices & Services
 
 ### I get "Invalid API Key" errors
 

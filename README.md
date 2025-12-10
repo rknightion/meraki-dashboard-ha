@@ -59,6 +59,8 @@ This integration follows Home Assistant best practices:
 
 ### HACS Installation (Recommended)
 
+This integration is available in the **default** HACS repository (no custom repositories required).
+
 1. Open HACS in your Home Assistant instance
 2. Click on "Integrations"
 3. Click the "+ Explore & Download Repositories" button
@@ -66,7 +68,7 @@ This integration follows Home Assistant best practices:
 5. Click on the integration and then click "Download"
 6. Restart Home Assistant
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
+[![Open your Home Assistant instance to install the Meraki Dashboard integration from HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=rknightion&repository=meraki-dashboard-ha&category=integration)
 
 ### Manual Installation
 
