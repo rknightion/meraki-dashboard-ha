@@ -31,7 +31,7 @@ dev = [
     "types-PyYAML",
     "safety",
     "marshmallow",
-    "pytest-homeassistant-custom-component==0.13.299",
+    "pytest-homeassistant-custom-component==0.13.300",
     "mkdocs-git-authors-plugin>=0.10.0",
     "mkdocs-git-committers-plugin-2>=2.5.0",
     "mkdocs-git-revision-date-localized-plugin>=1.4.7",
