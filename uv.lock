@@ -2,6 +2,9 @@ version = 1
 revision = 3
 requires-python = ">=3.13.2, <3.14"
 
+[manifest]
+overrides = [{ name = "pytest", specifier = ">=9.0.0" }]
+
 [[package]]
 name = "acme"
 version = "5.1.0"

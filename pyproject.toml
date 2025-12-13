@@ -48,6 +48,13 @@ Documentation = "https://m7kni.io/meraki-dashboard-ha"
 Repository = "https://github.com/rknightion/meraki-dashboard-ha"
 "Bug Tracker" = "https://github.com/rknightion/meraki-dashboard-ha/issues"
 
+# Temporary override: meraki 2.0.3 incorrectly constrains pytest<9.0.0
+# Remove once https://github.com/meraki/dashboard-api-python/pull/309 is merged
+[tool.uv]
+override-dependencies = [
+    "pytest>=9.0.0",
+]
+
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true
