@@ -29,6 +29,7 @@ from ..const import (
 )
 from ..coordinator import MerakiSensorCoordinator
 from ..utils.device_info import DeviceInfoBuilder
+from ..utils.sanitization import sanitize_attribute_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -163,12 +164,15 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
         network_name = getattr(self._network_hub, "network_name", "Unknown Network")
         network_id = self._device.get("networkId", "unknown")
 
+        # Sanitize all attribute values to remove control characters
         attributes.update(
             {
-                ATTR_NETWORK_ID: network_id,
-                ATTR_NETWORK_NAME: network_name,
-                ATTR_SERIAL: self._device_serial,
-                ATTR_MODEL: self._device.get("model", "Unknown"),
+                ATTR_NETWORK_ID: sanitize_attribute_value(network_id),
+                ATTR_NETWORK_NAME: sanitize_attribute_value(network_name),
+                ATTR_SERIAL: sanitize_attribute_value(self._device_serial),
+                ATTR_MODEL: sanitize_attribute_value(
+                    self._device.get("model", "Unknown")
+                ),
             }
         )
 
@@ -182,7 +186,9 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
             if readings and isinstance(readings, list) and len(readings) > 0:
                 last_reading = readings[-1]  # Most recent reading
                 if "ts" in last_reading:
-                    attributes[ATTR_LAST_REPORTED_AT] = last_reading["ts"]
+                    attributes[ATTR_LAST_REPORTED_AT] = sanitize_attribute_value(
+                        last_reading["ts"]
+                    )
 
         return attributes
 

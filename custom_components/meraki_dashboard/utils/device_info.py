@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from ..const import DOMAIN, MR_SENSOR_MEMORY_USAGE, MS_SENSOR_MEMORY_USAGE
+from .sanitization import sanitize_attribute_value
 
 if TYPE_CHECKING:
     from ..types import MerakiDeviceData
@@ -41,7 +42,7 @@ class DeviceInfoBuilder:
         self._info = {
             "identifiers": {(self.domain, f"{org_id}_org")},
             "manufacturer": "Cisco Meraki",
-            "name": name,
+            "name": sanitize_attribute_value(name),
             "model": "Organization",
         }
 
@@ -75,7 +76,7 @@ class DeviceInfoBuilder:
         self._info = {
             "identifiers": {(self.domain, f"{network_id}_{device_type}")},
             "manufacturer": "Cisco Meraki",
-            "name": name,
+            "name": sanitize_attribute_value(name),
             "model": f"{device_type.upper()} Network Hub",
         }
 
@@ -136,23 +137,28 @@ class DeviceInfoBuilder:
             else:
                 device_model = "Unknown"
 
+        # Sanitize all API-sourced values to remove control characters
         self._info = {
             "identifiers": {(self.domain, f"{config_entry_id}_{device_serial}")},
             "manufacturer": "Cisco Meraki",
-            "name": device_name,
-            "model": device_model,
-            "serial_number": device_serial,
+            "name": sanitize_attribute_value(device_name),
+            "model": sanitize_attribute_value(device_model),
+            "serial_number": sanitize_attribute_value(device_serial),
         }
 
-        # Add MAC address connection if available
+        # Add MAC address connection if available (sanitized)
         mac_address = device_data.get("mac")
         if mac_address:
-            self._info["connections"] = {("mac", mac_address)}
+            self._info["connections"] = {
+                ("mac", sanitize_attribute_value(mac_address))
+            }
 
-        # Set configuration URL - prefer lanIp if available
+        # Set configuration URL - prefer lanIp if available (sanitized)
         lan_ip = device_data.get("lanIp")
         if lan_ip:
-            self._info["configuration_url"] = f"http://{lan_ip}"
+            self._info["configuration_url"] = (
+                f"http://{sanitize_attribute_value(lan_ip)}"
+            )
         elif base_url and device_serial:
             self._info["configuration_url"] = (
                 f"{base_url}/manage/nodes/new_list/{device_serial}"
@@ -204,7 +210,9 @@ class DeviceInfoBuilder:
         """
         if "connections" not in self._info:
             self._info["connections"] = set()
-        self._info["connections"].add((connection_type, connection_id))
+        self._info["connections"].add(
+            (connection_type, sanitize_attribute_value(connection_id))
+        )
         return self
 
     def with_sw_version(self, version: str) -> DeviceInfoBuilder:
@@ -216,7 +224,7 @@ class DeviceInfoBuilder:
         Returns:
             Self for method chaining.
         """
-        self._info["sw_version"] = version
+        self._info["sw_version"] = sanitize_attribute_value(version)
         return self
 
     def with_hw_version(self, version: str) -> DeviceInfoBuilder:
@@ -228,7 +236,7 @@ class DeviceInfoBuilder:
         Returns:
             Self for method chaining.
         """
-        self._info["hw_version"] = version
+        self._info["hw_version"] = sanitize_attribute_value(version)
         return self
 
     def build(self) -> dict[str, Any]:
@@ -324,27 +332,28 @@ def get_device_display_name(device: dict[str, Any] | MerakiDeviceData) -> str:
     """Get the best available display name for a device.
 
     Prioritizes API-provided names, falls back to serial number or MAC address.
+    All values are sanitized to remove control characters.
 
     Args:
         device: Device dictionary from the API
 
     Returns:
-        A suitable display name for the device
+        A suitable display name for the device (sanitized)
     """
     # Try various name fields in order of preference
     name = device.get("name") or device.get("deviceName")
 
     if name and isinstance(name, str) and name.strip():
-        return name.strip()
+        return sanitize_attribute_value(name.strip())
 
     # Fall back to serial number
     if serial := device.get("serial"):
         model = device.get("model", "Device")
-        return f"{model} ({serial})"
+        return sanitize_attribute_value(f"{model} ({serial})")
 
     # Last resort: MAC address
     if mac := device.get("mac"):
-        return f"Device ({mac})"
+        return sanitize_attribute_value(f"Device ({mac})")
 
     return "Unknown Device"
 
