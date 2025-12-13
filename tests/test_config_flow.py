@@ -11,7 +11,6 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.meraki_dashboard.config_flow import (
     MerakiDashboardConfigFlow,
-    MerakiDashboardOptionsFlow,
 )
 from custom_components.meraki_dashboard.const import (
     CONF_API_KEY,
