@@ -1,12 +1,8 @@
 """Extended sensor platform tests using pytest-homeassistant-custom-component."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.meraki_dashboard.const import (
@@ -102,8 +98,8 @@ class TestSensorPlatformSetup:
         assert len(added_entities) > 0
         # Should have organization sensors, network sensors, and device sensors
         # Check that entities have the expected attributes
-        assert all(hasattr(e, 'entity_description') for e in added_entities)
-        assert all(hasattr(e, 'unique_id') for e in added_entities)
+        assert all(hasattr(e, "entity_description") for e in added_entities)
+        assert all(hasattr(e, "unique_id") for e in added_entities)
 
     async def test_async_setup_entry_with_mr_devices(
         self, hass: HomeAssistant, load_json_fixture
@@ -333,7 +329,10 @@ class TestSensorEntityStates:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test sensor state updates when coordinator updates."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]
@@ -375,7 +374,10 @@ class TestSensorEntityStates:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test sensor availability based on coordinator data."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]
@@ -416,7 +418,10 @@ class TestSensorEntityAttributes:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test MT sensor device info."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]
@@ -445,7 +450,10 @@ class TestSensorEntityAttributes:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test sensor unique ID generation."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]
@@ -471,7 +479,10 @@ class TestSensorEntityAttributes:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test sensor extra state attributes."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]
@@ -502,7 +513,10 @@ class TestSensorEdgeCases:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test sensor when coordinator data is missing."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]
@@ -527,7 +541,10 @@ class TestSensorEdgeCases:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test sensor when metric value is None."""
-        from custom_components.meraki_dashboard.devices.mt import MerakiMTSensor, MT_SENSOR_DESCRIPTIONS
+        from custom_components.meraki_dashboard.devices.mt import (
+            MT_SENSOR_DESCRIPTIONS,
+            MerakiMTSensor,
+        )
 
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]

@@ -1,14 +1,6 @@
 """Extended data transformer tests using pytest-homeassistant-custom-component."""
 
-import pytest
 
-from custom_components.meraki_dashboard.data.transformers import (
-    MTSensorDataTransformer,
-    MRWirelessDataTransformer,
-    MSSwitchDataTransformer,
-    OrganizationDataTransformer,
-    transformer_registry,
-)
 from custom_components.meraki_dashboard.const import (
     MR_SENSOR_CLIENT_COUNT,
     MR_SENSOR_MEMORY_USAGE,
@@ -19,7 +11,13 @@ from custom_components.meraki_dashboard.const import (
     MT_SENSOR_DOOR,
     MT_SENSOR_HUMIDITY,
     MT_SENSOR_TEMPERATURE,
-    MT_SENSOR_WATER,
+)
+from custom_components.meraki_dashboard.data.transformers import (
+    MRWirelessDataTransformer,
+    MSSwitchDataTransformer,
+    MTSensorDataTransformer,
+    OrganizationDataTransformer,
+    transformer_registry,
 )
 
 

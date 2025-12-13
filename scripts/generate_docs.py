@@ -96,68 +96,68 @@ def extract_sensor_descriptions(file_path: Path) -> dict[str, dict[str, Any]]:
         return {}
 
     descriptions = {}
-    
+
     # Use regex to find sensor description dictionaries
     # Match patterns like MT_SENSOR_DESCRIPTIONS or ORG_HUB_SENSOR_DESCRIPTIONS
     # Use a more robust pattern that handles nested braces
-    pattern = r'(\w+SENSOR_DESCRIPTIONS):\s*dict\[.*?\]\s*=\s*\{((?:[^{}]|\{[^{}]*\})*)\}'
+    pattern = r"(\w+SENSOR_DESCRIPTIONS):\s*dict\[.*?\]\s*=\s*\{((?:[^{}]|\{[^{}]*\})*)\}"
     matches = re.findall(pattern, content, re.DOTALL)
-    
+
     for dict_name, dict_content in matches:
         # Parse each sensor entry - handle both quoted and unquoted keys
         sensor_pattern = r'["\']?(\w+)["\']?\s*:\s*SensorEntityDescription\((.*?)\)(?:,|\s*\})'
         sensor_matches = re.findall(sensor_pattern, dict_content, re.DOTALL)
-        
+
         for sensor_key, sensor_args in sensor_matches:
             info = {"key": sensor_key}
-            
+
             # Extract properties from the arguments
             # Name
             name_match = re.search(r'name\s*=\s*"([^"]+)"', sensor_args)
             if name_match:
                 info["name"] = name_match.group(1)
-            
+
             # Device class
-            device_class_match = re.search(r'device_class\s*=\s*SensorDeviceClass\.(\w+)', sensor_args)
+            device_class_match = re.search(r"device_class\s*=\s*SensorDeviceClass\.(\w+)", sensor_args)
             if device_class_match:
                 info["device_class"] = device_class_match.group(1)
-            
+
             # State class
-            state_class_match = re.search(r'state_class\s*=\s*SensorStateClass\.(\w+)', sensor_args)
+            state_class_match = re.search(r"state_class\s*=\s*SensorStateClass\.(\w+)", sensor_args)
             if state_class_match:
                 info["state_class"] = state_class_match.group(1)
-            
+
             # Unit
-            unit_match = re.search(r'native_unit_of_measurement\s*=\s*([^,\n]+)', sensor_args)
+            unit_match = re.search(r"native_unit_of_measurement\s*=\s*([^,\n]+)", sensor_args)
             if unit_match:
                 unit_value = unit_match.group(1).strip()
                 # Clean up unit value
-                if 'Unit' in unit_value:
+                if "Unit" in unit_value:
                     # Handle UnitOfXxx.YYY
-                    unit_parts = unit_value.split('.')
+                    unit_parts = unit_value.split(".")
                     if len(unit_parts) > 1:
                         info["unit"] = unit_parts[-1]
                     else:
                         info["unit"] = unit_value
-                elif unit_value in ['PERCENTAGE', 'CONCENTRATION_PARTS_PER_MILLION', 'CONCENTRATION_MICROGRAMS_PER_CUBIC_METER']:
+                elif unit_value in ["PERCENTAGE", "CONCENTRATION_PARTS_PER_MILLION", "CONCENTRATION_MICROGRAMS_PER_CUBIC_METER"]:
                     # Map constants to actual units
                     unit_map = {
-                        'PERCENTAGE': '%',
-                        'CONCENTRATION_PARTS_PER_MILLION': 'ppm',
-                        'CONCENTRATION_MICROGRAMS_PER_CUBIC_METER': 'μg/m³'
+                        "PERCENTAGE": "%",
+                        "CONCENTRATION_PARTS_PER_MILLION": "ppm",
+                        "CONCENTRATION_MICROGRAMS_PER_CUBIC_METER": "μg/m³"
                     }
                     info["unit"] = unit_map.get(unit_value, unit_value)
                 else:
                     # String literal
                     info["unit"] = unit_value.strip('"')
-            
+
             # Icon
             icon_match = re.search(r'icon\s*=\s*"([^"]+)"', sensor_args)
             if icon_match:
                 info["icon"] = icon_match.group(1)
-            
+
             descriptions[sensor_key] = info
-    
+
     return descriptions
 
 
@@ -165,26 +165,26 @@ def generate_sensor_table_from_descriptions(descriptions: dict[str, dict[str, An
     """Generate a markdown table from sensor descriptions."""
     if not descriptions:
         return "No sensors found.\n"
-    
+
     # Create table header
     headers = ["Sensor", "Description", "Device Class", "Unit", "State Class", "Icon"]
     table = "| " + " | ".join(headers) + " |\n"
     table += "|" + "|".join(["-" * 10 for _ in headers]) + "|\n"
-    
+
     for key, info in sorted(descriptions.items()):
         name = info.get("name", key)
         device_class = info.get("device_class", "-")
         unit = info.get("unit", "-")
         state_class = info.get("state_class", "-")
         icon = info.get("icon", "-")
-        
+
         # Generate description
         description = name
         if device_class != "-":
             description = f"{name} sensor"
-        
+
         table += f"| {name} | {description} | {device_class} | {unit} | {state_class} | {icon} |\n"
-    
+
     return table
 
 
@@ -198,34 +198,34 @@ def extract_binary_sensor_descriptions(file_path: Path) -> dict[str, dict[str, A
         return {}
 
     descriptions = {}
-    
+
     # Look for binary sensor descriptions in dictionaries
-    dict_pattern = r'(\w+_BINARY_SENSOR_DESCRIPTIONS):\s*dict\[.*?\]\s*=\s*\{([^}]+)\}'
+    dict_pattern = r"(\w+_BINARY_SENSOR_DESCRIPTIONS):\s*dict\[.*?\]\s*=\s*\{([^}]+)\}"
     dict_matches = re.findall(dict_pattern, content, re.DOTALL)
-    
+
     for dict_name, dict_content in dict_matches:
         # Parse each sensor entry with quoted keys
         sensor_pattern = r'"(\w+)":\s*BinarySensorEntityDescription\((.*?)\)(?:,|\s*\})'
         sensor_matches = re.findall(sensor_pattern, dict_content, re.DOTALL)
-        
+
         for sensor_key, sensor_args in sensor_matches:
             info = {"key": sensor_key}
-            
+
             # Extract properties
             name_match = re.search(r'name\s*=\s*"([^"]+)"', sensor_args)
             if name_match:
                 info["name"] = name_match.group(1)
-            
-            device_class_match = re.search(r'device_class\s*=\s*BinarySensorDeviceClass\.(\w+)', sensor_args)
+
+            device_class_match = re.search(r"device_class\s*=\s*BinarySensorDeviceClass\.(\w+)", sensor_args)
             if device_class_match:
                 info["device_class"] = device_class_match.group(1)
-            
+
             icon_match = re.search(r'icon\s*=\s*"([^"]+)"', sensor_args)
             if icon_match:
                 info["icon"] = icon_match.group(1)
-            
+
             descriptions[sensor_key] = info
-    
+
     return descriptions
 
 
@@ -239,15 +239,15 @@ def extract_button_descriptions(file_path: Path) -> dict[str, dict[str, Any]]:
         return {}
 
     descriptions = {}
-    
-    # Extract button class information 
+
+    # Extract button class information
     classes = extract_class_info(file_path)
     for cls in classes:
         if "Button" in cls["name"] and cls["name"] not in ["ButtonEntity", "MerakiButtonEntity"]:
             # Create description from class
             key = cls["name"]
             info = {"key": key}
-            
+
             # Get name from class name
             if cls["name"] == "MerakiUpdateSensorDataButton":
                 info["name"] = "Update Sensor Data"
@@ -261,13 +261,13 @@ def extract_button_descriptions(file_path: Path) -> dict[str, dict[str, Any]]:
                 # Generate name from class name
                 name = cls["name"].replace("Meraki", "").replace("Button", "")
                 # Add spaces before capitals
-                name = re.sub(r'([a-z])([A-Z])', r'\1 \2', name)
+                name = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
                 info["name"] = name.strip()
                 info["description"] = f"{name} action"
                 info["icon"] = "mdi:button-cursor"
-            
+
             descriptions[key] = info
-    
+
     return descriptions
 
 
@@ -280,17 +280,17 @@ def main():
     sensor_entities = []
     binary_sensor_entities = []
     button_entities = []
-    
+
     # Keep track of all sensor descriptions organized by device type
     device_type_descriptions = {}
-    
+
     # Process device files to get sensor descriptions
     devices_path = integration_path / "devices"
     if devices_path.exists():
         for device_file in devices_path.glob("*.py"):
             if device_file.name != "__init__.py":
                 descriptions = extract_sensor_descriptions(device_file)
-                
+
                 # Organize by device type
                 device_type = device_file.stem.upper()
                 if descriptions:
@@ -307,7 +307,7 @@ def main():
                             device_type_descriptions["ORGANIZATION"] = org_sensors
                     else:
                         device_type_descriptions[device_type] = descriptions
-                
+
                 print(f"Found {len(descriptions)} sensor descriptions in {device_file.name}")
 
     # Process sensor.py
@@ -365,7 +365,7 @@ MT devices provide comprehensive environmental monitoring capabilities:
 """
         docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["MT"])
         docs_content += "\n"
-    
+
     if "MR" in device_type_descriptions:
         docs_content += """### MR Wireless Access Point Sensors
 
@@ -374,7 +374,7 @@ MR devices provide wireless network monitoring:
 """
         docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["MR"])
         docs_content += "\n"
-    
+
     if "MS" in device_type_descriptions:
         docs_content += """### MS Switch Sensors
 
@@ -383,7 +383,7 @@ MS devices provide switch and port monitoring:
 """
         docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["MS"])
         docs_content += "\n"
-    
+
     if "ORGANIZATION" in device_type_descriptions:
         docs_content += """### Organization-Level Sensors
 

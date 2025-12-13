@@ -1,7 +1,6 @@
 """Extended error handling tests using pytest-homeassistant-custom-component."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from meraki.exceptions import APIError
@@ -10,7 +9,6 @@ from custom_components.meraki_dashboard.utils.error_handling import (
     handle_api_errors,
 )
 from custom_components.meraki_dashboard.utils.retry import (
-    RetryConfig,
     RetryStrategies,
     calculate_retry_delay,
     should_retry,
@@ -172,7 +170,7 @@ class TestWithStandardRetries:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise asyncio.TimeoutError("Timeout")
+                raise TimeoutError("Timeout")
             return {"result": "success"}
 
         result = await api_call()
@@ -202,7 +200,7 @@ class TestWithStandardRetries:
         async def api_call():
             nonlocal call_count
             call_count += 1
-            raise asyncio.TimeoutError("Timeout")
+            raise TimeoutError("Timeout")
 
         with pytest.raises(asyncio.TimeoutError):
             await api_call()
@@ -236,7 +234,7 @@ class TestRateLimitHandling:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise asyncio.TimeoutError("Timeout")
+                raise TimeoutError("Timeout")
             return {"result": "success"}
 
         result = await api_call()
@@ -269,7 +267,7 @@ class TestTimeoutHandling:
 
         @handle_api_errors(convert_connection_errors=False, reraise_on=(asyncio.TimeoutError,))
         async def api_call():
-            raise asyncio.TimeoutError("Request timed out")
+            raise TimeoutError("Request timed out")
 
         with pytest.raises(asyncio.TimeoutError):
             await api_call()
@@ -283,7 +281,7 @@ class TestTimeoutHandling:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise asyncio.TimeoutError("Request timed out")
+                raise TimeoutError("Request timed out")
             return {"result": "success"}
 
         result = await api_call()
@@ -314,7 +312,7 @@ class TestConnectionErrors:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
-                raise asyncio.TimeoutError("Timeout")
+                raise TimeoutError("Timeout")
             return {"result": "success"}
 
         result = await api_call()
@@ -365,7 +363,7 @@ class TestConcurrentRequests:
         async def api_call(index):
             call_counts[index] += 1
             if call_counts[index] == 1:
-                raise asyncio.TimeoutError("Timeout")
+                raise TimeoutError("Timeout")
             return {"result": f"success_{index}"}
 
         # Run multiple calls concurrently

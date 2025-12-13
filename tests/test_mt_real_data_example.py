@@ -5,7 +5,6 @@ realistic test scenarios. It can serve as a template for other tests.
 """
 
 import pytest
-from homeassistant.core import HomeAssistant
 
 from tests.fixtures.fixture_loader import (
     fixture_loader,

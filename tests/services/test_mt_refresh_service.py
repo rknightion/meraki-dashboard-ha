@@ -8,7 +8,6 @@ from homeassistant.core import HomeAssistant
 
 from custom_components.meraki_dashboard.const import MT_REFRESH_COMMAND_INTERVAL
 from custom_components.meraki_dashboard.services.mt_refresh_service import (
-    CONSECUTIVE_FAILURE_THRESHOLD,
     MTRefreshService,
 )
 
@@ -170,7 +169,7 @@ class TestMTRefreshService:
             mt_refresh_service._batch_attempts += 1
             mt_refresh_service._batch_successes += 1
 
-        with patch.object(mt_refresh_service, '_send_action_batch', side_effect=mock_send_batch):
+        with patch.object(mt_refresh_service, "_send_action_batch", side_effect=mock_send_batch):
             await mt_refresh_service._async_refresh_devices(datetime.now(UTC))
 
         # Should have attempted one batch with 2 devices (MT15 and MT40)
@@ -279,7 +278,7 @@ class TestMTRefreshServiceIntegration:
             service._batch_attempts += 1
             service._batch_successes += 1
 
-        with patch.object(service, '_send_action_batch', side_effect=mock_send_batch):
+        with patch.object(service, "_send_action_batch", side_effect=mock_send_batch):
             await service._async_refresh_devices(datetime.now(UTC))
 
         # Should have attempted one batch with 10 devices

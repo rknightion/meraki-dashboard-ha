@@ -1,10 +1,8 @@
 """Extended binary sensor tests using pytest-homeassistant-custom-component."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
-import pytest
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -19,11 +17,6 @@ from custom_components.meraki_dashboard.const import (
     CONF_ORGANIZATION_ID,
     DEFAULT_BASE_URL,
     DOMAIN,
-    MT_SENSOR_BUTTON,
-    MT_SENSOR_DOOR,
-    MT_SENSOR_DOWNSTREAM_POWER,
-    MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
-    MT_SENSOR_WATER,
 )
 
 

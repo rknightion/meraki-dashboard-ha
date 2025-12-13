@@ -94,7 +94,7 @@ def sanitize_device_name_for_entity_id(name: str) -> str:
 
 
 def _strip_control_chars(value: str) -> str:
-    """Remove null and other control characters that databases reject.
+    r"""Remove null and other control characters that databases reject.
 
     PostgreSQL and other databases reject null characters (\\u0000) and other
     control characters in text fields. This function strips them while

@@ -1,6 +1,6 @@
 """Extended config flow tests using pytest-homeassistant-custom-component features."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from homeassistant import config_entries
@@ -8,9 +8,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.meraki_dashboard.config_flow import (
-    MerakiDashboardOptionsFlow,
-)
 from custom_components.meraki_dashboard.const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
@@ -24,7 +21,6 @@ from custom_components.meraki_dashboard.const import (
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
-    CONF_SELECTED_DEVICES,
     DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
@@ -312,9 +308,8 @@ class TestConfigFlowErrorHandling:
         with patch(
             "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
         ) as mock_api:
-            import asyncio
 
-            mock_api.side_effect = asyncio.TimeoutError("Connection timeout")
+            mock_api.side_effect = TimeoutError("Connection timeout")
 
             result = await hass.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_USER}
