@@ -47,7 +47,10 @@ def mock_device_info():
 @pytest.fixture(name="mock_network_hub")
 def mock_network_hub():
     """Mock network hub."""
-    return MagicMock()
+    hub = MagicMock()
+    hub.network_name = "Test Network"
+    hub.network_id = "N_123456789"
+    return hub
 
 
 class TestMerakiMTSensor:

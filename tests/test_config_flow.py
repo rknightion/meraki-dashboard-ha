@@ -381,6 +381,7 @@ class TestMerakiDashboardConfigFlow:
         assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
+@pytest.mark.usefixtures("enable_custom_integrations")
 class TestConfigFlowEdgeCases:
     """Test config flow edge cases."""
 
@@ -422,53 +423,59 @@ class TestConfigFlowEdgeCases:
         )
         config_entry.add_to_hass(hass)
 
-        # Create options flow directly
-        flow = MerakiDashboardOptionsFlow()
-        flow.hass = hass
-        # Set the config entry through the parent OptionsFlow class
-        flow._config_entry = config_entry
+        # Use framework to initialize options flow
+        with patch(
+            "custom_components.meraki_dashboard.config_flow.MerakiDashboardOptionsFlow._get_available_hubs",
+            return_value={},
+        ):
+            # Step 1: Initialize options flow
+            result = await hass.config_entries.options.async_init(
+                config_entry.entry_id
+            )
+            assert result["type"] == FlowResultType.FORM
+            assert result["step_id"] == "init"
 
-        # Mock the hub data
-        with patch.object(flow, "_get_available_hubs", return_value={}):
-            # Step 1: Choose to update API key
-            result = await flow.async_step_init(
-                {
+            # Step 2: Choose to update API key
+            result = await hass.config_entries.options.async_configure(
+                result["flow_id"],
+                user_input={
                     "update_api_key": True,
                     CONF_ENABLED_DEVICE_TYPES: ["MT"],
-                }
+                },
             )
 
             assert result["type"] == FlowResultType.FORM
             assert result["step_id"] == "api_key"
 
-        # Step 2: Provide new API key
-        with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
-        ) as mock_api:
-            # Mock successful API test
-            mock_instance = MagicMock()
-            mock_instance.organizations.getOrganizations.return_value = (
-                MOCK_ORGANIZATION_DATA
-            )
-            mock_api.return_value = mock_instance
-
+            # Step 3: Provide new API key
             with patch(
-                "homeassistant.config_entries.ConfigEntries.async_reload"
-            ) as mock_reload:
-                result = await flow.async_step_api_key(
-                    {
-                        CONF_API_KEY: "new_api_key_12345",
-                    }
+                "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            ) as mock_api:
+                # Mock successful API test
+                mock_instance = MagicMock()
+                mock_instance.organizations.getOrganizations.return_value = (
+                    MOCK_ORGANIZATION_DATA
                 )
+                mock_api.return_value = mock_instance
 
-                assert result["type"] == FlowResultType.ABORT
-                assert result["reason"] == "api_key_updated"
+                with patch(
+                    "homeassistant.config_entries.ConfigEntries.async_reload"
+                ) as mock_reload:
+                    result = await hass.config_entries.options.async_configure(
+                        result["flow_id"],
+                        user_input={
+                            CONF_API_KEY: "new_api_key_12345",
+                        },
+                    )
 
-                # Verify reload was called
-                mock_reload.assert_called_once()
+                    assert result["type"] == FlowResultType.ABORT
+                    assert result["reason"] == "api_key_updated"
 
-            # Verify config entry was updated
-            assert config_entry.data[CONF_API_KEY] == "new_api_key_12345"
+                    # Verify reload was called
+                    mock_reload.assert_called_once()
+
+                # Verify config entry was updated
+                assert config_entry.data[CONF_API_KEY] == "new_api_key_12345"
 
     async def test_options_flow_update_api_key_invalid(self, hass: HomeAssistant):
         """Test updating API key with invalid key."""
@@ -486,57 +493,66 @@ class TestConfigFlowEdgeCases:
         )
         config_entry.add_to_hass(hass)
 
-        # Create options flow directly
-        flow = MerakiDashboardOptionsFlow()
-        flow.hass = hass
-        # Set the config entry through the parent OptionsFlow class
-        flow._config_entry = config_entry
-
-        # Mock the hub data
-        with patch.object(flow, "_get_available_hubs", return_value={}):
-            # Step 1: Choose to update API key
-            result = await flow.async_step_init(
-                {
-                    "update_api_key": True,
-                    CONF_ENABLED_DEVICE_TYPES: ["MT"],
-                }
-            )
-
-            assert result["type"] == FlowResultType.FORM
-            assert result["step_id"] == "api_key"
-
-        # Step 2: Provide invalid API key
         # Create a custom exception that acts like APIError
         class TestAPIError(Exception):
             def __init__(self):
                 super().__init__("Unauthorized")
                 self.status = 401
 
-        with (
-            patch(
-                "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
-            ) as mock_api,
-            patch(
-                "custom_components.meraki_dashboard.config_flow.APIError", TestAPIError
-            ),
+        # Use framework to initialize options flow
+        with patch(
+            "custom_components.meraki_dashboard.config_flow.MerakiDashboardOptionsFlow._get_available_hubs",
+            return_value={},
         ):
-            # Mock API error
-            mock_instance = MagicMock()
-            mock_instance.organizations.getOrganizations.side_effect = TestAPIError()
-            mock_api.return_value = mock_instance
+            # Step 1: Initialize options flow
+            result = await hass.config_entries.options.async_init(
+                config_entry.entry_id
+            )
+            assert result["type"] == FlowResultType.FORM
+            assert result["step_id"] == "init"
 
-            result = await flow.async_step_api_key(
-                {
-                    CONF_API_KEY: "invalid_api_key",
-                }
+            # Step 2: Choose to update API key
+            result = await hass.config_entries.options.async_configure(
+                result["flow_id"],
+                user_input={
+                    "update_api_key": True,
+                    CONF_ENABLED_DEVICE_TYPES: ["MT"],
+                },
             )
 
             assert result["type"] == FlowResultType.FORM
             assert result["step_id"] == "api_key"
-            assert result["errors"] == {"base": "invalid_auth"}
 
-            # Verify config entry was NOT updated
-            assert config_entry.data[CONF_API_KEY] == "old_api_key"
+            # Step 3: Provide invalid API key
+            with (
+                patch(
+                    "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+                ) as mock_api,
+                patch(
+                    "custom_components.meraki_dashboard.config_flow.APIError",
+                    TestAPIError,
+                ),
+            ):
+                # Mock API error
+                mock_instance = MagicMock()
+                mock_instance.organizations.getOrganizations.side_effect = (
+                    TestAPIError()
+                )
+                mock_api.return_value = mock_instance
+
+                result = await hass.config_entries.options.async_configure(
+                    result["flow_id"],
+                    user_input={
+                        CONF_API_KEY: "invalid_api_key",
+                    },
+                )
+
+                assert result["type"] == FlowResultType.FORM
+                assert result["step_id"] == "api_key"
+                assert result["errors"] == {"base": "invalid_auth"}
+
+                # Verify config entry was NOT updated
+                assert config_entry.data[CONF_API_KEY] == "old_api_key"
 
     async def test_invalid_base_url(self, hass: HomeAssistant, mock_config_flow):
         """Test user flow with invalid base URL."""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date, datetime, time
 from typing import Any
 
 # Characters not allowed in entity IDs
@@ -124,8 +125,9 @@ def sanitize_attribute_value(value: Any) -> Any:
     if value is None:
         return None
 
-    # Handle datetime objects
-    if hasattr(value, "isoformat"):
+    # Handle datetime objects - use explicit type check, not duck typing
+    # (hasattr check would match MagicMock and other non-datetime objects)
+    if isinstance(value, datetime | date | time):
         return value.isoformat()
 
     # Handle lists and tuples
