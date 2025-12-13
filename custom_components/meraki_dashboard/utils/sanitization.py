@@ -9,6 +9,9 @@ from typing import Any
 INVALID_ENTITY_CHARS_REGEX = re.compile(r"[^a-z0-9_]+")
 # Characters to replace in device names (more permissive than entity IDs)
 INVALID_DEVICE_NAME_CHARS_REGEX = re.compile(r"[^\w\s\-\(\)]+")
+# Control characters to strip (null and others that databases reject)
+# Keep tab (0x09), newline (0x0A), carriage return (0x0D)
+CONTROL_CHARS_REGEX = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
 
 def sanitize_entity_id(name: str) -> str:
@@ -90,10 +93,27 @@ def sanitize_device_name_for_entity_id(name: str) -> str:
     return sanitize_entity_id(sanitized)
 
 
+def _strip_control_chars(value: str) -> str:
+    """Remove null and other control characters that databases reject.
+
+    PostgreSQL and other databases reject null characters (\\u0000) and other
+    control characters in text fields. This function strips them while
+    preserving tab, newline, and carriage return.
+
+    Args:
+        value: The string to sanitize
+
+    Returns:
+        String with control characters removed
+    """
+    return CONTROL_CHARS_REGEX.sub("", value)
+
+
 def sanitize_attribute_value(value: Any) -> Any:
     """Sanitize an attribute value for use in Home Assistant.
 
     Ensures values are JSON serializable and handles special cases.
+    Strips control characters (including null) that databases reject.
 
     Args:
         value: The value to sanitize
@@ -118,18 +138,22 @@ def sanitize_attribute_value(value: Any) -> Any:
 
     # Convert sets to lists for JSON serialization
     if isinstance(value, set):
-        return list(value)
+        return [sanitize_attribute_value(v) for v in value]
 
-    # Handle bytes
+    # Handle bytes - decode and strip control chars
     if isinstance(value, bytes):
-        return value.decode("utf-8", errors="replace")
+        return _strip_control_chars(value.decode("utf-8", errors="replace"))
 
-    # Return primitives as-is
-    if isinstance(value, str | int | float | bool):
+    # Handle strings - strip control characters
+    if isinstance(value, str):
+        return _strip_control_chars(value)
+
+    # Return numeric primitives as-is
+    if isinstance(value, int | float | bool):
         return value
 
-    # Convert everything else to string
-    return str(value)
+    # Convert everything else to string and sanitize
+    return _strip_control_chars(str(value))
 
 
 def sanitize_device_attributes(device: dict[str, Any]) -> dict[str, str]:

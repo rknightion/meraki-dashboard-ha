@@ -183,9 +183,9 @@ class TestSanitizeAttributeValue:
         )  # Strings preserved as-is
 
     def test_control_characters(self):
-        """Test control characters are preserved (no sanitization for strings)."""
-        assert sanitize_attribute_value("test\x00string") == "test\x00string"
-        assert sanitize_attribute_value("test\x01\x02string") == "test\x01\x02string"
+        """Test control characters are stripped from strings."""
+        assert sanitize_attribute_value("test\x00string") == "teststring"
+        assert sanitize_attribute_value("test\x01\x02string") == "teststring"
 
     def test_allowed_whitespace(self):
         """Test that newlines and tabs are preserved."""
@@ -195,9 +195,7 @@ class TestSanitizeAttributeValue:
     def test_edge_cases(self):
         """Test edge cases for attribute value sanitization."""
         assert sanitize_attribute_value("") == ""
-        assert (
-            sanitize_attribute_value("\x00\x01\x02") == "\x00\x01\x02"
-        )  # Control chars preserved
+        assert sanitize_attribute_value("\x00\x01\x02") == ""  # Control chars stripped
         assert sanitize_attribute_value("   ") == "   "  # Whitespace preserved
 
 
@@ -245,11 +243,11 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        # name is excluded, strings are preserved as-is (no control char removal)
+        # name is excluded, control chars are stripped from strings
         assert "name" not in result
-        assert result["notes"] == "This is a test\x00device"
-        assert result["address"] == "123 Main St\x01"
-        assert result["url"] == "https://example.com\x02"
+        assert result["notes"] == "This is a testdevice"
+        assert result["address"] == "123 Main St"
+        assert result["url"] == "https://example.com"
 
     def test_device_with_string_tags(self):
         """Test sanitization of device with string tags."""
@@ -273,9 +271,9 @@ class TestSanitizeDeviceAttributes:
 
         result = sanitize_device_attributes(device)
 
-        # name is excluded, lists are preserved with recursive sanitization
+        # name is excluded, lists are recursively sanitized (control chars stripped)
         assert "name" not in result
-        assert result["tags"] == ["tag1", "tag2\x00", "tag3"]
+        assert result["tags"] == ["tag1", "tag2", "tag3"]
 
     def test_device_with_empty_tags(self):
         """Test sanitization of device with empty tags."""
@@ -365,9 +363,7 @@ class TestSanitizeDeviceAttributes:
         assert "serial" not in result
         assert result["model"] == "MT11"
         assert result["tags"] == "office, conference, sensors"  # String preserved
-        assert (
-            result["notes"] == "Primary sensor\x00for conference room"
-        )  # Control chars preserved
+        assert result["notes"] == "Primary sensorfor conference room"  # Control chars stripped
         assert result["address"] == "123 Main St, Floor 2"
         assert result["lan_ip"] == "192.168.1.100"  # camelCase converted to snake_case
         assert result["firmware"] == "wireless-25-14"
