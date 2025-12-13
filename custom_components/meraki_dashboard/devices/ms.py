@@ -37,6 +37,7 @@ from ..data.transformers import transformer_registry
 from ..entities.base import MerakiSensorEntity
 from ..utils import get_device_status_info
 from ..utils.device_info import DeviceInfoBuilder
+from ..utils.sanitization import sanitize_attribute_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -349,21 +350,31 @@ class MerakiMSDeviceSensor(CoordinatorEntity[MerakiSensorCoordinator], SensorEnt
                 self.coordinator.network_hub.organization_hub, self._device_serial
             )
             if device_status:
-                # Add network configuration details
+                # Add network configuration details (sanitized to remove control chars)
                 if device_status.get("lanIp"):
-                    attrs["lan_ip"] = device_status.get("lanIp")
+                    attrs["lan_ip"] = sanitize_attribute_value(
+                        device_status.get("lanIp")
+                    )
 
                 if device_status.get("gateway"):
-                    attrs["gateway"] = device_status.get("gateway")
+                    attrs["gateway"] = sanitize_attribute_value(
+                        device_status.get("gateway")
+                    )
 
                 if device_status.get("ipType"):
-                    attrs["ip_type"] = device_status.get("ipType")
+                    attrs["ip_type"] = sanitize_attribute_value(
+                        device_status.get("ipType")
+                    )
 
                 if device_status.get("primaryDns"):
-                    attrs["primary_dns"] = device_status.get("primaryDns")
+                    attrs["primary_dns"] = sanitize_attribute_value(
+                        device_status.get("primaryDns")
+                    )
 
                 if device_status.get("secondaryDns"):
-                    attrs["secondary_dns"] = device_status.get("secondaryDns")
+                    attrs["secondary_dns"] = sanitize_attribute_value(
+                        device_status.get("secondaryDns")
+                    )
 
         return attrs
 

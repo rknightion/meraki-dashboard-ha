@@ -45,6 +45,7 @@ from ..const import (
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
 from ..entities.base import MerakiRestoreSensorEntity, MerakiSensorEntity
+from ..utils.sanitization import sanitize_attribute_value
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -236,9 +237,9 @@ class MerakiMTSensor(MerakiSensorEntity):
         """Return the state attributes."""
         attrs = super().extra_state_attributes.copy()
 
-        # Add MAC address if available
+        # Add MAC address if available (sanitized to remove control chars)
         if mac_address := self._device.get("mac"):
-            attrs["mac_address"] = mac_address
+            attrs["mac_address"] = sanitize_attribute_value(mac_address)
 
         # For temperature sensors, also include Fahrenheit value
         if self.entity_description.key == "temperature" and self.coordinator.data:
