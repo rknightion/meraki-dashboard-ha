@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.34.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.33.0...v0.34.0) (2025-12-20)
+
+
+### Features
+
+* add comprehensive startup summary with detailed hub information ([79040fc](https://github.com/rknightion/meraki-dashboard-ha/commit/79040fc4696a4632d1f57b377765daf6cac75fa3))
+* add CW device support for wireless APs ([8b0491a](https://github.com/rknightion/meraki-dashboard-ha/commit/8b0491af98c030a47017b774ec1c0e20371a45e4)), closes [#218](https://github.com/rknightion/meraki-dashboard-ha/issues/218)
+* add device type mapping system ([90e7bc2](https://github.com/rknightion/meraki-dashboard-ha/commit/90e7bc2c2b295a7cbce14bea7df73978795526a3))
+
+
+### Documentation
+
+* add agent guidance for meraki api documentation ([2281907](https://github.com/rknightion/meraki-dashboard-ha/commit/22819079f10e616863a038f37b1ef12388203aa5))
+* add comprehensive todo list for integration improvements ([212fdee](https://github.com/rknightion/meraki-dashboard-ha/commit/212fdeedccccadc1f4d3f9756acbc03ffc35fe84))
+* improve SEO meta tags robustness ([b1ea29d](https://github.com/rknightion/meraki-dashboard-ha/commit/b1ea29d143ff6c73c4d33f50b45836dfdb6636b2))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#219](https://github.com/rknightion/meraki-dashboard-ha/issues/219)) ([99d7bb1](https://github.com/rknightion/meraki-dashboard-ha/commit/99d7bb1facf08459c2d58e1bfae5a54e05e40482))
+* **deps:** update anthropics/claude-code-action digest to 0d19335 ([#221](https://github.com/rknightion/meraki-dashboard-ha/issues/221)) ([9afc269](https://github.com/rknightion/meraki-dashboard-ha/commit/9afc269bd3f7f4472053e7961b1ffb97e7f0af12))
+* **deps:** update anthropics/claude-code-action digest to 7145c3e ([#222](https://github.com/rknightion/meraki-dashboard-ha/issues/222)) ([6b5e150](https://github.com/rknightion/meraki-dashboard-ha/commit/6b5e1507fd6e6982f9b1eb8ec085985fa52c1ab0))
+* **deps:** update anthropics/claude-code-action digest to d7b6d50 ([#220](https://github.com/rknightion/meraki-dashboard-ha/issues/220)) ([4e6879d](https://github.com/rknightion/meraki-dashboard-ha/commit/4e6879d481aeca8dded4b3e1496a21b29c5eb222))
+* **deps:** update dependency pytest-homeassistant-custom-component to v0.13.301 ([#223](https://github.com/rknightion/meraki-dashboard-ha/issues/223)) ([8a8f0cc](https://github.com/rknightion/meraki-dashboard-ha/commit/8a8f0cc43a2f0baabf8dd61e8c2df7c5c6e24d57))
+* disable debug logging in dev config ([b74bfbf](https://github.com/rknightion/meraki-dashboard-ha/commit/b74bfbffcd838613768445bbf1dadfd4ce1e1bbc))
+* remove documentation build dependencies and configuration ([36c4d13](https://github.com/rknightion/meraki-dashboard-ha/commit/36c4d1397b504628a350b3823386e4a40ece8ee7))
+* tidy up unneded workflows ([f9a1fe4](https://github.com/rknightion/meraki-dashboard-ha/commit/f9a1fe4011b0ff981aa9ff6fdc1208444bb707c4))
+* update development dependencies and container packages ([52a1b99](https://github.com/rknightion/meraki-dashboard-ha/commit/52a1b9901ad3a0b4f5ff6607f95e75a758a7639d))
+* update documentation links and build configuration ([927af63](https://github.com/rknightion/meraki-dashboard-ha/commit/927af63d6fb4441e124ed1c7901fae7f0586fb8f))
+* update secrets baseline timestamps ([25494a2](https://github.com/rknightion/meraki-dashboard-ha/commit/25494a2e10d74a57efdb7c840b92435758f175bb))
+
+
+### Code Refactoring
+
+* improve startup summary formatting ([f70acef](https://github.com/rknightion/meraki-dashboard-ha/commit/f70acef0453d2a496df74784649405a157629cd5))
+* reduce logging verbosity for network hub operations ([fbb3a8e](https://github.com/rknightion/meraki-dashboard-ha/commit/fbb3a8e59485543f19ed806708c5f2e68682dc49))
+* use centralized device type detection ([3dd91c7](https://github.com/rknightion/meraki-dashboard-ha/commit/3dd91c7c35e564c3dfd3b5cedfcf780a0fce8c8d))
+
 ## [0.33.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.32.3...v0.33.0) (2025-12-13)
 
 
