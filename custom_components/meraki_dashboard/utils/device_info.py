@@ -607,17 +607,8 @@ def get_device_capabilities(
     device_serial = device.get("serial", "")
     device_model = device.get("model", "")
 
-    # Determine device type from model prefix
-    if device_model.startswith("MT"):
-        device_type = "MT"
-    elif device_model.startswith("MR"):
-        device_type = "MR"
-    elif device_model.startswith("MS"):
-        device_type = "MS"
-    elif device_model.startswith("MV"):
-        device_type = "MV"
-    else:
-        device_type = device.get("productType", "").upper()
+    # Determine device type from model or productType
+    device_type = determine_device_type(device) or ""
 
     # Try dynamic discovery first if we have coordinator data
     if coordinator_data and device_serial:
@@ -654,26 +645,25 @@ def should_create_entity(
     if always_create:
         return True
 
+    device_model = device.get("model", "")
+    device_type = determine_device_type(device)
+
     # Special case: always create memory usage sensors for MR/MS devices
     if metric_key in ["memory_usage", MR_SENSOR_MEMORY_USAGE, MS_SENSOR_MEMORY_USAGE]:
-        device_model = device.get("model", "")
-        # Check if device model starts with MR or MS
-        if device_model.startswith("MR") or device_model.startswith("MS"):
+        if device_type in {SENSOR_TYPE_MR, SENSOR_TYPE_MS}:
             return True
 
-    # Get device type from model
-    device_model = device.get("model", "")
-    if device_model.startswith("MR"):
+    if device_type == SENSOR_TYPE_MR:
         # For MR devices, allow all standard metrics
         return True  # Allow all MR sensors to be created
-    elif device_model.startswith("MS"):
+    elif device_type == SENSOR_TYPE_MS:
         # For MS devices, allow all standard metrics
         return True  # Allow all MS sensors to be created
 
     # For MT devices, we need to check capabilities more carefully
     # The metric_key comes from sensor descriptions which use EntityType values
     # These need to be mapped to the API metric names for capability checking
-    if device_model.startswith("MT"):
+    if device_type == SENSOR_TYPE_MT:
         # Get model-based capabilities first as the source of truth
         model_capabilities = create_device_capability_filter(device_model, "MT")
 

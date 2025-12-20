@@ -19,7 +19,6 @@ from meraki.exceptions import APIError
 from ..const import (
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
-    DEVICE_TYPE_MAPPINGS,
     DYNAMIC_DATA_REFRESH_INTERVAL,
     SEMI_STATIC_DATA_REFRESH_INTERVAL,
     SENSOR_TYPE_MR,
@@ -35,6 +34,7 @@ from ..types import (
     NetworkData,
     OrganizationData,
 )
+from ..utils.device_info import determine_device_type, device_matches_type
 from ..utils.error_handling import handle_api_errors
 from ..utils.retry import RetryStrategies, retry_on_api_error, with_standard_retries
 
@@ -498,7 +498,7 @@ class MerakiOrganizationHub:
                     type_devices = [
                         device
                         for device in devices
-                        if device.get("model", "").startswith(device_type)
+                        if device_matches_type(device, device_type)
                     ]
 
                     if type_devices:
@@ -1175,9 +1175,8 @@ class MerakiOrganizationHub:
                         _LOGGER.debug("Skipping device with no serial")
                         continue
 
-                    if not (
-                        device_model.startswith("MR") or device_model.startswith("MS")
-                    ):
+                    device_type = determine_device_type(device_data)
+                    if device_type not in {SENSOR_TYPE_MR, SENSOR_TYPE_MS}:
                         _LOGGER.debug(
                             "Skipping device %s with model %s (not MR/MS)",
                             device_serial,
@@ -1384,13 +1383,9 @@ class MerakiOrganizationHub:
             )
             self.total_api_calls += 1
 
-            # Check if any devices match the type prefixes
-            type_config = DEVICE_TYPE_MAPPINGS.get(device_type, {})
-            model_prefixes = type_config.get("model_prefixes", [])
-
+            # Check if any devices match the type prefixes or productType mapping
             for device in network_devices:
-                model = device.get("model", "")
-                if any(model.startswith(prefix) for prefix in model_prefixes):
+                if device_matches_type(device, device_type):
                     return True
 
             return False

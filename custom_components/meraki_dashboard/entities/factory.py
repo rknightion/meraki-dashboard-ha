@@ -54,12 +54,12 @@ from ..const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
 )
 from ..const import (
     MS_SENSOR_MEMORY_USAGE as MS_SENSOR_MEMORY_USAGE,
 )
 from ..coordinator import MerakiSensorCoordinator
+from ..utils.device_info import determine_device_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -188,18 +188,7 @@ class EntityFactory:
     @classmethod
     def _get_device_type(cls, device_data: dict[str, Any]) -> str | None:
         """Determine device type from device data."""
-        model = device_data.get("model", "")
-
-        if model.startswith("MT"):
-            return SENSOR_TYPE_MT
-        elif model.startswith("MR"):
-            return SENSOR_TYPE_MR
-        elif model.startswith("MS"):
-            return SENSOR_TYPE_MS
-        elif model.startswith("MV"):
-            return SENSOR_TYPE_MV
-
-        return None
+        return determine_device_type(device_data)
 
     @classmethod
     def _get_available_metrics(

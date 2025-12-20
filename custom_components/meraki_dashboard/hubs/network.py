@@ -40,6 +40,7 @@ from ..utils import (
     get_device_display_name,
     performance_monitor,
 )
+from ..utils.device_info import device_matches_type
 from ..utils.error_handling import handle_api_errors
 from ..utils.retry import with_standard_retries
 
@@ -332,19 +333,15 @@ class MerakiNetworkHub:
                 type_devices = []
                 for device in all_devices:
                     model = device.get("model", "")
-                    if model.startswith(self.device_type):
-                        type_devices.append(device)
-                    elif not model and self.device_type == SENSOR_TYPE_MT:
-                        # For MT devices, check productType as fallback when model is missing
-                        product_type = device.get("productType", "").lower()
-                        if product_type == "sensor":
+                    if device_matches_type(device, self.device_type):
+                        if not model and self.device_type == SENSOR_TYPE_MT:
                             _LOGGER.debug(
-                                "Device %s has no model but productType='sensor', including as MT device",
+                                "Device %s has no model but matches MT productType, including as MT device",
                                 device.get("serial", "unknown"),
                             )
                             # Set a generic model to avoid "Unknown" in logs
                             device["model"] = "MT"
-                            type_devices.append(device)
+                        type_devices.append(device)
                     elif not model:
                         # Log devices with missing models for debugging
                         _LOGGER.debug(

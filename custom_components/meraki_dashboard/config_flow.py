@@ -58,6 +58,7 @@ from .const import (
     USER_AGENT,
 )
 from .utils import sanitize_device_name
+from .utils.device_info import determine_device_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -230,13 +231,13 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             )
 
                             for device in devices:
-                                model = device.get("model", "")
+                                device_type = determine_device_type(device)
                                 # Include all supported device types for selection
-                                if (
-                                    model.startswith(SENSOR_TYPE_MT)
-                                    or model.startswith(SENSOR_TYPE_MR)
-                                    or model.startswith(SENSOR_TYPE_MS)
-                                ):
+                                if device_type in {
+                                    SENSOR_TYPE_MT,
+                                    SENSOR_TYPE_MR,
+                                    SENSOR_TYPE_MS,
+                                }:
                                     # Store network name for display
                                     device["network_name"] = network["name"]
                                     self._available_devices.append(device)

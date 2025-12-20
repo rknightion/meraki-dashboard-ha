@@ -28,7 +28,7 @@ from ..const import (
     ATTR_SERIAL,
 )
 from ..coordinator import MerakiSensorCoordinator
-from ..utils.device_info import DeviceInfoBuilder
+from ..utils.device_info import DeviceInfoBuilder, determine_device_type
 from ..utils.sanitization import sanitize_attribute_value
 
 _LOGGER = logging.getLogger(__name__)
@@ -145,15 +145,9 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
 
     def _get_device_type(self) -> str:
         """Get device type from model."""
-        model = self._device.get("model", "").upper()
-        if model.startswith("MT"):
-            return "MT"
-        elif model.startswith("MR"):
-            return "MR"
-        elif model.startswith("MS"):
-            return "MS"
-        elif model.startswith("MV"):
-            return "MV"
+        device_type = determine_device_type(self._device)
+        if device_type:
+            return device_type
         return "unknown"
 
     @property
