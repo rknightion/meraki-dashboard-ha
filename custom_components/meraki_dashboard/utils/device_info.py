@@ -197,9 +197,7 @@ class DeviceInfoBuilder:
         # Add MAC address connection if available (sanitized)
         mac_address = device_data.get("mac")
         if mac_address:
-            self._info["connections"] = {
-                ("mac", sanitize_attribute_value(mac_address))
-            }
+            self._info["connections"] = {("mac", sanitize_attribute_value(mac_address))}
 
         # Set configuration URL - prefer lanIp if available (sanitized)
         lan_ip = device_data.get("lanIp")
