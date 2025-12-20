@@ -246,7 +246,7 @@ DEVICE_TYPE_MAPPINGS: Final = {
     SENSOR_TYPE_MR: {
         "name_suffix": "Wireless Access Point",
         "description": "Wireless access points providing WiFi connectivity and network metrics",
-        "model_prefixes": ["MR"],
+        "model_prefixes": ["MR", "CW"],
     },
     SENSOR_TYPE_MS: {
         "name_suffix": "Switch",
