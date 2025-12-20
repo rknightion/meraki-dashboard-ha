@@ -11,6 +11,8 @@ Meraki Dashboard Exporter - A production-ready Prometheus exporter that collects
 - **Memory**: Be mindful of API rate limits and implement proper error handling
 - **Use parallel tasks/agents** when suitable use the parallel tasks and agents available to you
 - **Never issue git commands** the user will handle all 'git' commands
+- Use context7 MCP server with library ID meraki/dashboard-api-python for finding documentation about the meraki dashboard python SDK
+- Use context7 MCP server with library ID openapi/api_meraki_api_v1_openapispec for finding documentation about the meraki dashboard API itself (openai spec)
 </critical_notes>
 
 <file_map>
