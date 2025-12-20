@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -26,8 +27,8 @@ from .const import (
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
-    CONF_SEMI_STATIC_DATA_INTERVAL,
     CONF_SELECTED_DEVICES,
+    CONF_SEMI_STATIC_DATA_INTERVAL,
     CONF_STATIC_DATA_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
@@ -89,7 +90,7 @@ def _build_startup_summary(
     network_hubs: dict[str, MerakiNetworkHub],
     coordinator_ids: set[str],
 ) -> str:
-    options = entry.options or {}
+    options: dict[str, Any] = dict(entry.options) if entry.options else {}
 
     org_id = entry.data.get(CONF_ORGANIZATION_ID, "unknown")
     org_name = org_hub.organization_name or "Unknown"
@@ -99,6 +100,9 @@ def _build_startup_summary(
         CONF_ENABLED_DEVICE_TYPES, [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]
     )
     selected_devices = set(options.get(CONF_SELECTED_DEVICES, []))
+    selected_devices_summary = (
+        "all" if not selected_devices else f"{len(selected_devices)} selected"
+    )
 
     scan_interval = options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
     auto_discovery_default = options.get(CONF_AUTO_DISCOVERY, True)
@@ -128,25 +132,17 @@ def _build_startup_summary(
         f"Networks discovered: {len(org_hub.networks)}",
         f"Enabled device types: {', '.join(enabled_device_types)}",
         (
-            "Defaults: scan=%ds discovery=%ds auto_discovery=%s "
-            "selected_devices=%s mt_refresh=%s(%ds)"
-            % (
-                scan_interval,
-                discovery_interval_default,
-                "on" if auto_discovery_default else "off",
-                "all" if not selected_devices else f"{len(selected_devices)} selected",
-                "on" if mt_refresh_enabled else "off",
-                mt_refresh_interval,
-            )
+            f"Defaults: scan={scan_interval}s discovery={discovery_interval_default}s "
+            f"auto_discovery={'on' if auto_discovery_default else 'off'} "
+            f"selected_devices={selected_devices_summary} "
+            f"mt_refresh={'on' if mt_refresh_enabled else 'off'}({mt_refresh_interval}s)"
         ),
         (
-            "Org refresh: static=%ds semi_static=%ds dynamic=%ds"
-            % (static_interval, semi_static_interval, dynamic_interval)
+            "Org refresh: static="
+            f"{static_interval}s semi_static={semi_static_interval}s "
+            f"dynamic={dynamic_interval}s"
         ),
-        (
-            "Hubs: %d (coordinators: %d)"
-            % (len(network_hubs), len(coordinator_ids))
-        ),
+        f"Hubs: {len(network_hubs)} (coordinators: {len(coordinator_ids)})",
     ]
 
     hub_scan_intervals = options.get(CONF_HUB_SCAN_INTERVALS, {})
@@ -167,19 +163,13 @@ def _build_startup_summary(
             hub_id, discovery_interval_default
         )
         selected_count = (
-            sum(
-                1
-                for device in hub.devices
-                if device.get("serial") in selected_devices
-            )
+            sum(1 for device in hub.devices if device.get("serial") in selected_devices)
             if selected_devices
             else 0
         )
 
         discovery_label = (
-            f"on({hub_discovery_interval}s)"
-            if hub_auto_discovery_enabled
-            else "off"
+            f"on({hub_discovery_interval}s)" if hub_auto_discovery_enabled else "off"
         )
         selected_label = "all" if not selected_devices else str(selected_count)
         coordinator_label = "yes" if hub_id in coordinator_ids else "no"
