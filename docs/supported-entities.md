@@ -12,131 +12,212 @@ The Meraki Dashboard integration creates entities based on your Cisco Meraki dev
 
 The integration supports the following Meraki device types:
 
-- **MT** - Environmental sensors (temperature, humidity, CO2, air quality, power monitoring)
-- **MR** - Wireless access points (SSID status, client counts, RF metrics)
-- **MS** - Switches (port status, PoE consumption, traffic statistics)
-- **MV** - Cameras (coming soon)
+- **MT** - Environmental monitoring sensors for temperature, humidity, air quality, etc. (model prefixes: MT)
+- **MR** - Wireless access points providing WiFi connectivity and network metrics (model prefixes: MR, CW)
+- **MS** - Network switches providing port status, PoE power, and traffic metrics (model prefixes: MS)
+- **MV** - Security cameras providing video analytics and motion detection (model prefixes: MV) (no entities defined yet)
 
 ## Sensors
 
 ### MT Environmental Sensors
 
-MT devices provide comprehensive environmental monitoring capabilities:
+MT devices provide environmental monitoring capabilities:
 
-| Sensor | Description | Device Class | Unit | State Class | Icon |
+| Name | Key | Device Class | Unit | State Class | Icon | Precision |
+|----------|----------|----------|----------|----------|----------|----------|
+| Apparent Power | apparentPower | APPARENT_POWER | VA | MEASUREMENT | - | - |
+| Battery | battery | BATTERY | % | MEASUREMENT | - | - |
+| Button | button | - | - | - | mdi:gesture-tap-button | - |
+| CO2 | co2 | CO2 | ppm | MEASUREMENT | - | - |
+| Current | current | CURRENT | A | MEASUREMENT | - | 2 |
+| Frequency | frequency | FREQUENCY | Hz | MEASUREMENT | - | 2 |
+| Humidity | humidity | HUMIDITY | % | MEASUREMENT | - | 1 |
+| Indoor Air Quality | indoorAirQuality | AQI | - | MEASUREMENT | - | - |
+| Noise | noise | SOUND_PRESSURE | dB | MEASUREMENT | - | - |
+| PM2.5 | pm25 | PM25 | μg/m³ | MEASUREMENT | - | - |
+| Power Factor | powerFactor | POWER_FACTOR | - | MEASUREMENT | - | 3 |
+| Real Power | realPower | POWER | W | MEASUREMENT | - | - |
+| TVOC | tvoc | VOLATILE_ORGANIC_COMPOUNDS | μg/m³ | MEASUREMENT | - | 0 |
+| Temperature | temperature | TEMPERATURE | °C | MEASUREMENT | - | 1 |
+| Voltage | voltage | VOLTAGE | V | MEASUREMENT | - | 1 |
+
+
+### MT Energy Sensors
+
+Energy sensors are calculated from power readings when available:
+
+| Name | Key | Device Class | Unit | State Class | Precision |
 |----------|----------|----------|----------|----------|----------|
-| Apparent Power | Apparent Power sensor | APPARENT_POWER | VA | MEASUREMENT | - |
-| Battery | Battery sensor | BATTERY | % | MEASUREMENT | - |
-| Button | Button | - | - | - | mdi:gesture-tap-button |
-| CO2 | CO2 sensor | CO2 | ppm | MEASUREMENT | - |
-| Current | Current sensor | CURRENT | AMPERE | MEASUREMENT | - |
-| Frequency | Frequency sensor | FREQUENCY | HERTZ | MEASUREMENT | - |
-| Humidity | Humidity sensor | HUMIDITY | % | MEASUREMENT | - |
-| Indoor Air Quality | Indoor Air Quality sensor | AQI | - | MEASUREMENT | - |
-| Noise | Noise sensor | SOUND_PRESSURE | DECIBEL | MEASUREMENT | - |
-| PM2.5 | PM2.5 sensor | PM25 | μg/m³ | MEASUREMENT | - |
-| Power Factor | Power Factor sensor | POWER_FACTOR | - | MEASUREMENT | - |
-| Real Power | Real Power sensor | POWER | WATT | MEASUREMENT | - |
-| Temperature | Temperature sensor | TEMPERATURE | CELSIUS | MEASUREMENT | - |
-| TVOC | TVOC sensor | VOLATILE_ORGANIC_COMPOUNDS | μg/m³ | MEASUREMENT | - |
-| Voltage | Voltage sensor | VOLTAGE | VOLT | MEASUREMENT | - |
-| Energy | Energy sensor | ENERGY | WATT_HOUR | TOTAL_INCREASING | - |
+| Energy | realPower_energy | ENERGY | Wh | TOTAL_INCREASING | 1 |
+
 
 ### MR Wireless Access Point Sensors
 
-MR devices provide wireless network monitoring:
+MR devices provide wireless metrics per access point:
 
-| Sensor | Description | Device Class | Unit | State Class | Icon |
+| Name | Key | Unit | State Class | Icon | Precision |
 |----------|----------|----------|----------|----------|----------|
-| Channel Utilization 2.4GHz (Non-Wifi) | Channel Utilization 2.4GHz (Non-Wifi) | - | % | MEASUREMENT | mdi:signal-off |
-| Channel Utilization 5GHz (Non-Wifi) | Channel Utilization 5GHz (Non-Wifi) | - | % | MEASUREMENT | mdi:signal-off |
-| Channel Utilization 2.4GHz (Total) | Channel Utilization 2.4GHz (Total) | - | % | MEASUREMENT | mdi:access-point |
-| Channel Utilization 5GHz (Total) | Channel Utilization 5GHz (Total) | - | % | MEASUREMENT | mdi:access-point |
-| Channel Utilization 2.4GHz (Wifi) | Channel Utilization 2.4GHz (Wifi) | - | % | MEASUREMENT | mdi:wifi |
-| Channel Utilization 5GHz (Wifi) | Channel Utilization 5GHz (Wifi) | - | % | MEASUREMENT | mdi:wifi |
-| Connected Clients | Connected Clients | - | - | MEASUREMENT | mdi:account-multiple |
-| Enabled SSIDs | Enabled SSIDs | - | - | MEASUREMENT | mdi:wifi-check |
-| Memory Usage | Memory Usage | - | % | MEASUREMENT | mdi:memory |
-| Open SSIDs | Open SSIDs | - | - | MEASUREMENT | mdi:wifi-off |
-| SSID Count | SSID Count | - | - | MEASUREMENT | mdi:wifi |
+| Channel Utilization 2.4GHz (Non-Wifi) | channel_utilization_non_wifi_24 | % | MEASUREMENT | mdi:signal-off | 1 |
+| Channel Utilization 2.4GHz (Total) | channel_utilization_total_24 | % | MEASUREMENT | mdi:access-point | 1 |
+| Channel Utilization 2.4GHz (Wifi) | channel_utilization_wifi_24 | % | MEASUREMENT | mdi:wifi | 1 |
+| Channel Utilization 5GHz (Non-Wifi) | channel_utilization_non_wifi_5 | % | MEASUREMENT | mdi:signal-off | 1 |
+| Channel Utilization 5GHz (Total) | channel_utilization_total_5 | % | MEASUREMENT | mdi:access-point | 1 |
+| Channel Utilization 5GHz (Wifi) | channel_utilization_wifi_5 | % | MEASUREMENT | mdi:wifi | 1 |
+| Connected Clients | client_count | - | MEASUREMENT | mdi:account-multiple | - |
+| Enabled SSIDs | enabled_ssids | - | MEASUREMENT | mdi:wifi-check | - |
+| Memory Usage | memory_usage | % | MEASUREMENT | mdi:memory | 1 |
+| Open SSIDs | open_ssids | - | MEASUREMENT | mdi:wifi-off | - |
+| SSID Count | ssid_count | - | MEASUREMENT | mdi:wifi | - |
+
+
+### MR Network Sensors
+
+Network-level wireless metrics aggregated per network hub:
+
+| Name | Key | State Class | Icon |
+|----------|----------|----------|----------|
+| Network Enabled SSIDs | network_enabled_ssids | MEASUREMENT | mdi:wifi-check |
+| Network Open SSIDs | network_open_ssids | MEASUREMENT | mdi:wifi-off |
+| Network SSID Count | network_ssid_count | MEASUREMENT | mdi:wifi |
+
 
 ### MS Switch Sensors
 
 MS devices provide switch and port monitoring:
 
-| Sensor | Description | Device Class | Unit | State Class | Icon |
-|----------|----------|----------|----------|----------|----------|
-| Connected Clients | Connected Clients | - | - | MEASUREMENT | mdi:devices |
-| Connected Ports | Connected Ports | - | - | MEASUREMENT | mdi:ethernet-cable |
-| Memory Usage | Memory Usage | - | % | MEASUREMENT | mdi:memory |
-| PoE Ports | PoE Ports | - | - | MEASUREMENT | mdi:ethernet-cable-electric |
-| PoE Power Usage | PoE Power Usage sensor | POWER | WATT | MEASUREMENT | mdi:power-plug |
-| Port Count | Port Count | - | - | MEASUREMENT | mdi:ethernet |
-| Port Discards | Port Discards | - | - | TOTAL_INCREASING | mdi:trash-can |
-| Port Errors | Port Errors | - | - | TOTAL_INCREASING | mdi:alert-circle |
-| Port Link Count | Port Link Count | - | - | MEASUREMENT | mdi:ethernet-cable |
-| STP Priority | STP Priority | - | - | MEASUREMENT | mdi:sort-numeric-variant |
+| Name | Key | Device Class | Unit | State Class | Icon | Precision |
+|----------|----------|----------|----------|----------|----------|----------|
+| Connected Clients | connected_clients | - | - | MEASUREMENT | mdi:devices | - |
+| Connected Ports | connected_ports | - | - | MEASUREMENT | mdi:ethernet-cable | - |
+| Memory Usage | memory_usage | - | % | MEASUREMENT | mdi:memory | 1 |
+| PoE Ports | poe_ports | - | - | MEASUREMENT | mdi:ethernet-cable-electric | - |
+| PoE Power Usage | poe_power | POWER | W | MEASUREMENT | mdi:power-plug | 1 |
+| Port Count | port_count | - | - | MEASUREMENT | mdi:ethernet | - |
+| Port Discards | port_discards | - | - | TOTAL_INCREASING | mdi:trash-can | - |
+| Port Errors | port_errors | - | - | TOTAL_INCREASING | mdi:alert-circle | - |
+| Port Link Count | port_link_count | - | - | MEASUREMENT | mdi:ethernet-cable | - |
+| STP Priority | stp_priority | - | - | MEASUREMENT | mdi:sort-numeric-variant | - |
+
+
+### MS Network Sensors
+
+Network-level switch metrics aggregated per network hub:
+
+| Name | Key | Device Class | Unit | State Class | Icon | Precision |
+|----------|----------|----------|----------|----------|----------|----------|
+| Network Connected Clients | network_connected_clients | - | - | MEASUREMENT | mdi:devices | - |
+| Network Connected Ports | network_connected_ports | - | - | MEASUREMENT | mdi:ethernet-cable | - |
+| Network PoE Ports | network_poe_ports | - | - | MEASUREMENT | mdi:ethernet-cable-electric | - |
+| Network PoE Power Usage | network_poe_power | POWER | W | MEASUREMENT | mdi:power-plug | 1 |
+| Network Port Count | network_port_count | - | - | MEASUREMENT | mdi:ethernet | - |
+
 
 ### Organization-Level Sensors
 
-These sensors provide integration-wide information:
+These sensors provide organization-wide diagnostic information:
 
-| Sensor | Description | Device Class | Unit | State Class | Icon |
-|----------|----------|----------|----------|----------|----------|
-| Alerting Devices | Alerting Devices | - | - | MEASUREMENT | mdi:alert-circle |
-| Network Alerts | Network Alerts | - | - | MEASUREMENT | mdi:alert-network |
-| API Calls | API Calls | - | - | TOTAL_INCREASING | mdi:api |
-| Total Bluetooth Clients | Total Bluetooth Clients | - | clients | MEASUREMENT | mdi:bluetooth |
-| Total Clients (24h) | Total Clients (24h) | - | clients | MEASUREMENT | mdi:account-group |
-| Average Client Usage (24h) | Average Client Usage (24h) | - | KB | MEASUREMENT | mdi:chart-bell-curve |
-| Total Client Downstream (24h) | Total Client Downstream (24h) | - | KB | MEASUREMENT | mdi:download |
-| Total Client Usage (24h) | Total Client Usage (24h) | - | KB | MEASUREMENT | mdi:chart-line |
-| Total Client Upstream (24h) | Total Client Upstream (24h) | - | KB | MEASUREMENT | mdi:upload |
-| Device Count | Device Count | - | - | MEASUREMENT | mdi:counter |
-| Dormant Devices | Dormant Devices | - | - | MEASUREMENT | mdi:sleep |
-| Failed API Calls | Failed API Calls | - | - | TOTAL_INCREASING | mdi:api-off |
-| Licenses Expiring Soon | Licenses Expiring Soon | - | - | MEASUREMENT | mdi:license |
-| Network Count | Network Count | - | - | MEASUREMENT | mdi:network |
-| Offline Devices | Offline Devices | - | - | MEASUREMENT | mdi:access-point-network-off |
-| Online Devices | Online Devices | - | - | MEASUREMENT | mdi:access-point-network |
+| Name | Key | Unit | State Class | Category | Icon | Precision |
+|----------|----------|----------|----------|----------|----------|----------|
+| API Calls | api_calls | - | TOTAL_INCREASING | DIAGNOSTIC | mdi:api | - |
+| Alerting Devices | alerting_devices | - | MEASUREMENT | DIAGNOSTIC | mdi:alert-circle | - |
+| Average Client Usage (24h) | clients_usage_average_total | KB | MEASUREMENT | DIAGNOSTIC | mdi:chart-bell-curve | 2 |
+| Device Count | device_count | - | MEASUREMENT | DIAGNOSTIC | mdi:counter | - |
+| Dormant Devices | dormant_devices | - | MEASUREMENT | DIAGNOSTIC | mdi:sleep | - |
+| Failed API Calls | failed_api_calls | - | TOTAL_INCREASING | DIAGNOSTIC | mdi:api-off | - |
+| Licenses Expiring Soon | license_expiring | - | MEASUREMENT | DIAGNOSTIC | mdi:license | - |
+| Network Alerts | alerts_count | - | MEASUREMENT | DIAGNOSTIC | mdi:alert-network | - |
+| Network Count | network_count | - | MEASUREMENT | DIAGNOSTIC | mdi:network | - |
+| Offline Devices | offline_devices | - | MEASUREMENT | DIAGNOSTIC | mdi:access-point-network-off | - |
+| Online Devices | online_devices | - | MEASUREMENT | DIAGNOSTIC | mdi:access-point-network | - |
+| Total Bluetooth Clients | bluetooth_clients_total_count | clients | MEASUREMENT | DIAGNOSTIC | mdi:bluetooth | - |
+| Total Client Downstream (24h) | clients_usage_overall_downstream | KB | MEASUREMENT | DIAGNOSTIC | mdi:download | 1 |
+| Total Client Upstream (24h) | clients_usage_overall_upstream | KB | MEASUREMENT | DIAGNOSTIC | mdi:upload | 1 |
+| Total Client Usage (24h) | clients_usage_overall_total | KB | MEASUREMENT | DIAGNOSTIC | mdi:chart-line | 1 |
+| Total Clients (24h) | clients_total_count | clients | MEASUREMENT | DIAGNOSTIC | mdi:account-group | - |
+
+
+### Network Hub Sensors
+
+These sensors provide per-network hub diagnostic information:
+
+| Name | Key | State Class | Category | Icon |
+|----------|----------|----------|----------|----------|
+| Device Count | device_count | MEASUREMENT | DIAGNOSTIC | mdi:counter |
+
 
 ## Binary Sensors
 
-Binary sensors provide on/off state information:
+### MT Binary Sensors
 
-| Entity | Description | Device Class | Icon |
-|--------|-------------|--------------|------|
-| Water Detected | Water Detected binary sensor | MOISTURE | mdi:water-alert |
-| Door Open | Door Open binary sensor | DOOR | mdi:door |
-| Downstream Power | Downstream Power binary sensor | POWER | mdi:power-plug |
-| Remote Lockout Switch | Remote Lockout Switch binary sensor | LOCK | mdi:lock |
+| Name | Key | Device Class | Icon |
+|----------|----------|----------|----------|
+| Door Open | door | DOOR | mdi:door |
+| Downstream Power | downstreamPower | POWER | mdi:power-plug |
+| Remote Lockout Switch | remoteLockoutSwitch | LOCK | mdi:lock |
+| Water Detected | water | MOISTURE | mdi:water-alert |
+
 
 ## Buttons
 
-Control entities for device actions:
+| Name | Key | Description | Icon |
+|----------|----------|----------|----------|
+| Discover devices | discover_devices | Button to manually trigger device discovery across all network hubs. | mdi:magnify-scan |
+| Update sensor data | update_sensor_data | Button to manually trigger sensor data update across all coordinators. | mdi:refresh |
 
-| Entity | Description | Icon |
-|--------|-------------|------|
-| Update Sensor Data | Manually trigger sensor data update across all coordinators | mdi:refresh |
-| Discover Devices | Manually trigger device discovery | mdi:magnify |
+
+## Coverage Summary
+
+Totals by platform:
+
+| Platform | Count |
+|----------|----------|
+| Sensors | 62 |
+| Binary Sensors | 4 |
+| Buttons | 2 |
+
+Totals by device type:
+
+| Device Type | Sensors | Binary Sensors | Total |
+|----------|----------|----------|----------|
+| MT | 16 | 4 | 20 |
+| MR | 14 | 0 | 14 |
+| MS | 15 | 0 | 15 |
+| MV | 0 | 0 | 0 |
+
+Device types without entity descriptions yet (device type exists but no entity descriptions are defined):
+
+- MV
+
+Breakdown by description dictionary:
+
+| Dictionary | Count |
+|----------|----------|
+| MR_NETWORK_SENSOR_DESCRIPTIONS | 3 |
+| MR_SENSOR_DESCRIPTIONS | 11 |
+| MS_DEVICE_SENSOR_DESCRIPTIONS | 10 |
+| MS_NETWORK_SENSOR_DESCRIPTIONS | 5 |
+| MT_ENERGY_SENSOR_DESCRIPTIONS | 1 |
+| MT_SENSOR_DESCRIPTIONS | 15 |
+| NETWORK_HUB_SENSOR_DESCRIPTIONS | 1 |
+| ORG_HUB_SENSOR_DESCRIPTIONS | 16 |
+| MT_BINARY_SENSOR_DESCRIPTIONS | 4 |
 
 ## Entity Attributes
 
-All Meraki entities include these common attributes:
+All Meraki entities include these common attributes when applicable:
 
-### Device Attributes
-- `device_serial` - Unique device serial number
-- `device_model` - Hardware model
-- `device_firmware` - Current firmware version
-- `device_network` - Network name
-- `device_tags` - Assigned tags
-- `last_reported` - Last communication time
-
-### Sensor-Specific Attributes
-- `reading_at` - Timestamp of the sensor reading
-- `meta` - Additional metadata from the API
 - `network_id` - Network identifier
-- `organization_id` - Organization identifier
+- `network_name` - Network name
+- `serial` - Device serial number
+- `model` - Hardware model
+- `last_reported_at` - Timestamp of the most recent reading (when available)
+
+Additional attributes may be exposed per device type, such as:
+
+- `lan_ip`, `gateway`, `ip_type`, `primary_dns`, `secondary_dns` (MR/MS devices)
+- `memory_usage` (MR/MS devices when organization memory data is available)
+- `port_types`, `poe_enabled_ports`, `port_configurations` (MS devices)
+- `mac_address`, `temperature_fahrenheit` (MT devices when available)
 
 ## Entity Naming
 
@@ -148,31 +229,26 @@ Entities follow Home Assistant naming conventions:
 
 ## Update Intervals
 
-Different entity types update at different intervals to optimize API usage:
+Default polling intervals can be configured per hub and per organization.
+The defaults below are pulled from the integration constants (seconds):
 
-- **Environmental Sensors (MT)**: 10 minutes
-- **Network Devices (MR/MS)**: 5 minutes
-- **Organization Metrics**: 15 minutes
-- **Device Status**: 5 minutes
+- Global default scan interval: 300
+- Default discovery interval: 3600
+- MT default scan interval: 30
+- MR default scan interval: 600
+- MS default scan interval: 600
+- MV default scan interval: 600
+
+Organization-level data uses tiered refresh timers by default:
+
+- Static data interval: 14400
+- Semi-static data interval: 3600
+- Dynamic data interval: 600
 
 ## Entity Categories
 
-Some entities are categorized as diagnostic to help organize the UI:
-
-- **Diagnostic Entities**: Include device information like firmware version, serial number, model, and other rarely-changing metrics
-- **Standard Entities**: Include sensor readings, status information, and frequently-changing metrics
-
-All entities are enabled by default and collect data. Diagnostic entities appear in a separate section in the Home Assistant UI for better organization.
-
-## Units and Precision
-
-The integration uses appropriate units and precision for each sensor type:
-
-- **Temperature**: Celsius with 1 decimal place
-- **Humidity**: Percentage with no decimals
-- **Power**: Watts with 2 decimal places
-- **Network Traffic**: Automatically scaled (KB/s, MB/s, GB/s)
-- **Time**: ISO 8601 format for timestamps
+Some entities are categorized as diagnostic to help organize the UI.
+The tables above include a Category column when set on the description.
 
 ## See Also
 

@@ -1,492 +1,750 @@
 #!/usr/bin/env python3
 """Auto-generate entity documentation for the Meraki Dashboard integration."""
 
+from __future__ import annotations
+
 import ast
-import re
 from pathlib import Path
 from typing import Any
 
 
-def extract_class_info(file_path: Path) -> list[dict[str, Any]]:
-    """Extract class information from a Python file."""
+UNIT_NAME_MAP: dict[str, str] = {
+    "PERCENTAGE": "%",
+    "CONCENTRATION_PARTS_PER_MILLION": "ppm",
+    "CONCENTRATION_MICROGRAMS_PER_CUBIC_METER": "μg/m³",
+}
+
+UNIT_ATTR_MAP: dict[str, str] = {
+    "WATT": "W",
+    "WATT_HOUR": "Wh",
+    "AMPERE": "A",
+    "VOLT": "V",
+    "HERTZ": "Hz",
+    "DECIBEL": "dB",
+    "CELSIUS": "°C",
+}
+
+SENSOR_SECTION_ORDER = [
+    "MT_SENSOR_DESCRIPTIONS",
+    "MT_ENERGY_SENSOR_DESCRIPTIONS",
+    "MR_SENSOR_DESCRIPTIONS",
+    "MR_NETWORK_SENSOR_DESCRIPTIONS",
+    "MS_DEVICE_SENSOR_DESCRIPTIONS",
+    "MS_NETWORK_SENSOR_DESCRIPTIONS",
+    "ORG_HUB_SENSOR_DESCRIPTIONS",
+    "NETWORK_HUB_SENSOR_DESCRIPTIONS",
+]
+
+SENSOR_SECTION_DETAILS: dict[str, dict[str, str]] = {
+    "MT_SENSOR_DESCRIPTIONS": {
+        "title": "MT Environmental Sensors",
+        "intro": "MT devices provide environmental monitoring capabilities:",
+    },
+    "MT_ENERGY_SENSOR_DESCRIPTIONS": {
+        "title": "MT Energy Sensors",
+        "intro": "Energy sensors are calculated from power readings when available:",
+    },
+    "MR_SENSOR_DESCRIPTIONS": {
+        "title": "MR Wireless Access Point Sensors",
+        "intro": "MR devices provide wireless metrics per access point:",
+    },
+    "MR_NETWORK_SENSOR_DESCRIPTIONS": {
+        "title": "MR Network Sensors",
+        "intro": "Network-level wireless metrics aggregated per network hub:",
+    },
+    "MS_DEVICE_SENSOR_DESCRIPTIONS": {
+        "title": "MS Switch Sensors",
+        "intro": "MS devices provide switch and port monitoring:",
+    },
+    "MS_NETWORK_SENSOR_DESCRIPTIONS": {
+        "title": "MS Network Sensors",
+        "intro": "Network-level switch metrics aggregated per network hub:",
+    },
+    "ORG_HUB_SENSOR_DESCRIPTIONS": {
+        "title": "Organization-Level Sensors",
+        "intro": "These sensors provide organization-wide diagnostic information:",
+    },
+    "NETWORK_HUB_SENSOR_DESCRIPTIONS": {
+        "title": "Network Hub Sensors",
+        "intro": "These sensors provide per-network hub diagnostic information:",
+    },
+}
+
+SENSOR_TABLE_COLUMNS = [
+    ("Name", "name"),
+    ("Key", "key"),
+    ("Device Class", "device_class"),
+    ("Unit", "unit"),
+    ("State Class", "state_class"),
+    ("Category", "entity_category"),
+    ("Icon", "icon"),
+    ("Precision", "precision"),
+]
+
+BINARY_SENSOR_TABLE_COLUMNS = [
+    ("Name", "name"),
+    ("Key", "key"),
+    ("Device Class", "device_class"),
+    ("Category", "entity_category"),
+    ("Icon", "icon"),
+]
+
+BUTTON_TABLE_COLUMNS = [
+    ("Name", "name"),
+    ("Key", "key"),
+    ("Description", "description"),
+    ("Icon", "icon"),
+]
+
+
+def parse_python_file(file_path: Path) -> ast.AST | None:
+    """Parse a Python file and return its AST."""
     try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
-        return []
+        content = file_path.read_text(encoding="utf-8")
+    except Exception as err:
+        print(f"Error reading {file_path}: {err}")
+        return None
 
     try:
-        tree = ast.parse(content)
-    except SyntaxError as e:
-        print(f"Syntax error in {file_path}: {e}")
-        return []
-
-    classes = []
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ClassDef):
-            class_info = {
-                "name": node.name,
-                "docstring": ast.get_docstring(node),
-                "attributes": {},
-                "methods": {},
-                "properties": {},
-                "base_classes": [base.id if hasattr(base, "id") else str(base) for base in node.bases],
-                "file": file_path.name,
-                "init_params": []
-            }
-
-            # Extract class attributes and their values
-            for item in node.body:
-                if isinstance(item, ast.Assign):
-                    for target in item.targets:
-                        if isinstance(target, ast.Name):
-                            attr_name = target.id
-                            attr_value = None
-
-                            # Try to extract the value
-                            if isinstance(item.value, ast.Constant):
-                                attr_value = item.value.value
-                            elif isinstance(item.value, ast.Name):
-                                attr_value = item.value.id
-                            elif isinstance(item.value, ast.Attribute):
-                                # Handle things like SensorDeviceClass.SPEED
-                                attr_value = f"{item.value.value.id}.{item.value.attr}" if hasattr(item.value.value, "id") else str(item.value)
-                            elif isinstance(item.value, ast.Str):
-                                attr_value = item.value.s
-
-                            class_info["attributes"][attr_name] = attr_value
-
-                # Extract method and property information
-                elif isinstance(item, ast.FunctionDef):
-                    method_docstring = ast.get_docstring(item)
-                    is_property = any(isinstance(d, ast.Name) and d.id == "property" for d in item.decorator_list)
-
-                    method_info = {
-                        "docstring": method_docstring,
-                        "property": is_property,
-                        "returns": None
-                    }
-
-                    # Try to extract return type from annotation
-                    if item.returns:
-                        if isinstance(item.returns, ast.Name):
-                            method_info["returns"] = item.returns.id
-                        elif isinstance(item.returns, ast.Constant):
-                            method_info["returns"] = str(item.returns.value)
-
-                    if is_property:
-                        class_info["properties"][item.name] = method_info
-                    else:
-                        class_info["methods"][item.name] = method_info
-
-            classes.append(class_info)
-
-    return classes
+        return ast.parse(content)
+    except SyntaxError as err:
+        print(f"Syntax error in {file_path}: {err}")
+        return None
 
 
-def extract_sensor_descriptions(file_path: Path) -> dict[str, dict[str, Any]]:
-    """Extract sensor descriptions from device files."""
-    try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
+def safe_eval(node: ast.AST, values: dict[str, Any]) -> Any:
+    """Safely evaluate simple AST nodes for constants."""
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name):
+        return values.get(node.id, node.id)
+    if isinstance(node, ast.Dict):
+        return {
+            safe_eval(key, values): safe_eval(value, values)
+            for key, value in zip(node.keys, node.values)
+        }
+    if isinstance(node, ast.List):
+        return [safe_eval(elt, values) for elt in node.elts]
+    if isinstance(node, ast.Tuple):
+        return tuple(safe_eval(elt, values) for elt in node.elts)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
+        operand = safe_eval(node.operand, values)
+        if isinstance(operand, int | float):
+            return -operand
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = safe_eval(node.left, values)
+        right = safe_eval(node.right, values)
+        if isinstance(left, str) and isinstance(right, str):
+            return left + right
+        if isinstance(left, int | float) and isinstance(right, int | float):
+            return left + right
+    return None
+
+
+def load_const_values(const_path: Path) -> dict[str, Any]:
+    """Load constant values from const.py without importing Home Assistant."""
+    tree = parse_python_file(const_path)
+    if not tree:
         return {}
 
-    descriptions = {}
+    values: dict[str, Any] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            value = safe_eval(node.value, values)
+            if value is None:
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name):
+                    values[target.id] = value
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.value is not None:
+                value = safe_eval(node.value, values)
+                if value is not None:
+                    values[node.target.id] = value
+    return values
 
-    # Use regex to find sensor description dictionaries
-    # Match patterns like MT_SENSOR_DESCRIPTIONS or ORG_HUB_SENSOR_DESCRIPTIONS
-    # Use a more robust pattern that handles nested braces
-    pattern = r"(\w+SENSOR_DESCRIPTIONS):\s*dict\[.*?\]\s*=\s*\{((?:[^{}]|\{[^{}]*\})*)\}"
-    matches = re.findall(pattern, content, re.DOTALL)
 
-    for dict_name, dict_content in matches:
-        # Parse each sensor entry - handle both quoted and unquoted keys
-        sensor_pattern = r'["\']?(\w+)["\']?\s*:\s*SensorEntityDescription\((.*?)\)(?:,|\s*\})'
-        sensor_matches = re.findall(sensor_pattern, dict_content, re.DOTALL)
+def get_call_name(node: ast.AST) -> str | None:
+    """Return the function name for a call node."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
 
-        for sensor_key, sensor_args in sensor_matches:
-            info = {"key": sensor_key}
 
-            # Extract properties from the arguments
-            # Name
-            name_match = re.search(r'name\s*=\s*"([^"]+)"', sensor_args)
-            if name_match:
-                info["name"] = name_match.group(1)
+def render_fstring(node: ast.JoinedStr, values: dict[str, Any]) -> str:
+    """Render a best-effort f-string representation."""
+    rendered_parts: list[str] = []
+    for part in node.values:
+        if isinstance(part, ast.Constant):
+            rendered_parts.append(str(part.value))
+        elif isinstance(part, ast.FormattedValue):
+            rendered = render_value(part.value, values, kind="key")
+            rendered_parts.append(str(rendered))
+    return "".join(rendered_parts)
 
-            # Device class
-            device_class_match = re.search(r"device_class\s*=\s*SensorDeviceClass\.(\w+)", sensor_args)
-            if device_class_match:
-                info["device_class"] = device_class_match.group(1)
 
-            # State class
-            state_class_match = re.search(r"state_class\s*=\s*SensorStateClass\.(\w+)", sensor_args)
-            if state_class_match:
-                info["state_class"] = state_class_match.group(1)
+def render_value(node: ast.AST, values: dict[str, Any], kind: str) -> Any:
+    """Render a best-effort string value from an AST node."""
+    if isinstance(node, ast.Constant):
+        return node.value
+    if isinstance(node, ast.Name):
+        return values.get(node.id, node.id)
+    if isinstance(node, ast.Attribute):
+        if kind in {"device_class", "state_class", "entity_category"}:
+            return node.attr
+        parent = render_value(node.value, values, kind)
+        if isinstance(parent, str):
+            return f"{parent}.{node.attr}"
+        return node.attr
+    if isinstance(node, ast.JoinedStr):
+        return render_fstring(node, values)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = render_value(node.left, values, kind)
+        right = render_value(node.right, values, kind)
+        if isinstance(left, str) and isinstance(right, str):
+            return left + right
+    try:
+        return ast.unparse(node)
+    except Exception:
+        return str(node)
 
-            # Unit
-            unit_match = re.search(r"native_unit_of_measurement\s*=\s*([^,\n]+)", sensor_args)
-            if unit_match:
-                unit_value = unit_match.group(1).strip()
-                # Clean up unit value
-                if "Unit" in unit_value:
-                    # Handle UnitOfXxx.YYY
-                    unit_parts = unit_value.split(".")
-                    if len(unit_parts) > 1:
-                        info["unit"] = unit_parts[-1]
-                    else:
-                        info["unit"] = unit_value
-                elif unit_value in ["PERCENTAGE", "CONCENTRATION_PARTS_PER_MILLION", "CONCENTRATION_MICROGRAMS_PER_CUBIC_METER"]:
-                    # Map constants to actual units
-                    unit_map = {
-                        "PERCENTAGE": "%",
-                        "CONCENTRATION_PARTS_PER_MILLION": "ppm",
-                        "CONCENTRATION_MICROGRAMS_PER_CUBIC_METER": "μg/m³"
-                    }
-                    info["unit"] = unit_map.get(unit_value, unit_value)
-                else:
-                    # String literal
-                    info["unit"] = unit_value.strip('"')
 
-            # Icon
-            icon_match = re.search(r'icon\s*=\s*"([^"]+)"', sensor_args)
-            if icon_match:
-                info["icon"] = icon_match.group(1)
+def normalize_unit(raw_value: Any) -> str | None:
+    """Normalize unit values to a human-friendly representation."""
+    if raw_value is None:
+        return None
+    if isinstance(raw_value, int | float):
+        return str(raw_value)
+    if not isinstance(raw_value, str):
+        return str(raw_value)
 
-            descriptions[sensor_key] = info
+    if raw_value in UNIT_NAME_MAP:
+        return UNIT_NAME_MAP[raw_value]
+    if raw_value in UNIT_ATTR_MAP:
+        return UNIT_ATTR_MAP[raw_value]
+    if raw_value.startswith("UnitOf") and "." in raw_value:
+        attr = raw_value.split(".")[-1]
+        return UNIT_ATTR_MAP.get(attr, attr)
+    return raw_value
+
+
+def parse_description_call(
+    call: ast.Call, values: dict[str, Any]
+) -> dict[str, Any]:
+    """Parse a *EntityDescription() call into a dictionary."""
+    info: dict[str, Any] = {}
+
+    for keyword in call.keywords:
+        if keyword.arg is None:
+            continue
+        if keyword.arg == "key":
+            info["key"] = render_value(keyword.value, values, "key")
+        elif keyword.arg == "name":
+            info["name"] = render_value(keyword.value, values, "name")
+        elif keyword.arg == "device_class":
+            info["device_class"] = render_value(
+                keyword.value, values, "device_class"
+            )
+        elif keyword.arg == "state_class":
+            info["state_class"] = render_value(
+                keyword.value, values, "state_class"
+            )
+        elif keyword.arg == "native_unit_of_measurement":
+            info["unit"] = normalize_unit(
+                render_value(keyword.value, values, "unit")
+            )
+        elif keyword.arg == "icon":
+            info["icon"] = render_value(keyword.value, values, "icon")
+        elif keyword.arg == "entity_category":
+            info["entity_category"] = render_value(
+                keyword.value, values, "entity_category"
+            )
+        elif keyword.arg == "suggested_display_precision":
+            info["precision"] = render_value(keyword.value, values, "precision")
+
+    return info
+
+
+def extract_description_dicts(
+    file_path: Path,
+    description_class: str,
+    values: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    """Extract description dictionaries from a Python file."""
+    tree = parse_python_file(file_path)
+    if not tree:
+        return {}
+
+    descriptions: dict[str, list[dict[str, Any]]] = {}
+
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            value_node = node.value
+            target_nodes = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            value_node = node.value
+            target_nodes = [node.target]
+        else:
+            continue
+
+        if not isinstance(value_node, ast.Dict):
+            continue
+
+        target_names = [
+            target.id for target in target_nodes if isinstance(target, ast.Name)
+        ]
+        if not target_names:
+            continue
+
+        for target_name in target_names:
+            if not target_name.endswith("DESCRIPTIONS"):
+                continue
+
+            entries: list[dict[str, Any]] = []
+            for key_node, entry_node in zip(value_node.keys, value_node.values):
+                if not isinstance(entry_node, ast.Call):
+                    continue
+                if get_call_name(entry_node.func) != description_class:
+                    continue
+
+                info = parse_description_call(entry_node, values)
+                if "key" not in info or info["key"] is None:
+                    info["key"] = render_value(key_node, values, "key")
+                entries.append(info)
+
+            if entries:
+                descriptions[target_name] = entries
 
     return descriptions
 
 
-def generate_sensor_table_from_descriptions(descriptions: dict[str, dict[str, Any]]) -> str:
-    """Generate a markdown table from sensor descriptions."""
-    if not descriptions:
-        return "No sensors found.\n"
+class ButtonDescriptionExtractor(ast.NodeVisitor):
+    """Extract ButtonEntityDescription calls tied to button classes."""
 
-    # Create table header
-    headers = ["Sensor", "Description", "Device Class", "Unit", "State Class", "Icon"]
+    def __init__(self, values: dict[str, Any]) -> None:
+        self._values = values
+        self._class_stack: list[ast.ClassDef] = []
+        self.results: list[dict[str, Any]] = []
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self._class_stack.append(node)
+        self.generic_visit(node)
+        self._class_stack.pop()
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        if self._class_stack and isinstance(node.value, ast.Call):
+            if get_call_name(node.value.func) == "ButtonEntityDescription":
+                class_node = self._class_stack[-1]
+                info = parse_description_call(node.value, self._values)
+                info["class_name"] = class_node.name
+                docstring = ast.get_docstring(class_node)
+                if docstring:
+                    info["description"] = " ".join(docstring.split())
+                self.results.append(info)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        if self._class_stack and isinstance(node.value, ast.Call):
+            if get_call_name(node.value.func) == "ButtonEntityDescription":
+                class_node = self._class_stack[-1]
+                info = parse_description_call(node.value, self._values)
+                info["class_name"] = class_node.name
+                docstring = ast.get_docstring(class_node)
+                if docstring:
+                    info["description"] = " ".join(docstring.split())
+                self.results.append(info)
+        self.generic_visit(node)
+
+
+def extract_button_descriptions(
+    file_path: Path, values: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Extract button descriptions from button entity classes."""
+    tree = parse_python_file(file_path)
+    if not tree:
+        return []
+
+    extractor = ButtonDescriptionExtractor(values)
+    extractor.visit(tree)
+    return extractor.results
+
+
+def generate_table(rows: list[dict[str, Any]], columns: list[tuple[str, str]]) -> str:
+    """Generate a markdown table with optional columns."""
+    if not rows:
+        return "No entries found.\n"
+
+    normalized_rows: list[dict[str, str]] = []
+    for row in rows:
+        normalized = {
+            key: "-" if row.get(key) in (None, "") else str(row.get(key))
+            for _, key in columns
+        }
+        name = row.get("name") or row.get("key")
+        if name:
+            normalized["name"] = str(name)
+        if row.get("key"):
+            normalized["key"] = str(row.get("key"))
+        normalized_rows.append(normalized)
+
+    # Only include columns that have data (always keep name/key).
+    included_columns: list[tuple[str, str]] = []
+    for header, key in columns:
+        if key in {"name", "key"}:
+            included_columns.append((header, key))
+            continue
+        if any(row.get(key, "-") != "-" for row in normalized_rows):
+            included_columns.append((header, key))
+
+    headers = [header for header, _ in included_columns]
     table = "| " + " | ".join(headers) + " |\n"
     table += "|" + "|".join(["-" * 10 for _ in headers]) + "|\n"
 
-    for key, info in sorted(descriptions.items()):
-        name = info.get("name", key)
-        device_class = info.get("device_class", "-")
-        unit = info.get("unit", "-")
-        state_class = info.get("state_class", "-")
-        icon = info.get("icon", "-")
-
-        # Generate description
-        description = name
-        if device_class != "-":
-            description = f"{name} sensor"
-
-        table += f"| {name} | {description} | {device_class} | {unit} | {state_class} | {icon} |\n"
+    for row in normalized_rows:
+        values = [row.get(key, "-") for _, key in included_columns]
+        table += "| " + " | ".join(values) + " |\n"
 
     return table
 
 
-def extract_binary_sensor_descriptions(file_path: Path) -> dict[str, dict[str, Any]]:
-    """Extract binary sensor descriptions."""
-    try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
-        return {}
+def gather_description_dicts(
+    root: Path, description_class: str, values: dict[str, Any]
+) -> dict[str, list[dict[str, Any]]]:
+    """Gather description dictionaries from all integration files."""
+    results: dict[str, list[dict[str, Any]]] = {}
 
-    descriptions = {}
+    for file_path in sorted(root.rglob("*.py")):
+        file_descriptions = extract_description_dicts(
+            file_path, description_class, values
+        )
+        for dict_name, entries in file_descriptions.items():
+            results.setdefault(dict_name, []).extend(entries)
 
-    # Look for binary sensor descriptions in dictionaries
-    dict_pattern = r"(\w+_BINARY_SENSOR_DESCRIPTIONS):\s*dict\[.*?\]\s*=\s*\{([^}]+)\}"
-    dict_matches = re.findall(dict_pattern, content, re.DOTALL)
+    deduped: dict[str, list[dict[str, Any]]] = {}
+    for dict_name, entries in results.items():
+        by_key: dict[str, dict[str, Any]] = {}
+        for entry in entries:
+            key = entry.get("key") or entry.get("name") or "unknown"
+            if key in by_key:
+                continue
+            by_key[str(key)] = entry
+        deduped[dict_name] = list(by_key.values())
 
-    for dict_name, dict_content in dict_matches:
-        # Parse each sensor entry with quoted keys
-        sensor_pattern = r'"(\w+)":\s*BinarySensorEntityDescription\((.*?)\)(?:,|\s*\})'
-        sensor_matches = re.findall(sensor_pattern, dict_content, re.DOTALL)
-
-        for sensor_key, sensor_args in sensor_matches:
-            info = {"key": sensor_key}
-
-            # Extract properties
-            name_match = re.search(r'name\s*=\s*"([^"]+)"', sensor_args)
-            if name_match:
-                info["name"] = name_match.group(1)
-
-            device_class_match = re.search(r"device_class\s*=\s*BinarySensorDeviceClass\.(\w+)", sensor_args)
-            if device_class_match:
-                info["device_class"] = device_class_match.group(1)
-
-            icon_match = re.search(r'icon\s*=\s*"([^"]+)"', sensor_args)
-            if icon_match:
-                info["icon"] = icon_match.group(1)
-
-            descriptions[sensor_key] = info
-
-    return descriptions
+    return deduped
 
 
-def extract_button_descriptions(file_path: Path) -> dict[str, dict[str, Any]]:
-    """Extract button descriptions."""
-    try:
-        with open(file_path, encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        print(f"Error reading {file_path}: {e}")
-        return {}
+def sort_entries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Sort entries by name/key for stable documentation output."""
+    return sorted(
+        entries,
+        key=lambda item: (
+            str(item.get("name") or ""),
+            str(item.get("key") or ""),
+        ),
+    )
 
-    descriptions = {}
 
-    # Extract button class information
-    classes = extract_class_info(file_path)
-    for cls in classes:
-        if "Button" in cls["name"] and cls["name"] not in ["ButtonEntity", "MerakiButtonEntity"]:
-            # Create description from class
-            key = cls["name"]
-            info = {"key": key}
-
-            # Get name from class name
-            if cls["name"] == "MerakiUpdateSensorDataButton":
-                info["name"] = "Update Sensor Data"
-                info["description"] = "Manually trigger sensor data update across all coordinators"
-                info["icon"] = "mdi:refresh"
-            elif cls["name"] == "MerakiDiscoverDevicesButton":
-                info["name"] = "Discover Devices"
-                info["description"] = "Manually trigger device discovery"
-                info["icon"] = "mdi:magnify"
-            else:
-                # Generate name from class name
-                name = cls["name"].replace("Meraki", "").replace("Button", "")
-                # Add spaces before capitals
-                name = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
-                info["name"] = name.strip()
-                info["description"] = f"{name} action"
-                info["icon"] = "mdi:button-cursor"
-
-            descriptions[key] = info
-
-    return descriptions
+def has_device_entities(
+    device_type: str,
+    sensor_dicts: dict[str, list[dict[str, Any]]],
+    binary_dicts: dict[str, list[dict[str, Any]]],
+) -> bool:
+    """Return True if any description dicts exist for a device type."""
+    prefix = f"{device_type.upper()}_"
+    for name in sensor_dicts:
+        if name.startswith(prefix):
+            return True
+    for name in binary_dicts:
+        if name.startswith(prefix):
+            return True
+    return False
 
 
 def main():
     """Generate entity documentation."""
     # Get the integration path
-    integration_path = Path(__file__).parent.parent / "custom_components" / "meraki_dashboard"
+    integration_path = (
+        Path(__file__).parent.parent / "custom_components" / "meraki_dashboard"
+    )
 
-    # Extract information from platform files
-    sensor_entities = []
-    binary_sensor_entities = []
-    button_entities = []
+    const_values = load_const_values(integration_path / "const.py")
 
-    # Keep track of all sensor descriptions organized by device type
-    device_type_descriptions = {}
+    sensor_description_dicts = gather_description_dicts(
+        integration_path, "SensorEntityDescription", const_values
+    )
+    binary_description_dicts = gather_description_dicts(
+        integration_path, "BinarySensorEntityDescription", const_values
+    )
 
-    # Process device files to get sensor descriptions
-    devices_path = integration_path / "devices"
-    if devices_path.exists():
-        for device_file in devices_path.glob("*.py"):
-            if device_file.name != "__init__.py":
-                descriptions = extract_sensor_descriptions(device_file)
-
-                # Organize by device type
-                device_type = device_file.stem.upper()
-                if descriptions:
-                    # Handle organization.py specially - it has both ORG and NETWORK sensors
-                    if device_type == "ORGANIZATION":
-                        # Split organization sensors into separate categories
-                        org_sensors = {}
-                        network_sensors = {}
-                        for key, desc in descriptions.items():
-                            # You could check the dictionary name if needed, but for now
-                            # we'll put all sensors under ORGANIZATION
-                            org_sensors[key] = desc
-                        if org_sensors:
-                            device_type_descriptions["ORGANIZATION"] = org_sensors
-                    else:
-                        device_type_descriptions[device_type] = descriptions
-
-                print(f"Found {len(descriptions)} sensor descriptions in {device_file.name}")
-
-    # Process sensor.py
-    sensor_file = integration_path / "sensor.py"
-    if sensor_file.exists():
-        classes = extract_class_info(sensor_file)
-        sensor_entities.extend([cls for cls in classes if "Sensor" in cls["name"] and cls["name"] != "SensorEntity"])
-
-    # Process binary_sensor.py
-    binary_sensor_file = integration_path / "binary_sensor.py"
-    binary_sensor_descriptions = {}
-    if binary_sensor_file.exists():
-        classes = extract_class_info(binary_sensor_file)
-        binary_sensor_entities.extend([cls for cls in classes if "BinarySensor" in cls["name"]])
-        binary_sensor_descriptions = extract_binary_sensor_descriptions(binary_sensor_file)
-
-    # Process button.py
     button_file = integration_path / "button.py"
-    button_descriptions = {}
+    button_descriptions: list[dict[str, Any]] = []
     if button_file.exists():
-        classes = extract_class_info(button_file)
-        button_entities.extend([cls for cls in classes if "Button" in cls["name"]])
-        button_descriptions = extract_button_descriptions(button_file)
+        button_descriptions = extract_button_descriptions(button_file, const_values)
 
     # Generate documentation
-    docs_content = """# Supported Entities
+    docs_lines = [
+        "# Supported Entities",
+        "",
+        "This page provides a comprehensive reference of all entities provided by the Meraki Dashboard integration.",
+        "",
+        "<!-- This file is auto-generated by scripts/generate_docs.py - do not edit manually -->",
+        "",
+        "## Overview",
+        "",
+        (
+            "The Meraki Dashboard integration creates entities based on your Cisco Meraki device "
+            "types and their capabilities. Each physical Meraki device becomes a Home Assistant "
+            "device, with individual metrics exposed as entities."
+        ),
+        "",
+        "## Device Types",
+        "",
+        "The integration supports the following Meraki device types:",
+        "",
+    ]
 
-This page provides a comprehensive reference of all entities provided by the Meraki Dashboard integration.
+    device_type_order = [
+        const_values.get("SENSOR_TYPE_MT", "MT"),
+        const_values.get("SENSOR_TYPE_MR", "MR"),
+        const_values.get("SENSOR_TYPE_MS", "MS"),
+        const_values.get("SENSOR_TYPE_MV", "MV"),
+    ]
+    device_type_mappings = const_values.get("DEVICE_TYPE_MAPPINGS", {})
+    if isinstance(device_type_mappings, dict) and device_type_mappings:
+        for device_type in device_type_order:
+            if device_type not in device_type_mappings:
+                continue
+            config = device_type_mappings.get(device_type, {})
+            description = config.get("description", "")
+            suffix = config.get("name_suffix", "")
+            prefixes = ", ".join(config.get("model_prefixes", []))
+            details = description or suffix or "Meraki device type"
+            if prefixes:
+                details = f"{details} (model prefixes: {prefixes})"
+            if not has_device_entities(
+                device_type, sensor_description_dicts, binary_description_dicts
+            ):
+                details = f"{details} (no entities defined yet)"
+            docs_lines.append(f"- **{device_type}** - {details}")
+    else:
+        docs_lines.extend(
+            [
+                "- **MT** - Environmental sensors (temperature, humidity, CO2, air quality, power monitoring)",
+                "- **MR** - Wireless access points (SSID status, client counts, RF metrics)",
+                "- **MS** - Switches (port status, PoE consumption, traffic statistics)",
+                "- **MV** - Cameras (coming soon)",
+            ]
+        )
 
-<!-- This file is auto-generated by scripts/generate_docs.py - do not edit manually -->
+    docs_lines.extend(["", "## Sensors", ""])
 
-## Overview
+    described_sections = set()
+    for section in SENSOR_SECTION_ORDER:
+        entries = sensor_description_dicts.get(section, [])
+        if not entries:
+            continue
+        described_sections.add(section)
+        details = SENSOR_SECTION_DETAILS.get(section, {})
+        title = details.get("title", section.replace("_", " ").title())
+        intro = details.get("intro", "")
+        docs_lines.append(f"### {title}")
+        docs_lines.append("")
+        if intro:
+            docs_lines.append(intro)
+            docs_lines.append("")
+        docs_lines.append(generate_table(sort_entries(entries), SENSOR_TABLE_COLUMNS))
+        docs_lines.append("")
 
-The Meraki Dashboard integration creates entities based on your Cisco Meraki device types and their capabilities. Each physical Meraki device becomes a Home Assistant device, with individual metrics exposed as entities.
+    # Include any additional sensor description dicts not in the default order
+    for section, entries in sorted(sensor_description_dicts.items()):
+        if section in described_sections or not entries:
+            continue
+        title = section.replace("_", " ").title()
+        docs_lines.append(f"### {title}")
+        docs_lines.append("")
+        docs_lines.append(generate_table(sort_entries(entries), SENSOR_TABLE_COLUMNS))
+        docs_lines.append("")
 
-## Device Types
+    docs_lines.append("## Binary Sensors")
+    docs_lines.append("")
+    if not binary_description_dicts:
+        docs_lines.append("No binary sensors found.")
+        docs_lines.append("")
+    else:
+        for section, entries in sorted(binary_description_dicts.items()):
+            if not entries:
+                continue
+            title = section.replace("_", " ").title()
+            if section == "MT_BINARY_SENSOR_DESCRIPTIONS":
+                title = "MT Binary Sensors"
+            docs_lines.append(f"### {title}")
+            docs_lines.append("")
+            docs_lines.append(
+                generate_table(sort_entries(entries), BINARY_SENSOR_TABLE_COLUMNS)
+            )
+            docs_lines.append("")
 
-The integration supports the following Meraki device types:
+    docs_lines.append("## Buttons")
+    docs_lines.append("")
+    if not button_descriptions:
+        docs_lines.append("No buttons found.")
+        docs_lines.append("")
+    else:
+        docs_lines.append(
+            generate_table(sort_entries(button_descriptions), BUTTON_TABLE_COLUMNS)
+        )
+        docs_lines.append("")
 
-- **MT** - Environmental sensors (temperature, humidity, CO2, air quality, power monitoring)
-- **MR** - Wireless access points (SSID status, client counts, RF metrics)
-- **MS** - Switches (port status, PoE consumption, traffic statistics)
-- **MV** - Cameras (coming soon)
+    docs_lines.append("## Coverage Summary")
+    docs_lines.append("")
+    total_sensors = sum(len(entries) for entries in sensor_description_dicts.values())
+    total_binary_sensors = sum(
+        len(entries) for entries in binary_description_dicts.values()
+    )
+    total_buttons = len(button_descriptions)
+    docs_lines.append("Totals by platform:")
+    docs_lines.append("")
+    docs_lines.append("| Platform | Count |")
+    docs_lines.append("|----------|----------|")
+    docs_lines.append(f"| Sensors | {total_sensors} |")
+    docs_lines.append(f"| Binary Sensors | {total_binary_sensors} |")
+    docs_lines.append(f"| Buttons | {total_buttons} |")
+    docs_lines.append("")
 
-## Sensors
+    docs_lines.append("Totals by device type:")
+    docs_lines.append("")
+    docs_lines.append("| Device Type | Sensors | Binary Sensors | Total |")
+    docs_lines.append("|----------|----------|----------|----------|")
+    for device_type in device_type_order:
+        sensor_total = sum(
+            len(entries)
+            for name, entries in sensor_description_dicts.items()
+            if name.startswith(f"{device_type}_")
+        )
+        binary_total = sum(
+            len(entries)
+            for name, entries in binary_description_dicts.items()
+            if name.startswith(f"{device_type}_")
+        )
+        docs_lines.append(
+            f"| {device_type} | {sensor_total} | {binary_total} | {sensor_total + binary_total} |"
+        )
+    docs_lines.append("")
 
-"""
+    missing_device_types = [
+        device_type
+        for device_type in device_type_order
+        if not has_device_entities(
+            device_type, sensor_description_dicts, binary_description_dicts
+        )
+    ]
+    if missing_device_types:
+        docs_lines.append(
+            "Device types without entity descriptions yet (device type exists but no entity descriptions are defined):"
+        )
+        docs_lines.append("")
+        for device_type in missing_device_types:
+            docs_lines.append(f"- {device_type}")
+        docs_lines.append("")
 
-    # Generate device-specific sensor tables
-    if "MT" in device_type_descriptions:
-        docs_content += """### MT Environmental Sensors
+    docs_lines.append("Breakdown by description dictionary:")
+    docs_lines.append("")
+    docs_lines.append("| Dictionary | Count |")
+    docs_lines.append("|----------|----------|")
+    for name, entries in sorted(sensor_description_dicts.items()):
+        docs_lines.append(f"| {name} | {len(entries)} |")
+    for name, entries in sorted(binary_description_dicts.items()):
+        docs_lines.append(f"| {name} | {len(entries)} |")
+    docs_lines.append("")
 
-MT devices provide comprehensive environmental monitoring capabilities:
+    docs_lines.extend(
+        [
+            "## Entity Attributes",
+            "",
+            "All Meraki entities include these common attributes when applicable:",
+            "",
+            "- `network_id` - Network identifier",
+            "- `network_name` - Network name",
+            "- `serial` - Device serial number",
+            "- `model` - Hardware model",
+            "- `last_reported_at` - Timestamp of the most recent reading (when available)",
+            "",
+            "Additional attributes may be exposed per device type, such as:",
+            "",
+            "- `lan_ip`, `gateway`, `ip_type`, `primary_dns`, `secondary_dns` (MR/MS devices)",
+            "- `memory_usage` (MR/MS devices when organization memory data is available)",
+            "- `port_types`, `poe_enabled_ports`, `port_configurations` (MS devices)",
+            "- `mac_address`, `temperature_fahrenheit` (MT devices when available)",
+            "",
+            "## Entity Naming",
+            "",
+            "Entities follow Home Assistant naming conventions:",
+            "",
+            "- **Device Name**: Uses the Meraki device name (e.g., \"Office Sensor\", \"Main Switch\")",
+            "- **Entity Name**: Combines device name with metric (e.g., \"Office Sensor Temperature\")",
+            "- **Entity ID**: Sanitized version (e.g., `sensor.office_sensor_temperature`)",
+            "",
+            "## Update Intervals",
+            "",
+            "Default polling intervals can be configured per hub and per organization.",
+            "The defaults below are pulled from the integration constants (seconds):",
+            "",
+        ]
+    )
 
-"""
-        docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["MT"])
-        docs_content += "\n"
+    default_scan = const_values.get("DEFAULT_SCAN_INTERVAL", "unknown")
+    default_discovery = const_values.get("DEFAULT_DISCOVERY_INTERVAL", "unknown")
+    device_scan_intervals = const_values.get("DEVICE_TYPE_SCAN_INTERVALS", {})
 
-    if "MR" in device_type_descriptions:
-        docs_content += """### MR Wireless Access Point Sensors
+    docs_lines.append(f"- Global default scan interval: {default_scan}")
+    docs_lines.append(f"- Default discovery interval: {default_discovery}")
+    for device_type in device_type_order:
+        if (
+            isinstance(device_scan_intervals, dict)
+            and device_type in device_scan_intervals
+        ):
+            docs_lines.append(
+                f"- {device_type} default scan interval: {device_scan_intervals[device_type]}"
+            )
 
-MR devices provide wireless network monitoring:
+    docs_lines.extend(
+        [
+            "",
+            "Organization-level data uses tiered refresh timers by default:",
+            "",
+        ]
+    )
 
-"""
-        docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["MR"])
-        docs_content += "\n"
+    docs_lines.append(
+        f"- Static data interval: {const_values.get('STATIC_DATA_REFRESH_INTERVAL', 'unknown')}"
+    )
+    docs_lines.append(
+        f"- Semi-static data interval: {const_values.get('SEMI_STATIC_DATA_REFRESH_INTERVAL', 'unknown')}"
+    )
+    docs_lines.append(
+        f"- Dynamic data interval: {const_values.get('DYNAMIC_DATA_REFRESH_INTERVAL', 'unknown')}"
+    )
 
-    if "MS" in device_type_descriptions:
-        docs_content += """### MS Switch Sensors
+    docs_lines.extend(
+        [
+            "",
+            "## Entity Categories",
+            "",
+            "Some entities are categorized as diagnostic to help organize the UI.",
+            "The tables above include a Category column when set on the description.",
+            "",
+            "## See Also",
+            "",
+            "- [Device Support](device-support.md) - Detailed device compatibility",
+            "- [Entity Naming](naming-conventions.md) - Naming convention details",
+            "- [API Optimization](api-optimization.md) - Performance considerations",
+            "",
+        ]
+    )
 
-MS devices provide switch and port monitoring:
-
-"""
-        docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["MS"])
-        docs_content += "\n"
-
-    if "ORGANIZATION" in device_type_descriptions:
-        docs_content += """### Organization-Level Sensors
-
-These sensors provide integration-wide information:
-
-"""
-        docs_content += generate_sensor_table_from_descriptions(device_type_descriptions["ORGANIZATION"])
-        docs_content += "\n"
-
-    # Binary sensors section
-    if binary_sensor_descriptions:
-        docs_content += """## Binary Sensors
-
-Binary sensors provide on/off state information:
-
-| Entity | Description | Device Class | Icon |
-|--------|-------------|--------------|------|
-"""
-        for key, info in binary_sensor_descriptions.items():
-            name = info.get("name", key)
-            device_class = info.get("device_class", "-")
-            icon = info.get("icon", "-")
-            description = f"{name} binary sensor"
-            docs_content += f"| {name} | {description} | {device_class} | {icon} |\n"
-        docs_content += "\n"
-
-    # Buttons section
-    if button_descriptions:
-        docs_content += """## Buttons
-
-Control entities for device actions:
-
-| Entity | Description | Icon |
-|--------|-------------|------|
-"""
-        for key, info in button_descriptions.items():
-            name = info.get("name", key)
-            icon = info.get("icon", "-")
-            description = info.get("description", f"{name} action")
-            docs_content += f"| {name} | {description} | {icon} |\n"
-        docs_content += "\n"
-
-    # Additional sections
-    docs_content += """## Entity Attributes
-
-All Meraki entities include these common attributes:
-
-### Device Attributes
-- `device_serial` - Unique device serial number
-- `device_model` - Hardware model
-- `device_firmware` - Current firmware version
-- `device_network` - Network name
-- `device_tags` - Assigned tags
-- `last_reported` - Last communication time
-
-### Sensor-Specific Attributes
-- `reading_at` - Timestamp of the sensor reading
-- `meta` - Additional metadata from the API
-- `network_id` - Network identifier
-- `organization_id` - Organization identifier
-
-## Entity Naming
-
-Entities follow Home Assistant naming conventions:
-
-- **Device Name**: Uses the Meraki device name (e.g., "Office Sensor", "Main Switch")
-- **Entity Name**: Combines device name with metric (e.g., "Office Sensor Temperature")
-- **Entity ID**: Sanitized version (e.g., `sensor.office_sensor_temperature`)
-
-## Update Intervals
-
-Different entity types update at different intervals to optimize API usage:
-
-- **Environmental Sensors (MT)**: 10 minutes
-- **Network Devices (MR/MS)**: 5 minutes
-- **Organization Metrics**: 15 minutes
-- **Device Status**: 5 minutes
-
-## Entity Categories
-
-Some entities are categorized as diagnostic to help organize the UI:
-
-- **Diagnostic Entities**: Include device information like firmware version, serial number, model, and other rarely-changing metrics
-- **Standard Entities**: Include sensor readings, status information, and frequently-changing metrics
-
-All entities are enabled by default and collect data. Diagnostic entities appear in a separate section in the Home Assistant UI for better organization.
-
-## Units and Precision
-
-The integration uses appropriate units and precision for each sensor type:
-
-- **Temperature**: Celsius with 1 decimal place
-- **Humidity**: Percentage with no decimals
-- **Power**: Watts with 2 decimal places
-- **Network Traffic**: Automatically scaled (KB/s, MB/s, GB/s)
-- **Time**: ISO 8601 format for timestamps
-
-## See Also
-
-- [Device Support](device-support.md) - Detailed device compatibility
-- [Entity Naming](naming-conventions.md) - Naming convention details
-- [API Optimization](api-optimization.md) - Performance considerations
-"""
+    docs_content = "\n".join(docs_lines)
 
     # Write the documentation
     docs_path = Path(__file__).parent.parent / "docs" / "supported-entities.md"
@@ -496,8 +754,12 @@ The integration uses appropriate units and precision for each sensor type:
         f.write(docs_content)
 
     print(f"Generated entity documentation: {docs_path}")
-    print(f"Found sensor descriptions for device types: {list(device_type_descriptions.keys())}")
-    print(f"Found {len(binary_sensor_descriptions)} binary sensor descriptions")
+    print("Sensor description dictionaries:")
+    for name, entries in sorted(sensor_description_dicts.items()):
+        print(f"  - {name}: {len(entries)} entries")
+    print("Binary sensor description dictionaries:")
+    for name, entries in sorted(binary_description_dicts.items()):
+        print(f"  - {name}: {len(entries)} entries")
     print(f"Found {len(button_descriptions)} button descriptions")
 
 
