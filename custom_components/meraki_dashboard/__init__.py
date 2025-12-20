@@ -15,17 +15,36 @@ from .config.migration import async_migrate_config_entry
 from .config.schemas import MerakiConfigSchema
 from .const import (
     CONF_API_KEY,
+    CONF_AUTO_DISCOVERY,
+    CONF_DISCOVERY_INTERVAL,
+    CONF_DYNAMIC_DATA_INTERVAL,
+    CONF_ENABLED_DEVICE_TYPES,
+    CONF_HUB_AUTO_DISCOVERY,
+    CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
+    CONF_MT_REFRESH_ENABLED,
+    CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
+    CONF_SEMI_STATIC_DATA_INTERVAL,
+    CONF_SELECTED_DEVICES,
+    CONF_STATIC_DATA_INTERVAL,
+    DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
+    DYNAMIC_DATA_REFRESH_INTERVAL,
+    MT_REFRESH_COMMAND_INTERVAL,
     ORG_HUB_SUFFIX,
+    SEMI_STATIC_DATA_REFRESH_INTERVAL,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
+    SENSOR_TYPE_MT,
+    STATIC_DATA_REFRESH_INTERVAL,
 )
 from .coordinator import MerakiSensorCoordinator
 from .exceptions import ConfigurationError
-from .hubs import MerakiOrganizationHub
+from .hubs import MerakiNetworkHub, MerakiOrganizationHub
 from .utils import get_performance_metrics, performance_monitor
 from .utils.device_info import (
     create_network_hub_device_info,
@@ -62,6 +81,137 @@ def _setup_logging():
 
 # Initialize logging configuration
 _setup_logging()
+
+
+def _build_startup_summary(
+    entry: ConfigEntry,
+    org_hub: MerakiOrganizationHub,
+    network_hubs: dict[str, MerakiNetworkHub],
+    coordinator_ids: set[str],
+) -> str:
+    options = entry.options or {}
+
+    org_id = entry.data.get(CONF_ORGANIZATION_ID, "unknown")
+    org_name = org_hub.organization_name or "Unknown"
+    base_url = org_hub.base_url
+
+    enabled_device_types = options.get(
+        CONF_ENABLED_DEVICE_TYPES, [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]
+    )
+    selected_devices = set(options.get(CONF_SELECTED_DEVICES, []))
+
+    scan_interval = options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    auto_discovery_default = options.get(CONF_AUTO_DISCOVERY, True)
+    discovery_interval_default = options.get(
+        CONF_DISCOVERY_INTERVAL, DEFAULT_DISCOVERY_INTERVAL
+    )
+    mt_refresh_enabled = options.get(CONF_MT_REFRESH_ENABLED, True)
+    mt_refresh_interval = options.get(
+        CONF_MT_REFRESH_INTERVAL, MT_REFRESH_COMMAND_INTERVAL
+    )
+
+    static_interval = options.get(
+        CONF_STATIC_DATA_INTERVAL, STATIC_DATA_REFRESH_INTERVAL
+    )
+    semi_static_interval = options.get(
+        CONF_SEMI_STATIC_DATA_INTERVAL, SEMI_STATIC_DATA_REFRESH_INTERVAL
+    )
+    dynamic_interval = options.get(
+        CONF_DYNAMIC_DATA_INTERVAL, DYNAMIC_DATA_REFRESH_INTERVAL
+    )
+
+    lines = [
+        "Meraki Dashboard startup summary",
+        f"Config entry: {entry.title}",
+        f"Organization: {org_name} ({org_id})",
+        f"Base URL: {base_url}",
+        f"Networks discovered: {len(org_hub.networks)}",
+        f"Enabled device types: {', '.join(enabled_device_types)}",
+        (
+            "Defaults: scan=%ds discovery=%ds auto_discovery=%s "
+            "selected_devices=%s mt_refresh=%s(%ds)"
+            % (
+                scan_interval,
+                discovery_interval_default,
+                "on" if auto_discovery_default else "off",
+                "all" if not selected_devices else f"{len(selected_devices)} selected",
+                "on" if mt_refresh_enabled else "off",
+                mt_refresh_interval,
+            )
+        ),
+        (
+            "Org refresh: static=%ds semi_static=%ds dynamic=%ds"
+            % (static_interval, semi_static_interval, dynamic_interval)
+        ),
+        (
+            "Hubs: %d (coordinators: %d)"
+            % (len(network_hubs), len(coordinator_ids))
+        ),
+    ]
+
+    hub_scan_intervals = options.get(CONF_HUB_SCAN_INTERVALS, {})
+    hub_discovery_intervals = options.get(CONF_HUB_DISCOVERY_INTERVALS, {})
+    hub_auto_discovery = options.get(CONF_HUB_AUTO_DISCOVERY, {})
+
+    for hub_id, hub in sorted(
+        network_hubs.items(),
+        key=lambda item: (item[1].network_name, item[1].device_type),
+    ):
+        hub_scan_interval = hub_scan_intervals.get(
+            hub_id, DEVICE_TYPE_SCAN_INTERVALS.get(hub.device_type, scan_interval)
+        )
+        hub_auto_discovery_enabled = hub_auto_discovery.get(
+            hub_id, auto_discovery_default
+        )
+        hub_discovery_interval = hub_discovery_intervals.get(
+            hub_id, discovery_interval_default
+        )
+        selected_count = (
+            sum(
+                1
+                for device in hub.devices
+                if device.get("serial") in selected_devices
+            )
+            if selected_devices
+            else 0
+        )
+
+        discovery_label = (
+            f"on({hub_discovery_interval}s)"
+            if hub_auto_discovery_enabled
+            else "off"
+        )
+        selected_label = "all" if not selected_devices else str(selected_count)
+        coordinator_label = "yes" if hub_id in coordinator_ids else "no"
+
+        hub_parts = [
+            f"- {hub.hub_name} [{hub.device_type}]",
+            f"devices={len(hub.devices)}",
+            f"coordinator={coordinator_label}",
+            f"scan={hub_scan_interval}s",
+            f"discovery={discovery_label}",
+            f"selected={selected_label}",
+        ]
+
+        if hub.device_type == SENSOR_TYPE_MT:
+            has_mt15_mt40 = any(
+                device.get("model", "").upper() in ("MT15", "MT40")
+                for device in hub.devices
+            )
+            if not mt_refresh_enabled:
+                mt_refresh_label = "off"
+            elif not has_mt15_mt40:
+                mt_refresh_label = "skipped(no MT15/MT40)"
+            elif hub.mt_refresh_service and hub.mt_refresh_service.is_running:
+                mt_refresh_label = f"on({mt_refresh_interval}s)"
+            else:
+                mt_refresh_label = f"enabled({mt_refresh_interval}s)"
+            hub_parts.append(f"mt_refresh={mt_refresh_label}")
+
+        lines.append(" ".join(hub_parts))
+
+    return "\n".join(lines)
+
 
 # Platforms to be set up for this integration
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
@@ -104,7 +254,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     Returns:
         bool: True if setup successful
     """
-    _LOGGER.info(
+    _LOGGER.debug(
         "Setting up Meraki Dashboard integration for organization %s",
         entry.data[CONF_ORGANIZATION_ID],
     )
@@ -241,7 +391,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     )
                     hass.data[DOMAIN][entry.entry_id]["timers"].append(timer_handle)
 
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Created coordinator for %s with %d devices, scan interval: %d seconds",
                     hub.hub_name,
                     len(hub.devices),
@@ -262,10 +412,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Log performance metrics for debugging
         perf_metrics = get_performance_metrics()
         _LOGGER.info(
-            "Successfully set up Meraki Dashboard integration with %d network hubs and %d coordinators. "
+            _build_startup_summary(
+                entry,
+                org_hub,
+                network_hubs,
+                set(hass.data[DOMAIN][entry.entry_id]["coordinators"].keys()),
+            )
+        )
+        _LOGGER.debug(
             "Performance: %d API calls (%.2fms avg), %d errors",
-            len(network_hubs),
-            coordinator_count,
             perf_metrics["total_api_calls"],
             perf_metrics["average_duration"],
             perf_metrics["total_api_errors"],
