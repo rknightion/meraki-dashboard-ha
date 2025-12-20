@@ -667,6 +667,36 @@ class TestNetworkHubEdgeCases:
         assert len(network_hub.devices) == 1
         assert network_hub.devices[0]["serial"] == "device1"
 
+    async def test_discover_devices_cw_wireless_model(
+        self, mock_organization_hub, mock_config_entry
+    ):
+        """Test MR discovery includes CW wireless models."""
+        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+        clear_api_cache()
+
+        hub = MerakiNetworkHub(
+            organization_hub=mock_organization_hub,
+            network_id="test_network_id",
+            network_name="Test Network",
+            device_type=SENSOR_TYPE_MR,
+            config_entry=mock_config_entry,
+        )
+
+        hub.hass.async_add_executor_job.return_value = [
+            {
+                "serial": "device1",
+                "name": "CW AP",
+                "model": "CW9172I",
+                "productType": "wireless",
+            }
+        ]
+
+        await hub._async_discover_devices()
+
+        assert len(hub.devices) == 1
+        assert hub.devices[0]["serial"] == "device1"
+
     async def test_sensor_data_with_event_handler(self, network_hub):
         """Test sensor data retrieval with event handler processing."""
         network_hub.devices = [{"serial": "device1", "name": "MT Device 1"}]

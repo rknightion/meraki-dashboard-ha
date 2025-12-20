@@ -550,11 +550,16 @@ class TestMerakiOrganizationHub:
         organization_hub.dashboard = mock_dashboard_api
         mock_dashboard_api.networks.getNetworkDevices.return_value = [
             {"serial": "device1", "model": "MT40", "productType": "sensor"},
-            {"serial": "device2", "model": "MR36", "productType": "wireless"},
+            {"serial": "device2", "model": "CW9172I", "productType": "wireless"},
         ]
 
         result = await organization_hub._network_has_device_type(
             "network1", SENSOR_TYPE_MT
+        )
+        assert result is True
+
+        result = await organization_hub._network_has_device_type(
+            "network1", SENSOR_TYPE_MR
         )
         assert result is True
 

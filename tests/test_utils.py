@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
+from custom_components.meraki_dashboard.const import SENSOR_TYPE_MR, SENSOR_TYPE_MS
 from custom_components.meraki_dashboard.utils.cache import (
     cache_api_response,
     cleanup_expired_cache,
@@ -14,6 +15,8 @@ from custom_components.meraki_dashboard.utils.cache import (
 )
 from custom_components.meraki_dashboard.utils.device_info import (
     create_device_capability_filter,
+    determine_device_type,
+    device_matches_type,
     get_device_status_info,
     should_create_entity,
 )
@@ -656,6 +659,28 @@ class TestBatchApiCalls:
 
         assert len(results) == 1
         assert results[0] == "result_pos1_kw1_kw2"
+
+
+class TestDeviceTypeResolution:
+    """Test device type detection helpers."""
+
+    def test_determine_device_type_cw_wireless_model(self):
+        """CW model prefixes should resolve to MR (wireless)."""
+        device = {"model": "CW9172I", "productType": "wireless"}
+
+        assert determine_device_type(device) == SENSOR_TYPE_MR
+
+    def test_device_matches_type_uses_product_type(self):
+        """Devices with wireless productType should match MR."""
+        device = {"serial": "Q2XX-TEST-0001", "productType": "wireless"}
+
+        assert device_matches_type(device, SENSOR_TYPE_MR) is True
+
+    def test_determine_device_type_prefers_model_prefix(self):
+        """Model prefixes should win over conflicting productType values."""
+        device = {"model": "MS120", "productType": "wireless"}
+
+        assert determine_device_type(device) == SENSOR_TYPE_MS
 
 
 class TestDeviceCapabilityFilter:
