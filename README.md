@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/github/license/rknightion/meraki-dashboard-ha.svg?style=flat-square)](LICENSE)
 [![Tests](https://github.com/rknightion/meraki-dashboard-ha/workflows/Tests/badge.svg)](https://github.com/rknightion/meraki-dashboard-ha/actions/workflows/tests.yml)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Frknightion%2Fmeraki-dashboard-ha?ref=badge_shield)
-[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue.svg)](https://meraki.ha-components.m7kni.com)
+[![Documentation](https://img.shields.io/badge/docs-m7kni.io-blue.svg)](https://m7kni.io/meraki-dashboard-ha)
 
 ![Meraki Logo](docs/images/icon.png)
 
