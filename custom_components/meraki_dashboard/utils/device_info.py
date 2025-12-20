@@ -5,13 +5,61 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from ..const import DOMAIN, MR_SENSOR_MEMORY_USAGE, MS_SENSOR_MEMORY_USAGE
+from ..const import (
+    DEVICE_TYPE_MAPPINGS,
+    DOMAIN,
+    MR_SENSOR_MEMORY_USAGE,
+    MS_SENSOR_MEMORY_USAGE,
+    PRODUCT_TYPE_TO_DEVICE_TYPE,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
+    SENSOR_TYPE_MT,
+)
 from .sanitization import sanitize_attribute_value
 
 if TYPE_CHECKING:
     from ..types import MerakiDeviceData
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _device_type_from_model(model: str) -> str | None:
+    """Determine device type from model prefixes."""
+    if not model:
+        return None
+
+    normalized_model = model.upper()
+    for device_type, type_config in DEVICE_TYPE_MAPPINGS.items():
+        for prefix in type_config.get("model_prefixes", []):
+            if normalized_model.startswith(prefix.upper()):
+                return device_type
+    return None
+
+
+def _device_type_from_product_type(product_type: str | None) -> str | None:
+    """Determine device type from productType field."""
+    if not product_type:
+        return None
+
+    return PRODUCT_TYPE_TO_DEVICE_TYPE.get(product_type.lower())
+
+
+def determine_device_type(device: dict[str, Any]) -> str | None:
+    """Determine device type from model and product type."""
+    model = device.get("model", "")
+    device_type = _device_type_from_model(model)
+    if device_type:
+        return device_type
+
+    return _device_type_from_product_type(device.get("productType"))
+
+
+def device_matches_type(device: dict[str, Any], device_type: str) -> bool:
+    """Return True when the device matches the requested type."""
+    resolved_type = determine_device_type(device)
+    if resolved_type:
+        return resolved_type == device_type
+    return False
 
 
 class DeviceInfoBuilder:

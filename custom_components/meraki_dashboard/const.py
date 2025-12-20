@@ -260,6 +260,14 @@ DEVICE_TYPE_MAPPINGS: Final = {
     },
 }
 
+# Product type mapping for devices that don't follow model prefix naming.
+PRODUCT_TYPE_TO_DEVICE_TYPE: Final = {
+    "sensor": SENSOR_TYPE_MT,
+    "wireless": SENSOR_TYPE_MR,
+    "switch": SENSOR_TYPE_MS,
+    "camera": SENSOR_TYPE_MV,
+}
+
 # Sensor groupings
 MT_POWER_SENSORS: Final = [
     MT_SENSOR_APPARENT_POWER,
