@@ -4,15 +4,11 @@
 # Load default integrations
 default_config:
 
-# Enable Home Assistant debug mode
-homeassistant:
-  debug: true
-
 # Configure logging for development
 logger:
   default: info
-  logs:
-    custom_components.meraki_dashboard: debug
+#  logs:
+#    custom_components.meraki_dashboard: debug
 
 # Example Meraki Dashboard configuration (configure in secrets.yaml):
 # meraki_dashboard:
