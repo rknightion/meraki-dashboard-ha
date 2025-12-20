@@ -102,7 +102,7 @@ class MTRefreshService:
             timedelta(seconds=self._refresh_interval),
         )
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "MT Refresh Service started for network %s with %d second interval",
             self.network_hub.network_name,
             self._refresh_interval,
@@ -122,7 +122,7 @@ class MTRefreshService:
             self._refresh_timer()
             self._refresh_timer = None
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "MT Refresh Service stopped for network %s (batches: %d attempts, %d successful, %d failed)",
             self.network_hub.network_name,
             self._batch_attempts,
@@ -247,13 +247,13 @@ class MTRefreshService:
                         try:
                             result = json.loads(response_text)
                             batch_id = result.get("id", "unknown")
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Action batch successful: %d sensor refresh commands queued (batchId=%s)",
                                 len(actions),
                                 batch_id,
                             )
                         except json.JSONDecodeError:
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Action batch successful: %d sensor refresh commands queued",
                                 len(actions),
                             )

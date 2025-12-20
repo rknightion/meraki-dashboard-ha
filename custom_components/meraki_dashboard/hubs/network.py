@@ -190,7 +190,7 @@ class MerakiNetworkHub:
                         await self.mt_refresh_service.async_start(
                             interval=refresh_interval
                         )
-                        _LOGGER.info(
+                        _LOGGER.debug(
                             "Started MT refresh service for %s with %d second interval (found MT15/MT40 devices)",
                             self.hub_name,
                             refresh_interval,
@@ -241,7 +241,7 @@ class MerakiNetworkHub:
                         timedelta(seconds=discovery_interval),
                     )
 
-            _LOGGER.info(
+            _LOGGER.debug(
                 "Network hub %s set up successfully with %d devices (avg discovery time: %.2fs)",
                 self.hub_name,
                 len(self.devices),
@@ -338,7 +338,7 @@ class MerakiNetworkHub:
                         # For MT devices, check productType as fallback when model is missing
                         product_type = device.get("productType", "").lower()
                         if product_type == "sensor":
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Device %s has no model but productType='sensor', including as MT device",
                                 device.get("serial", "unknown"),
                             )

@@ -301,7 +301,7 @@ class MerakiOrganizationHub:
                 self.total_api_calls += 1
 
                 self.organization_name = org_info.get("name")
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Connected to Meraki organization: %s", self.organization_name
                 )
 
@@ -534,7 +534,7 @@ class MerakiOrganizationHub:
                     )
                     continue
 
-        _LOGGER.info(
+        _LOGGER.debug(
             "Created %d network hubs across %d networks",
             len(network_hubs),
             len(self.networks),
