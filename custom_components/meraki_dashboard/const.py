@@ -231,6 +231,22 @@ SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 60  # 1 hour
 DYNAMIC_DATA_REFRESH_INTERVAL: Final = 600  # 10 minutes
 DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 10  # 10 minutes
 
+# Device metric cache TTL defaults (in seconds)
+# These reduce API call volume by caching device-level metrics
+DEFAULT_STANDARD_CACHE_TTL: Final = 900  # 15 minutes - port status, client counts
+DEFAULT_EXTENDED_CACHE_TTL: Final = 1800  # 30 minutes - connection/latency stats
+DEFAULT_LONG_CACHE_TTL: Final = 3600  # 60 minutes - port configs, STP priorities
+
+# Device metric cache TTL configuration keys
+CONF_STANDARD_CACHE_TTL: Final = "standard_cache_ttl"
+CONF_EXTENDED_CACHE_TTL: Final = "extended_cache_ttl"
+CONF_LONG_CACHE_TTL: Final = "long_cache_ttl"
+
+# Optional metrics configuration keys (for reducing API calls)
+CONF_MR_ENABLE_LATENCY_STATS: Final = "mr_enable_latency_stats"
+CONF_MS_ENABLE_PACKET_STATS: Final = "ms_enable_packet_stats"
+CONF_BLUETOOTH_CLIENTS_ENABLED: Final = "bluetooth_clients_enabled"
+
 # Data type classifications
 STATIC_DATA_TYPES: Final = ["license_inventory", "device_statuses"]
 SEMI_STATIC_DATA_TYPES: Final = ["network_info", "device_info"]
