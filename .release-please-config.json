@@ -4,6 +4,7 @@
     ".": {
       "release-type": "simple",
       "package-name": "meraki-dashboard-ha",
+      "changelog-path": "docs/changelog.md",
       "changelog-sections": [
         {"type": "feat", "section": "Features"},
         {"type": "fix", "section": "Bug Fixes"},
@@ -22,11 +23,6 @@
           "type": "json",
           "path": "custom_components/meraki_dashboard/manifest.json",
           "jsonpath": "$.version"
-        },
-        {
-          "type": "generic",
-          "path": "docs/changelog.md",
-          "glob": false
         }
       ],
       "include-component-in-tag": false,
