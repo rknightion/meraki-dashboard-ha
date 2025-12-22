@@ -212,3 +212,5 @@ coverage.xml
 config/*
 !config/configuration.yaml
 .claude/settings.local.json
+
+config/
