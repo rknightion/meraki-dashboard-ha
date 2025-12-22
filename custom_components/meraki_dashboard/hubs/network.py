@@ -1566,6 +1566,8 @@ class MerakiNetworkHub:
     ) -> dict[str, dict[str, Any]]:
         """Get connection statistics for MR devices.
 
+        Uses batch API calls for efficiency and skips offline devices.
+
         Args:
             wireless_devices: List of wireless device dictionaries
 
@@ -1577,36 +1579,56 @@ class MerakiNetworkHub:
         if not self.dashboard:
             return connection_stats
 
-        for device in wireless_devices:
+        # Phase 4: Filter to online devices only
+        online_devices, _ = self._get_online_devices(wireless_devices)
+
+        # Check cache and collect devices needing fresh data
+        devices_needing_data: list[str] = []
+        for device in online_devices:
             device_serial = device.get("serial")
             if not device_serial:
                 continue
 
-            try:
-                _LOGGER.debug("Getting connection stats for device %s", device_serial)
+            # Check cache first (Extended cache - slower changing data)
+            cache_key = self._cache_key("connection_stats", device_serial)
+            cached_result = get_cached_api_response(cache_key)
+            if cached_result is not None:
+                connection_stats[device_serial] = cached_result
+            else:
+                devices_needing_data.append(device_serial)
 
-                # Get connection stats with 30-minute timespan
-                if not self.dashboard:
-                    return {}
-                dashboard = self.dashboard  # Store in local variable for mypy
-                result = await self.hass.async_add_executor_job(
-                    functools.partial(
-                        dashboard.wireless.getDeviceWirelessConnectionStats,
-                        device_serial,
-                        timespan=1800,  # 30 minutes
+        # Phase 2: Batch API calls for devices needing fresh data
+        if devices_needing_data and self.dashboard:
+            _LOGGER.debug(
+                "Batching connection stats requests for %d devices",
+                len(devices_needing_data),
+            )
+
+            dashboard = self.dashboard
+            api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                (
+                    dashboard.wireless.getDeviceWirelessConnectionStats,
+                    (serial,),
+                    {"timespan": 1800},  # 30 minutes
+                )
+                for serial in devices_needing_data
+            ]
+
+            results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+            self.organization_hub.total_api_calls += len(api_calls)
+
+            # Process results
+            for i, result in enumerate(results):
+                device_serial = devices_needing_data[i]
+                cache_key = self._cache_key("connection_stats", device_serial)
+
+                if isinstance(result, Exception):
+                    _LOGGER.debug(
+                        "Error getting connection stats for %s: %s", device_serial, result
                     )
-                )
-
-                self.organization_hub.total_api_calls += 1
-
-                if result:
+                elif result:
                     connection_stats[device_serial] = result
-
-            except Exception as err:
-                _LOGGER.debug(
-                    "Error getting connection stats for %s: %s", device_serial, err
-                )
-                continue
+                    cache_api_response(cache_key, result, self._get_extended_cache_ttl())
 
         return connection_stats
 
@@ -1614,6 +1636,8 @@ class MerakiNetworkHub:
         self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get packet loss statistics for MR devices.
+
+        Uses batch API calls for efficiency and skips offline devices.
 
         Args:
             wireless_devices: List of wireless device dictionaries
@@ -1626,36 +1650,61 @@ class MerakiNetworkHub:
         if not self.dashboard:
             return packet_loss
 
-        for device in wireless_devices:
+        # Check if latency stats are enabled (optional metric)
+        if not self._is_latency_stats_enabled():
+            _LOGGER.debug("Latency stats disabled, skipping packet loss fetch")
+            return packet_loss
+
+        # Phase 4: Filter to online devices only
+        online_devices, _ = self._get_online_devices(wireless_devices)
+
+        # Check cache and collect devices needing fresh data
+        devices_needing_data: list[str] = []
+        for device in online_devices:
             device_serial = device.get("serial")
             if not device_serial:
                 continue
 
-            try:
-                _LOGGER.debug("Getting packet loss stats for device %s", device_serial)
+            # Check cache first (Extended cache - slower changing data)
+            cache_key = self._cache_key("packet_loss", device_serial)
+            cached_result = get_cached_api_response(cache_key)
+            if cached_result is not None:
+                packet_loss[device_serial] = cached_result
+            else:
+                devices_needing_data.append(device_serial)
 
-                # Get packet loss with 5-minute timespan
-                if not self.dashboard:
-                    return {}
-                dashboard = self.dashboard  # Store in local variable for mypy
-                result = await self.hass.async_add_executor_job(
-                    functools.partial(
-                        dashboard.wireless.getDeviceWirelessLatencyStats,
-                        device_serial,
-                        timespan=300,  # 5 minutes
+        # Phase 2: Batch API calls for devices needing fresh data
+        if devices_needing_data and self.dashboard:
+            _LOGGER.debug(
+                "Batching packet loss requests for %d devices",
+                len(devices_needing_data),
+            )
+
+            dashboard = self.dashboard
+            api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                (
+                    dashboard.wireless.getDeviceWirelessLatencyStats,
+                    (serial,),
+                    {"timespan": 300},  # 5 minutes
+                )
+                for serial in devices_needing_data
+            ]
+
+            results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+            self.organization_hub.total_api_calls += len(api_calls)
+
+            # Process results
+            for i, result in enumerate(results):
+                device_serial = devices_needing_data[i]
+                cache_key = self._cache_key("packet_loss", device_serial)
+
+                if isinstance(result, Exception):
+                    _LOGGER.debug(
+                        "Error getting packet loss for %s: %s", device_serial, result
                     )
-                )
-
-                self.organization_hub.total_api_calls += 1
-
-                if result:
+                elif result:
                     packet_loss[device_serial] = result
-
-            except Exception as err:
-                _LOGGER.debug(
-                    "Error getting packet loss for %s: %s", device_serial, err
-                )
-                continue
+                    cache_api_response(cache_key, result, self._get_extended_cache_ttl())
 
         return packet_loss
 
@@ -1663,6 +1712,8 @@ class MerakiNetworkHub:
         self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
     ) -> dict[str, dict[str, Any]]:
         """Get CPU load history for MR devices.
+
+        Uses batch API calls for efficiency and skips offline devices.
 
         Args:
             wireless_devices: List of wireless device dictionaries
@@ -1675,22 +1726,50 @@ class MerakiNetworkHub:
         if not self.dashboard:
             return cpu_load
 
-        for device in wireless_devices:
+        # Phase 4: Filter to online devices only
+        online_devices, _ = self._get_online_devices(wireless_devices)
+
+        # Check cache and collect devices needing fresh data
+        devices_needing_data: list[str] = []
+        for device in online_devices:
             device_serial = device.get("serial")
             if not device_serial:
                 continue
 
-            try:
-                _LOGGER.debug("Getting CPU load for device %s", device_serial)
+            # Check cache first (Extended cache - slower changing data)
+            cache_key = self._cache_key("cpu_load", device_serial)
+            cached_result = get_cached_api_response(cache_key)
+            if cached_result is not None:
+                cpu_load[device_serial] = cached_result
+            else:
+                devices_needing_data.append(device_serial)
 
-                # Get wireless status which includes basicServiceSets with load info
-                result = await self.hass.async_add_executor_job(
-                    self.dashboard.wireless.getDeviceWirelessStatus, device_serial
-                )
+        # Phase 2: Batch API calls for devices needing fresh data
+        if devices_needing_data and self.dashboard:
+            _LOGGER.debug(
+                "Batching CPU load requests for %d devices",
+                len(devices_needing_data),
+            )
 
-                self.organization_hub.total_api_calls += 1
+            dashboard = self.dashboard
+            api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                (dashboard.wireless.getDeviceWirelessStatus, (serial,), {})
+                for serial in devices_needing_data
+            ]
 
-                if result:
+            results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+            self.organization_hub.total_api_calls += len(api_calls)
+
+            # Process results
+            for i, result in enumerate(results):
+                device_serial = devices_needing_data[i]
+                cache_key = self._cache_key("cpu_load", device_serial)
+
+                if isinstance(result, Exception):
+                    _LOGGER.debug(
+                        "Error getting CPU load for %s: %s", device_serial, result
+                    )
+                elif result:
                     # Extract CPU load from wireless status if available
                     # For MR devices, we can estimate load from client count
                     # and radio utilization as a proxy
@@ -1702,17 +1781,17 @@ class MerakiNetworkHub:
                     # Use a simple heuristic: 1 client = ~0.5% CPU load, max 100%
                     estimated_cpu_load = min(total_clients * 0.5, 100)
 
-                    cpu_load[device_serial] = {
+                    cpu_load_data = {
                         "cpu": {
                             "cpuLoad5": int(
                                 estimated_cpu_load * 100
                             )  # Convert to hundredths
                         }
                     }
-
-            except Exception as err:
-                _LOGGER.debug("Error getting CPU load for %s: %s", device_serial, err)
-                continue
+                    cpu_load[device_serial] = cpu_load_data
+                    cache_api_response(
+                        cache_key, cpu_load_data, self._get_extended_cache_ttl()
+                    )
 
         return cpu_load
 
