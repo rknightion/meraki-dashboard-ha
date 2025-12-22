@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.34.0...v0.35.0) (2025-12-22)
+
+
+### Features
+
+* add cache and batch API helpers ([88973f2](https://github.com/rknightion/meraki-dashboard-ha/commit/88973f26045b9a3fd619e345271e0f4822e5ff1a))
+* add cache TTL config options ([89b1d2a](https://github.com/rknightion/meraki-dashboard-ha/commit/89b1d2adafd3b95479fe8c623dd74279ad1b394c))
+* add config flow UI for cache settings ([902fecf](https://github.com/rknightion/meraki-dashboard-ha/commit/902fecf54892c0424da3de7580883a5bb0a5316c))
+* optimize MR device data with caching ([f00ea17](https://github.com/rknightion/meraki-dashboard-ha/commit/f00ea176c876997058f188b1a6ddc042d4fdf5af))
+* optimize MR statistics with caching ([45c3938](https://github.com/rknightion/meraki-dashboard-ha/commit/45c393818866a3cf3308fe741d27e846369e2e88))
+* optimize MS device data with caching ([4a8f10d](https://github.com/rknightion/meraki-dashboard-ha/commit/4a8f10d969a09e4c9c26533fbbd4f058d331a77c))
+* optimize MS statistics with caching ([84edb92](https://github.com/rknightion/meraki-dashboard-ha/commit/84edb92832d28b9d6915ea2b59fdea49135fff19))
+
+
+### Documentation
+
+* add cache and metric config help text ([9fbe466](https://github.com/rknightion/meraki-dashboard-ha/commit/9fbe466020489b51c883f68997200e46664fe94b))
+* regenerate entity documentation ([7f8203c](https://github.com/rknightion/meraki-dashboard-ha/commit/7f8203ccee50f96ede49f8e05c01f31eb2beb9e4))
+
+
+### Miscellaneous Chores
+
+* claude ([f476702](https://github.com/rknightion/meraki-dashboard-ha/commit/f476702718dbbf7d63bf6c153a188bf0f9fef2b5))
+* clean up config files and docs ([bdf72a0](https://github.com/rknightion/meraki-dashboard-ha/commit/bdf72a0262234624783377794b4bc1561d225441))
+* **deps:** lock file maintenance ([#225](https://github.com/rknightion/meraki-dashboard-ha/issues/225)) ([482a8ab](https://github.com/rknightion/meraki-dashboard-ha/commit/482a8ab2df231970634734e2e659c69e16aea990))
+* doc ([3959160](https://github.com/rknightion/meraki-dashboard-ha/commit/39591604b182c329ed00c2e24b9c5086deb90a0f))
+* docfix ([4dc80f6](https://github.com/rknightion/meraki-dashboard-ha/commit/4dc80f65c0bc9ee61aa4bfb1d9e0d05f1a7f1483))
+* fix docbuild ([5f540cb](https://github.com/rknightion/meraki-dashboard-ha/commit/5f540cbdaf53520e9f6e754365a9f538ace3ccc5))
+* update dependencies and add zensical config ([392f85b](https://github.com/rknightion/meraki-dashboard-ha/commit/392f85b4101419a72341d1cb49a085a91259f162))
+
 ## [0.34.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.33.0...v0.34.0) (2025-12-20)
 
 
