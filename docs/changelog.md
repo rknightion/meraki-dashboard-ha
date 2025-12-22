@@ -11,6 +11,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.35.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.35.0...v0.35.1) (2025-12-22)
+
+
+### Miscellaneous Chores
+
+* add cache and stats config translations ([6ef0a69](https://github.com/rknightion/meraki-dashboard-ha/commit/6ef0a698296dc78b01704e041a0435bc5cac26c5))
+* migrate changelog to docs directory ([80bcfcc](https://github.com/rknightion/meraki-dashboard-ha/commit/80bcfcccceb38703784b9a4fb986354a76364c55))
+
 ## [0.35.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.34.0...v0.35.0) (2025-12-22)
 
 
