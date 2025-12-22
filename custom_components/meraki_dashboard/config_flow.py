@@ -27,22 +27,31 @@ from .const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
+    CONF_BLUETOOTH_CLIENTS_ENABLED,
     CONF_DISCOVERY_INTERVAL,
     CONF_ENABLED_DEVICE_TYPES,
+    CONF_EXTENDED_CACHE_TTL,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
+    CONF_LONG_CACHE_TTL,
+    CONF_MR_ENABLE_LATENCY_STATS,
+    CONF_MS_ENABLE_PACKET_STATS,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
+    CONF_STANDARD_CACHE_TTL,
     DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL_MINUTES,
+    DEFAULT_EXTENDED_CACHE_TTL,
+    DEFAULT_LONG_CACHE_TTL,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
+    DEFAULT_STANDARD_CACHE_TTL,
     DEVICE_TYPE_MIN_SCAN_INTERVALS,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
@@ -615,6 +624,13 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     hub_id = key.replace("hub_discovery_interval_", "")
                     # Convert minutes to seconds, ensure integer type
                     hub_discovery_intervals[hub_id] = int(value * 60)
+                elif key in (
+                    CONF_STANDARD_CACHE_TTL,
+                    CONF_EXTENDED_CACHE_TTL,
+                    CONF_LONG_CACHE_TTL,
+                ):
+                    # Convert cache TTL from minutes to seconds
+                    options[key] = int(value * 60)
                 else:
                     # Regular options
                     options[key] = value
@@ -703,7 +719,85 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 )
             )
 
-        # 3. Add update API key checkbox
+        # 3. Add API optimization options (cache TTLs and optional metrics)
+        # Standard cache TTL (port status, client counts) - default 15 minutes
+        schema_dict[
+            vol.Optional(
+                CONF_STANDARD_CACHE_TTL,
+                default=current_options.get(
+                    CONF_STANDARD_CACHE_TTL, DEFAULT_STANDARD_CACHE_TTL
+                )
+                // 60,  # Convert to minutes for display
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=60,
+                step=1,
+                unit_of_measurement="minutes",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
+
+        # Extended cache TTL (connection stats, latency) - default 30 minutes
+        schema_dict[
+            vol.Optional(
+                CONF_EXTENDED_CACHE_TTL,
+                default=current_options.get(
+                    CONF_EXTENDED_CACHE_TTL, DEFAULT_EXTENDED_CACHE_TTL
+                )
+                // 60,  # Convert to minutes for display
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=120,
+                step=1,
+                unit_of_measurement="minutes",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
+
+        # Long cache TTL (port configs, STP) - default 60 minutes
+        schema_dict[
+            vol.Optional(
+                CONF_LONG_CACHE_TTL,
+                default=current_options.get(CONF_LONG_CACHE_TTL, DEFAULT_LONG_CACHE_TTL)
+                // 60,  # Convert to minutes for display
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=5,
+                max=240,
+                step=5,
+                unit_of_measurement="minutes",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        )
+
+        # Optional metrics toggles
+        schema_dict[
+            vol.Optional(
+                CONF_MR_ENABLE_LATENCY_STATS,
+                default=current_options.get(CONF_MR_ENABLE_LATENCY_STATS, True),
+            )
+        ] = selector.BooleanSelector()
+
+        schema_dict[
+            vol.Optional(
+                CONF_MS_ENABLE_PACKET_STATS,
+                default=current_options.get(CONF_MS_ENABLE_PACKET_STATS, True),
+            )
+        ] = selector.BooleanSelector()
+
+        schema_dict[
+            vol.Optional(
+                CONF_BLUETOOTH_CLIENTS_ENABLED,
+                default=current_options.get(CONF_BLUETOOTH_CLIENTS_ENABLED, True),
+            )
+        ] = selector.BooleanSelector()
+
+        # 4. Add update API key checkbox
         schema_dict[vol.Optional("update_api_key", default=False)] = (
             selector.BooleanSelector()
         )
