@@ -1800,6 +1800,8 @@ class MerakiNetworkHub:
     ) -> dict[str, dict[str, Any]]:
         """Get packet statistics for MS devices.
 
+        Uses batch API calls for efficiency and skips offline devices.
+
         Args:
             switch_devices: List of switch device dictionaries
 
@@ -1811,36 +1813,63 @@ class MerakiNetworkHub:
         if not self.dashboard:
             return packet_statistics
 
-        for device in switch_devices:
+        # Check if packet stats are enabled (optional metric)
+        if not self._is_packet_stats_enabled():
+            _LOGGER.debug("Packet stats disabled, skipping packet statistics fetch")
+            return packet_statistics
+
+        # Phase 4: Filter to online devices only
+        online_devices, _ = self._get_online_devices(switch_devices)
+
+        # Check cache and collect devices needing fresh data
+        devices_needing_data: list[str] = []
+        for device in online_devices:
             device_serial = device.get("serial")
             if not device_serial:
                 continue
 
-            try:
-                _LOGGER.debug("Getting packet statistics for device %s", device_serial)
+            # Check cache first (Extended cache - slower changing data)
+            cache_key = self._cache_key("packet_statistics", device_serial)
+            cached_result = get_cached_api_response(cache_key)
+            if cached_result is not None:
+                packet_statistics[device_serial] = cached_result
+            else:
+                devices_needing_data.append(device_serial)
 
-                # Get packet statistics with 5-minute timespan
-                if not self.dashboard:
-                    return {}
-                dashboard = self.dashboard  # Store in local variable for mypy
-                result = await self.hass.async_add_executor_job(
-                    functools.partial(
-                        dashboard.switch.getDeviceSwitchPortsStatusesPackets,
+        # Phase 2: Batch API calls for devices needing fresh data
+        if devices_needing_data and self.dashboard:
+            _LOGGER.debug(
+                "Batching packet statistics requests for %d devices",
+                len(devices_needing_data),
+            )
+
+            dashboard = self.dashboard
+            api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                (
+                    dashboard.switch.getDeviceSwitchPortsStatusesPackets,
+                    (serial,),
+                    {"timespan": 300},  # 5 minutes
+                )
+                for serial in devices_needing_data
+            ]
+
+            results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+            self.organization_hub.total_api_calls += len(api_calls)
+
+            # Process results
+            for i, result in enumerate(results):
+                device_serial = devices_needing_data[i]
+                cache_key = self._cache_key("packet_statistics", device_serial)
+
+                if isinstance(result, Exception):
+                    _LOGGER.debug(
+                        "Error getting packet statistics for %s: %s",
                         device_serial,
-                        timespan=300,  # 5 minutes
+                        result,
                     )
-                )
-
-                self.organization_hub.total_api_calls += 1
-
-                if result:
+                elif result:
                     packet_statistics[device_serial] = result
-
-            except Exception as err:
-                _LOGGER.debug(
-                    "Error getting packet statistics for %s: %s", device_serial, err
-                )
-                continue
+                    cache_api_response(cache_key, result, self._get_extended_cache_ttl())
 
         return packet_statistics
 
@@ -1860,26 +1889,46 @@ class MerakiNetworkHub:
         if not self.dashboard:
             return stp_priorities
 
+        # Check cache first (Long cache - STP config rarely changes)
+        cache_key = self._cache_key("stp_priorities")
+        cached_result = get_cached_api_response(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         try:
-            # Get networks to check STP settings
-            networks = await self.hass.async_add_executor_job(
-                self.dashboard.organizations.getOrganizationNetworks,
-                self.organization_id,
-            )
-            self.organization_hub.total_api_calls += 1
+            # Get networks to check STP settings - use org hub's cached networks
+            networks = self.organization_hub.networks or []
+            if not networks:
+                networks = await self.hass.async_add_executor_job(
+                    self.dashboard.organizations.getOrganizationNetworks,
+                    self.organization_id,
+                )
+                self.organization_hub.total_api_calls += 1
 
             # Find this network's STP settings
             for network in networks:
                 if network.get("id") == self.network_id:
                     try:
-                        # Get switch settings for the network
-                        switch_settings = await self.hass.async_add_executor_job(
-                            self.dashboard.switch.getNetworkSwitchSettings,
-                            self.network_id,
-                        )
-                        self.organization_hub.total_api_calls += 1
+                        # Check cache for switch settings (Long cache)
+                        settings_cache_key = self._cache_key("switch_settings")
+                        switch_settings = get_cached_api_response(settings_cache_key)
+
+                        if switch_settings is None:
+                            # Get switch settings for the network
+                            switch_settings = await self.hass.async_add_executor_job(
+                                self.dashboard.switch.getNetworkSwitchSettings,
+                                self.network_id,
+                            )
+                            self.organization_hub.total_api_calls += 1
+                            cache_api_response(
+                                settings_cache_key,
+                                switch_settings,
+                                self._get_long_cache_ttl(),
+                            )
 
                         # Extract STP priority for each switch
+                        if switch_settings is None:
+                            continue
                         stp_configs = switch_settings.get("stpBridgePriority", [])
                         if isinstance(stp_configs, list):
                             for config in stp_configs:
@@ -1901,6 +1950,9 @@ class MerakiNetworkHub:
                             err,
                         )
                     break
+
+            # Cache the computed STP priorities (Long cache)
+            cache_api_response(cache_key, stp_priorities, self._get_long_cache_ttl())
 
         except Exception as err:
             _LOGGER.debug("Error getting STP priorities: %s", err)
