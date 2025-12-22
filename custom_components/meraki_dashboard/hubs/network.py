@@ -536,66 +536,115 @@ class MerakiNetworkHub:
             if self.dashboard is None:
                 return
 
-            # Get wireless SSIDs for this network
-            ssids = await self.hass.async_add_executor_job(
-                self.dashboard.wireless.getNetworkWirelessSsids, self.network_id
-            )
-            self.organization_hub.total_api_calls += 1
+            # Get wireless SSIDs for this network (Long cache - rarely changes)
+            ssid_cache_key = self._cache_key("ssids")
+            ssids = get_cached_api_response(ssid_cache_key)
+            if ssids is None:
+                ssids = await self.hass.async_add_executor_job(
+                    self.dashboard.wireless.getNetworkWirelessSsids, self.network_id
+                )
+                self.organization_hub.total_api_calls += 1
+                cache_api_response(ssid_cache_key, ssids, self._get_long_cache_ttl())
 
             # Use already discovered and filtered wireless devices
             wireless_devices = self.devices
 
+            # Phase 4: Filter to online devices only for detailed API calls
+            online_devices, offline_serials = self._get_online_devices(wireless_devices)
+
+            # Build basic device info for all devices first
             devices_info = []
+            client_counts: dict[str, int] = {}
+
             for device in wireless_devices:
-                try:
-                    device_serial = device.get("serial")
-                    if not device_serial:
-                        continue
+                device_serial = device.get("serial")
+                if not device_serial:
+                    continue
 
-                    device_info: dict[str, Any] = {
-                        "serial": device_serial,
-                        "name": get_device_display_name(device),
-                        "model": device.get("model"),
-                        "clientCount": 0,
-                    }
+                device_info: dict[str, Any] = {
+                    "serial": device_serial,
+                    "name": get_device_display_name(device),
+                    "model": device.get("model"),
+                    "clientCount": 0,
+                }
+                devices_info.append(device_info)
 
-                    # Get client count and connection statistics
-                    try:
-                        # Get current client count from device clients endpoint
-                        def get_device_clients(serial: str):
-                            if self.dashboard is None:
-                                return None
-                            return self.dashboard.devices.getDeviceClients(
-                                serial,
-                                timespan=3600,  # 1 hour in seconds
+                # Check cache for client count
+                client_cache_key = self._cache_key("clients", device_serial)
+                cached_clients = get_cached_api_response(client_cache_key)
+                if cached_clients is not None:
+                    client_counts[device_serial] = cached_clients
+
+            # Phase 2: Batch API calls for online devices that need fresh client data
+            devices_needing_clients: list[dict[str, Any] | MerakiDeviceData] = [
+                d
+                for d in online_devices
+                if d.get("serial") and d.get("serial") not in client_counts
+            ]
+
+            if devices_needing_clients and self.dashboard:
+                _LOGGER.debug(
+                    "Batching client count requests for %d devices",
+                    len(devices_needing_clients),
+                )
+
+                # Prepare batch API calls
+                api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = []
+                serials_in_batch: list[str] = []
+                dashboard = self.dashboard  # Store reference for closure
+
+                for dev in devices_needing_clients:
+                    device_serial = dev.get("serial")
+                    if device_serial:
+                        api_calls.append(
+                            (
+                                dashboard.devices.getDeviceClients,
+                                (device_serial,),
+                                {"timespan": 3600},
+                            )
+                        )
+                        serials_in_batch.append(device_serial)
+
+                # Execute batch API calls concurrently
+                if api_calls:
+                    results = await batch_api_calls(
+                        self.hass, api_calls, max_concurrent=5
+                    )
+                    self.organization_hub.total_api_calls += len(api_calls)
+
+                    # Process results
+                    for i, result in enumerate(results):
+                        device_serial = serials_in_batch[i]
+                        client_cache_key = self._cache_key("clients", device_serial)
+
+                        if isinstance(result, Exception):
+                            _LOGGER.debug(
+                                "Could not get client count for %s: %s",
+                                device_serial,
+                                result,
+                            )
+                            client_counts[device_serial] = 0
+                            cache_api_response(
+                                client_cache_key, 0, self._get_standard_cache_ttl()
+                            )
+                        elif result and isinstance(result, list):
+                            client_counts[device_serial] = len(result)
+                            cache_api_response(
+                                client_cache_key,
+                                len(result),
+                                self._get_standard_cache_ttl(),
+                            )
+                        else:
+                            client_counts[device_serial] = 0
+                            cache_api_response(
+                                client_cache_key, 0, self._get_standard_cache_ttl()
                             )
 
-                        clients = await self.hass.async_add_executor_job(
-                            get_device_clients, device_serial
-                        )
-                        self.organization_hub.total_api_calls += 1
-
-                        if clients and isinstance(clients, list):
-                            device_info["clientCount"] = len(clients)
-                        else:
-                            device_info["clientCount"] = 0
-
-                    except Exception as client_err:
-                        _LOGGER.debug(
-                            "Could not get client count for %s: %s",
-                            device_serial,
-                            client_err,
-                        )
-
-                    devices_info.append(device_info)
-
-                except Exception as device_err:
-                    _LOGGER.debug(
-                        "Error getting wireless info for device %s: %s",
-                        device.get("serial"),
-                        device_err,
-                    )
-                    continue
+            # Update device_info with client counts
+            for device_info in devices_info:
+                device_serial = device_info.get("serial")
+                if device_serial and device_serial in client_counts:
+                    device_info["clientCount"] = client_counts[device_serial]
 
             # Get channel utilization data for wireless devices
             channel_utilization_data = await self._async_get_channel_utilization(
@@ -695,7 +744,7 @@ class MerakiNetworkHub:
 
             _LOGGER.debug(
                 "Retrieved %d SSIDs and %d wireless devices for network %s",
-                len(ssids),
+                len(ssids) if ssids else 0,
                 len(devices_info),
                 self.network_name,
             )
@@ -719,6 +768,12 @@ class MerakiNetworkHub:
 
         if not self.dashboard:
             return channel_utilization
+
+        # Check cache first (Standard cache - network-wide data)
+        cache_key = self._cache_key("channel_utilization")
+        cached_data = get_cached_api_response(cache_key)
+        if cached_data is not None:
+            return cached_data
 
         try:
             # Get channel utilization for the network with minimum timespan
@@ -781,6 +836,11 @@ class MerakiNetworkHub:
                 "Retrieved channel utilization for %d devices in network %s",
                 len(channel_utilization),
                 self.network_name,
+            )
+
+            # Cache the results (Standard cache)
+            cache_api_response(
+                cache_key, channel_utilization, self._get_standard_cache_ttl()
             )
 
         except Exception as err:
