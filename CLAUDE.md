@@ -9,7 +9,7 @@ Repo-wide guidance for contributors and LLM agents working in this project. Use 
 - `tests/` – Test suite, builders, and fixtures (dedicated `CLAUDE.md`).
 - `docs/` – MkDocs site and published documentation.
 - `scripts/` – Utility scripts (linting, docs generation, packaging helpers).
-- `config/`, `mkdocs.yml`, `pyproject.toml`, `uv.lock` – Project configuration and dependency management.
+- `config/`, `zensical.toml`, `pyproject.toml`, `uv.lock` – Project configuration and dependency management.
 
 ## Tooling & Commands
 
