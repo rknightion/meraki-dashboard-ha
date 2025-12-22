@@ -857,7 +857,10 @@ class MerakiNetworkHub:
     @with_standard_retries("realtime")
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _async_setup_switch_data(self) -> None:
-        """Set up switch data for MS devices (ports, status, power modules, configuration, etc.)."""
+        """Set up switch data for MS devices (ports, status, power modules, configuration, etc.).
+
+        Uses batch API calls for efficiency and skips offline devices.
+        """
         if self.device_type != SENSOR_TYPE_MS:
             return
 
@@ -874,213 +877,292 @@ class MerakiNetworkHub:
                 )
                 return
 
+            # Phase 4: Filter to online devices only for API calls
+            online_devices, offline_serials = self._get_online_devices(switch_devices)
+
             # Get comprehensive port and device information for all switches
-            all_ports_status = []
-            all_power_modules = []
-            all_port_configs = []
-            devices_info = []  # Add device-level aggregated info
+            all_ports_status: list[dict[str, Any]] = []
+            all_power_modules: list[dict[str, Any]] = []
+            all_port_configs: list[dict[str, Any]] = []
+            devices_info: list[dict[str, Any]] = []
 
+            # Build device info map and check caches
+            port_status_cache: dict[str, list[Any]] = {}
+            port_config_cache: dict[str, list[Any]] = {}
+            power_module_cache: dict[str, Any] = {}
+
+            devices_needing_port_status: list[str] = []
+            devices_needing_port_config: list[str] = []
+            devices_needing_power_modules: list[str] = []
+
+            # Create device info entries for all devices
+            device_info_map: dict[str, dict[str, Any]] = {}
             for device in switch_devices:
-                try:
-                    device_serial = device.get("serial")
-                    if not device_serial:
-                        continue
+                device_serial = device.get("serial")
+                if not device_serial:
+                    continue
 
-                    device_name = get_device_display_name(device)
-                    device_info: dict[str, Any] = {
-                        "serial": device_serial,
-                        "name": device_name,
-                        "model": device.get("model"),
-                        "port_count": 0,
-                        "connected_ports": 0,
-                        "connected_clients": 0,
-                        "poe_ports": 0,
-                        "poe_power_draw": 0,
-                        "poe_power_limit": 0,
-                        "port_errors": 0,
-                        "port_discards": 0,
-                        "port_utilization": 0,
-                        "port_link_count": 0,
-                    }
+                device_name = get_device_display_name(device)
+                device_info: dict[str, Any] = {
+                    "serial": device_serial,
+                    "name": device_name,
+                    "model": device.get("model"),
+                    "port_count": 0,
+                    "connected_ports": 0,
+                    "connected_clients": 0,
+                    "poe_ports": 0,
+                    "poe_power_draw": 0,
+                    "poe_power_limit": 0,
+                    "port_errors": 0,
+                    "port_discards": 0,
+                    "port_utilization": 0,
+                    "port_link_count": 0,
+                }
+                device_info_map[device_serial] = device_info
 
-                    # Get port status with 1-hour timespan for traffic data
-                    try:
-                        if not self.dashboard:
-                            continue
-                        dashboard = self.dashboard  # Store in local variable for mypy
-                        ports_status = await self.hass.async_add_executor_job(
-                            functools.partial(
-                                dashboard.switch.getDeviceSwitchPortsStatuses,
-                                device_serial,
-                                timespan=3600,  # 1 hour for traffic statistics
-                            )
-                        )
-                        self.organization_hub.total_api_calls += 1
+                # Check caches for this device
+                port_status_cache_key = self._cache_key("port_status", device_serial)
+                cached_port_status = get_cached_api_response(port_status_cache_key)
+                if cached_port_status is not None:
+                    port_status_cache[device_serial] = cached_port_status
+                elif device_serial not in offline_serials:
+                    devices_needing_port_status.append(device_serial)
 
-                        # Add device info to each port for tracking
-                        for port in ports_status:
-                            port["device_serial"] = device_serial
-                            port["device_name"] = device_name
-                            port["device_model"] = device.get("model")
+                port_config_cache_key = self._cache_key("port_config", device_serial)
+                cached_port_config = get_cached_api_response(port_config_cache_key)
+                if cached_port_config is not None:
+                    port_config_cache[device_serial] = cached_port_config
+                elif device_serial not in offline_serials:
+                    devices_needing_port_config.append(device_serial)
 
-                        all_ports_status.extend(ports_status)
-                    except Exception as port_err:
+                power_cache_key = self._cache_key("power_modules", device_serial)
+                cached_power = get_cached_api_response(power_cache_key)
+                if cached_power is not None:
+                    power_module_cache[device_serial] = cached_power
+                elif device_serial not in offline_serials:
+                    devices_needing_power_modules.append(device_serial)
+
+            # Phase 2: Batch API calls for port status
+            if devices_needing_port_status and self.dashboard:
+                _LOGGER.debug(
+                    "Batching port status requests for %d devices",
+                    len(devices_needing_port_status),
+                )
+                dashboard = self.dashboard
+                api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                    (
+                        dashboard.switch.getDeviceSwitchPortsStatuses,
+                        (serial,),
+                        {"timespan": 3600},
+                    )
+                    for serial in devices_needing_port_status
+                ]
+                results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+                self.organization_hub.total_api_calls += len(api_calls)
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_port_status[i]
+                    cache_key = self._cache_key("port_status", device_serial)
+                    if isinstance(result, Exception):
                         _LOGGER.debug(
-                            "Could not get port status for %s: %s",
-                            device_serial,
-                            port_err,
+                            "Could not get port status for %s: %s", device_serial, result
+                        )
+                        port_status_cache[device_serial] = []
+                    else:
+                        port_status_cache[device_serial] = result or []
+                        cache_api_response(
+                            cache_key, result or [], self._get_standard_cache_ttl()
                         )
 
-                    # Get port configuration
-                    try:
-                        port_configs = await self.hass.async_add_executor_job(
-                            self.dashboard.switch.getDeviceSwitchPorts,
-                            device_serial,
-                        )
-                        self.organization_hub.total_api_calls += 1
+            # Phase 2: Batch API calls for port config
+            if devices_needing_port_config and self.dashboard:
+                _LOGGER.debug(
+                    "Batching port config requests for %d devices",
+                    len(devices_needing_port_config),
+                )
+                dashboard = self.dashboard
+                api_calls = [
+                    (dashboard.switch.getDeviceSwitchPorts, (serial,), {})
+                    for serial in devices_needing_port_config
+                ]
+                results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+                self.organization_hub.total_api_calls += len(api_calls)
 
-                        # Add device info to each port config for tracking
-                        for port_config in port_configs:
-                            port_config["device_serial"] = device_serial
-                            port_config["device_name"] = device_name
-
-                        all_port_configs.extend(port_configs)
-                    except Exception as config_err:
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_port_config[i]
+                    cache_key = self._cache_key("port_config", device_serial)
+                    if isinstance(result, Exception):
                         _LOGGER.debug(
-                            "Could not get port config for %s: %s",
-                            device_serial,
-                            config_err,
+                            "Could not get port config for %s: %s", device_serial, result
+                        )
+                        port_config_cache[device_serial] = []
+                    else:
+                        port_config_cache[device_serial] = result or []
+                        cache_api_response(
+                            cache_key, result or [], self._get_long_cache_ttl()
                         )
 
-                    # Get power module status (for PoE switches)
-                    # Note: This method may not exist for all switch models or SDK versions
-                    try:
-                        # Check if the method exists before calling it
-                        if hasattr(
-                            self.dashboard.switch, "getDeviceSwitchPowerModulesStatuses"
-                        ):
-                            power_status = await self.hass.async_add_executor_job(
-                                self.dashboard.switch.getDeviceSwitchPowerModulesStatuses,
-                                device_serial,
-                            )
-                            self.organization_hub.total_api_calls += 1
+            # Phase 2: Batch API calls for power modules (if method exists)
+            if (
+                devices_needing_power_modules
+                and self.dashboard
+                and hasattr(
+                    self.dashboard.switch, "getDeviceSwitchPowerModulesStatuses"
+                )
+            ):
+                _LOGGER.debug(
+                    "Batching power module requests for %d devices",
+                    len(devices_needing_power_modules),
+                )
+                dashboard = self.dashboard
+                api_calls = [
+                    (
+                        dashboard.switch.getDeviceSwitchPowerModulesStatuses,
+                        (serial,),
+                        {},
+                    )
+                    for serial in devices_needing_power_modules
+                ]
+                results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
+                self.organization_hub.total_api_calls += len(api_calls)
 
-                            if power_status:
-                                power_info = {
-                                    "device_serial": device_serial,
-                                    "device_name": device_name,
-                                    "power_status": power_status,
-                                }
-                                all_power_modules.append(power_info)
-
-                                # Extract PoE power limit for device info
-                                if isinstance(power_status, list) and power_status:
-                                    device_info["poe_power_limit"] = power_status[
-                                        0
-                                    ].get("powerLimit", 0)
-                                elif isinstance(power_status, dict):
-                                    device_info["poe_power_limit"] = power_status.get(
-                                        "powerLimit", 0
-                                    )
-                        else:
-                            _LOGGER.debug(
-                                "Power module status method not available for switch %s",
-                                device_serial,
-                            )
-
-                    except Exception as power_err:
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_power_modules[i]
+                    cache_key = self._cache_key("power_modules", device_serial)
+                    if isinstance(result, Exception):
                         _LOGGER.debug(
                             "Could not get power status for %s: %s",
                             device_serial,
-                            power_err,
+                            result,
+                        )
+                    else:
+                        power_module_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_extended_cache_ttl()
                         )
 
-                    # Update device-level aggregated info from port data
-                    if ports_status:
-                        device_info["port_count"] = len(ports_status)
-                        device_info["connected_ports"] = sum(
-                            1
-                            for port in ports_status
-                            if port.get("enabled", False)
-                            and port.get("status") == "Connected"
-                        )
-
-                        # Safe aggregation of client counts (ensure numeric values)
-                        client_counts = []
-                        for port in ports_status:
-                            client_count = port.get("clientCount", 0)
-                            if isinstance(client_count, int | float):
-                                client_counts.append(client_count)
-                        device_info["connected_clients"] = sum(client_counts)
-
-                        device_info["poe_ports"] = sum(
-                            1
-                            for port in ports_status
-                            if port.get("powerUsageInWh") is not None
-                            and port.get("powerUsageInWh") > 0
-                        )
-
-                        # Safe aggregation of PoE power (ensure numeric values)
-                        power_values = []
-                        for port in ports_status:
-                            power_usage = port.get("powerUsageInWh")
-                            if power_usage is not None and isinstance(
-                                power_usage, int | float
-                            ):
-                                power_values.append(power_usage)
-                        device_info["poe_power_draw"] = sum(power_values) / 10
-
-                        # Safe aggregation of port errors (ensure numeric values)
-                        error_counts = []
-                        for port in ports_status:
-                            errors = port.get("errors", 0)
-                            if isinstance(errors, int | float):
-                                error_counts.append(errors)
-                        device_info["port_errors"] = sum(error_counts)
-
-                        # Safe aggregation of port discards (ensure numeric values)
-                        discard_counts = []
-                        for port in ports_status:
-                            discards = port.get("discards", 0)
-                            if isinstance(discards, int | float):
-                                discard_counts.append(discards)
-                        device_info["port_discards"] = sum(discard_counts)
-
-                        device_info["port_link_count"] = sum(
-                            1
-                            for port in ports_status
-                            if port.get("status") == "Connected"
-                        )
-
-                        # Calculate average port utilization
-                        utilizations = []
-                        for port in ports_status:
-                            usage = port.get("usageInKb", {})
-                            if usage and isinstance(usage, dict):
-                                sent = usage.get("sent", 0)
-                                recv = usage.get("recv", 0)
-                                if isinstance(sent, int | float) and isinstance(
-                                    recv, int | float
-                                ):
-                                    # Convert from Kb to percentage (assuming 1Gbps ports)
-                                    port_util = min(
-                                        100.0, ((sent + recv) / 1000000) * 100
-                                    )
-                                    utilizations.append(port_util)
-
-                        device_info["port_utilization"] = (
-                            sum(utilizations) / len(utilizations) if utilizations else 0
-                        )
-
-                    devices_info.append(device_info)
-
-                except Exception as device_err:
-                    _LOGGER.debug(
-                        "Error getting switch info for device %s: %s",
-                        device.get("serial"),
-                        device_err,
-                    )
+            # Process all devices with cached/fetched data
+            for device in switch_devices:
+                device_serial = device.get("serial")
+                if not device_serial:
                     continue
+
+                device_info = device_info_map[device_serial]
+                device_name = device_info["name"]
+
+                # Process port status
+                ports_status = port_status_cache.get(device_serial, [])
+                for port in ports_status:
+                    port["device_serial"] = device_serial
+                    port["device_name"] = device_name
+                    port["device_model"] = device.get("model")
+                all_ports_status.extend(ports_status)
+
+                # Process port configs
+                port_configs = port_config_cache.get(device_serial, [])
+                for port_config in port_configs:
+                    port_config["device_serial"] = device_serial
+                    port_config["device_name"] = device_name
+                all_port_configs.extend(port_configs)
+
+                # Process power modules
+                power_status = power_module_cache.get(device_serial)
+                if power_status:
+                    power_info = {
+                        "device_serial": device_serial,
+                        "device_name": device_name,
+                        "power_status": power_status,
+                    }
+                    all_power_modules.append(power_info)
+
+                    # Extract PoE power limit for device info
+                    if isinstance(power_status, list) and power_status:
+                        device_info["poe_power_limit"] = power_status[0].get(
+                            "powerLimit", 0
+                        )
+                    elif isinstance(power_status, dict):
+                        device_info["poe_power_limit"] = power_status.get(
+                            "powerLimit", 0
+                        )
+
+                # Update device-level aggregated info from port data
+                if ports_status:
+                    device_info["port_count"] = len(ports_status)
+                    device_info["connected_ports"] = sum(
+                        1
+                        for port in ports_status
+                        if port.get("enabled", False)
+                        and port.get("status") == "Connected"
+                    )
+
+                    # Safe aggregation of client counts (ensure numeric values)
+                    client_counts = []
+                    for port in ports_status:
+                        client_count = port.get("clientCount", 0)
+                        if isinstance(client_count, int | float):
+                            client_counts.append(client_count)
+                    device_info["connected_clients"] = sum(client_counts)
+
+                    device_info["poe_ports"] = sum(
+                        1
+                        for port in ports_status
+                        if port.get("powerUsageInWh") is not None
+                        and port.get("powerUsageInWh") > 0
+                    )
+
+                    # Safe aggregation of PoE power (ensure numeric values)
+                    power_values = []
+                    for port in ports_status:
+                        power_usage = port.get("powerUsageInWh")
+                        if power_usage is not None and isinstance(
+                            power_usage, int | float
+                        ):
+                            power_values.append(power_usage)
+                    device_info["poe_power_draw"] = sum(power_values) / 10
+
+                    # Safe aggregation of port errors (ensure numeric values)
+                    error_counts = []
+                    for port in ports_status:
+                        errors = port.get("errors", 0)
+                        if isinstance(errors, int | float):
+                            error_counts.append(errors)
+                    device_info["port_errors"] = sum(error_counts)
+
+                    # Safe aggregation of port discards (ensure numeric values)
+                    discard_counts = []
+                    for port in ports_status:
+                        discards = port.get("discards", 0)
+                        if isinstance(discards, int | float):
+                            discard_counts.append(discards)
+                    device_info["port_discards"] = sum(discard_counts)
+
+                    device_info["port_link_count"] = sum(
+                        1
+                        for port in ports_status
+                        if port.get("status") == "Connected"
+                    )
+
+                    # Calculate average port utilization
+                    utilizations = []
+                    for port in ports_status:
+                        usage = port.get("usageInKb", {})
+                        if usage and isinstance(usage, dict):
+                            sent = usage.get("sent", 0)
+                            recv = usage.get("recv", 0)
+                            if isinstance(sent, int | float) and isinstance(
+                                recv, int | float
+                            ):
+                                # Convert from Kb to percentage (assuming 1Gbps ports)
+                                port_util = min(
+                                    100.0, ((sent + recv) / 1000000) * 100
+                                )
+                                utilizations.append(port_util)
+
+                    device_info["port_utilization"] = (
+                        sum(utilizations) / len(utilizations) if utilizations else 0
+                    )
+
+                devices_info.append(device_info)
 
             # Get packet statistics for all switches
             packet_statistics = await self._async_get_packet_statistics(switch_devices)
