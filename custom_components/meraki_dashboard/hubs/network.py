@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import functools
 import logging
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
@@ -14,12 +13,20 @@ from homeassistant.helpers.event import async_track_time_interval
 from ..const import (
     CONF_AUTO_DISCOVERY,
     CONF_DISCOVERY_INTERVAL,
+    CONF_EXTENDED_CACHE_TTL,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
+    CONF_LONG_CACHE_TTL,
+    CONF_MR_ENABLE_LATENCY_STATS,
+    CONF_MS_ENABLE_PACKET_STATS,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_SELECTED_DEVICES,
+    CONF_STANDARD_CACHE_TTL,
     DEFAULT_DISCOVERY_INTERVAL,
+    DEFAULT_EXTENDED_CACHE_TTL,
+    DEFAULT_LONG_CACHE_TTL,
+    DEFAULT_STANDARD_CACHE_TTL,
     DOMAIN,
     MT_REFRESH_COMMAND_INTERVAL,
     SENSOR_TYPE_MR,
@@ -42,6 +49,7 @@ from ..utils import (
 )
 from ..utils.device_info import device_matches_type
 from ..utils.error_handling import handle_api_errors
+from ..utils.helpers import batch_api_calls
 from ..utils.retry import with_standard_retries
 
 if TYPE_CHECKING:
@@ -139,6 +147,108 @@ class MerakiNetworkHub:
         # Keep only the last 50 measurements to prevent memory growth
         if len(self._discovery_durations) > 50:
             self._discovery_durations.pop(0)
+
+    def _get_standard_cache_ttl(self) -> int:
+        """Get standard cache TTL from config or default."""
+        return self.config_entry.options.get(
+            CONF_STANDARD_CACHE_TTL, DEFAULT_STANDARD_CACHE_TTL
+        )
+
+    def _get_extended_cache_ttl(self) -> int:
+        """Get extended cache TTL from config or default."""
+        return self.config_entry.options.get(
+            CONF_EXTENDED_CACHE_TTL, DEFAULT_EXTENDED_CACHE_TTL
+        )
+
+    def _get_long_cache_ttl(self) -> int:
+        """Get long cache TTL from config or default."""
+        return self.config_entry.options.get(
+            CONF_LONG_CACHE_TTL, DEFAULT_LONG_CACHE_TTL
+        )
+
+    def _cache_key(self, data_type: str, identifier: str = "") -> str:
+        """Generate a cache key for API responses.
+
+        Args:
+            data_type: Type of data being cached (e.g., 'port_status', 'connection_stats')
+            identifier: Optional identifier (e.g., device serial)
+
+        Returns:
+            Unique cache key string
+        """
+        if identifier:
+            return f"{self.network_id}_{data_type}_{identifier}"
+        return f"{self.network_id}_{data_type}"
+
+    def _is_latency_stats_enabled(self) -> bool:
+        """Check if latency stats are enabled in config."""
+        return self.config_entry.options.get(CONF_MR_ENABLE_LATENCY_STATS, True)
+
+    def _is_packet_stats_enabled(self) -> bool:
+        """Check if packet stats are enabled in config."""
+        return self.config_entry.options.get(CONF_MS_ENABLE_PACKET_STATS, True)
+
+    def _is_device_online(self, device_serial: str) -> bool:
+        """Check if a device is online based on organization hub device statuses.
+
+        Args:
+            device_serial: The device serial number to check
+
+        Returns:
+            True if device is online or alerting (can still respond to API calls),
+            False if offline or dormant
+        """
+        # Default to True if we can't determine status (conservative approach)
+        if not hasattr(self, "organization_hub") or not self.organization_hub:
+            return True
+
+        device_statuses = getattr(self.organization_hub, "device_statuses", [])
+        if not device_statuses:
+            return True
+
+        # Find the device in the status list
+        for status in device_statuses:
+            if status.get("serial") == device_serial:
+                device_status = status.get("status", "online")
+                # Online and alerting devices can respond to API calls
+                # Offline and dormant devices cannot
+                return device_status in ("online", "alerting")
+
+        # Device not found in status list - assume online
+        return True
+
+    def _get_online_devices(
+        self, devices: Sequence[dict[str, Any] | MerakiDeviceData]
+    ) -> tuple[list[dict[str, Any] | MerakiDeviceData], list[str]]:
+        """Filter devices to only include those that are online.
+
+        Args:
+            devices: List of device dictionaries
+
+        Returns:
+            Tuple of (online_devices, offline_serials)
+        """
+        online_devices = []
+        offline_serials = []
+
+        for device in devices:
+            device_serial = device.get("serial")
+            if not device_serial:
+                continue
+
+            if self._is_device_online(device_serial):
+                online_devices.append(device)
+            else:
+                offline_serials.append(device_serial)
+
+        if offline_serials:
+            _LOGGER.debug(
+                "Skipping %d offline/dormant devices for detailed API calls: %s",
+                len(offline_serials),
+                offline_serials[:5],  # Log first 5 serials
+            )
+
+        return online_devices, offline_serials
 
     @with_standard_retries("setup")
     async def async_setup(self) -> bool:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 from collections.abc import Callable
 from typing import Any
 
@@ -34,8 +35,11 @@ async def batch_api_calls(
         batch_tasks = []
 
         for func, args, kwargs in batch:
-            # Create task for each API call
-            task = hass.async_add_executor_job(func, *args, **kwargs)
+            # Use functools.partial to bind kwargs since async_add_executor_job
+            # only accepts positional arguments
+            if kwargs:
+                func = functools.partial(func, **kwargs)
+            task = hass.async_add_executor_job(func, *args)
             batch_tasks.append(task)
 
         # Wait for batch to complete
