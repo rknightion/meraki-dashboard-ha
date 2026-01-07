@@ -5,6 +5,9 @@ from typing import Final
 # Domain constant
 DOMAIN: Final = "meraki_dashboard"
 
+# Service names
+SERVICE_SET_CAMERA_RTSP: Final = "set_camera_rtsp"
+
 # Integration name
 DEFAULT_NAME: Final = "Meraki Dashboard"
 
@@ -29,6 +32,9 @@ CONF_DISCOVERY_INTERVAL: Final = "discovery_interval"
 CONF_HUB_SCAN_INTERVALS: Final = "hub_scan_intervals"
 CONF_HUB_DISCOVERY_INTERVALS: Final = "hub_discovery_intervals"
 CONF_HUB_AUTO_DISCOVERY: Final = "hub_auto_discovery"
+CONF_HUB_SCAN_INTERVAL: Final = "hub_scan_interval"
+CONF_HUB_DISCOVERY_INTERVAL: Final = "hub_discovery_interval"
+CONF_HUB_SELECTION: Final = "hub_selection"
 
 # MT refresh service configuration
 CONF_MT_REFRESH_ENABLED: Final = "mt_refresh_enabled"
@@ -134,6 +140,21 @@ MS_SENSOR_PORT_PACKETS_RATE_TOPOLOGYCHANGES: Final = "port_packets_rate_topology
 # MS STP priority
 MS_SENSOR_STP_PRIORITY: Final = "stp_priority"
 
+# MV (Camera) sensor metrics
+MV_SENSOR_QUALITY: Final = "quality"
+MV_SENSOR_RESOLUTION: Final = "resolution"
+MV_SENSOR_RETENTION_PROFILE_ID: Final = "retention_profile_id"
+MV_SENSOR_MOTION_BASED_RETENTION_ENABLED: Final = "motion_based_retention_enabled"
+MV_SENSOR_AUDIO_RECORDING_ENABLED: Final = "audio_recording_enabled"
+MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED: Final = "restricted_bandwidth_mode_enabled"
+MV_SENSOR_MOTION_DETECTOR_VERSION: Final = "motion_detector_version"
+MV_SENSOR_EXTERNAL_RTSP_ENABLED: Final = "external_rtsp_enabled"
+MV_SENSOR_CUSTOM_ANALYTICS_ENABLED: Final = "custom_analytics_enabled"
+MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID: Final = "custom_analytics_artifact_id"
+MV_SENSOR_DETECTIONS_PERSON: Final = "detections_person"
+MV_SENSOR_DETECTIONS_VEHICLE: Final = "detections_vehicle"
+MV_SENSOR_DETECTIONS_TOTAL: Final = "detections_total"
+
 # Organization-level metrics
 ORG_SENSOR_API_CALLS: Final = "api_calls"
 ORG_SENSOR_FAILED_API_CALLS: Final = "failed_api_calls"
@@ -236,6 +257,10 @@ DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 10  # 10 minutes
 DEFAULT_STANDARD_CACHE_TTL: Final = 900  # 15 minutes - port status, client counts
 DEFAULT_EXTENDED_CACHE_TTL: Final = 1800  # 30 minutes - connection/latency stats
 DEFAULT_LONG_CACHE_TTL: Final = 3600  # 60 minutes - port configs, STP priorities
+
+# MV detection history defaults (in seconds)
+MV_DETECTIONS_LOOKBACK_SECONDS: Final = 300  # 5 minutes
+MV_DETECTIONS_INTERVAL_SECONDS: Final = 60  # 1 minute buckets
 
 # Device metric cache TTL configuration keys
 CONF_STANDARD_CACHE_TTL: Final = "standard_cache_ttl"

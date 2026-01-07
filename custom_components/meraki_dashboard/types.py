@@ -14,6 +14,8 @@ class MerakiDeviceData(TypedDict, total=False):
     name: str
     model: str
     networkId: str
+    network_id: str
+    network_name: str
     mac: str | None
     lat: str | int | float | None
     lng: str | int | float | None
@@ -204,6 +206,54 @@ class WirelessStats(TypedDict, total=False):
     clientCount: int | None
 
 
+class MVCameraQualityRetention(TypedDict, total=False):
+    """Type definition for MV camera quality and retention settings."""
+
+    profileId: str | None
+    quality: str | None
+    resolution: str | None
+    motionBasedRetentionEnabled: bool | None
+    audioRecordingEnabled: bool | None
+    restrictedBandwidthModeEnabled: bool | None
+    motionDetectorVersion: int | None
+
+
+class MVCameraVideoSettings(TypedDict, total=False):
+    """Type definition for MV camera video settings."""
+
+    externalRtspEnabled: bool | None
+    rtspUrl: str | None
+
+
+class MVCameraCustomAnalytics(TypedDict, total=False):
+    """Type definition for MV camera custom analytics settings."""
+
+    enabled: bool | None
+    artifactId: str | None
+    parameters: list[dict[str, Any]] | None
+
+
+class MVCameraDetections(TypedDict, total=False):
+    """Type definition for MV camera detection summary."""
+
+    total: int | None
+    by_object_type: dict[str, int] | None
+    by_boundary: dict[str, dict[str, Any]] | None
+
+
+class MVCameraStats(TypedDict, total=False):
+    """Type definition for MV camera stats and settings."""
+
+    serial: str
+    name: str | None
+    model: str | None
+    networkId: str | None
+    qualityAndRetention: MVCameraQualityRetention | None
+    videoSettings: MVCameraVideoSettings | None
+    customAnalytics: MVCameraCustomAnalytics | None
+    detections: MVCameraDetections | None
+
+
 class SwitchPortStatus(TypedDict, total=False):
     """Type definition for switch port status."""
 
@@ -291,6 +341,12 @@ class MSCoordinatorData(TypedDict, total=False):
     memory_usage: list[MemoryUsageData]
 
 
+class MVCoordinatorData(TypedDict, total=False):
+    """Coordinator data structure for MV (Camera) devices."""
+
+    devices_info: list[MVCameraStats]
+
+
 class OrganizationCoordinatorData(TypedDict, total=False):
     """Coordinator data structure for organization-level data."""
 
@@ -311,6 +367,7 @@ CoordinatorData = (
     dict[DeviceSerial, MTDeviceData]  # MT devices use serial as key
     | MRCoordinatorData
     | MSCoordinatorData
+    | MVCoordinatorData
     | OrganizationCoordinatorData
     | dict[str, Any]  # Fallback for legacy code
 )
@@ -319,6 +376,8 @@ CoordinatorData = (
 # Protocol Types for API interfaces
 class MerakiApiClient(Protocol):
     """Protocol for Meraki API client."""
+
+    _session: Any
 
     @property
     def organizations(self) -> Any:
@@ -338,6 +397,11 @@ class MerakiApiClient(Protocol):
     @property
     def sensor(self) -> Any:
         """Get sensor API endpoints."""
+        ...
+
+    @property
+    def camera(self) -> Any:
+        """Get camera API endpoints."""
         ...
 
     @property
