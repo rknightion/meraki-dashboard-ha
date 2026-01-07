@@ -6,10 +6,12 @@ import logging
 import sys
 from typing import Any
 
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
 from .config.migration import async_migrate_config_entry
@@ -41,6 +43,8 @@ from .const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
+    SERVICE_SET_CAMERA_RTSP,
     STATIC_DATA_REFRESH_INTERVAL,
 )
 from .coordinator import MerakiSensorCoordinator
@@ -82,6 +86,74 @@ def _setup_logging():
 
 # Initialize logging configuration
 _setup_logging()
+
+SERVICE_SET_CAMERA_RTSP_SCHEMA = vol.Schema(
+    {
+        vol.Required("serial"): cv.string,
+        vol.Required("enabled"): cv.boolean,
+        vol.Optional("config_entry_id"): cv.string,
+    }
+)
+
+
+async def _async_handle_set_camera_rtsp(hass: HomeAssistant, call: ServiceCall) -> None:
+    """Handle service call to enable/disable external RTSP for a camera."""
+    serial = call.data["serial"]
+    enabled = call.data["enabled"]
+    entry_id = call.data.get("config_entry_id")
+
+    domain_entries = hass.data.get(DOMAIN, {})
+    entries_to_check: dict[str, Any] = {}
+    if entry_id:
+        entry_data = domain_entries.get(entry_id)
+        if entry_data:
+            entries_to_check[entry_id] = entry_data
+    else:
+        entries_to_check = domain_entries
+
+    for entry_data in entries_to_check.values():
+        network_hubs = entry_data.get("network_hubs", {})
+        coordinators = entry_data.get("coordinators", {})
+        for hub_id, hub in network_hubs.items():
+            if hub.device_type != SENSOR_TYPE_MV:
+                continue
+            if not any(
+                device.get("serial") == serial for device in getattr(hub, "devices", [])
+            ):
+                continue
+            await hub.async_update_camera_video_settings(serial, enabled)
+            coordinator = coordinators.get(hub_id)
+            if not coordinator:
+                coordinator = next(
+                    (
+                        coord
+                        for coord in coordinators.values()
+                        if coord.network_hub == hub
+                    ),
+                    None,
+                )
+            if coordinator:
+                await coordinator.async_request_refresh()
+            _LOGGER.debug("Set external RTSP=%s for camera %s", enabled, serial)
+            return
+
+    _LOGGER.warning("No MV camera found for serial %s", serial)
+
+
+async def async_register_services(hass: HomeAssistant) -> None:
+    """Register integration services once."""
+    if hass.services.has_service(DOMAIN, SERVICE_SET_CAMERA_RTSP):
+        return
+
+    async def _handle_service(call: ServiceCall) -> None:
+        await _async_handle_set_camera_rtsp(hass, call)
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_CAMERA_RTSP,
+        _handle_service,
+        schema=SERVICE_SET_CAMERA_RTSP_SCHEMA,
+    )
 
 
 def _build_startup_summary(
@@ -416,6 +488,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             perf_metrics["total_api_errors"],
         )
 
+        await async_register_services(hass)
+
         return True
 
     except Exception as err:
@@ -476,5 +550,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         org_hub = data.get("organization_hub")
         if org_hub:
             await org_hub.async_unload()
+
+    if unload_ok and DOMAIN in hass.data and not hass.data[DOMAIN]:
+        hass.services.async_remove(DOMAIN, SERVICE_SET_CAMERA_RTSP)
 
     return unload_ok

@@ -1,0 +1,24 @@
+set_camera_rtsp:
+  name: Set Camera RTSP
+  description: Enable or disable the external RTSP stream for a Meraki MV camera.
+  fields:
+    serial:
+      name: Serial
+      description: Camera serial number.
+      required: true
+      example: Q2XX-XXXX-XXXX
+      selector:
+        text:
+    enabled:
+      name: Enabled
+      description: True to enable external RTSP, false to disable.
+      required: true
+      example: true
+      selector:
+        boolean:
+    config_entry_id:
+      name: Config Entry ID
+      description: Optional config entry ID when multiple integrations are configured.
+      required: false
+      selector:
+        text:
