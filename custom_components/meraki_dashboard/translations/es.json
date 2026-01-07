@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Integración de Meraki Dashboard",
-        "description": "Conecta tu Cisco Meraki Dashboard con Home Assistant para supervisar tus dispositivos Meraki.\n\n**Necesitarás:**\n• Una clave API de Meraki Dashboard (genérala en: Organization > Settings > Dashboard API access)\n• Tu ID de organización de Meraki (lo encontrarás en la URL del Dashboard o en la configuración de la API)\n\nLa integración es compatible con MT (sensores ambientales), MR (puntos de acceso inalámbricos) y MS (conmutadores).",
+        "description": "Conecta tu Cisco Meraki Dashboard con Home Assistant para supervisar tus dispositivos Meraki.\n\n**Necesitarás:**\n• Una clave API de Meraki Dashboard (genérala en: Organization > Settings > Dashboard API access)\n• Tu ID de organización de Meraki (lo encontrarás en la URL del Dashboard o en la configuración de la API)\n\nLa integración es compatible con MT (sensores ambientales), MR (puntos de acceso inalámbricos), MS (conmutadores) y MV (cámaras).",
         "data": {
           "api_key": "Clave API",
           "organization_id": "ID de organización",
@@ -35,14 +35,16 @@
           "enabled_device_types": "Tipos de dispositivo a supervisar",
           "selected_devices": "Seleccionar dispositivos específicos",
           "scan_interval": "Intervalo de actualización",
+          "mt_refresh_enabled": "Habilitar actualización rápida MT15/MT40",
           "auto_discovery": "Habilitar descubrimiento automático",
           "discovery_interval": "Intervalo de descubrimiento"
         },
         "data_description": {
           "name": "Opcional: Nombre personalizado para esta instancia de la integración. Si no se indica, se utilizará el nombre de tu organización.",
-          "enabled_device_types": "Elige qué tipos de dispositivos Meraki quieres supervisar. Puedes seleccionar varios tipos: MT (sensores ambientales), MR (puntos de acceso inalámbricos) y MS (conmutadores).",
+          "enabled_device_types": "Elige qué tipos de dispositivos Meraki quieres supervisar. Puedes seleccionar varios tipos: MT (sensores ambientales), MR (puntos de acceso inalámbricos), MS (conmutadores) y MV (cámaras).",
           "selected_devices": "Opcional: Selecciona dispositivos específicos para supervisar. Déjalo vacío para supervisar automáticamente todos los dispositivos de los tipos seleccionados y descubrir nuevos cuando se añadan.",
           "scan_interval": "Frecuencia con la que se obtienen datos actualizados de tus dispositivos (en minutos). Los sensores MT se actualizan por defecto cada 0,5 minutos (30 segundos) para admitir la función de actualización rápida MT15/MT40. Otros tipos de dispositivo se actualizan por defecto cada 5-10 minutos.",
+          "mt_refresh_enabled": "Habilita actualizaciones rápidas de los sensores MT15 y MT40 enviando comandos de actualización en lotes. Esto permite datos casi en tiempo real en lugar de esperar el intervalo predeterminado de 20 minutos de Meraki. Utiliza la API de Action Batches de Meraki para minimizar el uso de la API. Recomendado: habilitado (predeterminado).",
           "auto_discovery": "Cuando está habilitado, la integración descubrirá y añadirá automáticamente nuevos dispositivos a medida que se incorporen a tus redes Meraki. Recomendado: habilitado.",
           "discovery_interval": "Frecuencia con la que se buscan nuevos dispositivos cuando el descubrimiento automático está habilitado (en minutos). El valor predeterminado es 60 minutos. Valores inferiores encuentran dispositivos más rápido pero aumentan el uso de la API."
         }
@@ -79,6 +81,12 @@
           "enabled_device_types": "Tipos de dispositivo a supervisar",
           "mt_refresh_enabled": "Habilitar actualización rápida MT15/MT40",
           "mt_refresh_interval": "Intervalo de actualización MT",
+          "standard_cache_ttl": "TTL de caché estándar",
+          "extended_cache_ttl": "TTL de caché extendido",
+          "long_cache_ttl": "TTL de caché largo",
+          "mr_enable_latency_stats": "Habilitar estadísticas de latencia/pérdida de paquetes de MR",
+          "ms_enable_packet_stats": "Habilitar estadísticas de paquetes de MS",
+          "bluetooth_clients_enabled": "Habilitar seguimiento de clientes Bluetooth",
           "update_api_key": "Actualizar clave API",
           "scan_interval": "Intervalo de actualización",
           "discovery_interval": "Intervalo de descubrimiento",
@@ -86,15 +94,18 @@
           "selected_devices": "Dispositivos seleccionados",
           "static_data_interval": "Intervalo de datos de la organización",
           "semi_static_data_interval": "Intervalo de configuración de red",
-          "dynamic_data_interval": "Intervalo de métricas de los dispositivos",
-          "hub_auto_discovery_*": "Descubrimiento automático",
-          "hub_scan_interval_*": "Intervalo de actualización (segundos)",
-          "hub_discovery_interval_*": "Intervalo de descubrimiento"
+          "dynamic_data_interval": "Intervalo de métricas de los dispositivos"
         },
         "data_description": {
-          "enabled_device_types": "Elige qué tipos de dispositivos Meraki supervisar en tus redes. Puedes seleccionar MT (sensores ambientales), MR (puntos de acceso inalámbricos) y/o MS (conmutadores). Solo los tipos seleccionados aparecerán en Home Assistant.",
+          "enabled_device_types": "Elige qué tipos de dispositivos Meraki supervisar en tus redes. Puedes seleccionar MT (sensores ambientales), MR (puntos de acceso inalámbricos), MS (conmutadores) y/o MV (cámaras). Solo los tipos seleccionados aparecerán en Home Assistant.",
           "mt_refresh_enabled": "Habilita actualizaciones rápidas para los sensores ambientales MT15 y MT40 enviando comandos de actualización cada pocos segundos. Esto permite datos casi en tiempo real en lugar de esperar el intervalo predeterminado de 20 minutos de Meraki. Nota: puede generar avisos ocasionales de límite de velocidad en la API de Meraki. Recomendado: habilitado (predeterminado).",
           "mt_refresh_interval": "Frecuencia con la que se envían comandos de actualización a los dispositivos MT15/MT40 (1-60 segundos). El valor predeterminado es 30 segundos. Intervalos más bajos ofrecen actualizaciones más rápidas pero aumentan el uso de la API y pueden activar límites de velocidad. Solo se aplica cuando la actualización rápida MT15/MT40 está habilitada arriba.",
+          "standard_cache_ttl": "Duración de la caché para datos que cambian con frecuencia, como el estado de los puertos y el conteo de clientes (en minutos). Predeterminado: 15 minutos. Valores más bajos = datos más recientes pero más llamadas a la API.",
+          "extended_cache_ttl": "Duración de la caché para datos que cambian más lentamente, como estadísticas de conexión y métricas de latencia (en minutos). Predeterminado: 30 minutos. Estas métricas se agregan con el tiempo, por lo que el almacenamiento en caché tiene un impacto mínimo en la precisión.",
+          "long_cache_ttl": "Duración de la caché para datos que cambian raramente, como configuraciones de puertos y prioridades STP (en minutos). Predeterminado: 60 minutos. Los cambios de configuración son poco frecuentes, por lo que se recomienda un caché más largo.",
+          "mr_enable_latency_stats": "Obtiene estadísticas de latencia y pérdida de paquetes para puntos de acceso inalámbricos MR. Desactívalo para reducir llamadas a la API si no necesitas estas métricas.",
+          "ms_enable_packet_stats": "Obtiene estadísticas de paquetes (broadcast, multicast, errores) para puertos de conmutadores MS. Desactívalo para reducir llamadas a la API si no necesitas métricas detalladas de paquetes.",
+          "bluetooth_clients_enabled": "Realiza seguimiento de los clientes Bluetooth conectados a tus redes. Desactívalo para reducir llamadas a la API si no usas el seguimiento Bluetooth.",
           "update_api_key": "Marca esta casilla para actualizar tu clave API de Meraki Dashboard. Se te pedirá la nueva clave en el siguiente paso.",
           "scan_interval": "Frecuencia con la que se actualizan los datos de los sensores (en segundos). Ejemplos: 30 = 30 s, 60 = 1 min, 300 = 5 min, 600 = 10 min. Los sensores MT pueden llegar hasta 1 segundo con la actualización rápida habilitada. Otros tipos de dispositivo tienen un mínimo de 60 segundos (1 minuto).",
           "discovery_interval": "Frecuencia con la que se buscan nuevos dispositivos en tus redes (en minutos). El valor predeterminado es 60 minutos. Valores más bajos encuentran dispositivos más rápido pero aumentan el uso de la API.",
@@ -115,18 +126,28 @@
           "api_key": "Tu clave API de Meraki Dashboard. Esta clave se utiliza para autenticar todas las solicitudes a la API de Meraki. Mantén esta clave segura y no la compartas."
         }
       },
-      "hub_intervals": {
-        "title": "Configuración específica de la red",
-        "description": "Configura los intervalos de actualización y las opciones de descubrimiento para cada red de forma individual.\n\nCada red (hub) gestiona dispositivos de un tipo específico (MT, MR o MS) y puede tener su propia configuración.\n\n**Nota:** Los intervalos de los sensores MT se limitan a 20 minutos (1200 segundos) para garantizar la captura completa de datos históricos desde la nube de Meraki.",
+      "hub_select": {
+        "title": "Seleccionar red",
+        "description": "Elige una red para configurar. Después de guardar una red, volverás aquí para configurar otra.\n\n**Redes disponibles:**\n{hub_list}",
         "data": {
-          "hub_scan_intervals": "Intervalos de actualización de la red",
-          "hub_discovery_intervals": "Intervalos de descubrimiento de la red",
-          "hub_auto_discovery": "Configuración de descubrimiento automático de la red"
+          "hub_selection": "Red a configurar"
         },
         "data_description": {
-          "hub_scan_intervals": "Frecuencia con la que se obtienen datos de los dispositivos en cada red (en segundos). Valores más bajos proporcionan actualizaciones más frecuentes pero aumentan el uso de la API.",
-          "hub_discovery_intervals": "Frecuencia con la que se buscan nuevos dispositivos en cada red (en segundos). Normalmente se configura con un valor superior al de los intervalos de actualización.",
-          "hub_auto_discovery": "Habilita o deshabilita el descubrimiento automático de dispositivos para cada red individualmente."
+          "hub_selection": "Selecciona una red para configurar o elige Finalizar cuando hayas terminado."
+        }
+      },
+      "hub_settings": {
+        "title": "Configuración específica de la red",
+        "description": "Configura los ajustes de **{hub_name}** ({device_label}, {device_count} dispositivos).\n\nEl intervalo de actualización está en segundos (mínimo {min_scan_seconds}s). El intervalo de descubrimiento está en minutos (mínimo {min_discovery_minutes}m).",
+        "data": {
+          "hub_auto_discovery": "Descubrimiento automático",
+          "hub_scan_interval": "Intervalo de actualización",
+          "hub_discovery_interval": "Intervalo de descubrimiento"
+        },
+        "data_description": {
+          "hub_auto_discovery": "Habilita o deshabilita el descubrimiento automático de dispositivos para esta red.",
+          "hub_scan_interval": "Con qué frecuencia se obtienen datos de los dispositivos de esta red (en segundos). Valores más bajos ofrecen actualizaciones más frecuentes pero aumentan el uso de la API.",
+          "hub_discovery_interval": "Con qué frecuencia se buscan nuevos dispositivos en esta red (en minutos). Normalmente se establece más alto que los intervalos de actualización."
         }
       }
     },
@@ -171,6 +192,10 @@
     "discover_all_devices": {
       "name": "Descubrir todos los dispositivos",
       "description": "Buscar nuevos dispositivos en todas las redes"
+    },
+    "set_camera_rtsp": {
+      "name": "Configurar RTSP de la cámara",
+      "description": "Habilitar o deshabilitar el flujo RTSP externo para una cámara"
     }
   }
 }

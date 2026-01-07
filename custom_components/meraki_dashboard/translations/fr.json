@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Intégration Meraki Dashboard",
-        "description": "Connectez votre Cisco Meraki Dashboard à Home Assistant pour surveiller vos appareils Meraki.\n\n**Vous aurez besoin de :**\n• D'une clé API Meraki Dashboard (générez-la depuis : Organization > Settings > Dashboard API access)\n• De votre ID d'organisation Meraki (disponible dans l'URL du Dashboard ou dans les paramètres de l'API)\n\nL'intégration prend en charge MT (capteurs environnementaux), MR (points d'accès sans fil) et MS (commutateurs).",
+        "description": "Connectez votre Cisco Meraki Dashboard à Home Assistant pour surveiller vos appareils Meraki.\n\n**Vous aurez besoin de :**\n• D'une clé API Meraki Dashboard (générez-la depuis : Organization > Settings > Dashboard API access)\n• De votre ID d'organisation Meraki (disponible dans l'URL du Dashboard ou dans les paramètres de l'API)\n\nL'intégration prend en charge MT (capteurs environnementaux), MR (points d'accès sans fil), MS (commutateurs) et MV (caméras).",
         "data": {
           "api_key": "Clé API",
           "organization_id": "ID d'organisation",
@@ -35,14 +35,16 @@
           "enabled_device_types": "Types d'appareil à surveiller",
           "selected_devices": "Sélectionner des appareils spécifiques",
           "scan_interval": "Intervalle de mise à jour",
+          "mt_refresh_enabled": "Activer l'actualisation rapide MT15/MT40",
           "auto_discovery": "Activer la découverte automatique",
           "discovery_interval": "Intervalle de découverte"
         },
         "data_description": {
           "name": "Facultatif : Nom personnalisé pour cette instance de l'intégration. S'il n'est pas renseigné, le nom de votre organisation sera utilisé.",
-          "enabled_device_types": "Choisissez les types d'appareils Meraki que vous souhaitez surveiller. Vous pouvez sélectionner plusieurs types : MT (capteurs environnementaux), MR (points d'accès sans fil) et MS (commutateurs).",
+          "enabled_device_types": "Choisissez les types d'appareils Meraki que vous souhaitez surveiller. Vous pouvez sélectionner plusieurs types : MT (capteurs environnementaux), MR (points d'accès sans fil), MS (commutateurs) et MV (caméras).",
           "selected_devices": "Facultatif : Sélectionnez des appareils spécifiques à surveiller. Laissez vide pour surveiller automatiquement tous les appareils des types sélectionnés et découvrir les nouveaux lorsqu'ils sont ajoutés.",
           "scan_interval": "Fréquence à laquelle récupérer les données mises à jour de vos appareils (en minutes). Les capteurs MT sont configurés par défaut à 0,5 minute (30 secondes) pour prendre en charge la fonction d'actualisation rapide MT15/MT40. Les autres types d'appareils sont par défaut à 5-10 minutes.",
+          "mt_refresh_enabled": "Active des mises à jour rapides des capteurs MT15 et MT40 en envoyant des commandes d'actualisation groupées. Cela permet d'obtenir des données quasi en temps réel au lieu d'attendre l'intervalle par défaut de 20 minutes de Meraki. Utilise l'API Action Batches de Meraki pour minimiser l'utilisation de l'API. Recommandé : activée (par défaut).",
           "auto_discovery": "Lorsqu'elle est activée, l'intégration découvre et ajoute automatiquement les nouveaux appareils lorsqu'ils apparaissent dans vos réseaux Meraki. Recommandé : activée.",
           "discovery_interval": "Fréquence de recherche de nouveaux appareils lorsque la découverte automatique est activée (en minutes). La valeur par défaut est 60 minutes. Des valeurs inférieures trouvent les nouveaux appareils plus rapidement mais augmentent l'utilisation de l'API."
         }
@@ -79,6 +81,12 @@
           "enabled_device_types": "Types d'appareil à surveiller",
           "mt_refresh_enabled": "Activer l'actualisation rapide MT15/MT40",
           "mt_refresh_interval": "Intervalle d'actualisation MT",
+          "standard_cache_ttl": "TTL de cache standard",
+          "extended_cache_ttl": "TTL de cache étendu",
+          "long_cache_ttl": "TTL de cache long",
+          "mr_enable_latency_stats": "Activer les statistiques de latence/perte de paquets MR",
+          "ms_enable_packet_stats": "Activer les statistiques de paquets MS",
+          "bluetooth_clients_enabled": "Activer le suivi des clients Bluetooth",
           "update_api_key": "Mettre à jour la clé API",
           "scan_interval": "Intervalle de mise à jour",
           "discovery_interval": "Intervalle de découverte",
@@ -86,15 +94,18 @@
           "selected_devices": "Appareils sélectionnés",
           "static_data_interval": "Intervalle des données d'organisation",
           "semi_static_data_interval": "Intervalle de configuration réseau",
-          "dynamic_data_interval": "Intervalle des mesures des appareils",
-          "hub_auto_discovery_*": "Découverte automatique",
-          "hub_scan_interval_*": "Intervalle de mise à jour (secondes)",
-          "hub_discovery_interval_*": "Intervalle de découverte"
+          "dynamic_data_interval": "Intervalle des mesures des appareils"
         },
         "data_description": {
-          "enabled_device_types": "Choisissez les types d'appareils Meraki à surveiller dans vos réseaux. Vous pouvez sélectionner MT (capteurs environnementaux), MR (points d'accès sans fil) et/ou MS (commutateurs). Seuls les types sélectionnés apparaîtront dans Home Assistant.",
+          "enabled_device_types": "Choisissez les types d'appareils Meraki à surveiller dans vos réseaux. Vous pouvez sélectionner MT (capteurs environnementaux), MR (points d'accès sans fil), MS (commutateurs) et/ou MV (caméras). Seuls les types sélectionnés apparaîtront dans Home Assistant.",
           "mt_refresh_enabled": "Active des mises à jour rapides pour les capteurs environnementaux MT15 et MT40 en envoyant des commandes d'actualisation toutes les quelques secondes. Cela permet d'obtenir des données quasi en temps réel au lieu d'attendre l'intervalle par défaut de 20 minutes de Meraki. Remarque : peut occasionnellement déclencher des avertissements de limitation de débit de l'API Meraki. Recommandé : activée (par défaut).",
           "mt_refresh_interval": "Fréquence d'envoi des commandes d'actualisation aux appareils MT15/MT40 (1-60 secondes). Par défaut : 30 secondes. Des intervalles plus courts fournissent des mises à jour plus rapides mais augmentent l'utilisation de l'API et peuvent déclencher des limites de débit. Ne s'applique que lorsque l'actualisation rapide MT15/MT40 est activée ci-dessus.",
+          "standard_cache_ttl": "Durée du cache pour les données qui changent fréquemment comme l'état des ports et le nombre de clients (en minutes). Par défaut : 15 minutes. Des valeurs plus faibles = des données plus fraîches mais plus d'appels API.",
+          "extended_cache_ttl": "Durée du cache pour les données qui changent plus lentement comme les statistiques de connexion et les métriques de latence (en minutes). Par défaut : 30 minutes. Ces métriques sont agrégées dans le temps, donc la mise en cache a un impact minimal sur la précision.",
+          "long_cache_ttl": "Durée du cache pour les données qui changent rarement comme les configurations de ports et les priorités STP (en minutes). Par défaut : 60 minutes. Les changements de configuration sont rares, donc un cache plus long est recommandé.",
+          "mr_enable_latency_stats": "Récupère les statistiques de latence et de perte de paquets pour les points d'accès sans fil MR. Désactivez pour réduire les appels API si vous n'avez pas besoin de ces métriques.",
+          "ms_enable_packet_stats": "Récupère les statistiques de paquets (broadcast, multicast, erreurs) pour les ports de commutateurs MS. Désactivez pour réduire les appels API si vous n'avez pas besoin de métriques de paquets détaillées.",
+          "bluetooth_clients_enabled": "Suit les clients Bluetooth connectés à vos réseaux. Désactivez pour réduire les appels API si vous n'utilisez pas le suivi Bluetooth.",
           "update_api_key": "Cochez cette case pour mettre à jour votre clé API Meraki Dashboard. Vous serez invité à saisir la nouvelle clé à l'étape suivante.",
           "scan_interval": "Fréquence de mise à jour des données des capteurs (en secondes). Exemples : 30 = 30 s, 60 = 1 min, 300 = 5 min, 600 = 10 min. Les capteurs MT peuvent descendre jusqu'à 1 seconde avec l'actualisation rapide activée. Les autres types d'appareils ont un minimum de 60 secondes (1 minute).",
           "discovery_interval": "Fréquence de recherche de nouveaux appareils dans vos réseaux (en minutes). La valeur par défaut est 60 minutes. Des valeurs plus faibles détectent les nouveaux appareils plus rapidement mais augmentent l'utilisation de l'API.",
@@ -115,18 +126,28 @@
           "api_key": "Votre clé API Meraki Dashboard. Cette clé est utilisée pour authentifier toutes les requêtes vers l'API Meraki. Gardez cette clé en sécurité et ne la partagez pas."
         }
       },
-      "hub_intervals": {
-        "title": "Configuration spécifique au réseau",
-        "description": "Configurez les intervalles de mise à jour et les paramètres de découverte pour chaque réseau individuellement.\n\nChaque réseau (hub) gère des appareils d'un type spécifique (MT, MR ou MS) et peut posséder sa propre configuration.\n\n**Remarque :** les intervalles des capteurs MT sont limités à 20 minutes (1200 secondes) afin de garantir une capture complète des données historiques depuis le cloud Meraki.",
+      "hub_select": {
+        "title": "Sélectionner un réseau",
+        "description": "Choisissez un réseau à configurer. Après avoir enregistré un réseau, vous reviendrez ici pour en configurer un autre.\n\n**Réseaux disponibles :**\n{hub_list}",
         "data": {
-          "hub_scan_intervals": "Intervalles de mise à jour réseau",
-          "hub_discovery_intervals": "Intervalles de découverte réseau",
-          "hub_auto_discovery": "Paramètres de découverte automatique réseau"
+          "hub_selection": "Réseau à configurer"
         },
         "data_description": {
-          "hub_scan_intervals": "Fréquence de récupération des données des appareils dans chaque réseau (en secondes). Des valeurs plus faibles fournissent des mises à jour plus fréquentes mais augmentent l'utilisation de l'API.",
-          "hub_discovery_intervals": "Fréquence de recherche de nouveaux appareils dans chaque réseau (en secondes). Habituellement définie plus élevée que les intervalles de mise à jour.",
-          "hub_auto_discovery": "Activez ou désactivez la découverte automatique des appareils pour chaque réseau individuellement."
+          "hub_selection": "Choisissez un réseau à configurer, ou sélectionnez Terminer lorsque vous avez terminé."
+        }
+      },
+      "hub_settings": {
+        "title": "Paramètres spécifiques au réseau",
+        "description": "Configurez les paramètres pour **{hub_name}** ({device_label}, {device_count} appareils).\n\nL'intervalle de mise à jour est en secondes (minimum {min_scan_seconds}s). L'intervalle de découverte est en minutes (minimum {min_discovery_minutes}m).",
+        "data": {
+          "hub_auto_discovery": "Découverte automatique",
+          "hub_scan_interval": "Intervalle de mise à jour",
+          "hub_discovery_interval": "Intervalle de découverte"
+        },
+        "data_description": {
+          "hub_auto_discovery": "Activez ou désactivez la découverte automatique des appareils pour ce réseau.",
+          "hub_scan_interval": "Fréquence de récupération des données des appareils de ce réseau (en secondes). Des valeurs plus faibles fournissent des mises à jour plus fréquentes mais augmentent l'utilisation de l'API.",
+          "hub_discovery_interval": "Fréquence de recherche de nouveaux appareils dans ce réseau (en minutes). Généralement définie plus élevée que les intervalles de mise à jour."
         }
       }
     },
@@ -171,6 +192,10 @@
     "discover_all_devices": {
       "name": "Découvrir tous les appareils",
       "description": "Rechercher de nouveaux appareils sur l'ensemble des réseaux"
+    },
+    "set_camera_rtsp": {
+      "name": "Définir le RTSP de la caméra",
+      "description": "Activer ou désactiver le flux RTSP externe pour une caméra"
     }
   }
 }

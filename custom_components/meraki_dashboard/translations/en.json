@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Meraki Dashboard Integration",
-        "description": "Connect your Cisco Meraki Dashboard to Home Assistant to monitor your Meraki devices.\n\n**You will need:**\n• A Meraki Dashboard API key (generate one at: Organization > Settings > Dashboard API access)\n• Your Meraki Organization ID (found in the Dashboard URL or API settings)\n\nThe integration supports MT (Environmental Sensors), MR (Wireless Access Points), and MS (Switches).",
+        "description": "Connect your Cisco Meraki Dashboard to Home Assistant to monitor your Meraki devices.\n\n**You will need:**\n• A Meraki Dashboard API key (generate one at: Organization > Settings > Dashboard API access)\n• Your Meraki Organization ID (found in the Dashboard URL or API settings)\n\nThe integration supports MT (Environmental Sensors), MR (Wireless Access Points), MS (Switches), and MV (Cameras).",
         "data": {
           "api_key": "API Key",
           "organization_id": "Organization ID",
@@ -35,14 +35,16 @@
           "enabled_device_types": "Device Types to Monitor",
           "selected_devices": "Select Specific Devices",
           "scan_interval": "Update Interval",
+          "mt_refresh_enabled": "Enable MT15/MT40 Fast Refresh",
           "auto_discovery": "Enable Auto-Discovery",
           "discovery_interval": "Discovery Interval"
         },
         "data_description": {
           "name": "Optional: Custom name for this integration instance. If not provided, will use your organization name.",
-          "enabled_device_types": "Choose which types of Meraki devices you want to monitor. You can select multiple types: MT (Environmental Sensors), MR (Wireless Access Points), and MS (Switches).",
+          "enabled_device_types": "Choose which types of Meraki devices you want to monitor. You can select multiple types: MT (Environmental Sensors), MR (Wireless Access Points), MS (Switches), and MV (Cameras).",
           "selected_devices": "Optional: Select specific devices to monitor. Leave empty to automatically monitor all devices of the selected types and discover new ones as they're added.",
           "scan_interval": "How often to fetch updated data from your devices (in minutes). MT sensors default to 0.5 minutes (30 seconds) to support the MT15/MT40 fast refresh feature. Other device types default to 5-10 minutes.",
+          "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending batched refresh commands. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Uses Meraki's Action Batches API to minimize API usage. Recommended: enabled (default).",
           "auto_discovery": "When enabled, the integration will automatically discover and add new devices as they're added to your Meraki networks. Recommended: enabled.",
           "discovery_interval": "How often to scan for new devices when auto-discovery is enabled (in minutes). Default is 60 minutes. Lower values find new devices faster but increase API usage."
         }
@@ -92,13 +94,10 @@
           "selected_devices": "Selected Devices",
           "static_data_interval": "Organization Data Interval",
           "semi_static_data_interval": "Network Configuration Interval",
-          "dynamic_data_interval": "Device Metrics Interval",
-          "hub_auto_discovery_*": "Auto-Discovery",
-          "hub_scan_interval_*": "Update Interval (seconds)",
-          "hub_discovery_interval_*": "Discovery Interval"
+          "dynamic_data_interval": "Device Metrics Interval"
         },
         "data_description": {
-          "enabled_device_types": "Choose which types of Meraki devices to monitor in your networks. You can select MT (Environmental Sensors), MR (Wireless Access Points), and/or MS (Switches). Only selected device types will appear in Home Assistant.",
+          "enabled_device_types": "Choose which types of Meraki devices to monitor in your networks. You can select MT (Environmental Sensors), MR (Wireless Access Points), MS (Switches), and/or MV (Cameras). Only selected device types will appear in Home Assistant.",
           "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending batched refresh commands. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Uses Meraki's Action Batches API to minimize API usage. Recommended: enabled (default).",
           "mt_refresh_interval": "How often to send refresh commands to MT15/MT40 devices (1-60 seconds). Default is 30 seconds. Lower intervals provide faster updates but increase API usage and may trigger rate limits. Only applies when MT15/MT40 fast refresh is enabled above.",
           "standard_cache_ttl": "Cache duration for frequently changing data like port status and client counts (in minutes). Default: 15 minutes. Lower values = fresher data but more API calls.",
@@ -127,18 +126,28 @@
           "api_key": "Your Meraki Dashboard API key. This key is used to authenticate all requests to the Meraki API. Keep this key secure and do not share it."
         }
       },
-      "hub_intervals": {
-        "title": "Network-Specific Configuration",
-        "description": "Configure update intervals and discovery settings for each network individually.\n\nEach network (hub) manages devices of a specific type (MT, MR, or MS) and can have its own configuration.\n\n**Note:** MT sensor intervals are capped at 20 minutes (1200 seconds) to ensure complete historical data capture from the Meraki cloud.",
+      "hub_select": {
+        "title": "Select Network",
+        "description": "Choose a network to configure. After saving a network, you'll return here to configure another one.\n\n**Available Networks:**\n{hub_list}",
         "data": {
-          "hub_scan_intervals": "Network Update Intervals",
-          "hub_discovery_intervals": "Network Discovery Intervals",
-          "hub_auto_discovery": "Network Auto-Discovery Settings"
+          "hub_selection": "Network to Configure"
         },
         "data_description": {
-          "hub_scan_intervals": "How often to fetch data from devices in each network (in seconds). Lower values provide more frequent updates but increase API usage.",
-          "hub_discovery_intervals": "How often to scan for new devices in each network (in seconds). Typically set higher than scan intervals.",
-          "hub_auto_discovery": "Enable or disable automatic device discovery for each network individually."
+          "hub_selection": "Pick a network to configure, or choose Finish when you are done."
+        }
+      },
+      "hub_settings": {
+        "title": "Network-Specific Settings",
+        "description": "Configure settings for **{hub_name}** ({device_label}, {device_count} devices).\n\nUpdate interval is in seconds (minimum {min_scan_seconds}s). Discovery interval is in minutes (minimum {min_discovery_minutes}m).",
+        "data": {
+          "hub_auto_discovery": "Auto-Discovery",
+          "hub_scan_interval": "Update Interval",
+          "hub_discovery_interval": "Discovery Interval"
+        },
+        "data_description": {
+          "hub_auto_discovery": "Enable or disable automatic device discovery for this network.",
+          "hub_scan_interval": "How often to fetch data from devices in this network (in seconds). Lower values provide more frequent updates but increase API usage.",
+          "hub_discovery_interval": "How often to scan for new devices in this network (in minutes). Typically set higher than update intervals."
         }
       }
     },
@@ -183,6 +192,10 @@
     "discover_all_devices": {
       "name": "Discover All Devices",
       "description": "Scan for new devices across all networks"
+    },
+    "set_camera_rtsp": {
+      "name": "Set Camera RTSP",
+      "description": "Enable or disable the external RTSP stream for a camera"
     }
   }
 }
