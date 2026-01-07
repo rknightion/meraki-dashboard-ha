@@ -24,6 +24,7 @@ from ..const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
 )
@@ -475,11 +476,17 @@ class MerakiOrganizationHub:
 
             # Get enabled device types from config
             enabled_device_types = self.config_entry.options.get(
-                "enabled_device_types", [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]
+                "enabled_device_types",
+                [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV],
             )
 
             # Check each enabled device type to see if there are devices in this network
-            for device_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]:
+            for device_type in [
+                SENSOR_TYPE_MT,
+                SENSOR_TYPE_MR,
+                SENSOR_TYPE_MS,
+                SENSOR_TYPE_MV,
+            ]:
                 # Skip if this device type is not enabled
                 if device_type not in enabled_device_types:
                     _LOGGER.debug("Skipping disabled device type: %s", device_type)

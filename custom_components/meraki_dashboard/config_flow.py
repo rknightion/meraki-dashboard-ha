@@ -29,11 +29,15 @@ from .const import (
     CONF_BASE_URL,
     CONF_BLUETOOTH_CLIENTS_ENABLED,
     CONF_DISCOVERY_INTERVAL,
+    CONF_DYNAMIC_DATA_INTERVAL,
     CONF_ENABLED_DEVICE_TYPES,
     CONF_EXTENDED_CACHE_TTL,
     CONF_HUB_AUTO_DISCOVERY,
+    CONF_HUB_DISCOVERY_INTERVAL,
     CONF_HUB_DISCOVERY_INTERVALS,
+    CONF_HUB_SCAN_INTERVAL,
     CONF_HUB_SCAN_INTERVALS,
+    CONF_HUB_SELECTION,
     CONF_LONG_CACHE_TTL,
     CONF_MR_ENABLE_LATENCY_STATS,
     CONF_MS_ENABLE_PACKET_STATS,
@@ -42,7 +46,9 @@ from .const import (
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     CONF_SELECTED_DEVICES,
+    CONF_SEMI_STATIC_DATA_INTERVAL,
     CONF_STANDARD_CACHE_TTL,
+    CONF_STATIC_DATA_INTERVAL,
     DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL_MINUTES,
@@ -64,12 +70,16 @@ from .const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
     USER_AGENT,
 )
 from .utils import sanitize_device_name
-from .utils.device_info import determine_device_type
+from .utils.device_info import determine_device_type, get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
+
+# Sentinel value for finishing hub configuration
+HUB_SELECTION_DONE = "__done__"
 
 # Configure third-party logging for config flow (temporary, less verbose)
 # Only show errors during setup to prevent spam
@@ -246,6 +256,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                     SENSOR_TYPE_MT,
                                     SENSOR_TYPE_MR,
                                     SENSOR_TYPE_MS,
+                                    SENSOR_TYPE_MV,
                                 }:
                                     # Store network name for display
                                     device["network_name"] = network["name"]
@@ -289,6 +300,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             SENSOR_TYPE_MT,
                             SENSOR_TYPE_MR,
                             SENSOR_TYPE_MS,
+                            SENSOR_TYPE_MV,
                         ],
                         # MT refresh service defaults
                         CONF_MT_REFRESH_ENABLED: True,
@@ -371,10 +383,17 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_HUB_AUTO_DISCOVERY: {},
                     CONF_ENABLED_DEVICE_TYPES: user_input.get(
                         CONF_ENABLED_DEVICE_TYPES,
-                        [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
+                        [
+                            SENSOR_TYPE_MT,
+                            SENSOR_TYPE_MR,
+                            SENSOR_TYPE_MS,
+                            SENSOR_TYPE_MV,
+                        ],
                     ),
                     # MT refresh service defaults
-                    CONF_MT_REFRESH_ENABLED: True,
+                    CONF_MT_REFRESH_ENABLED: user_input.get(
+                        CONF_MT_REFRESH_ENABLED, True
+                    ),
                     CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
                 }
 
@@ -421,7 +440,12 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ): str,
                     vol.Optional(
                         CONF_ENABLED_DEVICE_TYPES,
-                        default=[SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
+                        default=[
+                            SENSOR_TYPE_MT,
+                            SENSOR_TYPE_MR,
+                            SENSOR_TYPE_MS,
+                            SENSOR_TYPE_MV,
+                        ],
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[
@@ -436,6 +460,10 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 selector.SelectOptionDict(
                                     value=SENSOR_TYPE_MS,
                                     label="MS - Switches",
+                                ),
+                                selector.SelectOptionDict(
+                                    value=SENSOR_TYPE_MV,
+                                    label="MV - Cameras",
                                 ),
                             ],
                             mode=selector.SelectSelectorMode.LIST,
@@ -454,6 +482,10 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             mode=selector.NumberSelectorMode.BOX,
                         )
                     ),
+                    vol.Optional(
+                        CONF_MT_REFRESH_ENABLED,
+                        default=True,
+                    ): selector.BooleanSelector(),
                     vol.Optional(CONF_AUTO_DISCOVERY, default=True): bool,
                     vol.Optional(
                         CONF_DISCOVERY_INTERVAL,
@@ -468,6 +500,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                 }
             ),
+            description_placeholders={
+                "device_count": str(len(self._available_devices)),
+            },
         )
 
     @staticmethod

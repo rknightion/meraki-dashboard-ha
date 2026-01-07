@@ -26,6 +26,7 @@ from ..const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
     STATIC_DATA_REFRESH_INTERVAL_MINUTES,
 )
 from .schemas import MerakiConfigSchema, validate_config_migration
@@ -125,6 +126,7 @@ class ConfigMigration:
                 SENSOR_TYPE_MT,
                 SENSOR_TYPE_MR,
                 SENSOR_TYPE_MS,
+                SENSOR_TYPE_MV,
             ]
             _LOGGER.debug(
                 "Added default enabled device types: %s",

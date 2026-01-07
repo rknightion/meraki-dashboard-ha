@@ -287,7 +287,9 @@ class MerakiConfigSchema:
     dynamic_data_interval: int = DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
 
     # Device type enablement (all device types enabled by default)
-    enabled_device_types: list[str] = field(default_factory=lambda: ["MT", "MR", "MS"])
+    enabled_device_types: list[str] = field(
+        default_factory=lambda: ["MT", "MR", "MS", "MV"]
+    )
 
     # MT refresh service configuration
     mt_refresh_enabled: bool = True
@@ -421,7 +423,7 @@ class MerakiConfigSchema:
             ),
             # Device type enablement
             enabled_device_types=options.get(
-                "enabled_device_types", ["MT", "MR", "MS"]
+                "enabled_device_types", ["MT", "MR", "MS", "MV"]
             ),
             # MT refresh service configuration
             mt_refresh_enabled=options.get("mt_refresh_enabled", True),
