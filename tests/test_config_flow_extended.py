@@ -15,8 +15,11 @@ from custom_components.meraki_dashboard.const import (
     CONF_DISCOVERY_INTERVAL,
     CONF_ENABLED_DEVICE_TYPES,
     CONF_HUB_AUTO_DISCOVERY,
+    CONF_HUB_DISCOVERY_INTERVAL,
     CONF_HUB_DISCOVERY_INTERVALS,
+    CONF_HUB_SCAN_INTERVAL,
     CONF_HUB_SCAN_INTERVALS,
+    CONF_HUB_SELECTION,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
@@ -236,7 +239,10 @@ class TestConfigFlowOptionsFlow:
             "organization_hub": MagicMock(),
             "network_hubs": {
                 "test_network_MT": MagicMock(
-                    device_type="MT", hub_name="Test Network - MT"
+                    device_type="MT",
+                    hub_name="Test Network - MT",
+                    network_name="Test Network",
+                    devices=[MagicMock(), MagicMock()],
                 )
             },
         }
@@ -251,6 +257,15 @@ class TestConfigFlowOptionsFlow:
                 CONF_MT_REFRESH_ENABLED: True,
                 CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
             },
+        )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "hub_select"
+
+        # Finish without configuring specific hubs
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={CONF_HUB_SELECTION: "__done__"},
         )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
@@ -281,14 +296,24 @@ class TestConfigFlowOptionsFlow:
         hass.data[DOMAIN][config_entry.entry_id] = {
             "organization_hub": MagicMock(),
             "network_hubs": {
-                "N_123_MT": MagicMock(device_type="MT", hub_name="Main Office - MT"),
-                "N_123_MR": MagicMock(device_type="MR", hub_name="Main Office - MR"),
+                "N_123_MT": MagicMock(
+                    device_type="MT",
+                    hub_name="Main Office - MT",
+                    network_name="Main Office",
+                    devices=[MagicMock()],
+                ),
+                "N_123_MR": MagicMock(
+                    device_type="MR",
+                    hub_name="Main Office - MR",
+                    network_name="Main Office",
+                    devices=[MagicMock(), MagicMock()],
+                ),
             },
         }
 
         result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
-        # Configure with hub-specific intervals
+        # Configure global options
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
@@ -296,7 +321,40 @@ class TestConfigFlowOptionsFlow:
             },
         )
 
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "hub_select"
+
+        # Select a hub to configure
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={CONF_HUB_SELECTION: "N_123_MT"},
+        )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "hub_settings"
+
+        # Configure hub settings
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={
+                CONF_HUB_AUTO_DISCOVERY: True,
+                CONF_HUB_SCAN_INTERVAL: 15,
+                CONF_HUB_DISCOVERY_INTERVAL: 30,
+            },
+        )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "hub_select"
+
+        # Finish options flow
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            user_input={CONF_HUB_SELECTION: "__done__"},
+        )
+
         assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"][CONF_HUB_SCAN_INTERVALS]["N_123_MT"] == 15
+        assert result["data"][CONF_HUB_DISCOVERY_INTERVALS]["N_123_MT"] == 1800
 
 
 @pytest.mark.usefixtures("enable_custom_integrations")

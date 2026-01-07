@@ -6,6 +6,9 @@ from custom_components.meraki_dashboard.const import (
     MR_SENSOR_MEMORY_USAGE,
     MS_SENSOR_MEMORY_USAGE,
     MS_SENSOR_PORT_COUNT,
+    MV_SENSOR_DETECTIONS_TOTAL,
+    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
+    MV_SENSOR_QUALITY,
     MT_SENSOR_BATTERY,
     MT_SENSOR_CO2,
     MT_SENSOR_DOOR,
@@ -15,6 +18,7 @@ from custom_components.meraki_dashboard.const import (
 from custom_components.meraki_dashboard.data.transformers import (
     MRWirelessDataTransformer,
     MSSwitchDataTransformer,
+    MVCameraDataTransformer,
     MTSensorDataTransformer,
     OrganizationDataTransformer,
     transformer_registry,
@@ -312,6 +316,43 @@ class TestMSSwitchDataTransformer:
         assert isinstance(result, dict)
 
 
+class TestMVCameraDataTransformer:
+    """Test MV camera data transformation."""
+
+    def test_transform_camera_settings(self):
+        """Test MV camera settings transformation."""
+        device_data = {
+            "serial": "Q2MV-TEST-0001",
+            "name": "Lobby Camera",
+            "model": "MV32",
+            "networkId": "N_123",
+            "qualityAndRetention": {
+                "quality": "Standard",
+                "resolution": "1280x720",
+                "motionBasedRetentionEnabled": True,
+            },
+            "videoSettings": {"externalRtspEnabled": True},
+        }
+
+        transformer = MVCameraDataTransformer()
+        result = transformer.transform(device_data)
+
+        assert result[MV_SENSOR_QUALITY] == "Standard"
+        assert result[MV_SENSOR_EXTERNAL_RTSP_ENABLED] == 1
+
+    def test_transform_camera_detections(self):
+        """Test MV camera detections transformation."""
+        device_data = {
+            "serial": "Q2MV-TEST-0002",
+            "detections": {"total": 7, "by_object_type": {"person": 5}},
+        }
+
+        transformer = MVCameraDataTransformer()
+        result = transformer.transform(device_data)
+
+        assert result[MV_SENSOR_DETECTIONS_TOTAL] == 7
+
+
 class TestOrganizationDataTransformer:
     """Test organization data transformation."""
 
@@ -375,6 +416,11 @@ class TestTransformerRegistry:
         transformer = transformer_registry.get_device_transformer("MS")
         assert isinstance(transformer, MSSwitchDataTransformer)
 
+    def test_get_transformer_mv(self):
+        """Test getting MV transformer from registry."""
+        transformer = transformer_registry.get_device_transformer("MV")
+        assert isinstance(transformer, MVCameraDataTransformer)
+
     def test_get_transformer_organization(self):
         """Test getting Organization transformer from registry."""
         transformer = transformer_registry.get_device_transformer("organization")
@@ -413,6 +459,7 @@ class TestTransformerEdgeCases:
             MTSensorDataTransformer(),
             MRWirelessDataTransformer(),
             MSSwitchDataTransformer(),
+            MVCameraDataTransformer(),
             OrganizationDataTransformer(),
         ]
 

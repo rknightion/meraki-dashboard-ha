@@ -561,7 +561,7 @@ class TestBinarySensorValueInterpretation:
 
         network_hub = MagicMock()
 
-        sensor = MerakiMTBinarySensor(
+        _sensor = MerakiMTBinarySensor(
             coordinator=coordinator,
             device=device,
             description=MT_BINARY_SENSOR_DESCRIPTIONS["door"],
@@ -590,7 +590,7 @@ class TestBinarySensorValueInterpretation:
 
         network_hub = MagicMock()
 
-        sensor = MerakiMTBinarySensor(
+        _sensor = MerakiMTBinarySensor(
             coordinator=coordinator,
             device=device,
             description=MT_BINARY_SENSOR_DESCRIPTIONS["door"],
@@ -619,7 +619,7 @@ class TestBinarySensorValueInterpretation:
             ("off", False),
         ]
 
-        for string_value, expected_result in test_cases:
+        for string_value, _expected_result in test_cases:
             coordinator = MagicMock()
             coordinator.data = {
                 device["serial"]: {
@@ -631,7 +631,7 @@ class TestBinarySensorValueInterpretation:
 
             network_hub = MagicMock()
 
-            sensor = MerakiMTBinarySensor(
+            MerakiMTBinarySensor(
                 coordinator=coordinator,
                 device=device,
                 description=MT_BINARY_SENSOR_DESCRIPTIONS["door"],

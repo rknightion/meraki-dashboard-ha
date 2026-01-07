@@ -89,6 +89,7 @@ class TestMerakiNetworkHub:
         assert network_hub._discovery_in_progress is False
         assert network_hub.wireless_data == {}
         assert network_hub.switch_data == {}
+        assert network_hub.camera_data == {}
         assert network_hub._discovery_unsub is None
 
     def test_initialization_mt_device_creates_event_handler(
@@ -304,7 +305,7 @@ class TestMerakiNetworkHub:
 
     async def test_async_discover_devices_with_selected_devices(self, network_hub):
         """Test device discovery with selected devices filter."""
-        network_hub._selected_devices = {"device1"}
+        network_hub.config_entry.options = {CONF_SELECTED_DEVICES: ["device1"]}
         # Mock the async_add_executor_job to return the device data directly
         network_hub.hass.async_add_executor_job.return_value = [
             {

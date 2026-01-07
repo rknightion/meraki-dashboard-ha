@@ -6,7 +6,12 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.meraki_dashboard.const import SENSOR_TYPE_MR, SENSOR_TYPE_MS
+from custom_components.meraki_dashboard.const import (
+    MV_SENSOR_DETECTIONS_TOTAL,
+    MV_SENSOR_QUALITY,
+    SENSOR_TYPE_MR,
+    SENSOR_TYPE_MS,
+)
 from custom_components.meraki_dashboard.utils.cache import (
     cache_api_response,
     cleanup_expired_cache,
@@ -820,6 +825,13 @@ class TestDeviceCapabilityFilter:
             "port_utilization",
         }
         assert capabilities == expected_capabilities
+
+    def test_create_device_capability_filter_mv_device(self):
+        """Test capability filter for MV devices."""
+        capabilities = create_device_capability_filter("MV32", "MV")
+
+        assert MV_SENSOR_QUALITY in capabilities
+        assert MV_SENSOR_DETECTIONS_TOTAL in capabilities
 
     def test_create_device_capability_filter_ms_poe_device(self):
         """Test capability filter for PoE-enabled MS devices."""
