@@ -42,6 +42,19 @@ from ..const import (
     MT_SENSOR_TVOC,
     MT_SENSOR_VOLTAGE,
     MT_SENSOR_WATER,
+    MV_SENSOR_AUDIO_RECORDING_ENABLED,
+    MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
+    MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
+    MV_SENSOR_DETECTIONS_PERSON,
+    MV_SENSOR_DETECTIONS_TOTAL,
+    MV_SENSOR_DETECTIONS_VEHICLE,
+    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
+    MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTOR_VERSION,
+    MV_SENSOR_QUALITY,
+    MV_SENSOR_RESOLUTION,
+    MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
+    MV_SENSOR_RETENTION_PROFILE_ID,
     ORG_SENSOR_ALERTS_COUNT,
     ORG_SENSOR_API_CALLS,
     ORG_SENSOR_DEVICE_COUNT,
@@ -700,6 +713,83 @@ class MSSwitchDataTransformer(DataTransformer):
         transformed["port_packets_topologychanges"] = topology_changes
 
 
+class MVCameraDataTransformer(DataTransformer):
+    """Transformer for MV (Camera) device data."""
+
+    def transform(self, raw_data: dict[str, Any]) -> dict[str, Any]:
+        """Transform MV camera data to standardized format."""
+        transformed: dict[str, Any] = {}
+
+        # Extract basic device info
+        transformed["serial"] = raw_data.get("serial")
+        transformed["name"] = raw_data.get("name")
+        transformed["model"] = raw_data.get("model")
+        transformed["networkId"] = raw_data.get("networkId")
+
+        quality_data = raw_data.get("qualityAndRetention", {}) or {}
+        if isinstance(quality_data, dict):
+            if "quality" in quality_data:
+                transformed[MV_SENSOR_QUALITY] = quality_data.get("quality")
+            if "resolution" in quality_data:
+                transformed[MV_SENSOR_RESOLUTION] = quality_data.get("resolution")
+            if "profileId" in quality_data:
+                transformed[MV_SENSOR_RETENTION_PROFILE_ID] = quality_data.get(
+                    "profileId"
+                )
+            if "motionBasedRetentionEnabled" in quality_data:
+                transformed[MV_SENSOR_MOTION_BASED_RETENTION_ENABLED] = (
+                    1 if quality_data.get("motionBasedRetentionEnabled") else 0
+                )
+            if "audioRecordingEnabled" in quality_data:
+                transformed[MV_SENSOR_AUDIO_RECORDING_ENABLED] = (
+                    1 if quality_data.get("audioRecordingEnabled") else 0
+                )
+            if "restrictedBandwidthModeEnabled" in quality_data:
+                transformed[MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED] = (
+                    1 if quality_data.get("restrictedBandwidthModeEnabled") else 0
+                )
+            if "motionDetectorVersion" in quality_data:
+                motion_version = quality_data.get("motionDetectorVersion")
+                if motion_version is not None:
+                    transformed[MV_SENSOR_MOTION_DETECTOR_VERSION] = (
+                        SafeExtractor.safe_int(motion_version)
+                    )
+
+        video_settings = raw_data.get("videoSettings", {}) or {}
+        if isinstance(video_settings, dict):
+            if "externalRtspEnabled" in video_settings:
+                transformed[MV_SENSOR_EXTERNAL_RTSP_ENABLED] = (
+                    1 if video_settings.get("externalRtspEnabled") else 0
+                )
+
+        custom_analytics = raw_data.get("customAnalytics", {}) or {}
+        if isinstance(custom_analytics, dict):
+            if "enabled" in custom_analytics:
+                transformed[MV_SENSOR_CUSTOM_ANALYTICS_ENABLED] = (
+                    1 if custom_analytics.get("enabled") else 0
+                )
+            if "artifactId" in custom_analytics:
+                transformed[MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID] = (
+                    custom_analytics.get("artifactId")
+                )
+
+        detections = raw_data.get("detections", {}) or {}
+        if isinstance(detections, dict):
+            transformed[MV_SENSOR_DETECTIONS_TOTAL] = SafeExtractor.safe_int(
+                detections.get("total", 0)
+            )
+            by_object_type = detections.get("by_object_type", {}) or {}
+            if isinstance(by_object_type, dict):
+                transformed[MV_SENSOR_DETECTIONS_PERSON] = SafeExtractor.safe_int(
+                    by_object_type.get("person", 0)
+                )
+                transformed[MV_SENSOR_DETECTIONS_VEHICLE] = SafeExtractor.safe_int(
+                    by_object_type.get("vehicle", 0)
+                )
+
+        return transformed
+
+
 class OrganizationDataTransformer(DataTransformer):
     """Transformer for organization-level data."""
 
@@ -850,6 +940,7 @@ class TransformerRegistry:
         self._device_transformers["MT"] = MTSensorDataTransformer()
         self._device_transformers["MR"] = MRWirelessDataTransformer()
         self._device_transformers["MS"] = MSSwitchDataTransformer()
+        self._device_transformers["MV"] = MVCameraDataTransformer()
         self._device_transformers["organization"] = OrganizationDataTransformer()
 
     @classmethod
