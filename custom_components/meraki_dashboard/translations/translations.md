@@ -152,8 +152,8 @@ Use this checklist to ensure complete translation:
 
     -   [ ] Title
     -   [ ] Description (includes MT15/MT40 explanation)
-    -   [ ] Field labels (14 fields)
-    -   [ ] Field descriptions (11 descriptions)
+    -   [ ] Field labels (17 fields)
+    -   [ ] Field descriptions (17 descriptions)
 
 -   [ ] `options.step.api_key` - API key update
 
@@ -162,7 +162,14 @@ Use this checklist to ensure complete translation:
     -   [ ] Field labels
     -   [ ] Field descriptions
 
--   [ ] `options.step.hub_intervals` - Network configuration
+-   [ ] `options.step.hub_select` - Network selection
+
+    -   [ ] Title
+    -   [ ] Description
+    -   [ ] Field labels (1 field)
+    -   [ ] Field descriptions (1 description)
+
+-   [ ] `options.step.hub_settings` - Network-specific settings
 
     -   [ ] Title
     -   [ ] Description
@@ -192,10 +199,13 @@ These placeholders are dynamically replaced at runtime. **Never translate them:*
 
 -   `{hub_list}` - List of configured networks
 -   `{hub_settings_explanation}` - Network settings explanation
--   `{device_count}` - Number of devices found
+-   `{hub_name}` - Network display name
+-   `{device_label}` - Device type label (e.g., Environmental Sensors)
+-   `{device_count}` - Number of devices (context-dependent)
+-   `{min_scan_seconds}` - Minimum update interval in seconds
+-   `{min_discovery_minutes}` - Minimum discovery interval in minutes
 -   `{config_entry_title}` - Integration name
 -   `{network_name}` - Network name
--   `{hub_name}` - Hub identifier
 -   `{organization_name}` - Organization name
 
 ## Technical Terms
