@@ -16,6 +16,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
 )
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity, EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -238,7 +239,24 @@ class MerakiButtonEntity(MerakiEntity, ButtonEntity):
     ) -> None:
         """Initialize the button entity."""
         super().__init__(description, config_entry_id)
-        self._integration_data = integration_data or {}
+
+
+class MerakiSwitchEntity(MerakiCoordinatorEntity, SwitchEntity):
+    """Base for ALL switch entities.
+
+    All switch entities MUST inherit from this class.
+    """
+
+    def __init__(
+        self,
+        coordinator: MerakiSensorCoordinator,
+        device: dict[str, Any],
+        description: EntityDescription,
+        config_entry_id: str,
+        network_hub: Any,
+    ) -> None:
+        """Initialize the switch entity."""
+        super().__init__(coordinator, device, description, config_entry_id, network_hub)
 
 
 class MerakiRestoreSensorEntity(MerakiCoordinatorEntity, RestoreSensor):
