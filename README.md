@@ -9,7 +9,7 @@
 
 ![Meraki Logo](docs/images/icon.png)
 
-This custom integration allows you to monitor your Cisco Meraki devices through Home Assistant. Currently supports MT series environmental sensors with plans to expand to other device types.
+This custom integration allows you to monitor your Cisco Meraki devices through Home Assistant. Supports MT environmental sensors, MR wireless access points, MS switches, and MV cameras.
 
 ## Features
 
@@ -28,7 +28,10 @@ This custom integration allows you to monitor your Cisco Meraki devices through 
   - Electrical measurements (voltage, current, power)
   - And more!
 
-- 🔄 **Automatic Device Discovery** - Automatically discovers all MT sensors in your organization
+- 📶 **MR Wireless Support** - SSID counts, client counts, channel utilization, and performance metrics
+- 🔌 **MS Switch Support** - Port status, PoE, traffic, and switch health metrics
+- 🎥 **MV Camera Support** - Camera settings plus detection history, snapshots, and optional RTSP streaming
+- 🔄 **Automatic Device Discovery** - Automatically discovers Meraki devices in your organization
 - ⚙️ **Flexible Configuration**
   - Select specific devices to monitor or monitor all
   - Configurable update interval (default: 20 minutes to match Meraki MT sensor update frequency)
@@ -36,7 +39,7 @@ This custom integration allows you to monitor your Cisco Meraki devices through 
   - Configurable discovery interval for new devices
 - 📊 **Real-time Updates** - Fetches latest sensor data at your configured interval
 - 🏢 **Multi-Network Support** - Monitors devices across all networks in your organization
-- 📱 **Device-Centric Design** - Each MT sensor is registered as a device with its metrics as entities
+- 📱 **Device-Centric Design** - Each Meraki device is registered as a device with its metrics as entities
 
 ## Device and Entity Structure
 
@@ -53,7 +56,7 @@ This integration follows Home Assistant best practices:
 
 - Home Assistant 2024.1.0 or newer
 - Cisco Meraki Dashboard account with API access
-- At least one Meraki network with MT series sensors
+- At least one Meraki network with supported devices (MT/MR/MS/MV)
 
 ## Installation
 
@@ -115,9 +118,8 @@ After setup, you can modify options by clicking "Configure" on the integration:
   - All MR models with SSID, client, and performance metrics
 - **MS Series Switches**
   - All MS models with port status, PoE, and traffic metrics
-
-### Planned Support
-- MV Series Cameras
+- **MV Series Cameras**
+  - Camera settings, detections history, snapshots, and optional RTSP streaming
 
 ## Entity Naming
 
