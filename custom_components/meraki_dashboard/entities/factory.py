@@ -51,9 +51,23 @@ from ..const import (
     MT_SENSOR_TVOC,
     MT_SENSOR_VOLTAGE,
     MT_SENSOR_WATER,
+    MV_SENSOR_AUDIO_RECORDING_ENABLED,
+    MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
+    MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
+    MV_SENSOR_DETECTIONS_PERSON,
+    MV_SENSOR_DETECTIONS_TOTAL,
+    MV_SENSOR_DETECTIONS_VEHICLE,
+    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
+    MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTOR_VERSION,
+    MV_SENSOR_QUALITY,
+    MV_SENSOR_RESOLUTION,
+    MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
+    MV_SENSOR_RETENTION_PROFILE_ID,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
 )
 from ..const import (
     MS_SENSOR_MEMORY_USAGE as MS_SENSOR_MEMORY_USAGE,
@@ -722,6 +736,186 @@ def _register_ms_entities():
             network_hub,
         )
 
+
+def _register_mv_entities():
+    """Register MV (Camera) sensor entities."""
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_QUALITY)
+    def create_mv_quality(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_QUALITY],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_RESOLUTION)
+    def create_mv_resolution(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_RESOLUTION],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_RETENTION_PROFILE_ID)
+    def create_mv_retention_profile(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_RETENTION_PROFILE_ID],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_MOTION_BASED_RETENTION_ENABLED)
+    def create_mv_motion_based_retention(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_MOTION_BASED_RETENTION_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_AUDIO_RECORDING_ENABLED)
+    def create_mv_audio_recording(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_AUDIO_RECORDING_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED)
+    def create_mv_restricted_bandwidth(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_MOTION_DETECTOR_VERSION)
+    def create_mv_motion_detector(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_MOTION_DETECTOR_VERSION],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_EXTERNAL_RTSP_ENABLED)
+    def create_mv_external_rtsp(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_EXTERNAL_RTSP_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_CUSTOM_ANALYTICS_ENABLED)
+    def create_mv_custom_analytics_enabled(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_CUSTOM_ANALYTICS_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID)
+    def create_mv_custom_analytics_artifact(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_DETECTIONS_PERSON)
+    def create_mv_detections_person(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_DETECTIONS_PERSON],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_DETECTIONS_VEHICLE)
+    def create_mv_detections_vehicle(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_DETECTIONS_VEHICLE],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_DETECTIONS_TOTAL)
+    def create_mv_detections_total(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_DETECTIONS_TOTAL],
+            config_entry_id,
+            network_hub,
+        )
+
     # Port Errors sensor
     @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_ERRORS)
     def create_ms_port_errors(coordinator, device, config_entry_id, network_hub=None):
@@ -999,6 +1193,7 @@ def _create_ms_device_sensor(
 _register_mt_entities()
 _register_mr_entities()
 _register_ms_entities()
+_register_mv_entities()
 _register_organization_entities()
 
 
@@ -1053,6 +1248,14 @@ def create_device_entity(
             SensorEntity,
             EntityFactory.create_entity(
                 SENSOR_TYPE_MS, metric_type, coordinator, device, entry_id, network_hub
+            ),
+        )
+    elif entity_type == "mv_device_sensor":
+        metric_type = description.key
+        return cast(
+            SensorEntity,
+            EntityFactory.create_entity(
+                SENSOR_TYPE_MV, metric_type, coordinator, device, entry_id, network_hub
             ),
         )
     else:
