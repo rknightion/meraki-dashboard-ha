@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN
+from .const import DOMAIN, SENSOR_TYPE_MV
 from .types import CoordinatorData, MerakiDeviceData
 from .utils import performance_monitor
 from .utils.error_handling import handle_api_errors
@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
     """Coordinator to manage fetching Meraki device data.
 
-    This coordinator handles periodic updates of device data for all device types (MT, MR, MS),
+    This coordinator handles periodic updates of device data for all device types (MT, MR, MS, MV),
     making efficient batch API calls to minimize API usage.
     """
 
@@ -93,6 +93,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
         - For MT devices: Dictionary with device serial numbers as keys and sensor data as values
         - For MR devices: Dictionary with wireless network data
         - For MS devices: Dictionary with switch network data
+        - For MV devices: Dictionary with camera network data
         """
         update_start_time = self.hass.loop.time()
         self._update_count += 1
@@ -144,6 +145,11 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
                     _LOGGER.debug(
                         "Failed to fetch switch network events: %s", event_err
                     )
+            elif self.hub.device_type == SENSOR_TYPE_MV:
+                _LOGGER.debug("Fetching MV camera data from hub %s", self.hub.hub_name)
+                await self.hub._async_setup_camera_data()
+                data = self.hub.camera_data or {}
+                _LOGGER.debug("Retrieved MV camera data with %d entries", len(data))
             else:
                 _LOGGER.warning("Unknown device type: %s", self.hub.device_type)
                 data = {}

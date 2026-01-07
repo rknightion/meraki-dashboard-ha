@@ -17,10 +17,12 @@ from .const import (
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
 )
 from .devices.mr import MR_NETWORK_SENSOR_DESCRIPTIONS, MR_SENSOR_DESCRIPTIONS
 from .devices.ms import MS_DEVICE_SENSOR_DESCRIPTIONS, MS_NETWORK_SENSOR_DESCRIPTIONS
 from .devices.mt import MT_ENERGY_SENSOR_DESCRIPTIONS, MT_SENSOR_DESCRIPTIONS
+from .devices.mv import MV_SENSOR_DESCRIPTIONS
 from .devices.organization import (
     NETWORK_HUB_SENSOR_DESCRIPTIONS,
     ORG_HUB_SENSOR_DESCRIPTIONS,
@@ -102,6 +104,10 @@ async def async_setup_entry(
         # Create MS device sensors
         elif network_hub.device_type == SENSOR_TYPE_MS and network_hub.switch_data:
             await _setup_ms_sensors(hass, network_hub, config_entry, entities)
+
+        # Create MV device sensors
+        elif network_hub.device_type == SENSOR_TYPE_MV and network_hub.camera_data:
+            await _setup_mv_sensors(hass, network_hub, config_entry, entities)
 
     _LOGGER.debug("Created %d sensor entities", len(entities))
     async_add_entities(entities, True)
@@ -369,6 +375,66 @@ async def _setup_ms_sensors(
 
     _LOGGER.debug(
         "Created MS sensors for %d devices (%d total sensors)",
+        len(network_hub.devices),
+        entities_created,
+    )
+
+
+async def _setup_mv_sensors(
+    hass: HomeAssistant,
+    network_hub: Any,
+    config_entry: ConfigEntry,
+    entities: list[SensorEntity],
+) -> None:
+    """Set up MV camera sensor entities."""
+    _LOGGER.debug("Setting up MV sensors for %s", network_hub.hub_name)
+
+    domain_data = hass.data[DOMAIN][config_entry.entry_id]
+    coordinators = domain_data["coordinators"]
+    coordinator = None
+
+    for _hub_id, coord in coordinators.items():
+        if coord.network_hub == network_hub:
+            coordinator = coord
+            break
+
+    if not coordinator:
+        _LOGGER.warning("No coordinator found for MV network %s", network_hub.hub_name)
+        return
+
+    entities_created = 0
+    for device in network_hub.devices:
+        device_serial = device.get("serial")
+        if not device_serial:
+            continue
+
+        _LOGGER.debug("Creating sensors for MV device: %s", device_serial)
+
+        for description in MV_SENSOR_DESCRIPTIONS.values():
+            if should_create_entity(device, description.key, coordinator.data):
+                try:
+                    entity = create_device_entity(
+                        "mv_device_sensor",
+                        coordinator,
+                        device,
+                        description,
+                        config_entry.entry_id,
+                        network_hub,
+                    )
+                    entities.append(entity)
+                    entities_created += 1
+                    _LOGGER.debug(
+                        "Created %s sensor for MV device %s",
+                        description.key,
+                        device_serial,
+                    )
+                except ValueError as e:
+                    _LOGGER.warning(
+                        "Failed to create MV device sensor %s: %s", description.key, e
+                    )
+
+    _LOGGER.debug(
+        "Created MV sensors for %d devices (%d total sensors)",
         len(network_hub.devices),
         entities_created,
     )
