@@ -15,7 +15,7 @@ The integration supports the following Meraki device types:
 - **MT** - Environmental monitoring sensors for temperature, humidity, air quality, etc. (model prefixes: MT)
 - **MR** - Wireless access points providing WiFi connectivity and network metrics (model prefixes: MR, CW)
 - **MS** - Network switches providing port status, PoE power, and traffic metrics (model prefixes: MS)
-- **MV** - Security cameras providing video analytics and motion detection (model prefixes: MV) (no entities defined yet)
+- **MV** - Security cameras providing video analytics and motion detection (model prefixes: MV)
 
 ## Sensors
 
@@ -145,6 +145,25 @@ These sensors provide per-network hub diagnostic information:
 | Device Count | device_count | MEASUREMENT | DIAGNOSTIC | mdi:counter |
 
 
+### Mv Sensor Descriptions
+
+| Name | Key | State Class | Category | Icon |
+|----------|----------|----------|----------|----------|
+| Audio Recording | audio_recording_enabled | - | DIAGNOSTIC | mdi:microphone |
+| Custom Analytics Artifact | custom_analytics_artifact_id | - | DIAGNOSTIC | mdi:identifier |
+| Custom Analytics Enabled | custom_analytics_enabled | - | DIAGNOSTIC | mdi:chart-box |
+| Detections (Person) | detections_person | MEASUREMENT | - | mdi:walk |
+| Detections (Total) | detections_total | MEASUREMENT | - | mdi:counter |
+| Detections (Vehicle) | detections_vehicle | MEASUREMENT | - | mdi:car |
+| External RTSP Enabled | external_rtsp_enabled | - | DIAGNOSTIC | mdi:cctv |
+| Motion Detector Version | motion_detector_version | - | DIAGNOSTIC | mdi:tag |
+| Motion-Based Retention | motion_based_retention_enabled | - | DIAGNOSTIC | mdi:motion-sensor |
+| Restricted Bandwidth Mode | restricted_bandwidth_mode_enabled | - | DIAGNOSTIC | mdi:network-strength-1 |
+| Retention Profile ID | retention_profile_id | - | DIAGNOSTIC | mdi:archive |
+| Video Quality | quality | - | DIAGNOSTIC | mdi:camera |
+| Video Resolution | resolution | - | DIAGNOSTIC | mdi:image-size-select-large |
+
+
 ## Binary Sensors
 
 ### MT Binary Sensors
@@ -171,7 +190,7 @@ Totals by platform:
 
 | Platform | Count |
 |----------|----------|
-| Sensors | 62 |
+| Sensors | 75 |
 | Binary Sensors | 4 |
 | Buttons | 2 |
 
@@ -182,11 +201,7 @@ Totals by device type:
 | MT | 16 | 4 | 20 |
 | MR | 14 | 0 | 14 |
 | MS | 15 | 0 | 15 |
-| MV | 0 | 0 | 0 |
-
-Device types without entity descriptions yet (device type exists but no entity descriptions are defined):
-
-- MV
+| MV | 13 | 0 | 13 |
 
 Breakdown by description dictionary:
 
@@ -198,6 +213,7 @@ Breakdown by description dictionary:
 | MS_NETWORK_SENSOR_DESCRIPTIONS | 5 |
 | MT_ENERGY_SENSOR_DESCRIPTIONS | 1 |
 | MT_SENSOR_DESCRIPTIONS | 15 |
+| MV_SENSOR_DESCRIPTIONS | 13 |
 | NETWORK_HUB_SENSOR_DESCRIPTIONS | 1 |
 | ORG_HUB_SENSOR_DESCRIPTIONS | 16 |
 | MT_BINARY_SENSOR_DESCRIPTIONS | 4 |
