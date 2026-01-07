@@ -169,7 +169,8 @@ def _build_startup_summary(
     base_url = org_hub.base_url
 
     enabled_device_types = options.get(
-        CONF_ENABLED_DEVICE_TYPES, [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]
+        CONF_ENABLED_DEVICE_TYPES,
+        [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV],
     )
     selected_devices = set(options.get(CONF_SELECTED_DEVICES, []))
     selected_devices_summary = (
@@ -276,7 +277,13 @@ def _build_startup_summary(
 
 
 # Platforms to be set up for this integration
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.BUTTON]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.SWITCH,
+    Platform.CAMERA,
+]
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
