@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
@@ -29,10 +30,14 @@ from ..const import (
     DEFAULT_STANDARD_CACHE_TTL,
     DOMAIN,
     MT_REFRESH_COMMAND_INTERVAL,
+    MV_DETECTIONS_INTERVAL_SECONDS,
+    MV_DETECTIONS_LOOKBACK_SECONDS,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
 )
+from ..data.transformers import SafeExtractor
 from ..services import MerakiEventService
 from ..services.mt_refresh_service import MTRefreshService
 from ..types import (
@@ -121,6 +126,7 @@ class MerakiNetworkHub:
         # Device type specific data storage
         self.wireless_data: dict[str, Any] = {}  # For MR devices
         self.switch_data: dict[str, Any] = {}  # For MS devices
+        self.camera_data: dict[str, Any] = {}  # For MV devices
 
         # Periodic discovery timer
         self._discovery_unsub: Callable[[], None] | None = None
@@ -269,6 +275,8 @@ class MerakiNetworkHub:
                 await self._async_setup_wireless_data()
             elif self.device_type == SENSOR_TYPE_MS:
                 await self._async_setup_switch_data()
+            elif self.device_type == SENSOR_TYPE_MV:
+                await self._async_setup_camera_data()
             # MT devices don't need special setup
 
             # Get selected devices from configuration
@@ -407,6 +415,12 @@ class MerakiNetworkHub:
         self._discovery_in_progress = True
 
         try:
+            # Refresh selected devices from current options to reflect updates
+            selected_devices = self.config_entry.options.get(CONF_SELECTED_DEVICES, [])
+            self._selected_devices = (
+                set(selected_devices) if selected_devices else set()
+            )
+
             if self.dashboard is None:
                 _LOGGER.error("Dashboard API not initialized for %s", self.hub_name)
                 return
@@ -421,14 +435,14 @@ class MerakiNetworkHub:
             cache_key = f"devices_{self.network_id}_{self.device_type}"
             cached_devices = get_cached_api_response(cache_key)
 
-            processed_devices: list[MerakiDeviceData]
+            all_devices: list[MerakiDeviceData]
             if cached_devices is not None:
                 _LOGGER.debug(
                     "Using cached device list for %s (found %d devices)",
                     self.hub_name,
                     len(cached_devices),
                 )
-                processed_devices = cached_devices
+                all_devices = cached_devices
             else:
                 # Get all devices in the network
                 api_start_time = self.hass.loop.time()
@@ -461,16 +475,8 @@ class MerakiNetworkHub:
                             self.device_type,
                         )
 
-                # Apply device selection filter if configured
-                if self._selected_devices:
-                    type_devices = [
-                        device
-                        for device in type_devices
-                        if device.get("serial") in self._selected_devices
-                    ]
-
                 # Process and sanitize devices
-                processed_devices = []
+                processed_devices: list[MerakiDeviceData] = []
                 for device in type_devices:
                     # Add network information
                     device["network_id"] = self.network_id
@@ -479,14 +485,20 @@ class MerakiNetworkHub:
                     # Keep the device as is (don't use sanitize_device_attributes here)
                     processed_devices.append(device)
 
-                # Cache the processed devices for the discovery interval duration
-                cache_api_response(
-                    cache_key, processed_devices, ttl=self._discovery_interval
-                )
+                # Cache the full device list (unfiltered) for the discovery interval duration
+                all_devices = processed_devices
+                cache_api_response(cache_key, all_devices, ttl=self._discovery_interval)
 
             # Update device list
             previous_count = len(self.devices)
-            self.devices = processed_devices
+            if self._selected_devices:
+                self.devices = [
+                    device
+                    for device in all_devices
+                    if device.get("serial") in self._selected_devices
+                ]
+            else:
+                self.devices = all_devices
 
             # Track discovery completion
             self._last_discovery_time = datetime.now(UTC)
@@ -1208,6 +1220,676 @@ class MerakiNetworkHub:
         except Exception as err:
             _LOGGER.error("Error getting switch data for %s: %s", self.hub_name, err)
             self.organization_hub.failed_api_calls += 1
+
+    def _resolve_camera_method(self, method_name: str) -> Callable[..., Any] | None:
+        """Resolve a camera-related SDK method across possible namespaces."""
+        if not self.dashboard:
+            return None
+
+        for namespace in ("camera", "devices", "organizations", "networks"):
+            api_group = getattr(self.dashboard, namespace, None)
+            if api_group and hasattr(api_group, method_name):
+                return getattr(api_group, method_name)
+
+        if hasattr(self.dashboard, method_name):
+            return getattr(self.dashboard, method_name)
+
+        return None
+
+    def _get_device_camera_video_settings(
+        self, device_serial: str
+    ) -> dict[str, Any] | None:
+        """Fetch camera video settings using the current API path."""
+        if not self.dashboard:
+            return None
+
+        metadata = {
+            "tags": ["camera", "configure", "video"],
+            "operation": "getDeviceCameraVideoSettings",
+        }
+        resource = f"/devices/{device_serial}/camera/video/settings"
+        return self.dashboard._session.get(metadata, resource)
+
+    @with_standard_retries("realtime")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
+    async def async_get_camera_video_settings(
+        self, device_serial: str, force: bool = False
+    ) -> dict[str, Any] | None:
+        """Fetch camera video settings with optional cache bypass."""
+        if not self.dashboard:
+            return None
+
+        cache_key = self._cache_key("camera_video_settings", device_serial)
+        if not force:
+            cached = get_cached_api_response(cache_key)
+            if cached is not None:
+                return cached
+
+        try:
+            response = await self.hass.async_add_executor_job(
+                self._get_device_camera_video_settings, device_serial
+            )
+            self.organization_hub.total_api_calls += 1
+            if isinstance(response, dict):
+                cache_api_response(cache_key, response, self._get_standard_cache_ttl())
+                if self.camera_data and isinstance(
+                    self.camera_data.get("devices_info"), list
+                ):
+                    for device_info in self.camera_data["devices_info"]:
+                        if device_info.get("serial") == device_serial:
+                            device_info["videoSettings"] = response
+                            break
+                return response
+        except Exception as err:
+            _LOGGER.debug(
+                "Could not refresh video settings for %s: %s", device_serial, err
+            )
+            self.organization_hub.failed_api_calls += 1
+
+        return None
+
+    @property
+    def supports_camera_video_link(self) -> bool:
+        """Return True if the dashboard SDK supports video links."""
+        return self._resolve_camera_method("getDeviceCameraVideoLink") is not None
+
+    @performance_monitor("camera_data_setup")
+    @with_standard_retries("realtime")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
+    async def _async_setup_camera_data(self) -> None:
+        """Set up camera data for MV devices (settings, analytics, detections)."""
+        if self.device_type != SENSOR_TYPE_MV:
+            return
+
+        try:
+            if self.dashboard is None:
+                return
+
+            camera_devices = self.devices
+            if not camera_devices:
+                _LOGGER.debug(
+                    "No camera devices found in network %s", self.network_name
+                )
+                return
+
+            # Filter to online devices for device-specific calls
+            _online_devices, offline_serials = self._get_online_devices(camera_devices)
+
+            devices_info: list[dict[str, Any]] = []
+            device_info_map: dict[str, dict[str, Any]] = {}
+
+            quality_cache: dict[str, dict[str, Any]] = {}
+            video_cache: dict[str, dict[str, Any]] = {}
+            analytics_cache: dict[str, dict[str, Any]] = {}
+
+            devices_needing_quality: list[str] = []
+            devices_needing_video: list[str] = []
+            devices_needing_analytics: list[str] = []
+
+            for device in camera_devices:
+                device_serial = device.get("serial")
+                if not device_serial:
+                    continue
+
+                device_info: dict[str, Any] = {
+                    "serial": device_serial,
+                    "name": get_device_display_name(device),
+                    "model": device.get("model"),
+                    "networkId": device.get("networkId", self.network_id),
+                }
+                device_info_map[device_serial] = device_info
+
+                quality_cache_key = self._cache_key("camera_quality", device_serial)
+                cached_quality = get_cached_api_response(quality_cache_key)
+                if cached_quality is not None:
+                    quality_cache[device_serial] = cached_quality
+                elif device_serial not in offline_serials:
+                    devices_needing_quality.append(device_serial)
+
+                video_cache_key = self._cache_key(
+                    "camera_video_settings", device_serial
+                )
+                cached_video = get_cached_api_response(video_cache_key)
+                if cached_video is not None:
+                    video_cache[device_serial] = cached_video
+                elif device_serial not in offline_serials:
+                    devices_needing_video.append(device_serial)
+
+                analytics_cache_key = self._cache_key(
+                    "camera_custom_analytics", device_serial
+                )
+                cached_analytics = get_cached_api_response(analytics_cache_key)
+                if cached_analytics is not None:
+                    analytics_cache[device_serial] = cached_analytics
+                elif device_serial not in offline_serials:
+                    devices_needing_analytics.append(device_serial)
+
+            # Fetch quality & retention settings
+            quality_method = self._resolve_camera_method(
+                "getDeviceCameraQualityAndRetention"
+            )
+            if quality_method and devices_needing_quality:
+                quality_api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                    (quality_method, (serial,), {})
+                    for serial in devices_needing_quality
+                ]
+                results = await batch_api_calls(
+                    self.hass, quality_api_calls, max_concurrent=5
+                )
+                self.organization_hub.total_api_calls += len(quality_api_calls)
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_quality[i]
+                    cache_key = self._cache_key("camera_quality", device_serial)
+                    if isinstance(result, Exception):
+                        _LOGGER.debug(
+                            "Could not get quality settings for %s: %s",
+                            device_serial,
+                            result,
+                        )
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+                    elif isinstance(result, dict):
+                        quality_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_long_cache_ttl()
+                        )
+                    else:
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+
+            # Fetch video settings (RTSP, etc.) using the current API path
+            if devices_needing_video:
+                video_api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                    (self._get_device_camera_video_settings, (serial,), {})
+                    for serial in devices_needing_video
+                ]
+                results = await batch_api_calls(
+                    self.hass, video_api_calls, max_concurrent=5
+                )
+                self.organization_hub.total_api_calls += len(video_api_calls)
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_video[i]
+                    cache_key = self._cache_key("camera_video_settings", device_serial)
+                    if isinstance(result, Exception):
+                        _LOGGER.debug(
+                            "Could not get video settings for %s: %s",
+                            device_serial,
+                            result,
+                        )
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+                    elif isinstance(result, dict):
+                        video_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_long_cache_ttl()
+                        )
+                    else:
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+
+            # Fetch custom analytics settings
+            analytics_method = self._resolve_camera_method(
+                "getDeviceCameraCustomAnalytics"
+            )
+            if analytics_method and devices_needing_analytics:
+                analytics_api_calls: list[
+                    tuple[Any, tuple[Any, ...], dict[str, Any]]
+                ] = [
+                    (analytics_method, (serial,), {})
+                    for serial in devices_needing_analytics
+                ]
+                results = await batch_api_calls(
+                    self.hass, analytics_api_calls, max_concurrent=5
+                )
+                self.organization_hub.total_api_calls += len(analytics_api_calls)
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_analytics[i]
+                    cache_key = self._cache_key(
+                        "camera_custom_analytics", device_serial
+                    )
+                    if isinstance(result, Exception):
+                        _LOGGER.debug(
+                            "Could not get custom analytics for %s: %s",
+                            device_serial,
+                            result,
+                        )
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+                    elif isinstance(result, dict):
+                        analytics_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_long_cache_ttl()
+                        )
+                    else:
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+
+            profile_ids: set[str] = set()
+            for quality_data in quality_cache.values():
+                if isinstance(quality_data, dict):
+                    profile_id = quality_data.get("profileId")
+                    if profile_id:
+                        profile_ids.add(profile_id)
+
+            profiles_by_id: dict[str, dict[str, Any]] = {}
+            if profile_ids:
+                profiles_cache_key = self._cache_key("camera_quality_profiles")
+                cached_profiles = get_cached_api_response(profiles_cache_key)
+                if cached_profiles is None:
+                    profiles_method = self._resolve_camera_method(
+                        "getNetworkCameraQualityRetentionProfiles"
+                    )
+                    if profiles_method:
+                        try:
+                            profiles = await self.hass.async_add_executor_job(
+                                profiles_method, self.network_id
+                            )
+                            self.organization_hub.total_api_calls += 1
+                            if isinstance(profiles, list):
+                                cached_profiles = profiles
+                                cache_api_response(
+                                    profiles_cache_key,
+                                    profiles,
+                                    self._get_long_cache_ttl(),
+                                )
+                        except Exception as err:
+                            _LOGGER.debug(
+                                "Could not fetch camera quality profiles: %s", err
+                            )
+                            self.organization_hub.failed_api_calls += 1
+
+                if isinstance(cached_profiles, list):
+                    for profile in cached_profiles:
+                        profile_id = profile.get("id")
+                        if profile_id in profile_ids:
+                            profiles_by_id[profile_id] = profile
+
+            # Fetch camera boundaries (areas/lines) and detections history
+            boundaries_cache_key = self._cache_key("camera_boundaries")
+            cached_boundaries = get_cached_api_response(boundaries_cache_key)
+            boundary_map: dict[str, dict[str, Any]] = {}
+
+            if cached_boundaries is None:
+                boundaries: list[dict[str, Any]] = []
+                areas_method = self._resolve_camera_method(
+                    "getOrganizationCameraBoundariesAreasByDevice"
+                )
+                lines_method = self._resolve_camera_method(
+                    "getOrganizationCameraBoundariesLinesByDevice"
+                )
+
+                if areas_method:
+                    try:
+                        areas = await self.hass.async_add_executor_job(
+                            areas_method, self.organization_id
+                        )
+                        self.organization_hub.total_api_calls += 1
+                        if isinstance(areas, list):
+                            boundaries.extend(areas)
+                    except Exception as err:
+                        _LOGGER.debug("Could not fetch camera areas: %s", err)
+                        self.organization_hub.failed_api_calls += 1
+
+                if lines_method:
+                    try:
+                        lines = await self.hass.async_add_executor_job(
+                            lines_method, self.organization_id
+                        )
+                        self.organization_hub.total_api_calls += 1
+                        if isinstance(lines, list):
+                            boundaries.extend(lines)
+                    except Exception as err:
+                        _LOGGER.debug("Could not fetch camera lines: %s", err)
+                        self.organization_hub.failed_api_calls += 1
+
+                if boundaries:
+                    cache_api_response(
+                        boundaries_cache_key, boundaries, self._get_long_cache_ttl()
+                    )
+                    cached_boundaries = boundaries
+
+            if isinstance(cached_boundaries, list):
+                for entry in cached_boundaries:
+                    serial = entry.get("serial")
+                    boundary_items = entry.get("boundaries", [])
+                    if isinstance(boundary_items, dict):
+                        boundary_items = [boundary_items]
+
+                    if not serial or not isinstance(boundary_items, list):
+                        continue
+
+                    for boundary in boundary_items:
+                        boundary_id = boundary.get("boundaryId") or boundary.get("id")
+                        if not boundary_id:
+                            continue
+                        boundary_type = boundary.get("type")
+                        boundary_name = boundary.get("name")
+                        boundary_map[boundary_id] = {
+                            "serial": serial,
+                            "type": boundary_type,
+                            "name": boundary_name,
+                        }
+
+            boundary_ids = [
+                boundary_id
+                for boundary_id, info in boundary_map.items()
+                if info.get("serial") in device_info_map
+            ]
+
+            detection_cache_key = self._cache_key("camera_detections_history")
+            cached_detections = get_cached_api_response(detection_cache_key)
+            detections_by_device: dict[str, dict[str, Any]] = {}
+
+            if cached_detections is None and boundary_ids:
+                end_time = datetime.now(UTC)
+                start_time = end_time - timedelta(
+                    seconds=MV_DETECTIONS_LOOKBACK_SECONDS
+                )
+                start_time_iso = start_time.isoformat().replace("+00:00", "Z")
+                end_time_iso = end_time.isoformat().replace("+00:00", "Z")
+                detection_cache_ttl = min(
+                    self._get_standard_cache_ttl(),
+                    MV_DETECTIONS_INTERVAL_SECONDS,
+                )
+
+                params: list[tuple[str, Any]] = [
+                    ("perPage", 1000),
+                    ("ranges[][startTime]", start_time_iso),
+                    ("ranges[][endTime]", end_time_iso),
+                    ("ranges[][interval]", MV_DETECTIONS_INTERVAL_SECONDS),
+                ]
+                for boundary_id in boundary_ids:
+                    params.append(("boundaryIds[]", boundary_id))
+                for boundary_type in ("person", "vehicle"):
+                    params.append(("boundaryTypes[]", boundary_type))
+
+                try:
+
+                    def get_detection_history():
+                        if not self.dashboard:
+                            return None
+                        metadata = {
+                            "tags": ["camera", "configure", "detections"],
+                            "operation": (
+                                "getOrganizationCameraDetectionsHistoryByBoundaryByInterval"
+                            ),
+                        }
+                        resource = (
+                            f"/organizations/{self.organization_id}"
+                            "/camera/detections/history/byBoundary/byInterval"
+                        )
+                        return self.dashboard._session.get(
+                            metadata, resource, params=params
+                        )
+
+                    response = await self.hass.async_add_executor_job(
+                        get_detection_history
+                    )
+                    self.organization_hub.total_api_calls += 1
+                    if isinstance(response, list):
+                        cached_detections = response
+                        cache_api_response(
+                            detection_cache_key,
+                            response,
+                            detection_cache_ttl,
+                        )
+                except Exception as err:
+                    _LOGGER.debug("Could not fetch camera detections history: %s", err)
+                    self.organization_hub.failed_api_calls += 1
+
+            if isinstance(cached_detections, list):
+                for entry in cached_detections:
+                    boundary_id = entry.get("boundaryId")
+                    if not boundary_id or boundary_id not in boundary_map:
+                        continue
+
+                    boundary_info = boundary_map[boundary_id]
+                    serial = boundary_info["serial"]
+                    if serial not in detections_by_device:
+                        detections_by_device[serial] = {
+                            "total": 0,
+                            "by_object_type": defaultdict(int),
+                            "by_boundary": {},
+                        }
+
+                    results = entry.get("results", [])
+                    if isinstance(results, dict):
+                        results = [results]
+
+                    if not isinstance(results, list):
+                        continue
+
+                    boundary_counts: dict[str, int] = defaultdict(int)
+                    for result in results:
+                        object_type = result.get("objectType", "unknown")
+                        count_in = SafeExtractor.safe_int(result.get("in", 0))
+                        detections_by_device[serial]["total"] += count_in
+                        detections_by_device[serial]["by_object_type"][object_type] += (
+                            count_in
+                        )
+                        boundary_counts[object_type] += count_in
+
+                    detections_by_device[serial]["by_boundary"][boundary_id] = {
+                        "name": boundary_info.get("name"),
+                        "type": boundary_info.get("type"),
+                        "counts": dict(boundary_counts),
+                    }
+
+            def _enrich_quality_profile(
+                device_info: dict[str, Any], quality_data: dict[str, Any]
+            ) -> dict[str, Any]:
+                profile_id = quality_data.get("profileId")
+                if not profile_id:
+                    return quality_data
+
+                profile = profiles_by_id.get(profile_id)
+                if not isinstance(profile, dict):
+                    return quality_data
+
+                enriched = dict(quality_data)
+                for field in (
+                    "motionBasedRetentionEnabled",
+                    "audioRecordingEnabled",
+                    "restrictedBandwidthModeEnabled",
+                    "motionDetectorVersion",
+                ):
+                    if field not in enriched and field in profile:
+                        enriched[field] = profile.get(field)
+
+                video_settings = profile.get("videoSettings")
+                if isinstance(video_settings, dict):
+                    model = device_info.get("model")
+                    model_settings = None
+                    if model and model in video_settings:
+                        model_settings = video_settings.get(model)
+                    elif model:
+                        for key in sorted(video_settings.keys(), key=len, reverse=True):
+                            if model.startswith(key):
+                                model_settings = video_settings.get(key)
+                                break
+                    if model_settings is None and video_settings:
+                        model_settings = next(iter(video_settings.values()), None)
+
+                    if isinstance(model_settings, dict):
+                        if "quality" not in enriched and "quality" in model_settings:
+                            enriched["quality"] = model_settings.get("quality")
+                        if (
+                            "resolution" not in enriched
+                            and "resolution" in model_settings
+                        ):
+                            enriched["resolution"] = model_settings.get("resolution")
+
+                return enriched
+
+            # Merge data into device info
+            for device_serial, device_info in device_info_map.items():
+                if device_serial in quality_cache:
+                    quality_data = quality_cache[device_serial]
+                    if isinstance(quality_data, dict) and profiles_by_id:
+                        quality_data = _enrich_quality_profile(
+                            device_info, quality_data
+                        )
+                    device_info["qualityAndRetention"] = quality_data
+                if device_serial in video_cache:
+                    device_info["videoSettings"] = video_cache[device_serial]
+                if device_serial in analytics_cache:
+                    device_info["customAnalytics"] = analytics_cache[device_serial]
+                if device_serial in detections_by_device:
+                    detections = detections_by_device[device_serial]
+                    detections["by_object_type"] = dict(
+                        detections.get("by_object_type", {})
+                    )
+                    device_info["detections"] = detections
+
+                devices_info.append(device_info)
+
+            self.camera_data = {
+                "devices_info": devices_info,
+                "network_id": self.network_id,
+                "network_name": self.network_name,
+                "last_updated": datetime.now(UTC).isoformat(),
+            }
+
+            _LOGGER.debug(
+                "Retrieved camera settings for %d devices in network %s",
+                len(devices_info),
+                self.network_name,
+            )
+
+        except Exception as err:
+            _LOGGER.error("Error getting camera data for %s: %s", self.hub_name, err)
+            self.organization_hub.failed_api_calls += 1
+
+    @with_standard_retries("realtime")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
+    async def async_generate_camera_snapshot(
+        self,
+        device_serial: str,
+        timestamp: str | None = None,
+        fullframe: bool | None = None,
+    ) -> dict[str, Any] | None:
+        """Generate a camera snapshot and return the response payload."""
+        if not self.dashboard:
+            return None
+
+        method = self._resolve_camera_method("generateDeviceCameraSnapshot")
+        if not method:
+            _LOGGER.debug(
+                "Camera snapshot method not available in SDK for %s", device_serial
+            )
+            return None
+
+        payload: dict[str, Any] = {}
+        if timestamp:
+            payload["timestamp"] = timestamp
+        if fullframe is not None:
+            payload["fullframe"] = fullframe
+
+        try:
+
+            def generate_snapshot():
+                return method(device_serial, **payload)
+
+            response = await self.hass.async_add_executor_job(generate_snapshot)
+            self.organization_hub.total_api_calls += 1
+            if isinstance(response, dict):
+                return response
+        except Exception as err:
+            _LOGGER.debug("Snapshot generation failed for %s: %s", device_serial, err)
+            self.organization_hub.failed_api_calls += 1
+
+        return None
+
+    @with_standard_retries("realtime")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
+    async def async_get_camera_video_link(
+        self,
+        device_serial: str,
+        timestamp: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Return a video link payload for the camera, if available."""
+        if not self.dashboard:
+            return None
+
+        method = self._resolve_camera_method("getDeviceCameraVideoLink")
+        if not method:
+            _LOGGER.debug(
+                "Camera video link method not available in SDK for %s", device_serial
+            )
+            return None
+
+        payload: dict[str, Any] = {}
+        if timestamp:
+            payload["timestamp"] = timestamp
+
+        try:
+
+            def get_video_link():
+                return method(device_serial, **payload)
+
+            response = await self.hass.async_add_executor_job(get_video_link)
+            self.organization_hub.total_api_calls += 1
+            if isinstance(response, dict):
+                return response
+        except Exception as err:
+            _LOGGER.debug("Video link fetch failed for %s: %s", device_serial, err)
+            self.organization_hub.failed_api_calls += 1
+
+        return None
+
+    @with_standard_retries("realtime")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
+    async def async_update_camera_video_settings(
+        self,
+        device_serial: str,
+        external_rtsp_enabled: bool,
+    ) -> dict[str, Any] | None:
+        """Update camera video settings (external RTSP)."""
+        if not self.dashboard:
+            return None
+
+        method = self._resolve_camera_method("updateDeviceCameraVideoSettings")
+        if not method:
+            _LOGGER.debug(
+                "Camera video settings update method not available for %s",
+                device_serial,
+            )
+            return None
+
+        try:
+
+            def update_settings():
+                return method(device_serial, externalRtspEnabled=external_rtsp_enabled)
+
+            response = await self.hass.async_add_executor_job(update_settings)
+            self.organization_hub.total_api_calls += 1
+            if isinstance(response, dict):
+                updated_settings = response
+                if "rtspUrl" not in response:
+                    refreshed = await self.async_get_camera_video_settings(
+                        device_serial, force=True
+                    )
+                    if isinstance(refreshed, dict):
+                        updated_settings = refreshed
+                cache_api_response(
+                    self._cache_key("camera_video_settings", device_serial),
+                    updated_settings,
+                    self._get_standard_cache_ttl(),
+                )
+                if self.camera_data and isinstance(
+                    self.camera_data.get("devices_info"), list
+                ):
+                    for device_info in self.camera_data["devices_info"]:
+                        if device_info.get("serial") == device_serial:
+                            device_info["videoSettings"] = updated_settings
+                            break
+                return updated_settings
+        except Exception as err:
+            _LOGGER.debug(
+                "Camera video settings update failed for %s: %s",
+                device_serial,
+                err,
+            )
+            self.organization_hub.failed_api_calls += 1
+
+        return None
 
     @performance_monitor("sensor_data_fetch")
     @with_standard_retries("realtime")
