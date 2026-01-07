@@ -626,6 +626,12 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Meraki Dashboard integration."""
 
+    def __init__(self) -> None:
+        """Initialize the options flow state."""
+        self._pending_options: dict[str, Any] = {}
+        self._hubs_info: dict[str, dict[str, Any]] = {}
+        self._selected_hub_id: str | None = None
+
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -636,58 +642,59 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 return await self.async_step_api_key()
 
             current_options = dict(self.config_entry.options or {})
+            options = dict(current_options)
 
-            # Get hub information for processing
-            hubs_info = await self._get_available_hubs()
+            # Copy hub dictionaries to avoid mutating existing options in place
+            options[CONF_HUB_SCAN_INTERVALS] = dict(
+                current_options.get(CONF_HUB_SCAN_INTERVALS, {})
+            )
+            options[CONF_HUB_DISCOVERY_INTERVALS] = dict(
+                current_options.get(CONF_HUB_DISCOVERY_INTERVALS, {})
+            )
+            options[CONF_HUB_AUTO_DISCOVERY] = dict(
+                current_options.get(CONF_HUB_AUTO_DISCOVERY, {})
+            )
 
-            # Process the new field naming scheme
-            options = {}
-            hub_scan_intervals = {}
-            hub_discovery_intervals = {}
-            hub_auto_discovery = {}
+            # Apply global option updates
+            for key in (
+                CONF_ENABLED_DEVICE_TYPES,
+                CONF_MT_REFRESH_ENABLED,
+                CONF_MR_ENABLE_LATENCY_STATS,
+                CONF_MS_ENABLE_PACKET_STATS,
+                CONF_BLUETOOTH_CLIENTS_ENABLED,
+                CONF_SCAN_INTERVAL,
+                CONF_AUTO_DISCOVERY,
+                CONF_DISCOVERY_INTERVAL,
+                CONF_SELECTED_DEVICES,
+                CONF_STATIC_DATA_INTERVAL,
+                CONF_SEMI_STATIC_DATA_INTERVAL,
+                CONF_DYNAMIC_DATA_INTERVAL,
+            ):
+                if key in user_input:
+                    options[key] = user_input[key]
 
-            # Process all user input
-            for key, value in user_input.items():
-                if key.startswith("hub_auto_discovery_"):
-                    hub_id = key.replace("hub_auto_discovery_", "")
-                    hub_auto_discovery[hub_id] = value
-                elif key.startswith("hub_scan_interval_"):
-                    hub_id = key.replace("hub_scan_interval_", "")
-                    # Value is already in seconds, ensure integer type
-                    hub_scan_intervals[hub_id] = int(value)
-                elif key.startswith("hub_discovery_interval_"):
-                    hub_id = key.replace("hub_discovery_interval_", "")
-                    # Convert minutes to seconds, ensure integer type
-                    hub_discovery_intervals[hub_id] = int(value * 60)
-                elif key in (
-                    CONF_STANDARD_CACHE_TTL,
-                    CONF_EXTENDED_CACHE_TTL,
-                    CONF_LONG_CACHE_TTL,
-                ):
-                    # Convert cache TTL from minutes to seconds
-                    options[key] = int(value * 60)
-                else:
-                    # Regular options
-                    options[key] = value
-
-            # Store hub configurations
-            if hub_scan_intervals:
-                options[CONF_HUB_SCAN_INTERVALS] = hub_scan_intervals
-            if hub_discovery_intervals:
-                options[CONF_HUB_DISCOVERY_INTERVALS] = hub_discovery_intervals
-            if hub_auto_discovery:
-                options[CONF_HUB_AUTO_DISCOVERY] = hub_auto_discovery
-
-            # Validate the updated configuration
-            try:
-                MerakiConfigSchema.from_config_entry(
-                    dict(self.config_entry.data), options
+            if CONF_MT_REFRESH_INTERVAL in user_input:
+                options[CONF_MT_REFRESH_INTERVAL] = int(
+                    user_input[CONF_MT_REFRESH_INTERVAL]
                 )
-            except ConfigValidationError as err:
-                _LOGGER.error("Invalid options configuration: %s", err)
-                return self.async_abort(reason="invalid_configuration")
 
-            return self.async_create_entry(title="", data=options)
+            for key in (
+                CONF_STANDARD_CACHE_TTL,
+                CONF_EXTENDED_CACHE_TTL,
+                CONF_LONG_CACHE_TTL,
+            ):
+                if key in user_input:
+                    options[key] = int(user_input[key] * 60)
+
+            options.pop("update_api_key", None)
+
+            self._pending_options = options
+            self._hubs_info = await self._get_available_hubs()
+
+            if self._hubs_info:
+                return await self.async_step_hub_select()
+
+            return self._finalize_options()
 
         # Get current hub information from hass.data if available
         hubs_info = await self._get_available_hubs()
@@ -702,7 +709,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 CONF_ENABLED_DEVICE_TYPES,
                 default=current_options.get(
                     CONF_ENABLED_DEVICE_TYPES,
-                    [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS],
+                    [
+                        SENSOR_TYPE_MT,
+                        SENSOR_TYPE_MR,
+                        SENSOR_TYPE_MS,
+                        SENSOR_TYPE_MV,
+                    ],
                 ),
             )
         ] = selector.SelectSelector(
@@ -720,11 +732,66 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                         value=SENSOR_TYPE_MS,
                         label="MS - Switches",
                     ),
+                    selector.SelectOptionDict(
+                        value=SENSOR_TYPE_MV,
+                        label="MV - Cameras",
+                    ),
                 ],
                 mode=selector.SelectSelectorMode.LIST,
                 multiple=True,
             )
         )
+
+        # 1b. Allow selecting specific devices to monitor
+        available_devices = await self._get_available_devices()
+        device_type_labels = {
+            SENSOR_TYPE_MT: "Environmental Sensors",
+            SENSOR_TYPE_MR: "Wireless Access Points",
+            SENSOR_TYPE_MS: "Switches",
+            SENSOR_TYPE_MV: "Cameras",
+        }
+        device_options: list[selector.SelectOptionDict] = []
+        for device in available_devices:
+            device_name = get_device_display_name(device)
+            network_name = device.get("network_name", "Unknown Network")
+            device_type = device.get("device_type", "")
+            device_label = device_type_labels.get(device_type, device_type or "Device")
+            serial = device.get("serial")
+            if not serial:
+                continue
+
+            device_options.append(
+                selector.SelectOptionDict(
+                    value=serial,
+                    label=f"{device_name} ({network_name} - {device_label})",
+                )
+            )
+
+        selected_devices = current_options.get(CONF_SELECTED_DEVICES, [])
+        known_serials = {option["value"] for option in device_options}
+        for serial in selected_devices:
+            if serial in known_serials:
+                continue
+            device_options.append(
+                selector.SelectOptionDict(
+                    value=serial,
+                    label=f"{serial} (Unknown Device)",
+                )
+            )
+
+        if device_options:
+            schema_dict[
+                vol.Optional(
+                    CONF_SELECTED_DEVICES,
+                    default=selected_devices,
+                )
+            ] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=device_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    multiple=True,
+                )
+            )
 
         # 2. Add MT refresh service configuration
         schema_dict[
@@ -837,98 +904,14 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             selector.BooleanSelector()
         )
 
-        # 4. Build hub-specific options if we have hubs
-        if hubs_info:
-            # Add settings for each hub
-            for hub_key, hub_info in sorted(hubs_info.items()):
-                hub_name = hub_info["network_name"]
-                device_type = hub_info["device_type"]
-                device_count = hub_info["device_count"]
-
-                # Use cleaner field names for the form
-                auto_discovery_key = f"hub_auto_discovery_{hub_key}"
-                scan_interval_key = f"hub_scan_interval_{hub_key}"
-                discovery_interval_key = f"hub_discovery_interval_{hub_key}"
-
-                # Create device-specific labels
-                device_type_labels = {
-                    SENSOR_TYPE_MT: "Environmental Sensors",
-                    SENSOR_TYPE_MR: "Wireless Access Points",
-                    SENSOR_TYPE_MS: "Switches",
-                }
-                device_label = device_type_labels.get(device_type, device_type)
-
-                # Auto-discovery toggle
-                schema_dict[
-                    vol.Optional(
-                        auto_discovery_key,
-                        default=current_options.get(CONF_HUB_AUTO_DISCOVERY, {}).get(
-                            hub_key, True
-                        ),
-                    )
-                ] = selector.BooleanSelector(selector.BooleanSelectorConfig())
-
-                # Scan interval (in seconds)
-                current_scan_seconds = current_options.get(
-                    CONF_HUB_SCAN_INTERVALS, {}
-                ).get(
-                    hub_key,
-                    DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
-                )
-
-                # Device-specific minimums: MT can go as low as 1 second, others 60 seconds
-                min_value = DEVICE_TYPE_MIN_SCAN_INTERVALS.get(device_type, 60)
-                # For MT devices, allow 1-second steps; others use 10-second steps for usability
-                step_value = 1 if device_type == SENSOR_TYPE_MT else 10
-                max_value = 3600  # 1 hour maximum
-
-                schema_dict[
-                    vol.Optional(
-                        scan_interval_key,
-                        default=current_scan_seconds,
-                    )
-                ] = selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=min_value,
-                        max=max_value,
-                        step=step_value,
-                        unit_of_measurement="seconds",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                )
-
-                # Discovery interval
-                current_discovery_minutes = (
-                    current_options.get(CONF_HUB_DISCOVERY_INTERVALS, {}).get(
-                        hub_key, DEFAULT_DISCOVERY_INTERVAL
-                    )
-                    // 60
-                )
-
-                schema_dict[
-                    vol.Optional(
-                        discovery_interval_key,
-                        default=current_discovery_minutes,
-                    )
-                ] = selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
-                        max=1440,
-                        step=1,
-                        unit_of_measurement="minutes",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                )
-
         # Build enhanced description placeholders
         description_placeholders = {}
 
         if hubs_info:
-            # Add hub information to placeholders with detailed field mapping
+            # Add hub information to placeholders
             hub_details = []
-            hub_field_mapping = []
 
-            for hub_key, hub_info in sorted(hubs_info.items()):
+            for _hub_key, hub_info in sorted(hubs_info.items()):
                 hub_name = hub_info["network_name"]
                 device_type = hub_info["device_type"]
                 device_count = hub_info["device_count"]
@@ -938,6 +921,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     SENSOR_TYPE_MT: "MT - Environmental Sensors",
                     SENSOR_TYPE_MR: "MR - Wireless Access Points",
                     SENSOR_TYPE_MS: "MS - Switches",
+                    SENSOR_TYPE_MV: "MV - Cameras",
                 }
                 device_label = device_type_labels.get(device_type, device_type)
 
@@ -946,23 +930,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                     f"• **{hub_name}** ({device_label}): {device_count} devices"
                 )
 
-                # Add field mapping explanation
-                hub_field_mapping.append(
-                    f"\n**{hub_name}** ({device_label}):\n"
-                    f"  • `hub_auto_discovery_{hub_key}` - Enable automatic discovery of new devices\n"
-                    f"  • `hub_scan_interval_{hub_key}` - How often to update sensor data (minutes)\n"
-                    f"  • `hub_discovery_interval_{hub_key}` - How often to scan for new devices (minutes)"
-                )
-
             description_placeholders["hub_list"] = "\n".join(hub_details)
             description_placeholders["has_hubs"] = "true"
             description_placeholders["hub_settings_explanation"] = (
                 "**Network-Specific Settings:**\n\n"
-                "Each network below has three configuration options:\n"
-                "• **Auto-Discovery** - Automatically detect and add new devices\n"
-                "• **Update Interval** - How frequently to fetch data from devices (minutes)\n"
-                "• **Discovery Interval** - How often to scan for new devices (minutes)\n"
-                + "\n".join(hub_field_mapping)
+                "After saving this screen, you'll be able to configure each network's "
+                "auto-discovery, update interval, and discovery interval."
             )
         else:
             description_placeholders["hub_list"] = (
@@ -976,6 +949,215 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(schema_dict),
             description_placeholders=description_placeholders,
         )
+
+    async def async_step_hub_select(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Select a hub to configure."""
+        self._ensure_pending_options()
+
+        if not self._hubs_info:
+            self._hubs_info = await self._get_available_hubs()
+
+        if user_input is not None:
+            selection = user_input[CONF_HUB_SELECTION]
+            if selection == HUB_SELECTION_DONE or not self._hubs_info:
+                return self._finalize_options()
+
+            self._selected_hub_id = selection
+            return await self.async_step_hub_settings()
+
+        if not self._hubs_info:
+            return self._finalize_options()
+
+        device_type_labels = {
+            SENSOR_TYPE_MT: "Environmental Sensors",
+            SENSOR_TYPE_MR: "Wireless Access Points",
+            SENSOR_TYPE_MS: "Switches",
+            SENSOR_TYPE_MV: "Cameras",
+        }
+
+        hub_options = []
+        hub_details = []
+
+        for hub_key, hub_info in sorted(
+            self._hubs_info.items(),
+            key=lambda item: (
+                item[1].get("network_name", ""),
+                item[1].get("device_type", ""),
+            ),
+        ):
+            hub_name = hub_info["network_name"]
+            device_type = hub_info["device_type"]
+            device_count = hub_info["device_count"]
+            device_label = device_type_labels.get(device_type, device_type)
+
+            hub_options.append(
+                selector.SelectOptionDict(
+                    value=hub_key,
+                    label=f"{hub_name} ({device_label}, {device_count} devices)",
+                )
+            )
+            hub_details.append(
+                f"• **{hub_name}** ({device_label}): {device_count} devices"
+            )
+
+        hub_options.append(
+            selector.SelectOptionDict(
+                value=HUB_SELECTION_DONE,
+                label="Finish (no more networks)",
+            )
+        )
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_HUB_SELECTION,
+                    default=HUB_SELECTION_DONE,
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=hub_options,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                )
+            }
+        )
+
+        return self.async_show_form(
+            step_id="hub_select",
+            data_schema=schema,
+            description_placeholders={
+                "hub_list": "\n".join(hub_details),
+            },
+        )
+
+    async def async_step_hub_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Configure settings for a specific hub."""
+        self._ensure_pending_options()
+
+        if not self._selected_hub_id:
+            return await self.async_step_hub_select()
+
+        hub_info = self._hubs_info.get(self._selected_hub_id)
+        if not hub_info:
+            _LOGGER.debug("Selected hub %s no longer available", self._selected_hub_id)
+            return await self.async_step_hub_select()
+
+        device_type = hub_info["device_type"]
+        device_type_labels = {
+            SENSOR_TYPE_MT: "Environmental Sensors",
+            SENSOR_TYPE_MR: "Wireless Access Points",
+            SENSOR_TYPE_MS: "Switches",
+            SENSOR_TYPE_MV: "Cameras",
+        }
+        device_label = device_type_labels.get(device_type, device_type)
+
+        options = self._ensure_pending_options()
+        hub_scan_intervals = options.setdefault(CONF_HUB_SCAN_INTERVALS, {})
+        hub_discovery_intervals = options.setdefault(CONF_HUB_DISCOVERY_INTERVALS, {})
+        hub_auto_discovery = options.setdefault(CONF_HUB_AUTO_DISCOVERY, {})
+
+        if user_input is not None:
+            hub_auto_discovery[self._selected_hub_id] = user_input[
+                CONF_HUB_AUTO_DISCOVERY
+            ]
+            hub_scan_intervals[self._selected_hub_id] = int(
+                user_input[CONF_HUB_SCAN_INTERVAL]
+            )
+            hub_discovery_intervals[self._selected_hub_id] = int(
+                user_input[CONF_HUB_DISCOVERY_INTERVAL] * 60
+            )
+
+            self._pending_options = options
+            return await self.async_step_hub_select()
+
+        current_scan_seconds = hub_scan_intervals.get(
+            self._selected_hub_id,
+            DEVICE_TYPE_SCAN_INTERVALS.get(device_type, 300),
+        )
+        current_discovery_minutes = (
+            hub_discovery_intervals.get(
+                self._selected_hub_id, DEFAULT_DISCOVERY_INTERVAL
+            )
+            // 60
+        )
+        current_auto_discovery = hub_auto_discovery.get(self._selected_hub_id, True)
+
+        min_scan_seconds = DEVICE_TYPE_MIN_SCAN_INTERVALS.get(device_type, 60)
+        step_value = 1 if device_type == SENSOR_TYPE_MT else 10
+        max_scan_seconds = 3600
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_HUB_AUTO_DISCOVERY, default=current_auto_discovery
+                ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                vol.Required(
+                    CONF_HUB_SCAN_INTERVAL, default=current_scan_seconds
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=min_scan_seconds,
+                        max=max_scan_seconds,
+                        step=step_value,
+                        unit_of_measurement="seconds",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    CONF_HUB_DISCOVERY_INTERVAL, default=current_discovery_minutes
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=MIN_DISCOVERY_INTERVAL_MINUTES,
+                        max=1440,
+                        step=1,
+                        unit_of_measurement="minutes",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="hub_settings",
+            data_schema=schema,
+            description_placeholders={
+                "hub_name": hub_info["network_name"],
+                "device_label": device_label,
+                "device_count": hub_info["device_count"],
+                "min_scan_seconds": str(min_scan_seconds),
+                "min_discovery_minutes": str(MIN_DISCOVERY_INTERVAL_MINUTES),
+            },
+        )
+
+    def _ensure_pending_options(self) -> dict[str, Any]:
+        """Ensure pending options are populated with current values."""
+        if not self._pending_options:
+            current_options = dict(self.config_entry.options or {})
+            self._pending_options = dict(current_options)
+            self._pending_options[CONF_HUB_SCAN_INTERVALS] = dict(
+                current_options.get(CONF_HUB_SCAN_INTERVALS, {})
+            )
+            self._pending_options[CONF_HUB_DISCOVERY_INTERVALS] = dict(
+                current_options.get(CONF_HUB_DISCOVERY_INTERVALS, {})
+            )
+            self._pending_options[CONF_HUB_AUTO_DISCOVERY] = dict(
+                current_options.get(CONF_HUB_AUTO_DISCOVERY, {})
+            )
+
+        return self._pending_options
+
+    def _finalize_options(self) -> ConfigFlowResult:
+        """Validate and finalize option updates."""
+        options = self._ensure_pending_options()
+        try:
+            MerakiConfigSchema.from_config_entry(dict(self.config_entry.data), options)
+        except ConfigValidationError as err:
+            _LOGGER.error("Invalid options configuration: %s", err)
+            return self.async_abort(reason="invalid_configuration")
+
+        return self.async_create_entry(title="", data=options)
 
     async def async_step_api_key(
         self, user_input: dict[str, Any] | None = None
@@ -1068,3 +1250,35 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         except Exception:
             _LOGGER.debug("Could not get hub information, using legacy configuration")
             return {}
+
+    async def _get_available_devices(self) -> list[dict[str, Any]]:
+        """Get available devices for selection from network hubs."""
+        try:
+            integration_data = self.hass.data.get(DOMAIN, {}).get(
+                self.config_entry.entry_id
+            )
+            if not integration_data:
+                return []
+
+            network_hubs = integration_data.get("network_hubs", {})
+            devices: list[dict[str, Any]] = []
+
+            for hub in network_hubs.values():
+                network_name = getattr(hub, "network_name", "Unknown Network")
+                device_type = getattr(hub, "device_type", "")
+                for device in getattr(hub, "devices", []):
+                    serial = device.get("serial")
+                    if not serial:
+                        continue
+                    devices.append(
+                        {
+                            **device,
+                            "network_name": network_name,
+                            "device_type": device_type,
+                        }
+                    )
+
+            return devices
+        except Exception:
+            _LOGGER.debug("Could not get device information for selection list")
+            return []
