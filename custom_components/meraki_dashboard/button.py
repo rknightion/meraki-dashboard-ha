@@ -28,7 +28,6 @@ async def async_setup_entry(
         # Get the organization hub from the domain data
         domain_data = hass.data[DOMAIN][config_entry.entry_id]
         organization_hub = domain_data["organization_hub"]
-
         entities = [
             MerakiUpdateSensorDataButton(organization_hub, config_entry),
             MerakiDiscoverDevicesButton(organization_hub, config_entry),

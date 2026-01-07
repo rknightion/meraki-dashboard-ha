@@ -977,7 +977,9 @@ class MerakiNetworkHub:
                     cache_key = self._cache_key("port_status", device_serial)
                     if isinstance(result, Exception):
                         _LOGGER.debug(
-                            "Could not get port status for %s: %s", device_serial, result
+                            "Could not get port status for %s: %s",
+                            device_serial,
+                            result,
                         )
                         port_status_cache[device_serial] = []
                     else:
@@ -1005,7 +1007,9 @@ class MerakiNetworkHub:
                     cache_key = self._cache_key("port_config", device_serial)
                     if isinstance(result, Exception):
                         _LOGGER.debug(
-                            "Could not get port config for %s: %s", device_serial, result
+                            "Could not get port config for %s: %s",
+                            device_serial,
+                            result,
                         )
                         port_config_cache[device_serial] = []
                     else:
@@ -1149,9 +1153,7 @@ class MerakiNetworkHub:
                     device_info["port_discards"] = sum(discard_counts)
 
                     device_info["port_link_count"] = sum(
-                        1
-                        for port in ports_status
-                        if port.get("status") == "Connected"
+                        1 for port in ports_status if port.get("status") == "Connected"
                     )
 
                     # Calculate average port utilization
@@ -1165,9 +1167,7 @@ class MerakiNetworkHub:
                                 recv, int | float
                             ):
                                 # Convert from Kb to percentage (assuming 1Gbps ports)
-                                port_util = min(
-                                    100.0, ((sent + recv) / 1000000) * 100
-                                )
+                                port_util = min(100.0, ((sent + recv) / 1000000) * 100)
                                 utilizations.append(port_util)
 
                     device_info["port_utilization"] = (
@@ -2306,11 +2306,15 @@ class MerakiNetworkHub:
 
                 if isinstance(result, Exception):
                     _LOGGER.debug(
-                        "Error getting connection stats for %s: %s", device_serial, result
+                        "Error getting connection stats for %s: %s",
+                        device_serial,
+                        result,
                     )
                 elif result:
                     connection_stats[device_serial] = result
-                    cache_api_response(cache_key, result, self._get_extended_cache_ttl())
+                    cache_api_response(
+                        cache_key, result, self._get_extended_cache_ttl()
+                    )
 
         return connection_stats
 
@@ -2386,7 +2390,9 @@ class MerakiNetworkHub:
                     )
                 elif result:
                     packet_loss[device_serial] = result
-                    cache_api_response(cache_key, result, self._get_extended_cache_ttl())
+                    cache_api_response(
+                        cache_key, result, self._get_extended_cache_ttl()
+                    )
 
         return packet_loss
 
@@ -2551,7 +2557,9 @@ class MerakiNetworkHub:
                     )
                 elif result:
                     packet_statistics[device_serial] = result
-                    cache_api_response(cache_key, result, self._get_extended_cache_ttl())
+                    cache_api_response(
+                        cache_key, result, self._get_extended_cache_ttl()
+                    )
 
         return packet_statistics
 
