@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from ..const import (
@@ -10,10 +11,24 @@ from ..const import (
     DOMAIN,
     MR_SENSOR_MEMORY_USAGE,
     MS_SENSOR_MEMORY_USAGE,
+    MV_SENSOR_AUDIO_RECORDING_ENABLED,
+    MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
+    MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
+    MV_SENSOR_DETECTIONS_PERSON,
+    MV_SENSOR_DETECTIONS_TOTAL,
+    MV_SENSOR_DETECTIONS_VEHICLE,
+    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
+    MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTOR_VERSION,
+    MV_SENSOR_QUALITY,
+    MV_SENSOR_RESOLUTION,
+    MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
+    MV_SENSOR_RETENTION_PROFILE_ID,
     PRODUCT_TYPE_TO_DEVICE_TYPE,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
+    SENSOR_TYPE_MV,
 )
 from .sanitization import sanitize_attribute_value
 
@@ -44,17 +59,22 @@ def _device_type_from_product_type(product_type: str | None) -> str | None:
     return PRODUCT_TYPE_TO_DEVICE_TYPE.get(product_type.lower())
 
 
-def determine_device_type(device: dict[str, Any]) -> str | None:
+def determine_device_type(device: Mapping[str, Any] | MerakiDeviceData) -> str | None:
     """Determine device type from model and product type."""
-    model = device.get("model", "")
+    model_value = device.get("model")
+    model = model_value if isinstance(model_value, str) else ""
     device_type = _device_type_from_model(model)
     if device_type:
         return device_type
 
-    return _device_type_from_product_type(device.get("productType"))
+    product_type_value = device.get("productType")
+    product_type = product_type_value if isinstance(product_type_value, str) else None
+    return _device_type_from_product_type(product_type)
 
 
-def device_matches_type(device: dict[str, Any], device_type: str) -> bool:
+def device_matches_type(
+    device: Mapping[str, Any] | MerakiDeviceData, device_type: str
+) -> bool:
     """Return True when the device matches the requested type."""
     resolved_type = determine_device_type(device)
     if resolved_type:
@@ -526,7 +546,21 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
 
     elif device_type == "MV":
         # MV (Camera) devices
-        return {"status", "recent_detections"}
+        return {
+            MV_SENSOR_QUALITY,
+            MV_SENSOR_RESOLUTION,
+            MV_SENSOR_RETENTION_PROFILE_ID,
+            MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+            MV_SENSOR_AUDIO_RECORDING_ENABLED,
+            MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
+            MV_SENSOR_MOTION_DETECTOR_VERSION,
+            MV_SENSOR_EXTERNAL_RTSP_ENABLED,
+            MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
+            MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
+            MV_SENSOR_DETECTIONS_PERSON,
+            MV_SENSOR_DETECTIONS_VEHICLE,
+            MV_SENSOR_DETECTIONS_TOTAL,
+        }
 
     return set()
 
@@ -657,6 +691,9 @@ def should_create_entity(
     elif device_type == SENSOR_TYPE_MS:
         # For MS devices, allow all standard metrics
         return True  # Allow all MS sensors to be created
+    elif device_type == SENSOR_TYPE_MV:
+        # For MV devices, allow all camera metrics
+        return True
 
     # For MT devices, we need to check capabilities more carefully
     # The metric_key comes from sensor descriptions which use EntityType values
