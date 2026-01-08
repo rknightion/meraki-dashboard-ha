@@ -487,6 +487,57 @@ class TestMerakiNetworkHub:
         # Switch data should still be populated without raising errors
         assert isinstance(hub.switch_data, dict)
 
+    async def test_switch_port_profile_name_mapping(
+        self, mock_organization_hub, mock_config_entry
+    ):
+        """Test switch port profile names are mapped onto port configs."""
+        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+        clear_api_cache()
+
+        hub = MerakiNetworkHub(
+            organization_hub=mock_organization_hub,
+            network_id="test_network_id",
+            network_name="Test Network",
+            device_type=SENSOR_TYPE_MS,
+            config_entry=mock_config_entry,
+        )
+
+        hub.devices = [
+            {
+                "serial": "MS-123",
+                "name": "Test MS Device",
+                "model": "MS120",
+                "productType": "switch",
+            }
+        ]
+
+        hub._async_get_packet_statistics = AsyncMock(return_value={})
+        hub._async_get_stp_priorities = AsyncMock(return_value={})
+
+        async def mock_api_call(api_call, *args, **kwargs):
+            if "getDeviceSwitchPortsStatuses" in str(api_call):
+                return []
+            if "getDeviceSwitchPorts" in str(api_call):
+                return [
+                    {
+                        "portId": "1",
+                        "profile": {"enabled": True, "id": "profile1"},
+                    }
+                ]
+            if "getNetworkSwitchPortsProfiles" in str(api_call):
+                return [{"profileId": "profile1", "name": "AP Profile"}]
+            return []
+
+        hub.organization_hub.async_api_call.side_effect = mock_api_call
+
+        await hub._async_setup_switch_data()
+
+        port_configs = hub.switch_data.get("port_configs", [])
+        assert port_configs
+        profile = port_configs[0].get("profile", {})
+        assert profile.get("name") == "AP Profile"
+
     async def test_async_setup_switch_data_api_error(
         self, mock_organization_hub, mock_config_entry
     ):
