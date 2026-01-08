@@ -69,12 +69,12 @@ class TestMRMemoryUsage:
         network_hub = MagicMock()
         organization_hub = MagicMock()
         organization_hub.device_memory_usage = {
-            "Q2XX-XXXX-XXXX": {
-                "memory_usage_percent": 75.5,
-                "memory_used_kb": 1024,
-                "memory_free_kb": 256,
-                "memory_total_kb": 1280,
-                "last_interval_end": "2024-01-01T00:00:00Z",
+                "Q2XX-XXXX-XXXX": {
+                    "memory_usage_percent": 75.5,
+                    "memory_used_kb": 1024,
+                    "memory_free_kb": 256,
+                    "memory_total_kb": 1280,
+                    "last_interval_end": "2024-01-01T00:00:00Z",
             }
         }
         network_hub.organization_hub = organization_hub
@@ -106,12 +106,12 @@ class TestMRMemoryUsage:
         network_hub = MagicMock()
         organization_hub = MagicMock()
         organization_hub.device_memory_usage = {
-            "Q2XX-XXXX-XXXX": {
-                "memory_usage_percent": 75.5,
-                "memory_used_kb": 1024,
-                "memory_free_kb": 256,
-                "memory_total_kb": 1280,
-                "last_interval_end": "2024-01-01T00:00:00Z",
+                "Q2XX-XXXX-XXXX": {
+                    "memory_usage_percent": 75.5,
+                    "memory_used_kb": 1024,
+                    "memory_free_kb": 256,
+                    "memory_total_kb": 1280,
+                    "last_interval_end": "2024-01-01T00:00:00Z",
             }
         }
         network_hub.organization_hub = organization_hub

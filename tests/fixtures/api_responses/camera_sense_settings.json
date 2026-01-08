@@ -1,0 +1,9 @@
+{
+  "senseEnabled": true,
+  "audioDetection": {
+    "enabled": false
+  },
+  "detectionModelId": "model_123",
+  "mqttBrokerId": "broker_456",
+  "senseVersion": 2
+}

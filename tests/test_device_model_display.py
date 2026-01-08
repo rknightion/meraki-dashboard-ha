@@ -1,6 +1,6 @@
 """Test device model display in entity names."""
 
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -37,6 +37,7 @@ class TestDeviceModelDisplay:
         org_hub.total_api_calls = 0
         org_hub.failed_api_calls = 0
         org_hub._track_api_call_duration = Mock()
+        org_hub.async_api_call = AsyncMock()
 
         # Create mock config entry
         config_entry = Mock()
@@ -47,22 +48,35 @@ class TestDeviceModelDisplay:
             org_hub, "net123", "Test Network", SENSOR_TYPE_MT, config_entry
         )
 
+        # Ensure cache doesn't override test data
+        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+        clear_api_cache()
+
         # Mock the API response with devices that have full model names
         mock_devices = [
-            {"serial": "Q2XX-0001", "model": "MT11", "name": ""},
-            {"serial": "Q2XX-0002", "model": "MT14", "name": ""},
-            {"serial": "Q2XX-0003", "model": "MT20", "name": "Air Quality"},
+            {
+                "serial": "Q2XX-0001",
+                "model": "MT11",
+                "name": "",
+                "productType": "sensor",
+            },
+            {
+                "serial": "Q2XX-0002",
+                "model": "MT14",
+                "name": "",
+                "productType": "sensor",
+            },
+            {
+                "serial": "Q2XX-0003",
+                "model": "MT20",
+                "name": "Air Quality",
+                "productType": "sensor",
+            },
         ]
 
-        # Mock the dashboard API call
-        org_hub.dashboard.networks.getNetworkDevices = Mock(return_value=mock_devices)
-
-        # Mock async_add_executor_job to run the function directly
-        async def mock_executor(func, *args):
-            return func(*args)
-
-        org_hub.hass.async_add_executor_job = mock_executor
-        org_hub.hass.loop.time = Mock(return_value=0)
+        # Mock the organization hub API call
+        org_hub.async_api_call.return_value = mock_devices
 
         # Run device discovery
         await hub._async_discover_devices()

@@ -158,7 +158,7 @@ async def test_fetch_mr_network_events(hass: HomeAssistant, mock_mr_events):
 
         # Verify API was called
         network_hub.dashboard.networks.getNetworkEvents.assert_called_once_with(
-            network_hub.network_id, productType="wireless", perPage=50
+            network_hub.network_id, productType="wireless", perPage=100
         )
 
         # Verify events were returned
@@ -217,7 +217,7 @@ async def test_fetch_ms_network_events(hass: HomeAssistant, mock_ms_events):
 
         # Verify API was called
         network_hub.dashboard.networks.getNetworkEvents.assert_called_once_with(
-            network_hub.network_id, productType="switch", perPage=50
+            network_hub.network_id, productType="switch", perPage=100
         )
 
         # Verify events were returned

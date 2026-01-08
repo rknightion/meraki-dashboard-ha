@@ -575,12 +575,6 @@ class TestBatchApiCalls:
         """Test successful batch API calls."""
         hass = MagicMock(spec=HomeAssistant)
 
-        # Mock the async_add_executor_job to return coroutines that resolve to our expected values
-        async def mock_executor_job(func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        hass.async_add_executor_job.side_effect = mock_executor_job
-
         # Regular functions (not async)
         def mock_func1(arg1):
             return f"result1_{arg1}"
@@ -597,7 +591,9 @@ class TestBatchApiCalls:
             (mock_func3, (), {}),
         ]
 
-        results = await batch_api_calls(hass, api_calls, max_concurrent=2)
+        results = await batch_api_calls(
+            hass, api_calls, max_concurrent=2, delay_between_batches=0
+        )
 
         assert len(results) == 3
         assert results[0] == "result1_test1"
@@ -608,11 +604,6 @@ class TestBatchApiCalls:
     async def test_batch_api_calls_with_errors(self):
         """Test batch API calls with some errors."""
         hass = MagicMock(spec=HomeAssistant)
-
-        async def mock_executor_job(func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        hass.async_add_executor_job.side_effect = mock_executor_job
 
         def mock_success():
             return "success"
@@ -626,7 +617,7 @@ class TestBatchApiCalls:
             (mock_success, (), {}),
         ]
 
-        results = await batch_api_calls(hass, api_calls)
+        results = await batch_api_calls(hass, api_calls, delay_between_batches=0)
 
         assert len(results) == 3
         assert results[0] == "success"
@@ -648,11 +639,6 @@ class TestBatchApiCalls:
         """Test batch API calls with keyword arguments."""
         hass = MagicMock(spec=HomeAssistant)
 
-        async def mock_executor_job(func, *args, **kwargs):
-            return func(*args, **kwargs)
-
-        hass.async_add_executor_job.side_effect = mock_executor_job
-
         def mock_func(arg1, arg2=None, arg3=None):
             return f"result_{arg1}_{arg2}_{arg3}"
 
@@ -660,7 +646,7 @@ class TestBatchApiCalls:
             (mock_func, ("pos1",), {"arg2": "kw1", "arg3": "kw2"}),
         ]
 
-        results = await batch_api_calls(hass, api_calls)
+        results = await batch_api_calls(hass, api_calls, delay_between_batches=0)
 
         assert len(results) == 1
         assert results[0] == "result_pos1_kw1_kw2"

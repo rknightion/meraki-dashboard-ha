@@ -1,7 +1,7 @@
 """Hub builder for creating test hub instances."""
 
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -134,7 +134,7 @@ class HubBuilder:
         mock_api = MagicMock()
 
         # Mock organizations
-        mock_api.organizations.getOrganizations = MagicMock(
+        mock_api.organizations.getOrganizations = AsyncMock(
             return_value=[
                 {
                     "id": self._hub_data["organization_id"],
@@ -145,22 +145,46 @@ class HubBuilder:
         )
 
         # Mock networks
-        mock_api.organizations.getOrganizationNetworks = MagicMock(
+        mock_api.organizations.getOrganizationNetworks = AsyncMock(
             return_value=self._hub_data["networks"]
+        )
+        mock_api.organizations.getOrganization = AsyncMock(
+            return_value={
+                "id": self._hub_data["organization_id"],
+                "name": self._hub_data["organization_name"],
+            }
         )
 
         # Mock devices
-        mock_api.organizations.getOrganizationDevices = MagicMock(return_value=[])
-        mock_api.organizations.getOrganizationDevicesStatuses = MagicMock(
+        mock_api.organizations.getOrganizationDevices = AsyncMock(return_value=[])
+        mock_api.organizations.getOrganizationDevicesAvailabilities = AsyncMock(
             return_value=[]
+        )
+        mock_api.organizations.getOrganizationDevicesStatusesOverview = AsyncMock(
+            return_value={
+                "counts": {
+                    "byStatus": {"online": 0, "offline": 0, "alerting": 0, "dormant": 0}
+                }
+            }
+        )
+        mock_api.organizations.getOrganizationLicenses = AsyncMock(return_value=[])
+        mock_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork = (
+            AsyncMock(return_value={"items": []})
+        )
+        mock_api.organizations.getOrganizationClientsOverview = AsyncMock(
+            return_value={"counts": {"total": 0}, "usage": {"overall": {}, "average": 0}}
+        )
+        mock_api.organizations.getOrganizationDevicesSystemMemoryUsageHistoryByInterval = (
+            AsyncMock(return_value=[])
         )
 
         # Mock networks API
         mock_api.networks = MagicMock()
-        mock_api.networks.getNetworkDevices = MagicMock(return_value=[])
+        mock_api.networks.getNetworkBluetoothClients = AsyncMock(return_value=[])
+        mock_api.networks.getNetworkEvents = AsyncMock(return_value={"events": []})
 
         # Mock licenses
-        mock_api.organizations.getOrganizationLicensesOverview = MagicMock(
+        mock_api.organizations.getOrganizationLicensesOverview = AsyncMock(
             return_value={
                 "status": "OK",
                 "expirationDate": "2025-01-01",
@@ -170,24 +194,41 @@ class HubBuilder:
 
         # Mock sensor API
         mock_api.sensor = MagicMock()
-        mock_api.sensor.getOrganizationSensorReadingsLatest = MagicMock(return_value=[])
+        mock_api.sensor.getOrganizationSensorReadingsLatest = AsyncMock(return_value=[])
 
         # Mock wireless API
         mock_api.wireless = MagicMock()
-        mock_api.wireless.getNetworkWirelessUsageHistory = MagicMock(return_value=[])
-        mock_api.wireless.getNetworkWirelessClientCountHistory = MagicMock(
+        mock_api.wireless.getNetworkWirelessUsageHistory = AsyncMock(return_value=[])
+        mock_api.wireless.getNetworkWirelessClientCountHistory = AsyncMock(
             return_value=[]
         )
-        mock_api.wireless.getNetworkWirelessSsids = MagicMock(return_value=[])
+        mock_api.wireless.getNetworkWirelessSsids = AsyncMock(return_value=[])
+        mock_api.wireless.getNetworkNetworkHealthChannelUtilization = AsyncMock(
+            return_value=[]
+        )
+        mock_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = AsyncMock(
+            return_value=[]
+        )
+        mock_api.wireless.getDeviceWirelessConnectionStats = AsyncMock(return_value={})
+        mock_api.wireless.getDeviceWirelessLatencyStats = AsyncMock(return_value={})
+        mock_api.wireless.getDeviceWirelessStatus = AsyncMock(return_value={})
         mock_api.devices = MagicMock()
-        mock_api.devices.getDeviceClients = MagicMock(return_value=[])
+        mock_api.devices.getDeviceClients = AsyncMock(return_value=[])
 
         # Mock switch API
         mock_api.switch = MagicMock()
-        mock_api.switch.getOrganizationSwitchPortsStatusesBySwitch = MagicMock(
+        mock_api.switch.getOrganizationSwitchPortsStatusesBySwitch = AsyncMock(
             return_value={}
         )
-        mock_api.switch.getDeviceSwitchPortsStatuses = MagicMock(return_value=[])
+        mock_api.switch.getDeviceSwitchPortsStatuses = AsyncMock(return_value=[])
+        mock_api.switch.getDeviceSwitchPorts = AsyncMock(return_value=[])
+        mock_api.switch.getDeviceSwitchPowerModulesStatuses = AsyncMock(
+            return_value={}
+        )
+        mock_api.switch.getDeviceSwitchPortsStatusesPackets = AsyncMock(
+            return_value={}
+        )
+        mock_api.switch.getNetworkSwitchSettings = AsyncMock(return_value={})
 
         # Store for later access
         self._mock_api = mock_api
@@ -216,7 +257,7 @@ class HubBuilder:
         if not self._mock_api:
             self.build_mock_api()
 
-        hub.api = self._mock_api
+        hub.dashboard = self._mock_api
 
         return hub
 

@@ -28,12 +28,14 @@ def mock_organization_hub():
     org_hub.hass = Mock()
     org_hub.hass.loop = Mock()
     org_hub.hass.loop.time = Mock(return_value=0.0)
-    org_hub.hass.async_add_executor_job = AsyncMock()
     org_hub.dashboard = Mock()
     org_hub.organization_id = "test_org_id"
     org_hub.total_api_calls = 0
     org_hub.failed_api_calls = 0
     org_hub._track_api_call_duration = Mock()
+    org_hub.async_api_call = AsyncMock()
+    org_hub.networks = []
+    org_hub.device_statuses = []
     return org_hub
 
 
@@ -280,8 +282,8 @@ class TestMerakiNetworkHub:
 
     async def test_async_discover_devices_mt_success(self, network_hub):
         """Test successful MT device discovery."""
-        # Mock the async_add_executor_job to return the device data directly
-        network_hub.hass.async_add_executor_job.return_value = [
+        # Mock the organization hub API call to return device data directly
+        network_hub.organization_hub.async_api_call.return_value = [
             {
                 "serial": "device1",
                 "name": "MT Device 1",
@@ -306,8 +308,8 @@ class TestMerakiNetworkHub:
     async def test_async_discover_devices_with_selected_devices(self, network_hub):
         """Test device discovery with selected devices filter."""
         network_hub.config_entry.options = {CONF_SELECTED_DEVICES: ["device1"]}
-        # Mock the async_add_executor_job to return the device data directly
-        network_hub.hass.async_add_executor_job.return_value = [
+        # Mock the async API call to return the device data directly
+        network_hub.organization_hub.async_api_call.return_value = [
             {
                 "serial": "device1",
                 "name": "MT Device 1",
@@ -335,7 +337,7 @@ class TestMerakiNetworkHub:
         await network_hub._async_discover_devices()
 
         # Should not make any API calls
-        network_hub.dashboard.networks.getNetworkDevices.assert_not_called()
+        network_hub.organization_hub.async_api_call.assert_not_called()
 
     async def test_async_discover_devices_skip_too_soon(self, network_hub):
         """Test skipping discovery when called too soon."""
@@ -344,14 +346,14 @@ class TestMerakiNetworkHub:
         await network_hub._async_discover_devices()
 
         # Should not make any API calls
-        network_hub.dashboard.networks.getNetworkDevices.assert_not_called()
+        network_hub.organization_hub.async_api_call.assert_not_called()
 
     async def test_async_discover_devices_api_error(self, network_hub):
         """Test device discovery with API error."""
         from meraki.exceptions import APIError
 
-        # Mock the hass.async_add_executor_job to raise APIError
-        async def mock_api_error(*args):
+        # Mock the async API call to raise APIError
+        async def mock_api_error(*args, **kwargs):
             mock_response = Mock()
             mock_response.status_code = 404
             mock_response.text = '{"message": "Network not found"}'
@@ -360,7 +362,7 @@ class TestMerakiNetworkHub:
                 mock_response,
             )
 
-        network_hub.hass.async_add_executor_job.side_effect = mock_api_error
+        network_hub.organization_hub.async_api_call.side_effect = mock_api_error
 
         await network_hub._async_discover_devices()
 
@@ -371,6 +373,10 @@ class TestMerakiNetworkHub:
         self, mock_organization_hub, mock_config_entry
     ):
         """Test successful wireless data setup."""
+        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+        clear_api_cache()
+
         hub = MerakiNetworkHub(
             organization_hub=mock_organization_hub,
             network_id="test_network_id",
@@ -379,9 +385,18 @@ class TestMerakiNetworkHub:
             config_entry=mock_config_entry,
         )
 
-        # Mock async_add_executor_job to return data directly
-        async def mock_executor_job(func, *args):
-            if "getNetworkWirelessSsids" in str(func):
+        hub.devices = [
+            {
+                "serial": "MR-123",
+                "name": "Test MR Device",
+                "model": "MR36",
+                "networkId": "test_network_id",
+                "productType": "wireless",
+            }
+        ]
+
+        async def mock_api_call(api_call, *args, **kwargs):
+            if "getNetworkWirelessSsids" in str(api_call):
                 return [
                     {
                         "number": 0,
@@ -390,17 +405,13 @@ class TestMerakiNetworkHub:
                         "authMode": "psk",
                     }
                 ]
-            elif "getNetworkDevices" in str(func):
-                return [
-                    {
-                        "serial": "MR-123",
-                        "name": "Test MR Device",
-                        "model": "MR36",
-                    }
-                ]
+            if "getDeviceClients" in str(api_call):
+                return []
+            if "getNetworkNetworkHealthChannelUtilization" in str(api_call):
+                return []
             return {}
 
-        hub.hass.async_add_executor_job.side_effect = mock_executor_job
+        hub.organization_hub.async_api_call.side_effect = mock_api_call
 
         await hub._async_setup_wireless_data()
 
@@ -439,7 +450,7 @@ class TestMerakiNetworkHub:
                 mock_response,
             )
 
-        hub.hass.async_add_executor_job.side_effect = mock_api_error
+        hub.organization_hub.async_api_call.side_effect = mock_api_error
 
         await hub._async_setup_wireless_data()
 
@@ -449,6 +460,10 @@ class TestMerakiNetworkHub:
         self, mock_organization_hub, mock_config_entry
     ):
         """Test successful switch data setup."""
+        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+        clear_api_cache()
+
         hub = MerakiNetworkHub(
             organization_hub=mock_organization_hub,
             network_id="test_network_id",
@@ -457,24 +472,19 @@ class TestMerakiNetworkHub:
             config_entry=mock_config_entry,
         )
 
-        # Mock async_add_executor_job to return data directly
-        async def mock_executor_job(func, *args):
-            if "getNetworkDevices" in str(func):
-                return [
-                    {
-                        "serial": "MS-123",
-                        "name": "Test MS Device",
-                        "model": "MS120",
-                    }
-                ]
-            return []
-
-        hub.hass.async_add_executor_job.side_effect = mock_executor_job
+        hub.devices = [
+            {
+                "serial": "MS-123",
+                "name": "Test MS Device",
+                "model": "MS120",
+                "productType": "switch",
+            }
+        ]
+        hub.organization_hub.async_api_call.return_value = []
 
         await hub._async_setup_switch_data()
 
-        # Since no switch devices are found, switch_data should remain empty
-        # but the method should complete without error
+        # Switch data should still be populated without raising errors
         assert isinstance(hub.switch_data, dict)
 
     async def test_async_setup_switch_data_api_error(
@@ -505,11 +515,20 @@ class TestMerakiNetworkHub:
                 mock_response,
             )
 
-        hub.hass.async_add_executor_job.side_effect = mock_api_error
+        hub.devices = [
+            {
+                "serial": "MS-123",
+                "name": "Test MS Device",
+                "model": "MS120",
+                "productType": "switch",
+            }
+        ]
+        hub.organization_hub.async_api_call.side_effect = mock_api_error
 
         await hub._async_setup_switch_data()
 
-        assert hub.switch_data == {}
+        assert isinstance(hub.switch_data, dict)
+        assert hub.switch_data.get("ports_status") == []
 
     async def test_async_get_sensor_data_mt_success(self, network_hub):
         """Test successful MT sensor data retrieval."""
@@ -542,12 +561,11 @@ class TestMerakiNetworkHub:
                 },
             ]
 
-        with patch.object(
-            network_hub.hass,
-            "async_add_executor_job",
-            side_effect=lambda func, *args: mock_sensor_readings(*args),
-        ):
-            result = await network_hub.async_get_sensor_data()
+        def mock_api_call(_api_call, org_id, *args, **kwargs):
+            return mock_sensor_readings(org_id, kwargs.get("serials", []))
+
+        network_hub.organization_hub.async_api_call.side_effect = mock_api_call
+        result = await network_hub.async_get_sensor_data()
 
         assert len(result) == 2
         assert "device1" in result
@@ -581,10 +599,8 @@ class TestMerakiNetworkHub:
                 mock_response,
             )
 
-        with patch.object(
-            network_hub.hass, "async_add_executor_job", side_effect=mock_api_error
-        ):
-            result = await network_hub.async_get_sensor_data()
+        network_hub.organization_hub.async_api_call.side_effect = mock_api_error
+        result = await network_hub.async_get_sensor_data()
 
         assert result == {}
 
@@ -637,8 +653,8 @@ class TestNetworkHubEdgeCases:
 
     async def test_discover_devices_empty_response(self, network_hub):
         """Test device discovery with empty API response."""
-        # Mock the async_add_executor_job to return empty device list
-        network_hub.hass.async_add_executor_job.return_value = []
+        # Mock the organization hub API call to return empty device list
+        network_hub.organization_hub.async_api_call.return_value = []
 
         await network_hub._async_discover_devices()
 
@@ -647,8 +663,8 @@ class TestNetworkHubEdgeCases:
 
     async def test_discover_devices_mixed_product_types(self, network_hub):
         """Test device discovery filters by product type."""
-        # Mock the async_add_executor_job to return the device data directly
-        network_hub.hass.async_add_executor_job.return_value = [
+        # Mock the organization hub API call to return the device data directly
+        network_hub.organization_hub.async_api_call.return_value = [
             {
                 "serial": "device1",
                 "name": "MT Device",
@@ -684,7 +700,7 @@ class TestNetworkHubEdgeCases:
             config_entry=mock_config_entry,
         )
 
-        hub.hass.async_add_executor_job.return_value = [
+        hub.organization_hub.async_api_call.return_value = [
             {
                 "serial": "device1",
                 "name": "CW AP",
@@ -720,12 +736,11 @@ class TestNetworkHubEdgeCases:
         network_hub.event_service = Mock()
         network_hub.event_service.track_sensor_changes = AsyncMock()
 
-        with patch.object(
-            network_hub.hass,
-            "async_add_executor_job",
-            side_effect=lambda func, *args: mock_sensor_readings(*args),
-        ):
-            await network_hub.async_get_sensor_data()
+        def mock_api_call(_api_call, org_id, *args, **kwargs):
+            return mock_sensor_readings(org_id, kwargs.get("serials", []))
+
+        network_hub.organization_hub.async_api_call.side_effect = mock_api_call
+        await network_hub.async_get_sensor_data()
 
         # Should call event service
         network_hub.event_service.track_sensor_changes.assert_called_once()
@@ -746,8 +761,8 @@ class TestNetworkHubEdgeCases:
 
     async def test_device_sanitization(self, network_hub):
         """Test device data sanitization during discovery."""
-        # Mock the async_add_executor_job to return the device data directly
-        network_hub.hass.async_add_executor_job.return_value = [
+        # Mock the organization hub API call to return the device data directly
+        network_hub.organization_hub.async_api_call.return_value = [
             {
                 "serial": "device1",
                 "name": "MT@Device#1",  # Contains special characters

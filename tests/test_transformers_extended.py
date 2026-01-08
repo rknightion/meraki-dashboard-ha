@@ -1,25 +1,28 @@
 """Extended data transformer tests using pytest-homeassistant-custom-component."""
 
-
 from custom_components.meraki_dashboard.const import (
     MR_SENSOR_CLIENT_COUNT,
     MR_SENSOR_MEMORY_USAGE,
     MS_SENSOR_MEMORY_USAGE,
     MS_SENSOR_PORT_COUNT,
-    MV_SENSOR_DETECTIONS_TOTAL,
-    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
-    MV_SENSOR_QUALITY,
     MT_SENSOR_BATTERY,
     MT_SENSOR_CO2,
     MT_SENSOR_DOOR,
     MT_SENSOR_HUMIDITY,
     MT_SENSOR_TEMPERATURE,
+    MV_SENSOR_DETECTIONS_TOTAL,
+    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
+    MV_SENSOR_QUALITY,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
+    MV_SENSOR_RECORDING_STATUS,
+    MV_SENSOR_STORAGE_USAGE_PERCENT,
 )
 from custom_components.meraki_dashboard.data.transformers import (
     MRWirelessDataTransformer,
     MSSwitchDataTransformer,
-    MVCameraDataTransformer,
     MTSensorDataTransformer,
+    MVCameraDataTransformer,
     OrganizationDataTransformer,
     transformer_registry,
 )
@@ -352,6 +355,25 @@ class TestMVCameraDataTransformer:
 
         assert result[MV_SENSOR_DETECTIONS_TOTAL] == 7
 
+    def test_transform_camera_motion_and_storage(self, load_json_fixture):
+        """Test MV camera motion and storage transformation."""
+        device_data = {
+            "serial": "Q2MV-TEST-0003",
+            "senseSettings": load_json_fixture("camera_sense_settings.json"),
+            "analyticsRecent": load_json_fixture("camera_analytics_recent.json"),
+            "analyticsLive": load_json_fixture("camera_analytics_live.json"),
+            "qualityAndRetention": {"motionBasedRetentionEnabled": True},
+            "storageUsagePercent": 0.55,
+        }
+
+        transformer = MVCameraDataTransformer()
+        result = transformer.transform(device_data)
+
+        assert result[MV_SENSOR_MOTION_DETECTION_ENABLED] == 1
+        assert result[MV_SENSOR_RECENT_MOTION_DETECTED] == 1
+        assert result[MV_SENSOR_RECORDING_STATUS] == "motion_based"
+        assert result[MV_SENSOR_STORAGE_USAGE_PERCENT] == 55.0
+
 
 class TestOrganizationDataTransformer:
     """Test organization data transformation."""
@@ -609,3 +631,4 @@ class TestTransformerUnitConversions:
         # Percentage should be between 0-100
         if MT_SENSOR_HUMIDITY in result:
             assert 0 <= result[MT_SENSOR_HUMIDITY] <= 100
+

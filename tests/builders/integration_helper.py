@@ -1,9 +1,9 @@
 """Integration test helper for simplified test setup."""
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -62,13 +62,11 @@ class IntegrationTestHelper:
         else:
             hub_builder.with_selected_device_types(["MT", "MR", "MS", "MV"])
 
-        # Create config entry
+        # Create config entry and add to hass using internal registry
         self._config_entry = hub_builder.build_config_entry(self.hass)
-        # Add to hass using the proper method
         self.hass.config_entries._entries[self._config_entry.entry_id] = (
             self._config_entry
         )
-        # Properly initialize domain index if it doesn't exist
         if not hasattr(self.hass.config_entries, "_domain_index"):
             self.hass.config_entries._domain_index = {}
         self.hass.config_entries._domain_index.setdefault(DOMAIN, []).append(
@@ -83,10 +81,6 @@ class IntegrationTestHelper:
             self._devices = devices
             self._mock_api.organizations.getOrganizationDevices.return_value = devices
 
-            # Also set up getNetworkDevices to return devices for the network
-            # This is needed for network hub creation
-            self._mock_api.networks.getNetworkDevices.return_value = devices
-
             # Create device statuses
             statuses = []
             for device in devices:
@@ -98,12 +92,16 @@ class IntegrationTestHelper:
                     .build()
                 )
                 statuses.append(status)
-            self._mock_api.organizations.getOrganizationDevicesStatuses.return_value = (
+            self._mock_api.organizations.getOrganizationDevicesAvailabilities.return_value = (
                 statuses
             )
 
         # Set up the integration
-        with patch("meraki.DashboardAPI", return_value=self._mock_api):
+        async_api_mock = AsyncMock()
+        async_api_mock.__aenter__.return_value = self._mock_api
+        async_api_mock.__aexit__.return_value = None
+
+        with patch("meraki.aio.AsyncDashboardAPI", return_value=async_api_mock):
             # Mock the platform setup functions
             with patch(
                 "custom_components.meraki_dashboard.sensor.async_setup_entry",
@@ -117,16 +115,24 @@ class IntegrationTestHelper:
                         "custom_components.meraki_dashboard.button.async_setup_entry",
                         return_value=True,
                     ):
+                        # Mark entry as being set up to satisfy HA lifecycle checks
+                        self._config_entry._async_set_state(
+                            self.hass, ConfigEntryState.SETUP_IN_PROGRESS, None
+                        )
+
                         # Import and call async_setup_entry directly
                         from custom_components.meraki_dashboard import async_setup_entry
 
                         result = await async_setup_entry(self.hass, self._config_entry)
-                        # The result indicates if setup was successful
+                        await self.hass.async_block_till_done()
                         if not result:
                             raise RuntimeError(
                                 "Failed to set up integration - async_setup_entry returned False"
                             )
-                        await self.hass.async_block_till_done()
+
+                        self._config_entry._async_set_state(
+                            self.hass, ConfigEntryState.LOADED, None
+                        )
 
             # The config entry state is managed internally by Home Assistant
             # We don't need to set it manually

@@ -81,6 +81,7 @@ class MerakiMVCameraRtspSwitch(MerakiSwitchEntity):
         config_entry_id: str,
         network_hub: Any,
     ) -> None:
+        """Initialize the MV external RTSP switch."""
         description = SwitchEntityDescription(
             key="rtsp",
             name="External RTSP",

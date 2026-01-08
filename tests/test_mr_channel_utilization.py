@@ -49,6 +49,8 @@ def mock_mr_hub():
     # Mock organization hub
     org_hub = MagicMock()
     org_hub.device_memory_usage = {}
+    org_hub.device_statuses = []
+    org_hub.async_api_call = AsyncMock()
     hub.organization_hub = org_hub
 
     return hub
@@ -94,6 +96,7 @@ async def test_channel_utilization_api_call(mock_mr_hub):
     """Test channel utilization API call in network hub."""
     # Import the function we need to test
     from custom_components.meraki_dashboard.hubs.network import MerakiNetworkHub
+    from custom_components.meraki_dashboard.utils.cache import clear_api_cache
 
     # Create a real network hub instance
     hub = MerakiNetworkHub(
@@ -104,10 +107,8 @@ async def test_channel_utilization_api_call(mock_mr_hub):
         MagicMock(),
     )
     hub.dashboard = mock_mr_hub.dashboard
-    hub.hass = MagicMock()
-    hub.hass.async_add_executor_job = AsyncMock(
-        side_effect=lambda func, *args: func(*args)
-    )
+
+    clear_api_cache()
 
     # Create mock API response
     mock_channel_data = [
@@ -160,9 +161,7 @@ async def test_channel_utilization_api_call(mock_mr_hub):
     ]
 
     # Mock the API call
-    hub.dashboard.networks.getNetworkNetworkHealthChannelUtilization = MagicMock(
-        return_value=mock_channel_data
-    )
+    hub.organization_hub.async_api_call.return_value = mock_channel_data
 
     # Call the method
     channel_data = await hub._async_get_channel_utilization([])
@@ -270,6 +269,7 @@ async def test_channel_utilization_in_wireless_data_setup(mock_mr_hub):
     """Test that channel utilization is fetched during wireless data setup."""
     # Import the class we need to test
     from custom_components.meraki_dashboard.hubs.network import MerakiNetworkHub
+    from custom_components.meraki_dashboard.utils.cache import clear_api_cache
 
     # Create a real network hub instance
     hub = MerakiNetworkHub(
@@ -280,13 +280,18 @@ async def test_channel_utilization_in_wireless_data_setup(mock_mr_hub):
         MagicMock(),
     )
     hub.dashboard = mock_mr_hub.dashboard
-    hub.hass = MagicMock()
-    hub.hass.async_add_executor_job = AsyncMock(
-        side_effect=lambda func, *args: func(*args)
-    )
+
+    clear_api_cache()
 
     # Mock API responses
-    mock_devices = [{"serial": "Q3AB-QLZS-GCWH", "model": "MR56", "name": "Test AP"}]
+    mock_devices = [
+        {
+            "serial": "Q3AB-QLZS-GCWH",
+            "model": "MR56",
+            "name": "Test AP",
+            "productType": "wireless",
+        }
+    ]
     mock_channel_data = [
         {
             "serial": "Q3AB-QLZS-GCWH",
@@ -296,12 +301,18 @@ async def test_channel_utilization_in_wireless_data_setup(mock_mr_hub):
         }
     ]
 
-    hub.dashboard.networks.getNetworkDevices = MagicMock(return_value=mock_devices)
-    hub.dashboard.wireless.getNetworkWirelessSsids = MagicMock(return_value=[])
-    hub.dashboard.devices.getDeviceClients = MagicMock(return_value=[])
-    hub.dashboard.networks.getNetworkNetworkHealthChannelUtilization = MagicMock(
-        return_value=mock_channel_data
-    )
+    hub.devices = mock_devices
+
+    async def mock_api_call(api_call, *args, **kwargs):
+        if "getNetworkWirelessSsids" in str(api_call):
+            return []
+        if "getDeviceClients" in str(api_call):
+            return []
+        if "getNetworkNetworkHealthChannelUtilization" in str(api_call):
+            return mock_channel_data
+        return {}
+
+    hub.organization_hub.async_api_call.side_effect = mock_api_call
 
     # Run wireless data setup
     await hub._async_setup_wireless_data()

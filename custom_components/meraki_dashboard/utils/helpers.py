@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 
 
 async def batch_api_calls(
-    hass: HomeAssistant,
+    _hass: HomeAssistant | None,
     api_calls: list[tuple[Callable, tuple, dict]],
     max_concurrent: int = 5,
     delay_between_batches: float = 0.1,
@@ -29,18 +29,21 @@ async def batch_api_calls(
     """
     results = []
 
+    async def _invoke(func: Callable, args: tuple, kwargs: dict) -> Any:
+        if kwargs:
+            func = functools.partial(func, **kwargs)
+        result = func(*args)
+        if asyncio.iscoroutine(result):
+            return await result
+        return result
+
     # Process in batches
     for i in range(0, len(api_calls), max_concurrent):
         batch = api_calls[i : i + max_concurrent]
-        batch_tasks = []
-
-        for func, args, kwargs in batch:
-            # Use functools.partial to bind kwargs since async_add_executor_job
-            # only accepts positional arguments
-            if kwargs:
-                func = functools.partial(func, **kwargs)
-            task = hass.async_add_executor_job(func, *args)
-            batch_tasks.append(task)
+        batch_tasks = [
+            asyncio.create_task(_invoke(func, args, kwargs))
+            for func, args, kwargs in batch
+        ]
 
         # Wait for batch to complete
         batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)

@@ -20,7 +20,10 @@ from .const import (
     SENSOR_TYPE_MV,
 )
 from .devices.mr import MR_NETWORK_SENSOR_DESCRIPTIONS, MR_SENSOR_DESCRIPTIONS
-from .devices.ms import MS_DEVICE_SENSOR_DESCRIPTIONS, MS_NETWORK_SENSOR_DESCRIPTIONS
+from .devices.ms import (
+    MS_DEVICE_SENSOR_DESCRIPTIONS,
+    MS_NETWORK_SENSOR_DESCRIPTIONS,
+)
 from .devices.mt import MT_ENERGY_SENSOR_DESCRIPTIONS, MT_SENSOR_DESCRIPTIONS
 from .devices.mv import MV_SENSOR_DESCRIPTIONS
 from .devices.organization import (

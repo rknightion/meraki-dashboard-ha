@@ -203,10 +203,10 @@ class TestMerakiMRSensors:
         for description in MR_SENSOR_DESCRIPTIONS.values():
             # All MR sensors should have a state class
             assert description.state_class is not None
-            assert description.state_class in [
+            assert description.state_class in {
                 SensorStateClass.MEASUREMENT,
                 SensorStateClass.TOTAL_INCREASING,
-            ]
+            }
 
     async def test_mr_device_sensor_unique_id_generation(
         self, hass, mock_mr_coordinator, mock_mr_device

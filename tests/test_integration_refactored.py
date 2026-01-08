@@ -3,10 +3,16 @@
 This demonstrates how test builders simplify integration testing.
 """
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.meraki_dashboard.const import DOMAIN
+from custom_components.meraki_dashboard.const import (
+    DOMAIN,
+    ENTITY_REMOVAL_MIN_DISCOVERY_PASSES,
+)
+from custom_components.meraki_dashboard.utils.device_info import create_device_info
 from tests.builders import (
     IntegrationTestHelper,
     MerakiDeviceBuilder,
@@ -99,31 +105,33 @@ class TestIntegrationSetupWithBuilders:
         mock_response.text = '{"message": "Internal Server Error"}'
 
         # Create mock API that raises APIError on getOrganization
-        def mock_dashboard_init(*args, **kwargs):
-            mock_api = MagicMock()
-            mock_api.organizations = MagicMock()
-            mock_api.organizations.getOrganization.side_effect = APIError(
-                {
-                    "message": "Internal Server Error",
-                    "status": 500,
-                    "tags": ["organizations"],
-                },
-                mock_response,
-            )
-            # Set up other required mocks
-            mock_api.organizations.getOrganizationNetworks.return_value = []
-            mock_api.organizations.getOrganizationDevices.return_value = []
-            mock_api.organizations.getOrganizationDevicesStatuses.return_value = []
-            return mock_api
+        mock_api = MagicMock()
+        mock_api.organizations = MagicMock()
+        mock_api.organizations.getOrganization.side_effect = APIError(
+            {
+                "message": "Internal Server Error",
+                "status": 500,
+                "operation": "getOrganization",
+                "tags": ["organizations"],
+            },
+            mock_response,
+        )
+        # Set up other required mocks
+        mock_api.organizations.getOrganizationNetworks.return_value = []
+        mock_api.organizations.getOrganizationDevices.return_value = []
+        mock_api.organizations.getOrganizationDevicesAvailabilities.return_value = []
+        mock_api.organizations.getOrganizationDevicesStatusesOverview.return_value = {
+            "counts": {"byStatus": {}}
+        }
 
-        # Patch the DashboardAPI constructor
-        with patch("meraki.DashboardAPI", side_effect=mock_dashboard_init):
-            # Setup should complete but org hub setup will fail
-            config_entry = await helper.setup_meraki_integration(
-                organization_id="123456"
-            )
-            # The integration should still be created, but with errors logged
-            assert config_entry is not None
+        # Patch the mock API builder to inject our erroring API
+        with patch(
+            "tests.builders.integration_helper.HubBuilder.build_mock_api",
+            return_value=mock_api,
+        ):
+            # Setup should fail when the organization lookup errors
+            with pytest.raises(RuntimeError, match="Failed to set up integration"):
+                await helper.setup_meraki_integration(organization_id="123456")
 
     @pytest.mark.asyncio
     async def test_unload_integration(self, hass: HomeAssistant):
@@ -226,6 +234,104 @@ class TestEntityCreationWithBuilders:
         assert (
             mock_api.sensor.getOrganizationSensorReadingsLatest.return_value is not None
         )
+
+    @pytest.mark.asyncio
+    async def test_entity_registry_cleanup_on_device_removal(
+        self, hass: HomeAssistant
+    ):
+        """Test entity registry cleanup when a device is removed."""
+        helper = IntegrationTestHelper(hass)
+
+        device = await helper.create_mt_device_with_sensors(
+            serial="MT-ORPHAN-001",
+            metrics=["temperature", "humidity"],
+        )
+
+        await helper.setup_meraki_integration(
+            devices=[device], selected_device_types=["MT"]
+        )
+        await helper.trigger_coordinator_update()
+
+        device_registry = helper.get_device_registry()
+        entity_registry = helper.get_entity_registry()
+        entry_id = helper._config_entry.entry_id
+        device_serial = device["serial"]
+
+        network_hubs = helper.get_all_network_hubs()
+        assert network_hubs
+        hub = next(iter(network_hubs.values()))
+
+        hub_identifier = (DOMAIN, f"{hub.network_id}_{hub.device_type}")
+        hub_device_entry = device_registry.async_get_device(
+            identifiers={hub_identifier}
+        )
+        assert hub_device_entry is not None
+
+        device_info = create_device_info(
+            device,
+            entry_id,
+            hub.network_id,
+            hub.device_type,
+            None,
+        )
+        device_entry = device_registry.async_get_or_create(
+            config_entry_id=entry_id, **device_info
+        )
+        if device_entry.via_device_id != hub_device_entry.id:
+            device_entry = device_registry.async_update_device(
+                device_entry.id, via_device_id=hub_device_entry.id
+            ) or device_entry
+        entity_registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            f"{entry_id}_{device_serial}_temperature",
+            config_entry=helper._config_entry,
+            device_id=device_entry.id,
+            suggested_object_id=f"{device_serial.lower()}_temperature",
+        )
+
+        before_entries = [
+            entry
+            for entry in entity_registry.entities.values()
+            if entry.config_entry_id == entry_id
+            and device_serial in (entry.unique_id or "")
+        ]
+        assert before_entries
+
+        hub.devices = []
+
+        coordinator = next(
+            iter(hass.data[DOMAIN][entry_id]["coordinators"].values())
+        )
+        base_time = (hub._last_discovery_time or datetime.now(UTC)) + timedelta(
+            seconds=1
+        )
+        for offset in range(ENTITY_REMOVAL_MIN_DISCOVERY_PASSES - 1):
+            hub._last_discovery_time = base_time + timedelta(seconds=offset)
+            await coordinator._async_cleanup_entity_registry()
+
+            entity_registry = helper.get_entity_registry()
+            still_present_entries = [
+                entry
+                for entry in entity_registry.entities.values()
+                if entry.config_entry_id == entry_id
+                and device_serial in (entry.unique_id or "")
+            ]
+            assert still_present_entries
+
+        hub._last_discovery_time = base_time + timedelta(
+            seconds=ENTITY_REMOVAL_MIN_DISCOVERY_PASSES
+        )
+        await coordinator._async_cleanup_entity_registry()
+
+        entity_registry = helper.get_entity_registry()
+        after_entries = [
+            entry
+            for entry in entity_registry.entities.values()
+            if entry.config_entry_id == entry_id
+            and device_serial in (entry.unique_id or "")
+        ]
+        assert not after_entries
 
     @pytest.mark.asyncio
     async def test_button_entities_created(self, hass: HomeAssistant):

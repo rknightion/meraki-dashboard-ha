@@ -119,6 +119,10 @@ These sensors provide organization-wide diagnostic information:
 | Name | Key | Unit | State Class | Category | Icon | Precision |
 |----------|----------|----------|----------|----------|----------|----------|
 | API Calls | api_calls | - | TOTAL_INCREASING | DIAGNOSTIC | mdi:api | - |
+| API Calls per Minute | api_calls_per_minute | calls/min | MEASUREMENT | DIAGNOSTIC | mdi:timer-outline | - |
+| API Rate Limit Queue Depth | api_rate_limit_queue_depth | requests | MEASUREMENT | DIAGNOSTIC | mdi:format-list-numbered | - |
+| API Throttle Events (1h) | api_throttle_events | events | MEASUREMENT | DIAGNOSTIC | mdi:clock-alert-outline | - |
+| API Throttle Wait Time | api_throttle_wait_seconds_total | s | TOTAL_INCREASING | DIAGNOSTIC | mdi:timer-sand | - |
 | Alerting Devices | alerting_devices | - | MEASUREMENT | DIAGNOSTIC | mdi:alert-circle | - |
 | Average Client Usage (24h) | clients_usage_average_total | KB | MEASUREMENT | DIAGNOSTIC | mdi:chart-bell-curve | 2 |
 | Device Count | device_count | - | MEASUREMENT | DIAGNOSTIC | mdi:counter | - |
@@ -147,21 +151,23 @@ These sensors provide per-network hub diagnostic information:
 
 ### Mv Sensor Descriptions
 
-| Name | Key | State Class | Category | Icon |
-|----------|----------|----------|----------|----------|
-| Audio Recording | audio_recording_enabled | - | DIAGNOSTIC | mdi:microphone |
-| Custom Analytics Artifact | custom_analytics_artifact_id | - | DIAGNOSTIC | mdi:identifier |
-| Custom Analytics Enabled | custom_analytics_enabled | - | DIAGNOSTIC | mdi:chart-box |
-| Detections (Person) | detections_person | MEASUREMENT | - | mdi:walk |
-| Detections (Total) | detections_total | MEASUREMENT | - | mdi:counter |
-| Detections (Vehicle) | detections_vehicle | MEASUREMENT | - | mdi:car |
-| External RTSP Enabled | external_rtsp_enabled | - | DIAGNOSTIC | mdi:cctv |
-| Motion Detector Version | motion_detector_version | - | DIAGNOSTIC | mdi:tag |
-| Motion-Based Retention | motion_based_retention_enabled | - | DIAGNOSTIC | mdi:motion-sensor |
-| Restricted Bandwidth Mode | restricted_bandwidth_mode_enabled | - | DIAGNOSTIC | mdi:network-strength-1 |
-| Retention Profile ID | retention_profile_id | - | DIAGNOSTIC | mdi:archive |
-| Video Quality | quality | - | DIAGNOSTIC | mdi:camera |
-| Video Resolution | resolution | - | DIAGNOSTIC | mdi:image-size-select-large |
+| Name | Key | Unit | State Class | Category | Icon | Precision |
+|----------|----------|----------|----------|----------|----------|----------|
+| Audio Recording | audio_recording_enabled | - | - | DIAGNOSTIC | mdi:microphone | - |
+| Custom Analytics Artifact | custom_analytics_artifact_id | - | - | DIAGNOSTIC | mdi:identifier | - |
+| Custom Analytics Enabled | custom_analytics_enabled | - | - | DIAGNOSTIC | mdi:chart-box | - |
+| Detections (Person) | detections_person | - | MEASUREMENT | - | mdi:walk | - |
+| Detections (Total) | detections_total | - | MEASUREMENT | - | mdi:counter | - |
+| Detections (Vehicle) | detections_vehicle | - | MEASUREMENT | - | mdi:car | - |
+| External RTSP Enabled | external_rtsp_enabled | - | - | DIAGNOSTIC | mdi:cctv | - |
+| Motion Detector Version | motion_detector_version | - | - | DIAGNOSTIC | mdi:tag | - |
+| Motion-Based Retention | motion_based_retention_enabled | - | - | DIAGNOSTIC | mdi:motion-sensor | - |
+| Recording Status | recording_status | - | - | DIAGNOSTIC | mdi:record-rec | - |
+| Restricted Bandwidth Mode | restricted_bandwidth_mode_enabled | - | - | DIAGNOSTIC | mdi:network-strength-1 | - |
+| Retention Profile ID | retention_profile_id | - | - | DIAGNOSTIC | mdi:archive | - |
+| Storage Usage | storage_usage_percent | % | MEASUREMENT | DIAGNOSTIC | mdi:harddisk | 1 |
+| Video Quality | quality | - | - | DIAGNOSTIC | mdi:camera | - |
+| Video Resolution | resolution | - | - | DIAGNOSTIC | mdi:image-size-select-large | - |
 
 
 ## Binary Sensors
@@ -174,6 +180,14 @@ These sensors provide per-network hub diagnostic information:
 | Downstream Power | downstreamPower | POWER | mdi:power-plug |
 | Remote Lockout Switch | remoteLockoutSwitch | LOCK | mdi:lock |
 | Water Detected | water | MOISTURE | mdi:water-alert |
+
+
+### Mv Binary Sensor Descriptions
+
+| Name | Key | Device Class | Category | Icon |
+|----------|----------|----------|----------|----------|
+| Motion Detection Enabled | motion_detection_enabled | - | DIAGNOSTIC | mdi:motion-sensor |
+| Recent Motion Detected | recent_motion_detected | MOTION | - | mdi:motion-sensor |
 
 
 ## Buttons
@@ -190,8 +204,8 @@ Totals by platform:
 
 | Platform | Count |
 |----------|----------|
-| Sensors | 75 |
-| Binary Sensors | 4 |
+| Sensors | 81 |
+| Binary Sensors | 6 |
 | Buttons | 2 |
 
 Totals by device type:
@@ -201,7 +215,7 @@ Totals by device type:
 | MT | 16 | 4 | 20 |
 | MR | 14 | 0 | 14 |
 | MS | 15 | 0 | 15 |
-| MV | 13 | 0 | 13 |
+| MV | 15 | 2 | 17 |
 
 Breakdown by description dictionary:
 
@@ -213,10 +227,11 @@ Breakdown by description dictionary:
 | MS_NETWORK_SENSOR_DESCRIPTIONS | 5 |
 | MT_ENERGY_SENSOR_DESCRIPTIONS | 1 |
 | MT_SENSOR_DESCRIPTIONS | 15 |
-| MV_SENSOR_DESCRIPTIONS | 13 |
+| MV_SENSOR_DESCRIPTIONS | 15 |
 | NETWORK_HUB_SENSOR_DESCRIPTIONS | 1 |
-| ORG_HUB_SENSOR_DESCRIPTIONS | 16 |
+| ORG_HUB_SENSOR_DESCRIPTIONS | 20 |
 | MT_BINARY_SENSOR_DESCRIPTIONS | 4 |
+| MV_BINARY_SENSOR_DESCRIPTIONS | 2 |
 
 ## Entity Attributes
 

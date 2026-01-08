@@ -43,6 +43,9 @@ from .performance import (
     reset_performance_metrics,
 )
 
+# Import from rate limiter module
+from .rate_limiter import MerakiRateLimiter
+
 # Import from retry module
 from .retry import with_standard_retries
 
@@ -84,6 +87,8 @@ __all__ = [
     "get_performance_metrics",
     "performance_monitor",
     "reset_performance_metrics",
+    # Rate limiter
+    "MerakiRateLimiter",
     # Retry
     "with_standard_retries",
     # Sanitization

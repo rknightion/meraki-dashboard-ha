@@ -10,7 +10,7 @@ import pytest
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from meraki.exceptions import APIError
+from meraki.exceptions import APIError, AsyncAPIError
 
 from custom_components.meraki_dashboard.const import (
     CONF_BASE_URL,
@@ -24,6 +24,14 @@ from custom_components.meraki_dashboard.hubs.organization import (
     MerakiOrganizationHub,
     _configure_third_party_logging,
 )
+
+
+def _async_api_context(api_instance: Mock) -> AsyncMock:
+    """Create AsyncDashboardAPI context manager mock."""
+    async_api_mock = AsyncMock()
+    async_api_mock.__aenter__.return_value = api_instance
+    async_api_mock.__aexit__.return_value = None
+    return async_api_mock
 
 
 def create_mock_api_error(message: str, status: int) -> APIError:
@@ -42,6 +50,22 @@ def create_mock_api_error(message: str, status: int) -> APIError:
     }
 
     return APIError(error_data, mock_response)
+
+
+def create_mock_async_api_error(message: str, status: int) -> AsyncAPIError:
+    """Create a mock AsyncAPIError with proper response object."""
+    mock_response = Mock()
+    mock_response.status = status
+    mock_response.reason = "Error"
+
+    error_data = {
+        "message": message,
+        "status": status,
+        "operation": "test_operation",
+        "tags": ["organizations"],
+    }
+
+    return AsyncAPIError(error_data, mock_response, message)
 
 
 @pytest.fixture
@@ -66,13 +90,29 @@ def mock_dashboard_api():
     dashboard.networks = Mock()
     dashboard.licensing = Mock()
     dashboard.administered = Mock()
-    dashboard.organizations.getOrganizationDevicesStatuses = Mock()
-    dashboard.organizations.getOrganizationDevicesStatusesOverview = Mock(
+    dashboard.organizations.getOrganization = AsyncMock(
+        return_value={"id": "test_org_id", "name": "Test Org"}
+    )
+    dashboard.organizations.getOrganizationNetworks = AsyncMock(return_value=[])
+    dashboard.organizations.getOrganizationDevices = AsyncMock(return_value=[])
+    dashboard.organizations.getOrganizationDevicesAvailabilities = AsyncMock(
+        return_value=[]
+    )
+    dashboard.organizations.getOrganizationDevicesStatusesOverview = AsyncMock(
         return_value={
             "counts": {
                 "byStatus": {"online": 10, "offline": 2, "alerting": 1, "dormant": 0}
             }
         }
+    )
+    dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork = (
+        AsyncMock(return_value={"items": []})
+    )
+    dashboard.organizations.getOrganizationAssuranceAlertsOverview = AsyncMock(
+        return_value={"counts": {"total": 0}}
+    )
+    dashboard.organizations.getOrganizationClientsOverview = AsyncMock(
+        return_value={"counts": {"total": 0}, "usage": {"overall": {}, "average": 0}}
     )
     return dashboard
 
@@ -140,12 +180,14 @@ class TestMerakiOrganizationHub:
         assert len(organization_hub._api_call_durations) == 100
         assert organization_hub._api_call_durations[0] == 1.0  # First should be removed
 
-    @patch("custom_components.meraki_dashboard.hubs.organization.meraki.DashboardAPI")
+    @patch(
+        "custom_components.meraki_dashboard.hubs.organization.meraki.aio.AsyncDashboardAPI"
+    )
     async def test_async_setup_success(
         self, mock_dashboard_class, organization_hub, mock_dashboard_api
     ):
         """Test successful organization hub setup."""
-        mock_dashboard_class.return_value = mock_dashboard_api
+        mock_dashboard_class.return_value = _async_api_context(mock_dashboard_api)
         mock_dashboard_api.organizations.getOrganization.return_value = {
             "id": "test_org_id",
             "name": "Test Organization",
@@ -164,9 +206,7 @@ class TestMerakiOrganizationHub:
         assert organization_hub.dashboard is mock_dashboard_api
         assert organization_hub.organization_name == "Test Organization"
         assert len(organization_hub.networks) == 1
-        assert (
-            organization_hub.total_api_calls >= 2
-        )  # getOrganization + getOrganizationNetworks + additional data fetching
+        assert organization_hub.total_api_calls >= 2
 
         # Verify API client was configured correctly
         mock_dashboard_class.assert_called_once_with(
@@ -177,17 +217,21 @@ class TestMerakiOrganizationHub:
             print_console=False,
             output_log=False,
             suppress_logging=True,
+            maximum_concurrent_requests=5,
+            wait_on_rate_limit=True,
         )
 
         # Clean up timer to avoid lingering tasks
         await organization_hub.async_unload()
 
-    @patch("custom_components.meraki_dashboard.hubs.organization.meraki.DashboardAPI")
+    @patch(
+        "custom_components.meraki_dashboard.hubs.organization.meraki.aio.AsyncDashboardAPI"
+    )
     async def test_async_setup_auth_failure(
         self, mock_dashboard_class, organization_hub, mock_dashboard_api
     ):
         """Test setup with authentication failure."""
-        mock_dashboard_class.return_value = mock_dashboard_api
+        mock_dashboard_class.return_value = _async_api_context(mock_dashboard_api)
         mock_dashboard_api.organizations.getOrganization.side_effect = (
             create_mock_api_error("Invalid API key", 401)
         )
@@ -198,12 +242,14 @@ class TestMerakiOrganizationHub:
         assert organization_hub.failed_api_calls == 1
         assert "Invalid API key" in organization_hub.last_api_call_error
 
-    @patch("custom_components.meraki_dashboard.hubs.organization.meraki.DashboardAPI")
+    @patch(
+        "custom_components.meraki_dashboard.hubs.organization.meraki.aio.AsyncDashboardAPI"
+    )
     async def test_async_setup_connection_error(
         self, mock_dashboard_class, organization_hub, mock_dashboard_api
     ):
         """Test setup with connection error."""
-        mock_dashboard_class.return_value = mock_dashboard_api
+        mock_dashboard_class.return_value = _async_api_context(mock_dashboard_api)
         mock_dashboard_api.organizations.getOrganization.side_effect = (
             create_mock_api_error("Connection timeout", 500)
         )
@@ -214,7 +260,9 @@ class TestMerakiOrganizationHub:
         assert organization_hub.failed_api_calls == 1
         assert "Connection timeout" in organization_hub.last_api_call_error
 
-    @patch("custom_components.meraki_dashboard.hubs.organization.meraki.DashboardAPI")
+    @patch(
+        "custom_components.meraki_dashboard.hubs.organization.meraki.aio.AsyncDashboardAPI"
+    )
     async def test_async_setup_general_exception(
         self, mock_dashboard_class, organization_hub
     ):
@@ -224,7 +272,7 @@ class TestMerakiOrganizationHub:
         with pytest.raises(ConfigEntryNotReady):
             await organization_hub.async_setup()
 
-        assert organization_hub.failed_api_calls == 1
+        assert organization_hub.failed_api_calls == 0
         assert "General error" in organization_hub.last_api_call_error
 
     @patch("custom_components.meraki_dashboard.hubs.network.MerakiNetworkHub")
@@ -246,21 +294,39 @@ class TestMerakiOrganizationHub:
             },
         ]
 
-        # Mock getNetworkDevices to return appropriate devices for each network
-        def mock_get_network_devices(network_id):
-            if network_id == "network1":
-                return [
-                    {"serial": "device1", "model": "MR36", "productType": "wireless"},
-                    {"serial": "device2", "model": "MS220", "productType": "switch"},
-                ]
-            elif network_id == "network2":
-                return [
-                    {"serial": "device3", "model": "MT40", "productType": "sensor"},
-                ]
-            return []
+        # Mock getOrganizationDevices to return appropriate devices for each network
+        async def mock_get_org_devices(_org_id, network_ids=None, **_kwargs):
+            network_ids = network_ids or _kwargs.get("networkIds") or []
+            devices = []
+            if "network1" in network_ids:
+                devices.extend(
+                    [
+                        {
+                            "serial": "device1",
+                            "model": "MR36",
+                            "productType": "wireless",
+                        },
+                        {
+                            "serial": "device2",
+                            "model": "MS220",
+                            "productType": "switch",
+                        },
+                    ]
+                )
+            if "network2" in network_ids:
+                devices.extend(
+                    [
+                        {
+                            "serial": "device3",
+                            "model": "MT40",
+                            "productType": "sensor",
+                        },
+                    ]
+                )
+            return devices
 
-        mock_dashboard_api.networks.getNetworkDevices.side_effect = (
-            mock_get_network_devices
+        mock_dashboard_api.organizations.getOrganizationDevices.side_effect = (
+            mock_get_org_devices
         )
 
         mock_network_hub = Mock()
@@ -314,8 +380,8 @@ class TestMerakiOrganizationHub:
             }
         ]
 
-        # Mock getNetworkDevices to return devices
-        mock_dashboard_api.networks.getNetworkDevices.return_value = [
+        # Mock getOrganizationDevices to return devices
+        mock_dashboard_api.organizations.getOrganizationDevices.return_value = [
             {"serial": "device1", "model": "MR36", "productType": "wireless"},
         ]
 
@@ -339,6 +405,9 @@ class TestMerakiOrganizationHub:
         organization_hub._fetch_license_data = AsyncMock()
         organization_hub._fetch_alerts_data = AsyncMock()
         organization_hub._fetch_device_statuses = AsyncMock()
+        organization_hub._fetch_clients_overview = AsyncMock()
+        organization_hub._fetch_bluetooth_clients_overview = AsyncMock()
+        organization_hub._fetch_memory_usage = AsyncMock()
 
         await organization_hub.async_update_organization_data()
 
@@ -346,6 +415,9 @@ class TestMerakiOrganizationHub:
         organization_hub._fetch_license_data.assert_called_once()
         organization_hub._fetch_alerts_data.assert_called_once()
         organization_hub._fetch_device_statuses.assert_called_once()
+        organization_hub._fetch_clients_overview.assert_called_once()
+        organization_hub._fetch_bluetooth_clients_overview.assert_called_once()
+        organization_hub._fetch_memory_usage.assert_called_once()
 
     async def test_fetch_license_data_success(
         self, organization_hub, mock_dashboard_api
@@ -488,6 +560,23 @@ class TestMerakiOrganizationHub:
         assert organization_hub.failed_api_calls == 1
         assert organization_hub.last_api_call_error is not None
 
+    async def test_fetch_alerts_data_fallback_success(
+        self, organization_hub, mock_dashboard_api
+    ):
+        """Test alerts overview fallback when by-network endpoint fails."""
+        organization_hub.dashboard = mock_dashboard_api
+        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.side_effect = create_mock_async_api_error(
+            "Alerts overview by network API error", 429
+        )
+        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverview.return_value = {
+            "counts": {"total": 4}
+        }
+
+        await organization_hub._fetch_alerts_data()
+
+        assert organization_hub.active_alerts_count == 4
+        assert organization_hub.recent_alerts == []
+
     async def test_fetch_alerts_data_no_alerts(
         self, organization_hub, mock_dashboard_api
     ):
@@ -509,7 +598,7 @@ class TestMerakiOrganizationHub:
     ):
         """Test successful device statuses fetching."""
         organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationDevicesStatuses.return_value = [
+        mock_dashboard_api.organizations.getOrganizationDevicesAvailabilities.return_value = [
             {
                 "serial": "device1",
                 "name": "Device 1",
@@ -534,7 +623,7 @@ class TestMerakiOrganizationHub:
     ):
         """Test device statuses fetching with API error."""
         organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationDevicesStatuses.side_effect = (
+        mock_dashboard_api.organizations.getOrganizationDevicesAvailabilities.side_effect = (
             create_mock_api_error("Device status API error", 500)
         )
 
@@ -548,7 +637,7 @@ class TestMerakiOrganizationHub:
     ):
         """Test checking if network has device type."""
         organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.networks.getNetworkDevices.return_value = [
+        mock_dashboard_api.organizations.getOrganizationDevices.return_value = [
             {"serial": "device1", "model": "MT40", "productType": "sensor"},
             {"serial": "device2", "model": "CW9172I", "productType": "wireless"},
         ]
@@ -573,7 +662,7 @@ class TestMerakiOrganizationHub:
     ):
         """Test checking device type with API error."""
         organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.networks.getNetworkDevices.side_effect = (
+        mock_dashboard_api.organizations.getOrganizationDevices.side_effect = (
             create_mock_api_error("Network devices API error", 404)
         )
 
@@ -639,18 +728,24 @@ class TestMerakiOrganizationHub:
         assert organization_hub._last_device_status_update is not None
         assert organization_hub._last_alerts_update is not None
         assert organization_hub._last_clients_update is not None
+        assert organization_hub._last_bluetooth_clients_update is not None
+        assert organization_hub._last_memory_usage_update is not None
 
         # Verify diagnostic properties work
         assert organization_hub.last_license_update_age_minutes is not None
         assert organization_hub.last_device_status_update_age_minutes is not None
         assert organization_hub.last_alerts_update_age_minutes is not None
         assert organization_hub.last_clients_update_age_minutes is not None
+        assert organization_hub.last_bluetooth_clients_update_age_minutes is not None
+        assert organization_hub.last_memory_usage_update_age_minutes is not None
 
         # All should be very recent (0 minutes)
         assert organization_hub.last_license_update_age_minutes == 0
         assert organization_hub.last_device_status_update_age_minutes == 0
         assert organization_hub.last_alerts_update_age_minutes == 0
         assert organization_hub.last_clients_update_age_minutes == 0
+        assert organization_hub.last_bluetooth_clients_update_age_minutes == 0
+        assert organization_hub.last_memory_usage_update_age_minutes == 0
 
     async def test_tiered_refresh_diagnostic_properties_none(self, organization_hub):
         """Test diagnostic properties when no updates have occurred."""
@@ -659,6 +754,8 @@ class TestMerakiOrganizationHub:
         assert organization_hub.last_device_status_update_age_minutes is None
         assert organization_hub.last_alerts_update_age_minutes is None
         assert organization_hub.last_clients_update_age_minutes is None
+        assert organization_hub.last_bluetooth_clients_update_age_minutes is None
+        assert organization_hub.last_memory_usage_update_age_minutes is None
 
     async def test_fetch_clients_overview_success(
         self, organization_hub, mock_dashboard_api
@@ -942,14 +1039,15 @@ class TestOrganizationHubEdgeCases:
 
         assert hub._base_url == DEFAULT_BASE_URL  # Should use default
 
-    @patch("custom_components.meraki_dashboard.hubs.organization.meraki.DashboardAPI")
+    @patch(
+        "custom_components.meraki_dashboard.hubs.organization.meraki.aio.AsyncDashboardAPI"
+    )
     async def test_setup_with_empty_networks(
         self, mock_dashboard_class, organization_hub, mock_dashboard_api
     ):
         """Test setup with empty networks list."""
         # Mock the API to prevent socket usage
-        mock_dashboard_class.return_value = mock_dashboard_api
-        organization_hub.dashboard = mock_dashboard_api
+        mock_dashboard_class.return_value = _async_api_context(mock_dashboard_api)
         mock_dashboard_api.organizations.getOrganization.return_value = {
             "id": "test_org_id",
             "name": "Test Organization",

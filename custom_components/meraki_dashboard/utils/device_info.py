@@ -19,11 +19,15 @@ from ..const import (
     MV_SENSOR_DETECTIONS_VEHICLE,
     MV_SENSOR_EXTERNAL_RTSP_ENABLED,
     MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
     MV_SENSOR_MOTION_DETECTOR_VERSION,
     MV_SENSOR_QUALITY,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
+    MV_SENSOR_RECORDING_STATUS,
     MV_SENSOR_RESOLUTION,
     MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
     MV_SENSOR_RETENTION_PROFILE_ID,
+    MV_SENSOR_STORAGE_USAGE_PERCENT,
     PRODUCT_TYPE_TO_DEVICE_TYPE,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
@@ -551,6 +555,8 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             MV_SENSOR_RESOLUTION,
             MV_SENSOR_RETENTION_PROFILE_ID,
             MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+            MV_SENSOR_MOTION_DETECTION_ENABLED,
+            MV_SENSOR_RECENT_MOTION_DETECTED,
             MV_SENSOR_AUDIO_RECORDING_ENABLED,
             MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
             MV_SENSOR_MOTION_DETECTOR_VERSION,
@@ -560,6 +566,8 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
             MV_SENSOR_DETECTIONS_PERSON,
             MV_SENSOR_DETECTIONS_VEHICLE,
             MV_SENSOR_DETECTIONS_TOTAL,
+            MV_SENSOR_RECORDING_STATUS,
+            MV_SENSOR_STORAGE_USAGE_PERCENT,
         }
 
     return set()
@@ -681,7 +689,11 @@ def should_create_entity(
     device_type = determine_device_type(device)
 
     # Special case: always create memory usage sensors for MR/MS devices
-    if metric_key in ["memory_usage", MR_SENSOR_MEMORY_USAGE, MS_SENSOR_MEMORY_USAGE]:
+    if metric_key in [
+        "memory_usage",
+        MR_SENSOR_MEMORY_USAGE,
+        MS_SENSOR_MEMORY_USAGE,
+    ]:
         if device_type in {SENSOR_TYPE_MR, SENSOR_TYPE_MS}:
             return True
 

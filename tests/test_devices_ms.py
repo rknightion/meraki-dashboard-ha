@@ -210,10 +210,10 @@ class TestMerakiMSSensors:
         for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
             # All MS sensors should have a state class
             assert description.state_class is not None
-            assert description.state_class in [
+            assert description.state_class in {
                 SensorStateClass.MEASUREMENT,
                 SensorStateClass.TOTAL_INCREASING,
-            ]
+            }
 
     async def test_ms_sensor_device_classes(self):
         """Test MS sensor device class assignments."""

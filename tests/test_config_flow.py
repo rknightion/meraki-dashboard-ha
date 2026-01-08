@@ -32,19 +32,39 @@ from tests.fixtures.meraki_api import (
 )
 
 
+def _async_api_context(api_instance: MagicMock) -> AsyncMock:
+    """Create AsyncDashboardAPI context manager mock."""
+    async_api_mock = AsyncMock()
+    async_api_mock.__aenter__.return_value = api_instance
+    async_api_mock.__aexit__.return_value = None
+    return async_api_mock
+
+
 @pytest.fixture(name="mock_dashboard_api")
 def mock_dashboard_api():
     """Mock the Meraki Dashboard API."""
     api_mock = MagicMock()
 
     # Mock organizations
-    api_mock.organizations.getOrganizations.return_value = MOCK_ORGANIZATION_DATA
-    api_mock.organizations.getOrganization.return_value = MOCK_ORGANIZATION_DATA[0]
-    api_mock.organizations.getOrganizationNetworks.return_value = MOCK_NETWORKS_DATA
+    api_mock.organizations.getOrganizations = AsyncMock(
+        return_value=MOCK_ORGANIZATION_DATA
+    )
+    api_mock.organizations.getOrganization = AsyncMock(
+        return_value=MOCK_ORGANIZATION_DATA[0]
+    )
+    api_mock.organizations.getOrganizationNetworks = AsyncMock(
+        return_value=MOCK_NETWORKS_DATA
+    )
 
-    # Mock networks and devices
-    api_mock.networks.getNetworkDevices.side_effect = (
-        lambda network_id: MOCK_DEVICES_DATA.get(network_id, [])
+    async def get_org_devices(_org_id, network_ids=None, **_kwargs):
+        network_ids = network_ids or _kwargs.get("networkIds") or []
+        devices: list[dict] = []
+        for network_id in network_ids:
+            devices.extend(MOCK_DEVICES_DATA.get(network_id, []))
+        return devices
+
+    api_mock.organizations.getOrganizationDevices = AsyncMock(
+        side_effect=get_org_devices
     )
 
     return api_mock
@@ -68,8 +88,8 @@ class TestMerakiDashboardConfigFlow:
         """Test successful user flow."""
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI",
-            return_value=mock_dashboard_api,
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(mock_dashboard_api),
         ):
             # Test initial step
             result = await mock_config_flow.async_step_user()
@@ -92,20 +112,25 @@ class TestMerakiDashboardConfigFlow:
     async def test_user_flow_invalid_auth(self, hass: HomeAssistant, mock_config_flow):
         """Test user flow with invalid authentication."""
 
+        # Mock API to raise authentication error
+        from meraki.exceptions import APIError
+
+        # Create a custom APIError that behaves correctly
+        class MockAPIError(APIError):
+            def __init__(self, status):
+                self.status = status
+                self.response = None
+                # Don't call super().__init__ as it needs specific parameters
+
+        api_instance = MagicMock()
+        api_instance.organizations.getOrganizations = AsyncMock(
+            side_effect=MockAPIError(401)
+        )
+
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
-        ) as mock_api:
-            # Mock API to raise authentication error
-            from meraki.exceptions import APIError
-
-            # Create a custom APIError that behaves correctly
-            class MockAPIError(APIError):
-                def __init__(self, status):
-                    self.status = status
-                    self.response = None
-                    # Don't call super().__init__ as it needs specific parameters
-
-            mock_api.side_effect = MockAPIError(401)
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(api_instance),
+        ):
 
             result = await mock_config_flow.async_step_user(
                 {
@@ -127,8 +152,8 @@ class TestMerakiDashboardConfigFlow:
         mock_dashboard_api.organizations.getOrganizations.return_value = []
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI",
-            return_value=mock_dashboard_api,
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(mock_dashboard_api),
         ):
             result = await mock_config_flow.async_step_user(
                 {
@@ -156,8 +181,8 @@ class TestMerakiDashboardConfigFlow:
         mock_config_flow._abort_if_unique_id_configured = MagicMock()
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI",
-            return_value=mock_dashboard_api,
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(mock_dashboard_api),
         ):
             result = await mock_config_flow.async_step_organization(
                 {
@@ -175,7 +200,7 @@ class TestMerakiDashboardConfigFlow:
         """Test organization flow when no devices are found."""
 
         # Mock API to return empty devices
-        mock_dashboard_api.networks.getNetworkDevices.return_value = []
+        mock_dashboard_api.organizations.getOrganizationDevices.return_value = []
         mock_dashboard_api.organizations.getOrganizationNetworks.return_value = []
 
         # Set up flow state
@@ -188,8 +213,8 @@ class TestMerakiDashboardConfigFlow:
         mock_config_flow._abort_if_unique_id_configured = MagicMock()
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI",
-            return_value=mock_dashboard_api,
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(mock_dashboard_api),
         ):
             result = await mock_config_flow.async_step_organization(
                 {
@@ -264,20 +289,24 @@ class TestMerakiDashboardConfigFlow:
         mock_config_flow.hass = hass
         hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
+        from meraki.exceptions import APIError
+
+        # Create a custom APIError that behaves correctly
+        class MockAPIError(APIError):
+            def __init__(self, status):
+                self.status = status
+                self.response = None
+                # Don't call super().__init__ as it needs specific parameters
+
+        api_instance = MagicMock()
+        api_instance.organizations.getOrganization = AsyncMock(
+            side_effect=MockAPIError(401)
+        )
+
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
-        ) as mock_api:
-            from meraki.exceptions import APIError
-
-            # Create a custom APIError that behaves correctly
-            class MockAPIError(APIError):
-                def __init__(self, status):
-                    self.status = status
-                    self.response = None
-                    # Don't call super().__init__ as it needs specific parameters
-
-            mock_api.side_effect = MockAPIError(401)
-
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(api_instance),
+        ):
             result = await mock_config_flow.async_step_reauth(
                 {CONF_API_KEY: "9999999999999999999999999999999999999999"}
             )
@@ -300,20 +329,25 @@ class TestMerakiDashboardConfigFlow:
         mock_config_flow.hass = hass
         hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
+        # Simulate forbidden access
+        from meraki.exceptions import APIError
+
+        # Create a custom APIError that behaves correctly
+        class MockAPIError(APIError):
+            def __init__(self, status):
+                self.status = status
+                self.response = None
+                # Don't call super().__init__ as it needs specific parameters
+
+        api_instance = MagicMock()
+        api_instance.organizations.getOrganization = AsyncMock(
+            side_effect=MockAPIError(403)
+        )
+
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
-        ) as mock_api:
-            # Simulate forbidden access
-            from meraki.exceptions import APIError
-
-            # Create a custom APIError that behaves correctly
-            class MockAPIError(APIError):
-                def __init__(self, status):
-                    self.status = status
-                    self.response = None
-                    # Don't call super().__init__ as it needs specific parameters
-
-            mock_api.side_effect = MockAPIError(403)
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+            return_value=_async_api_context(api_instance),
+        ):
 
             result = await mock_config_flow.async_step_reauth(
                 {CONF_API_KEY: "8888888888888888888888888888888888888888"}
@@ -390,7 +424,7 @@ class TestConfigFlowEdgeCases:
         """Test user flow when cannot connect to API."""
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
             # Mock connection error - the actual flow catches all exceptions and returns 'unknown'
             mock_api.side_effect = ConnectionError("Cannot connect")
@@ -448,14 +482,14 @@ class TestConfigFlowEdgeCases:
 
             # Step 3: Provide new API key
             with patch(
-                "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+                "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
             ) as mock_api:
                 # Mock successful API test
                 mock_instance = MagicMock()
-                mock_instance.organizations.getOrganizations.return_value = (
-                    MOCK_ORGANIZATION_DATA
+                mock_instance.organizations.getOrganizations = AsyncMock(
+                    return_value=MOCK_ORGANIZATION_DATA
                 )
-                mock_api.return_value = mock_instance
+                mock_api.return_value = _async_api_context(mock_instance)
 
                 with patch(
                     "homeassistant.config_entries.ConfigEntries.async_reload"
@@ -525,7 +559,7 @@ class TestConfigFlowEdgeCases:
             # Step 3: Provide invalid API key
             with (
                 patch(
-                    "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+                    "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
                 ) as mock_api,
                 patch(
                     "custom_components.meraki_dashboard.config_flow.APIError",
@@ -534,10 +568,10 @@ class TestConfigFlowEdgeCases:
             ):
                 # Mock API error
                 mock_instance = MagicMock()
-                mock_instance.organizations.getOrganizations.side_effect = (
-                    TestAPIError()
+                mock_instance.organizations.getOrganizations = AsyncMock(
+                    side_effect=TestAPIError()
                 )
-                mock_api.return_value = mock_instance
+                mock_api.return_value = _async_api_context(mock_instance)
 
                 result = await hass.config_entries.options.async_configure(
                     result["flow_id"],

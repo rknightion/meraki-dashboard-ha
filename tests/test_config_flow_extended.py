@@ -1,6 +1,6 @@
 """Extended config flow tests using pytest-homeassistant-custom-component features."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant import config_entries
@@ -32,6 +32,14 @@ from custom_components.meraki_dashboard.const import (
 )
 
 
+def _async_api_context(api_instance: MagicMock) -> AsyncMock:
+    """Create AsyncDashboardAPI context manager mock."""
+    async_api_mock = AsyncMock()
+    async_api_mock.__aenter__.return_value = api_instance
+    async_api_mock.__aexit__.return_value = None
+    return async_api_mock
+
+
 @pytest.mark.usefixtures("enable_custom_integrations")
 class TestConfigFlowDeviceSelection:
     """Test device selection in config flow."""
@@ -50,18 +58,28 @@ class TestConfigFlowDeviceSelection:
         all_devices = mt_devices + mr_devices + ms_devices
 
         # Mock API
-        with patch("custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI") as mock_api:
+        with patch(
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
+        ) as mock_api:
             api_instance = MagicMock()
-            api_instance.organizations.getOrganizations.return_value = orgs
-            api_instance.organizations.getOrganization.return_value = orgs[0]
-            api_instance.organizations.getOrganizationNetworks.return_value = networks
+            api_instance.organizations.getOrganizations = AsyncMock(return_value=orgs)
+            api_instance.organizations.getOrganization = AsyncMock(return_value=orgs[0])
+            api_instance.organizations.getOrganizationNetworks = AsyncMock(
+                return_value=networks
+            )
 
-            # Mock device responses per network
-            def get_network_devices(network_id):
-                return [d for d in all_devices if d.get("networkId") == network_id]
+            async def get_org_devices(_org_id, network_ids=None, **_kwargs):
+                network_ids = network_ids or _kwargs.get("networkIds") or []
+                return [
+                    d
+                    for d in all_devices
+                    if d.get("networkId") in network_ids
+                ]
 
-            api_instance.networks.getNetworkDevices.side_effect = get_network_devices
-            mock_api.return_value = api_instance
+            api_instance.organizations.getOrganizationDevices = AsyncMock(
+                side_effect=get_org_devices
+            )
+            mock_api.return_value = _async_api_context(api_instance)
 
             # Start config flow
             result = await hass.config_entries.flow.async_init(
@@ -103,13 +121,19 @@ class TestConfigFlowDeviceSelection:
         networks = load_json_fixture("networks.json")
         mt_devices = load_json_fixture("mt_devices.json")
 
-        with patch("custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI") as mock_api:
+        with patch(
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
+        ) as mock_api:
             api_instance = MagicMock()
-            api_instance.organizations.getOrganizations.return_value = orgs
-            api_instance.organizations.getOrganization.return_value = orgs[0]
-            api_instance.organizations.getOrganizationNetworks.return_value = networks
-            api_instance.networks.getNetworkDevices.return_value = mt_devices
-            mock_api.return_value = api_instance
+            api_instance.organizations.getOrganizations = AsyncMock(return_value=orgs)
+            api_instance.organizations.getOrganization = AsyncMock(return_value=orgs[0])
+            api_instance.organizations.getOrganizationNetworks = AsyncMock(
+                return_value=networks
+            )
+            api_instance.organizations.getOrganizationDevices = AsyncMock(
+                return_value=mt_devices
+            )
+            mock_api.return_value = _async_api_context(api_instance)
 
             # Start flow
             result = await hass.config_entries.flow.async_init(
@@ -364,7 +388,7 @@ class TestConfigFlowErrorHandling:
     async def test_connection_timeout_error(self, hass: HomeAssistant):
         """Test handling of connection timeout."""
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
 
             mock_api.side_effect = TimeoutError("Connection timeout")
@@ -389,7 +413,7 @@ class TestConfigFlowErrorHandling:
     ):
         """Test handling of rate limit (429) error."""
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
             mock_api.side_effect = api_error_429
 
@@ -414,12 +438,12 @@ class TestConfigFlowErrorHandling:
     ):
         """Test handling of malformed API responses."""
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
             api_instance = MagicMock()
             # Return None instead of list
-            api_instance.organizations.getOrganizations.return_value = None
-            mock_api.return_value = api_instance
+            api_instance.organizations.getOrganizations = AsyncMock(return_value=None)
+            mock_api.return_value = _async_api_context(api_instance)
 
             result = await hass.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -447,21 +471,28 @@ class TestConfigFlowErrorHandling:
         networks = load_json_fixture("networks.json")
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
             api_instance = MagicMock()
-            api_instance.organizations.getOrganizations.return_value = orgs
-            api_instance.organizations.getOrganization.return_value = orgs[0]
-            api_instance.organizations.getOrganizationNetworks.return_value = networks
+            api_instance.organizations.getOrganizations = AsyncMock(return_value=orgs)
+            api_instance.organizations.getOrganization = AsyncMock(return_value=orgs[0])
+            api_instance.organizations.getOrganizationNetworks = AsyncMock(
+                return_value=networks
+            )
 
             # Simulate error when fetching devices
             response_mock = MagicMock()
             response_mock.status_code = 500
-            api_instance.networks.getNetworkDevices.side_effect = APIError(
-                metadata={"tags": ["Internal Server Error"], "operation": "getNetworkDevices"},
-                response=response_mock
+            api_instance.organizations.getOrganizationDevices = AsyncMock(
+                side_effect=APIError(
+                    metadata={
+                        "tags": ["Internal Server Error"],
+                        "operation": "getOrganizationDevices",
+                    },
+                    response=response_mock,
+                )
             )
-            mock_api.return_value = api_instance
+            mock_api.return_value = _async_api_context(api_instance)
 
             result = await hass.config_entries.flow.async_init(
                 DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -514,11 +545,11 @@ class TestConfigFlowReauth:
         config_entry.add_to_hass(hass)
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
             api_instance = MagicMock()
-            api_instance.organizations.getOrganization.return_value = orgs[0]
-            mock_api.return_value = api_instance
+            api_instance.organizations.getOrganization = AsyncMock(return_value=orgs[0])
+            mock_api.return_value = _async_api_context(api_instance)
 
             result = await hass.config_entries.flow.async_init(
                 DOMAIN,
@@ -563,11 +594,11 @@ class TestConfigFlowReauth:
         config_entry.add_to_hass(hass)
 
         with patch(
-            "custom_components.meraki_dashboard.config_flow.meraki.DashboardAPI"
+            "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
             api_instance = MagicMock()
-            api_instance.organizations.getOrganization.return_value = orgs[0]
-            mock_api.return_value = api_instance
+            api_instance.organizations.getOrganization = AsyncMock(return_value=orgs[0])
+            mock_api.return_value = _async_api_context(api_instance)
 
             result = await hass.config_entries.flow.async_init(
                 DOMAIN,

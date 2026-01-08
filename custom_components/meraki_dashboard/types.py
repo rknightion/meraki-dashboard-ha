@@ -233,6 +233,16 @@ class MVCameraCustomAnalytics(TypedDict, total=False):
     parameters: list[dict[str, Any]] | None
 
 
+class MVCameraSenseSettings(TypedDict, total=False):
+    """Type definition for MV camera sense settings."""
+
+    senseEnabled: bool | None
+    audioDetection: dict[str, Any] | None
+    detectionModelId: str | None
+    mqttBrokerId: str | None
+    senseVersion: int | None
+
+
 class MVCameraDetections(TypedDict, total=False):
     """Type definition for MV camera detection summary."""
 
@@ -251,7 +261,12 @@ class MVCameraStats(TypedDict, total=False):
     qualityAndRetention: MVCameraQualityRetention | None
     videoSettings: MVCameraVideoSettings | None
     customAnalytics: MVCameraCustomAnalytics | None
+    senseSettings: MVCameraSenseSettings | None
+    analyticsLive: dict[str, Any] | None
+    analyticsRecent: list[dict[str, Any]] | dict[str, Any] | None
     detections: MVCameraDetections | None
+    recordingStatus: str | None
+    storageUsagePercent: float | None
 
 
 class SwitchPortStatus(TypedDict, total=False):
@@ -418,31 +433,37 @@ class MerakiApiClient(Protocol):
 class OrganizationApi(Protocol):
     """Protocol for organization API endpoints."""
 
-    def getOrganizationDevices(
+    async def getOrganizationDevices(
         self, organizationId: str, **kwargs
     ) -> list[MerakiDeviceData]:
         """Get organization devices."""
         ...
 
-    def getOrganizationDevicesStatuses(
+    async def getOrganizationDevicesAvailabilities(
         self, organizationId: str, **kwargs
     ) -> list[DeviceStatus]:
-        """Get organization device statuses."""
+        """Get organization device availabilities."""
         ...
 
-    def getOrganizationLicensesOverview(
+    async def getOrganizationDevicesStatusesOverview(
+        self, organizationId: str, **kwargs
+    ) -> dict[str, Any]:
+        """Get organization device statuses overview."""
+        ...
+
+    async def getOrganizationLicensesOverview(
         self, organizationId: str, **kwargs
     ) -> dict[str, Any]:
         """Get organization licenses overview."""
         ...
 
-    def getOrganizationSensorReadingsLatest(
+    async def getOrganizationSensorReadingsLatest(
         self, organizationId: str, **kwargs
     ) -> dict[str, list[MTDeviceData]]:
         """Get latest sensor readings."""
         ...
 
-    def getOrganizationDevicesUplinksAddressesByDevice(
+    async def getOrganizationDevicesUplinksAddressesByDevice(
         self, organizationId: str, **kwargs
     ) -> list[UplinkStatus]:
         """Get uplink addresses by device."""
@@ -452,23 +473,19 @@ class OrganizationApi(Protocol):
 class NetworkApi(Protocol):
     """Protocol for network API endpoints."""
 
-    def getNetworkDevices(self, networkId: str) -> list[MerakiDeviceData]:
-        """Get network devices."""
-        ...
-
-    def getNetworkWirelessDevicesConnectionStats(
+    async def getNetworkWirelessDevicesConnectionStats(
         self, networkId: str, **kwargs
     ) -> list[WirelessStats]:
         """Get wireless connection stats."""
         ...
 
-    def getNetworkSwitchPortsStatuses(
+    async def getNetworkSwitchPortsStatuses(
         self, networkId: str, **kwargs
     ) -> list[SwitchPortStatus]:
         """Get switch port statuses."""
         ...
 
-    def getNetworkWirelessSsids(self, networkId: str) -> list[dict[str, Any]]:
+    async def getNetworkWirelessSsids(self, networkId: str) -> list[dict[str, Any]]:
         """Get wireless SSIDs."""
         ...
 
@@ -476,7 +493,7 @@ class NetworkApi(Protocol):
 class DeviceApi(Protocol):
     """Protocol for device API endpoints."""
 
-    def getDeviceSwitchPortsStatuses(self, serial: str) -> list[SwitchPortStatus]:
+    async def getDeviceSwitchPortsStatuses(self, serial: str) -> list[SwitchPortStatus]:
         """Get device switch port statuses."""
         ...
 
@@ -484,7 +501,7 @@ class DeviceApi(Protocol):
 class SensorApi(Protocol):
     """Protocol for sensor API endpoints."""
 
-    def getDeviceSensorReadingsLatest(self, serial: str) -> list[SensorReading]:
+    async def getDeviceSensorReadingsLatest(self, serial: str) -> list[SensorReading]:
         """Get latest sensor readings for device."""
         ...
 

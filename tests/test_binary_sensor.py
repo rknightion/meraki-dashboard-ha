@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from custom_components.meraki_dashboard.binary_sensor import (
     MT_BINARY_SENSOR_DESCRIPTIONS,
     MerakiMTBinarySensor,
+    MerakiMVBinarySensor,
     async_setup_entry,
 )
 from custom_components.meraki_dashboard.const import (
@@ -17,7 +18,10 @@ from custom_components.meraki_dashboard.const import (
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
     MT_SENSOR_WATER,
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
 )
+from custom_components.meraki_dashboard.devices.mv import MV_BINARY_SENSOR_DESCRIPTIONS
 from tests.fixtures.meraki_api import MOCK_PROCESSED_SENSOR_DATA
 
 
@@ -437,3 +441,69 @@ class TestBinarySensorUtilities:
         # Verify all have same device but different sensor types
         assert all(sensor._device == mock_device_info for sensor in sensors)
         assert all(sensor._device_serial == "Q2YY-YYYY-YYYY" for sensor in sensors)
+
+
+class TestMerakiMVBinarySensor:
+    """Test MerakiMVBinarySensor entity."""
+
+    def test_motion_detection_enabled(self, hass):
+        """Test MV motion detection enabled sensor."""
+        coordinator = MagicMock()
+        coordinator.data = {
+            "devices_info": [
+                {
+                    "serial": "Q2MV-TEST-0001",
+                    "senseSettings": {"senseEnabled": True},
+                }
+            ]
+        }
+        coordinator.last_update_success = True
+
+        device = {
+            "serial": "Q2MV-TEST-0001",
+            "model": "MV32",
+            "name": "Lobby Camera",
+            "networkId": "N_123",
+        }
+
+        sensor = MerakiMVBinarySensor(
+            coordinator=coordinator,
+            device=device,
+            description=MV_BINARY_SENSOR_DESCRIPTIONS[
+                MV_SENSOR_MOTION_DETECTION_ENABLED
+            ],
+            config_entry_id="test_entry",
+            network_hub=MagicMock(),
+        )
+
+        assert sensor.is_on is True
+
+    def test_recent_motion_detected(self, hass):
+        """Test MV recent motion detected sensor."""
+        coordinator = MagicMock()
+        coordinator.data = {
+            "devices_info": [
+                {
+                    "serial": "Q2MV-TEST-0002",
+                    "analyticsRecent": [{"entrances": 1, "averageCount": 0}],
+                }
+            ]
+        }
+        coordinator.last_update_success = True
+
+        device = {
+            "serial": "Q2MV-TEST-0002",
+            "model": "MV32",
+            "name": "Server Room Camera",
+            "networkId": "N_123",
+        }
+
+        sensor = MerakiMVBinarySensor(
+            coordinator=coordinator,
+            device=device,
+            description=MV_BINARY_SENSOR_DESCRIPTIONS[MV_SENSOR_RECENT_MOTION_DETECTED],
+            config_entry_id="test_entry",
+            network_hub=MagicMock(),
+        )
+
+        assert sensor.is_on is True

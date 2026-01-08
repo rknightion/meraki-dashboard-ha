@@ -11,6 +11,16 @@ from typing import Any, TypeVar, cast
 from aiohttp import ClientError, ClientResponseError, ClientTimeout
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
+try:
+    from meraki.exceptions import AsyncAPIError as MerakiAsyncAPIError
+except Exception:  # pragma: no cover - optional import
+    MerakiAsyncAPIError = None
+
+try:
+    from meraki.exceptions import APIError as MerakiSdkApiError
+except Exception:  # pragma: no cover - optional import
+    MerakiSdkApiError = None
+
 from ..exceptions import (
     APIError,
     MerakiApiError,
@@ -75,6 +85,15 @@ def handle_api_errors(
                 # Handle specific API error types
                 if isinstance(err, ClientResponseError):
                     return _handle_client_response_error(
+                        err,
+                        func.__name__,
+                        log_errors,
+                        default_return,
+                        convert_auth_errors,
+                        convert_connection_errors,
+                    )
+                elif _is_meraki_sdk_error(err):
+                    return _handle_meraki_sdk_error(
                         err,
                         func.__name__,
                         log_errors,
@@ -148,7 +167,16 @@ def handle_api_errors(
                     raise
 
                 # Handle specific API error types (sync version)
-                if isinstance(err, MerakiApiError):
+                if _is_meraki_sdk_error(err):
+                    return _handle_meraki_sdk_error(
+                        err,
+                        func.__name__,
+                        log_errors,
+                        default_return,
+                        convert_auth_errors,
+                        convert_connection_errors,
+                    )
+                elif isinstance(err, MerakiApiError):
                     return _handle_meraki_api_error(
                         err,
                         func.__name__,
@@ -296,7 +324,70 @@ def _handle_meraki_api_error(
         # Generic MerakiApiError
         if log_errors:
             _LOGGER.error("API error in %s: %s", func_name, err)
-        return default_return
+    return default_return
+
+
+def _is_meraki_sdk_error(err: Exception) -> bool:
+    """Return True if the error is from the Meraki SDK."""
+    if MerakiAsyncAPIError is not None and isinstance(err, MerakiAsyncAPIError):
+        return True
+    if MerakiSdkApiError is not None and isinstance(err, MerakiSdkApiError):
+        return True
+    return False
+
+
+def _handle_meraki_sdk_error(
+    err: Exception,
+    func_name: str,
+    log_errors: bool,
+    default_return: Any,
+    convert_auth_errors: bool,
+    convert_connection_errors: bool,
+) -> Any:
+    """Handle Meraki SDK API errors (sync or async)."""
+    status = (
+        getattr(err, "status", None)
+        or getattr(err, "status_code", None)
+        or getattr(err, "statusCode", None)
+    )
+    message = getattr(err, "message", None) or str(err)
+
+    if status in (401, 403):
+        if log_errors:
+            _LOGGER.error("Authentication failed in %s: %s", func_name, message)
+        if convert_auth_errors:
+            raise ConfigEntryAuthFailed(message) from err
+        raise MerakiAuthenticationError(message) from err
+
+    if status == 429:
+        retry_after = getattr(err, "retry_after", None)
+        if log_errors:
+            _LOGGER.warning(
+                "Rate limit exceeded in %s, retry after %s seconds",
+                func_name,
+                retry_after or "unknown",
+            )
+        raise MerakiRateLimitError(message, retry_after) from err
+
+    if status and status >= 500:
+        if log_errors:
+            _LOGGER.error(
+                "Server error in %s: %s (status %s)", func_name, message, status
+            )
+        if convert_connection_errors:
+            raise ConfigEntryNotReady(
+                f"Meraki API server error (HTTP {status})"
+            ) from err
+        raise MerakiApiError(message, status) from err
+
+    if log_errors:
+        _LOGGER.error(
+            "Meraki API error in %s: %s (status %s)",
+            func_name,
+            message,
+            status,
+        )
+    raise MerakiApiError(message, status) from err
 
 
 def api_retry(

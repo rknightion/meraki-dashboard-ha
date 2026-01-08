@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 from custom_components.meraki_dashboard.const import SENSOR_TYPE_MV
 from custom_components.meraki_dashboard.hubs.network import MerakiNetworkHub
@@ -18,11 +19,24 @@ def _make_org_hub(hass):
     org_hub.device_statuses = []
     org_hub._track_api_call_duration = MagicMock()
     org_hub.base_url = "https://api.meraki.com/api/v1"
+
+    async def async_api_call(api_call, *args, **kwargs):
+        kwargs.pop("priority", None)
+        result = api_call(*args, **kwargs)
+        if asyncio.iscoroutine(result):
+            return await result
+        return result
+
+    org_hub.async_api_call = AsyncMock(side_effect=async_api_call)
     return org_hub
 
 
 async def test_mv_camera_data_enriches_quality_profile(hass, mock_config_entry):
     """Ensure MV camera data enriches quality profile fields."""
+    from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+    clear_api_cache()
+
     org_hub = _make_org_hub(hass)
     network_hub = MerakiNetworkHub(
         organization_hub=org_hub,
@@ -81,6 +95,10 @@ async def test_mv_camera_data_enriches_quality_profile(hass, mock_config_entry):
 
 async def test_mv_camera_detections_aggregation(hass, mock_config_entry):
     """Ensure detections history aggregates per device."""
+    from custom_components.meraki_dashboard.utils.cache import clear_api_cache
+
+    clear_api_cache()
+
     org_hub = _make_org_hub(hass)
     network_hub = MerakiNetworkHub(
         organization_hub=org_hub,

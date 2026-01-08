@@ -144,6 +144,10 @@ class FixtureLoader:
         """Load switch power modules status."""
         return self.load("switch_power_modules.json")
 
+    def load_device_memory_usage_history(self) -> dict[str, Any]:
+        """Load device memory usage history."""
+        return self.load("device_memory_usage_history.json")
+
     # MV Camera fixtures
     def load_mv_devices(self) -> list[dict[str, Any]]:
         """Load MV camera devices fixture."""
