@@ -7,6 +7,7 @@ DOMAIN: Final = "meraki_dashboard"
 
 # Service names
 SERVICE_SET_CAMERA_RTSP: Final = "set_camera_rtsp"
+SERVICE_CYCLE_SWITCH_PORT_POE: Final = "cycle_switch_port_poe"
 
 # Integration name
 DEFAULT_NAME: Final = "Meraki Dashboard"
@@ -27,6 +28,7 @@ CONF_SCAN_INTERVAL: Final = "scan_interval"
 CONF_SELECTED_DEVICES: Final = "selected_devices"
 CONF_AUTO_DISCOVERY: Final = "auto_discovery"
 CONF_DISCOVERY_INTERVAL: Final = "discovery_interval"
+CONF_MS_PORT_EXCLUSIONS: Final = "ms_port_exclusions"
 
 # Per-hub configuration
 CONF_HUB_SCAN_INTERVALS: Final = "hub_scan_intervals"
@@ -119,6 +121,10 @@ MS_SENSOR_POE_LIMIT: Final = "poe_limit"
 MS_SENSOR_PORT_UTILIZATION: Final = "port_utilization"
 MS_SENSOR_MEMORY_USAGE: Final = "memory_usage"
 
+# MS (Switch) switch entity keys
+MS_SWITCH_PORT_ENABLED: Final = "port_enabled"
+MS_SWITCH_PORT_POE_ENABLED: Final = "port_poe_enabled"
+
 # MS Port packet statistics
 MS_SENSOR_PORT_PACKETS_TOTAL: Final = "port_packets_total"
 MS_SENSOR_PORT_PACKETS_BROADCAST: Final = "port_packets_broadcast"
@@ -192,6 +198,17 @@ ATTR_NETWORK_NAME: Final = "network_name"
 ATTR_SERIAL: Final = "serial"
 ATTR_MODEL: Final = "model"
 ATTR_LAST_REPORTED_AT: Final = "last_reported_at"
+ATTR_PORT_ID: Final = "port_id"
+ATTR_PORT_NAME: Final = "port_name"
+ATTR_PORT_TAGS: Final = "port_tags"
+ATTR_PORT_TYPE: Final = "port_type"
+ATTR_PORT_VLAN: Final = "port_vlan"
+ATTR_PORT_VOICE_VLAN: Final = "port_voice_vlan"
+ATTR_PORT_IS_UPLINK: Final = "port_is_uplink"
+ATTR_PORT_EXCLUDED: Final = "port_excluded"
+ATTR_PORT_PROFILE_ENABLED: Final = "port_profile_enabled"
+ATTR_PORT_PROFILE_ID: Final = "port_profile_id"
+ATTR_PORT_PROFILE_NAME: Final = "port_profile_name"
 
 # Event configuration
 EVENT_TYPE: Final = "meraki_dashboard_event"
@@ -279,6 +296,7 @@ DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES: Final = 10  # 10 minutes
 DEFAULT_STANDARD_CACHE_TTL: Final = 900  # 15 minutes - port status, client counts
 DEFAULT_EXTENDED_CACHE_TTL: Final = 1800  # 30 minutes - connection/latency stats
 DEFAULT_LONG_CACHE_TTL: Final = 3600  # 60 minutes - port configs, STP priorities
+DEFAULT_MS_POE_CYCLE_DELAY_SECONDS: Final = 5
 
 # MV detection history defaults (in seconds)
 MV_DETECTIONS_LOOKBACK_SECONDS: Final = 300  # 5 minutes
