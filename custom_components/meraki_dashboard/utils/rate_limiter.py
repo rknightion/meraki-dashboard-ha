@@ -24,7 +24,13 @@ class MerakiRateLimiter:
         self._throttle_window_seconds = throttle_window_minutes * 60
 
         self._queue: asyncio.PriorityQueue[
-            tuple[int, int, tuple[Callable[..., Any], tuple[Any, ...], dict[str, Any], asyncio.Future]]
+            tuple[
+                int,
+                int,
+                tuple[
+                    Callable[..., Any], tuple[Any, ...], dict[str, Any], asyncio.Future
+                ],
+            ]
             | tuple[int, int, None]
         ] = asyncio.PriorityQueue()
         self._sequence = 0
