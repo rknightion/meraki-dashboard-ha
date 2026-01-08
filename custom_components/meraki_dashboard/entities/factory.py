@@ -59,11 +59,15 @@ from ..const import (
     MV_SENSOR_DETECTIONS_VEHICLE,
     MV_SENSOR_EXTERNAL_RTSP_ENABLED,
     MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
     MV_SENSOR_MOTION_DETECTOR_VERSION,
     MV_SENSOR_QUALITY,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
+    MV_SENSOR_RECORDING_STATUS,
     MV_SENSOR_RESOLUTION,
     MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
     MV_SENSOR_RETENTION_PROFILE_ID,
+    MV_SENSOR_STORAGE_USAGE_PERCENT,
     SENSOR_TYPE_MR,
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
@@ -79,6 +83,34 @@ _LOGGER = logging.getLogger(__name__)
 
 # Type variable for entity types
 EntityT = TypeVar("EntityT", bound=Entity)
+
+
+def extract_device_serial_from_identifier(
+    config_entry_id: str, identifier: str
+) -> str | None:
+    """Extract device serial from a device registry identifier.
+
+    Device identifiers are stored as "{config_entry_id}_{serial}".
+    """
+    prefix = f"{config_entry_id}_"
+    if not identifier.startswith(prefix):
+        return None
+    serial = identifier[len(prefix) :]
+    return serial or None
+
+
+def extract_device_serial_from_unique_id(
+    config_entry_id: str, unique_id: str
+) -> str | None:
+    """Extract device serial from an entity unique ID."""
+    prefix = f"{config_entry_id}_"
+    if not unique_id.startswith(prefix):
+        return None
+    remainder = unique_id[len(prefix) :]
+    serial, sep, _rest = remainder.partition("_")
+    if not sep:
+        return None
+    return serial or None
 
 
 class EntityFactory:
@@ -834,6 +866,32 @@ def _register_mv_entities():
             network_hub,
         )
 
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_RECORDING_STATUS)
+    def create_mv_recording_status(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_RECORDING_STATUS],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_STORAGE_USAGE_PERCENT)
+    def create_mv_storage_usage(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
+
+        return MerakiMVDeviceSensor(
+            device,
+            coordinator,
+            MV_SENSOR_DESCRIPTIONS[MV_SENSOR_STORAGE_USAGE_PERCENT],
+            config_entry_id,
+            network_hub,
+        )
+
     @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_EXTERNAL_RTSP_ENABLED)
     def create_mv_external_rtsp(coordinator, device, config_entry_id, network_hub=None):
         from ..devices.mv import MV_SENSOR_DESCRIPTIONS, MerakiMVDeviceSensor
@@ -916,6 +974,36 @@ def _register_mv_entities():
             network_hub,
         )
 
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_MOTION_DETECTION_ENABLED)
+    def create_mv_motion_detection_enabled(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..binary_sensor import MerakiMVBinarySensor
+        from ..devices.mv import MV_BINARY_SENSOR_DESCRIPTIONS
+
+        return MerakiMVBinarySensor(
+            coordinator,
+            device,
+            MV_BINARY_SENSOR_DESCRIPTIONS[MV_SENSOR_MOTION_DETECTION_ENABLED],
+            config_entry_id,
+            network_hub,
+        )
+
+    @EntityFactory.register(SENSOR_TYPE_MV, MV_SENSOR_RECENT_MOTION_DETECTED)
+    def create_mv_recent_motion_detected(
+        coordinator, device, config_entry_id, network_hub=None
+    ):
+        from ..binary_sensor import MerakiMVBinarySensor
+        from ..devices.mv import MV_BINARY_SENSOR_DESCRIPTIONS
+
+        return MerakiMVBinarySensor(
+            coordinator,
+            device,
+            MV_BINARY_SENSOR_DESCRIPTIONS[MV_SENSOR_RECENT_MOTION_DETECTED],
+            config_entry_id,
+            network_hub,
+        )
+
     # Port Errors sensor
     @EntityFactory.register(SENSOR_TYPE_MS, MS_SENSOR_PORT_ERRORS)
     def create_ms_port_errors(coordinator, device, config_entry_id, network_hub=None):
@@ -990,6 +1078,29 @@ def _register_organization_entities():
     EntityFactory._registry["failed_api_calls"] = (
         lambda hub, description, entry_id: _create_org_entity(
             "MerakiHubFailedApiCallsSensor", hub, description, entry_id
+        )
+    )
+    EntityFactory._registry["api_calls_per_minute"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubApiCallsPerMinuteSensor", hub, description, entry_id
+        )
+    )
+    EntityFactory._registry["api_throttle_events"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubApiThrottleEventsSensor", hub, description, entry_id
+        )
+    )
+    EntityFactory._registry["api_rate_limit_queue_depth"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubApiRateLimitQueueDepthSensor", hub, description, entry_id
+        )
+    )
+    EntityFactory._registry["api_throttle_wait_seconds_total"] = (
+        lambda hub, description, entry_id: _create_org_entity(
+            "MerakiHubApiThrottleWaitSecondsTotalSensor",
+            hub,
+            description,
+            entry_id,
         )
     )
     EntityFactory._registry["device_count"] = (

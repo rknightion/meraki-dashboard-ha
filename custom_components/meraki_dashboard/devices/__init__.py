@@ -6,7 +6,11 @@ from .mt import MerakiMTEnergySensor, MerakiMTSensor
 from .mv import MerakiMVDeviceSensor
 from .organization import (
     MerakiHubAlertsCountSensor,
+    MerakiHubApiCallsPerMinuteSensor,
     MerakiHubApiCallsSensor,
+    MerakiHubApiRateLimitQueueDepthSensor,
+    MerakiHubApiThrottleEventsSensor,
+    MerakiHubApiThrottleWaitSecondsTotalSensor,
     MerakiHubBluetoothClientsTotalCountSensor,
     MerakiHubClientsTotalCountSensor,
     MerakiHubClientsUsageAverageTotalSensor,
@@ -31,6 +35,10 @@ __all__ = [
     "MerakiMVDeviceSensor",
     "MerakiHubAlertsCountSensor",
     "MerakiHubApiCallsSensor",
+    "MerakiHubApiCallsPerMinuteSensor",
+    "MerakiHubApiRateLimitQueueDepthSensor",
+    "MerakiHubApiThrottleEventsSensor",
+    "MerakiHubApiThrottleWaitSecondsTotalSensor",
     "MerakiHubBluetoothClientsTotalCountSensor",
     "MerakiHubClientsTotalCountSensor",
     "MerakiHubClientsUsageAverageTotalSensor",

@@ -5,10 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
+    BinarySensorEntityDescription,
+)
 from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 
@@ -21,11 +26,15 @@ from ..const import (
     MV_SENSOR_DETECTIONS_VEHICLE,
     MV_SENSOR_EXTERNAL_RTSP_ENABLED,
     MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
     MV_SENSOR_MOTION_DETECTOR_VERSION,
     MV_SENSOR_QUALITY,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
+    MV_SENSOR_RECORDING_STATUS,
     MV_SENSOR_RESOLUTION,
     MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
     MV_SENSOR_RETENTION_PROFILE_ID,
+    MV_SENSOR_STORAGE_USAGE_PERCENT,
 )
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
@@ -80,6 +89,21 @@ MV_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         icon="mdi:tag",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    MV_SENSOR_RECORDING_STATUS: SensorEntityDescription(
+        key=MV_SENSOR_RECORDING_STATUS,
+        name="Recording Status",
+        icon="mdi:record-rec",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    MV_SENSOR_STORAGE_USAGE_PERCENT: SensorEntityDescription(
+        key=MV_SENSOR_STORAGE_USAGE_PERCENT,
+        name="Storage Usage",
+        icon="mdi:harddisk",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
     MV_SENSOR_EXTERNAL_RTSP_ENABLED: SensorEntityDescription(
         key=MV_SENSOR_EXTERNAL_RTSP_ENABLED,
         name="External RTSP Enabled",
@@ -115,6 +139,22 @@ MV_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         name="Detections (Total)",
         icon="mdi:counter",
         state_class=SensorStateClass.MEASUREMENT,
+    ),
+}
+
+
+MV_BINARY_SENSOR_DESCRIPTIONS: dict[str, BinarySensorEntityDescription] = {
+    MV_SENSOR_MOTION_DETECTION_ENABLED: BinarySensorEntityDescription(
+        key=MV_SENSOR_MOTION_DETECTION_ENABLED,
+        name="Motion Detection Enabled",
+        icon="mdi:motion-sensor",
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    MV_SENSOR_RECENT_MOTION_DETECTED: BinarySensorEntityDescription(
+        key=MV_SENSOR_RECENT_MOTION_DETECTED,
+        name="Recent Motion Detected",
+        icon="mdi:motion-sensor",
+        device_class=BinarySensorDeviceClass.MOTION,
     ),
 }
 
