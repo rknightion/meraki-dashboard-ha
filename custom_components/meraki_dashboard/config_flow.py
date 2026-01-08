@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import meraki
@@ -42,6 +43,7 @@ from .const import (
     CONF_LONG_CACHE_TTL,
     CONF_MR_ENABLE_LATENCY_STATS,
     CONF_MS_ENABLE_PACKET_STATS,
+    CONF_MS_PORT_EXCLUSIONS,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
@@ -80,6 +82,52 @@ from .utils.device_info import determine_device_type, get_device_display_name
 _LOGGER = logging.getLogger(__name__)
 
 MERAKI_API_ERRORS = (APIError, AsyncAPIError)
+
+
+def _normalize_port_exclusion_entry(entry: str) -> str | None:
+    """Normalize a port exclusion entry to SERIAL:PORT format."""
+    if not entry:
+        return None
+
+    value = entry.strip()
+    if not value:
+        return None
+
+    parts = re.split(r"[:/]", value, maxsplit=1)
+    if len(parts) != 2:
+        return None
+
+    serial = parts[0].strip().upper()
+    port_id = parts[1].strip()
+    if not serial or not port_id:
+        return None
+
+    return f"{serial}:{port_id}"
+
+
+def _parse_port_exclusions(value: str | list[str]) -> list[str]:
+    """Parse port exclusions from a string or list."""
+    if isinstance(value, list):
+        items = value
+    else:
+        if not value:
+            return []
+        items = re.split(r"[,\\n]+", value)
+
+    parsed: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        normalized = _normalize_port_exclusion_entry(item)
+        if not normalized or normalized in seen:
+            continue
+        parsed.append(normalized)
+        seen.add(normalized)
+    return parsed
+
+
+def _format_port_exclusions(entries: list[str]) -> str:
+    """Format port exclusions for display in the options UI."""
+    return "\n".join(entries)
 
 
 def _extract_error_status(err: Exception) -> int | None:
@@ -719,6 +767,11 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 if key in user_input:
                     options[key] = user_input[key]
 
+            if CONF_MS_PORT_EXCLUSIONS in user_input:
+                options[CONF_MS_PORT_EXCLUSIONS] = _parse_port_exclusions(
+                    user_input[CONF_MS_PORT_EXCLUSIONS]
+                )
+
             if CONF_MT_REFRESH_INTERVAL in user_input:
                 options[CONF_MT_REFRESH_INTERVAL] = int(
                     user_input[CONF_MT_REFRESH_INTERVAL]
@@ -937,6 +990,19 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 default=current_options.get(CONF_MS_ENABLE_PACKET_STATS, True),
             )
         ] = selector.BooleanSelector()
+
+        schema_dict[
+            vol.Optional(
+                CONF_MS_PORT_EXCLUSIONS,
+                default=_format_port_exclusions(
+                    current_options.get(CONF_MS_PORT_EXCLUSIONS, [])
+                ),
+            )
+        ] = selector.TextSelector(
+            selector.TextSelectorConfig(
+                multiline=True,
+            )
+        )
 
         schema_dict[
             vol.Optional(
