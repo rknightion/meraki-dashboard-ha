@@ -41,7 +41,7 @@ async def test_mt_entities(hass):
     assert org_hub is not None
 ```
 
-- `setup_meraki_integration` automatically patches `meraki.DashboardAPI` using the builder’s mock and registers platforms (sensor, binary sensor, button).
+- `setup_meraki_integration` automatically patches `meraki.aio.AsyncDashboardAPI` using the builder’s mock and registers platforms (sensor, binary sensor, button).
 - When a test adds background timers, call `await helper.unload_integration()` in teardown to ensure callbacks are cleaned up.
 
 ### Adding Sensor Readings
@@ -104,6 +104,6 @@ Prefer `uv run pytest` for focused suites and `make test` for full coverage. Ena
 ## Guardrails
 
 - Maintain async test functions (`pytest.mark.asyncio`) when interacting with Home Assistant helpers.
-- Do not instantiate `meraki.DashboardAPI` directly—use `HubBuilder` / `IntegrationTestHelper` mocks so tests stay isolated.
+- Do not instantiate `meraki.aio.AsyncDashboardAPI` directly—use `HubBuilder` / `IntegrationTestHelper` mocks so tests stay isolated.
 - Keep entity IDs and metric constants in sync with `custom_components/meraki_dashboard/const.py` (reuse enums instead of string literals when asserting).
 - Update tests alongside code changes (new metrics, services, or events) to keep coverage aligned with integration behavior.

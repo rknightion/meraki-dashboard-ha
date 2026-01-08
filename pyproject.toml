@@ -17,7 +17,7 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 dependencies = [
-    "meraki==2.0.3"
+    "meraki @ git+https://github.com/meraki/dashboard-api-python.git@2.1.0",
 ]
 
 [dependency-groups]

@@ -99,11 +99,6 @@ repos:
         -   types-PyYAML
         -   homeassistant-stubs==2025.7.3
 
--   repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.37.1
-    hooks:
-    -   id: yamllint
-
 # Global excludes (your existing excludes are good)
 exclude: |
   (?x)^(

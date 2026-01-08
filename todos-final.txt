@@ -1,162 +1,10 @@
 # Meraki Dashboard Home Assistant Integration - Consolidated TODO List
-# Generated: 2025-12-19
-# Source: Merged and deduplicated from todos.txt + todos-claude.txt
-# Total Items: 26 (9 items excluded - see bottom for reasoning)
-
+## Ignore all references to 'todos.txt' or 'todos-claude.txt' those files no longer exist.
 ================================================================================
                     SECTION 1: HIGH PRIORITY - CRITICAL INFRASTRUCTURE
 ================================================================================
 These foundational changes should be completed first as other features depend on them.
 
---------------------------------------------------------------------------------
-## 1. Replace Deprecated Endpoints + Add Pagination Handling
---------------------------------------------------------------------------------
-Complexity: MEDIUM
-Value: HIGH
-Priority: CRITICAL (blocking other development)
-
-DESCRIPTION:
-Replace deprecated API endpoints (getNetworkDevices, getOrganizationDevicesStatuses)
-and add pagination support for large organizations.
-
-CURRENT STATE:
-- getNetworkDevices called in organization.py:493, network.py:325, config_flow.py:229
-- getOrganizationDevicesStatuses called in organization.py:1064
-- No pagination handling - large orgs may get incomplete data
-- Risk: Data loss for organizations with 100+ devices
-
-IMPLEMENTATION:
-1. Replace deprecated endpoint calls:
-   - getNetworkDevices → getOrganizationDevices (filter by networkId)
-   - getOrganizationDevicesStatuses → getOrganizationDevicesAvailabilities
-
-2. Add pagination support using SDK:
-   - Use total_pages="all" for complete data fetching
-   - Or iterate with startingAfter parameter
-   - Apply to: devices, statuses, events, clients endpoints
-
-3. Update response parsing for new endpoint formats
-
-FILES TO MODIFY:
-- custom_components/meraki_dashboard/hubs/organization.py
-- custom_components/meraki_dashboard/hubs/network.py
-- custom_components/meraki_dashboard/config_flow.py
-- tests/ (update fixtures for new response shapes)
-
---------------------------------------------------------------------------------
-## 2. Async API Client Optimization
---------------------------------------------------------------------------------
-Complexity: MEDIUM
-Value: HIGH
-Priority: CRITICAL (performance foundation)
-
-DESCRIPTION:
-Migrate from synchronous meraki.DashboardAPI to meraki.aio.AsyncDashboardAPI
-for better performance and reduced blocking.
-
-CURRENT STATE:
-- Uses synchronous DashboardAPI (90+ locations)
-- Wrapped in hass.async_add_executor_job() - thread pool contention at scale
-- Estimated 5-10% performance degradation on large orgs (20+ devices)
-
-IMPLEMENTATION:
-1. Update API client initialization:
-   - Import meraki.aio.AsyncDashboardAPI
-   - Replace DashboardAPI instantiation in organization.py:278-288
-   - Update all API calls to use async/await
-
-2. Remove executor_job wrappers:
-   - Direct await of API calls
-   - Simplify error handling flow
-
-3. Update retry decorators for native async:
-   - Ensure @with_standard_retries works with async functions
-   - Update error_handling.py patterns
-
-4. Verify test suite passes with async client
-
-FILES TO MODIFY:
-- custom_components/meraki_dashboard/hubs/organization.py
-- custom_components/meraki_dashboard/hubs/network.py
-- custom_components/meraki_dashboard/utils/retry.py
-- custom_components/meraki_dashboard/utils/error_handling.py
-- custom_components/meraki_dashboard/config_flow.py
-
---------------------------------------------------------------------------------
-## 3. Rate Limit Handling Improvements
---------------------------------------------------------------------------------
-Complexity: MEDIUM
-Value: HIGH
-Priority: HIGH
-
-DESCRIPTION:
-Improve handling of Meraki API rate limits (10 calls/second) with intelligent
-pre-emptive throttling and request prioritization.
-
-CURRENT STATE:
-- Basic retry with exponential backoff exists
-- 429 errors handled reactively in error_handling.py
-- Retry-After header parsed (lines 212-227)
-- No pre-emptive throttling before hitting limits
-- Per-device API calls risk rate limiting on large networks
-
-IMPLEMENTATION:
-1. Create rate limiter service:
-   - Track API calls per second across all hubs
-   - Pre-emptive throttling before hitting 10/sec limit
-   - Token bucket or sliding window algorithm
-
-2. Implement request prioritization:
-   - Critical updates (alerts, status changes) get priority
-   - Background tasks (discovery, static data) deprioritized
-   - Queue system for rate-limited requests
-
-3. Add rate limit sensors:
-   - api_calls_per_minute sensor
-   - api_throttle_active binary sensor
-
-4. Improve retry-after handling:
-   - Dynamic backoff based on Retry-After header
-   - Coordinated backoff across all hubs
-
-FILES TO MODIFY:
-- custom_components/meraki_dashboard/utils/rate_limiter.py (NEW)
-- custom_components/meraki_dashboard/utils/retry.py
-- custom_components/meraki_dashboard/hubs/organization.py
-- custom_components/meraki_dashboard/hubs/network.py
-
---------------------------------------------------------------------------------
-## 4. Entity Registry Cleanup on Device Removal
---------------------------------------------------------------------------------
-Complexity: LOW
-Value: MEDIUM
-Priority: HIGH
-
-DESCRIPTION:
-Properly remove entities when devices are removed from Meraki or filtered
-from configuration to prevent orphan entities.
-
-CURRENT STATE:
-- Orphan entities may remain in HA registry after device removal
-- No cleanup on device filtering changes
-- Confusing for users with stale entities
-
-IMPLEMENTATION:
-1. Track registered entities in coordinator:
-   - Maintain set of currently valid entity unique IDs
-   - Compare against HA entity registry on refresh
-
-2. Implement cleanup on coordinator refresh:
-   - Identify entities for devices no longer present
-   - Remove via entity registry API
-
-3. Add cleanup on config entry unload:
-   - Clean removal of all integration entities
-
-FILES TO MODIFY:
-- custom_components/meraki_dashboard/__init__.py
-- custom_components/meraki_dashboard/coordinator.py
-- custom_components/meraki_dashboard/entities/factory.py
 
 ================================================================================
                     SECTION 2: HIGH PRIORITY - NEW DEVICE TYPES
@@ -223,52 +71,11 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/entities/factory.py
 - translations/en.json
 
+PARTIALLY IMPLEMENTED (2026-01-07): Core MV support exists (devices, hub camera data, transformer, factory, tests), but several sensors in this todo are still missing.
 --------------------------------------------------------------------------------
 ## 6. MV Camera Support Implementation
 --------------------------------------------------------------------------------
-Complexity: HIGH
-Value: HIGH
-Priority: HIGH
-
-DESCRIPTION:
-Implement full MV (camera) device support. Constants exist but no actual
-implementation - largest missing device type.
-
-CURRENT STATE:
-- SENSOR_TYPE_MV = "MV" defined in const.py
-- MV_SCAN_INTERVAL defined
-- No devices/mv.py module
-- No camera-specific API calls
-- Entity factory can detect MV but will fail to create entities
-
-IMPLEMENTATION:
-1. Create devices/mv.py with sensor descriptors:
-   - motion_detection_enabled (binary sensor)
-   - recent_motion_detected (binary sensor)
-   - audio_detection_enabled (binary sensor)
-   - stream_quality (sensor)
-   - recording_status (sensor)
-   - storage_usage_percent (sensor)
-
-2. Add camera API calls in hubs/network.py:
-   - dashboard.camera.getDeviceCameraAnalyticsLive
-   - dashboard.camera.getDeviceCameraAnalyticsOverview
-   - dashboard.camera.getNetworkCameraQualityRetentionProfiles
-   - Add _async_setup_camera_data() method
-
-3. Create MVCameraDataTransformer in transformers.py
-
-4. Register entity descriptors in factory:
-   - Add _register_mv_entities() function
-
-5. Add tests using existing mv_devices.json fixture
-
-FILES TO MODIFY:
-- custom_components/meraki_dashboard/devices/mv.py (NEW)
-- custom_components/meraki_dashboard/hubs/network.py
-- custom_components/meraki_dashboard/entities/factory.py
-- custom_components/meraki_dashboard/data/transformers.py
-
+Completed
 --------------------------------------------------------------------------------
 ## 7. MG Cellular Gateway Support
 --------------------------------------------------------------------------------
@@ -320,62 +127,8 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/entities/factory.py
 - custom_components/meraki_dashboard/data/transformers.py
 
-================================================================================
-                    SECTION 3: HIGH PRIORITY - NEW PLATFORMS
-================================================================================
 
---------------------------------------------------------------------------------
-## 8. Device Tracker Platform for Client Presence
---------------------------------------------------------------------------------
-Complexity: HIGH
-Value: HIGH
-Priority: HIGH
-
-DESCRIPTION:
-Add Home Assistant device_tracker platform to track client devices (phones,
-laptops) for presence detection automation. Major feature request.
-
-CURRENT STATE:
-- Client count and usage tracked at organization level
-- Individual client tracking not implemented
-- No device_tracker platform
-- getDeviceClients data available in network hubs but not exposed per-client
-
-IMPLEMENTATION:
-1. Create device_tracker.py platform module:
-   - Track clients by MAC address
-   - Support consider_home timeout option
-   - Support track_new option for auto-adding clients
-   - Integrate with HA person entities
-
-2. Add client tracking in hubs:
-   - Use existing getNetworkClients data
-   - Track: MAC, IP, hostname, SSID, AP serial, last seen time
-   - Efficient delta updates (only changed clients)
-
-3. Create ClientDeviceTrackerEntity class:
-   - Inherit from ScannerEntity
-   - Implement: source_type, is_connected, mac_address
-   - Add extra attributes: IP, SSID, connected AP
-
-4. Add config flow options:
-   - Enable/disable client tracking
-   - Client tracking interval
-   - MAC address allowlist/blocklist
-   - Track by: MAC or hostname
-
-5. Handle client identification:
-   - Use MAC as unique ID
-   - Optional hostname-based friendly naming
-   - Handle roaming between APs
-
-FILES TO CREATE/MODIFY:
-- custom_components/meraki_dashboard/device_tracker.py (NEW)
-- custom_components/meraki_dashboard/__init__.py (add Platform.DEVICE_TRACKER)
-- custom_components/meraki_dashboard/config_flow.py
-- custom_components/meraki_dashboard/const.py
-- custom_components/meraki_dashboard/hubs/network.py
-
+PARTIALLY IMPLEMENTED (2026-01-07): The switch platform exists (MV External RTSP), but there are no MS PoE/port control entities.
 --------------------------------------------------------------------------------
 ## 9. Switch Platform for PoE Control
 --------------------------------------------------------------------------------
@@ -388,41 +141,35 @@ Add switch entity platform to control PoE on individual switch ports, enabling
 automation of PoE-powered devices (cameras, phones, APs).
 
 CURRENT STATE:
-- PoE status exposed as read-only sensors (MS_SENSOR_POE_POWER)
-- No control capability
-- Only sensor/binary_sensor/button platforms registered
+- switch.py exists and Platform.SWITCH is registered.
+- Current switch entities only cover MV External RTSP.
+- MS port status/config data is already fetched in hubs/network.py
+  (port_configs, ports_status), but no PoE control entities exist.
 
 IMPLEMENTATION:
-1. Create switch.py platform module:
+1. Extend switch.py with MS PoE/port control entities:
    - PoE enable/disable per port
    - Port enable/disable control
 
-2. Create PoESwitchEntity class:
-   - Inherit from SwitchEntity
-   - Implement turn_on, turn_off, is_on
-   - Track current PoE state from existing port data
+2. Implement PoE switch entity behavior:
+   - Use dashboard.switch.updateDeviceSwitchPort
+   - Derive current state from switch_data port configs/status
 
-3. Add API calls for port updates:
-   - dashboard.switch.updateDeviceSwitchPort
-   - Handle API rate limits for control operations
-
-4. Add port cycling service:
+3. Add port cycling service:
    - Service to cycle PoE (off/on with delay)
    - Useful for rebooting PoE devices
 
-5. Update manifest.json and __init__.py with switch platform
-
-6. Add safety options:
+4. Add safety options:
    - Confirmation for bulk operations
    - Exclusion list for critical ports
 
 FILES TO CREATE/MODIFY:
-- custom_components/meraki_dashboard/switch.py (NEW)
-- custom_components/meraki_dashboard/__init__.py
-- custom_components/meraki_dashboard/manifest.json
+- custom_components/meraki_dashboard/switch.py
+- custom_components/meraki_dashboard/hubs/network.py
 - custom_components/meraki_dashboard/const.py
-- custom_components/meraki_dashboard/services.yaml (NEW)
-
+- custom_components/meraki_dashboard/config_flow.py
+- custom_components/meraki_dashboard/services.yaml (NEW or extend)
+- translations/en.json
 --------------------------------------------------------------------------------
 ## 10. Webhook Integration for Real-Time Events
 --------------------------------------------------------------------------------
@@ -475,6 +222,7 @@ FILES TO CREATE/MODIFY:
                     SECTION 4: MEDIUM PRIORITY - 2025 API FEATURES
 ================================================================================
 
+PARTIALLY IMPLEMENTED (2026-01-07): Memory usage uses the history endpoint but only the latest interval is exposed; no averages or trends.
 --------------------------------------------------------------------------------
 ## 11. Device Memory Utilization History
 --------------------------------------------------------------------------------
@@ -487,8 +235,10 @@ Leverage new API endpoint for historical memory utilization data, enabling
 trend analysis and proactive alerting before memory issues impact performance.
 
 CURRENT STATE:
-- Only current memory usage tracked via getOrganizationDevicesSystemMemoryUsageHistoryByInterval
-- No trend analysis or historical averages
+- Organization hub uses getOrganizationDevicesSystemMemoryUsageHistoryByInterval
+  but only processes the most recent interval.
+- MR/MS sensors expose current memory usage (MR_SENSOR_MEMORY_USAGE/MS_SENSOR_MEMORY_USAGE).
+- No 1h/24h averages or trend calculation stored in coordinator data.
 
 IMPLEMENTATION:
 1. Add new sensor descriptors in devices/mr.py and devices/ms.py:
@@ -497,11 +247,11 @@ IMPLEMENTATION:
    - memory_usage_trend (trending up/down/stable)
 
 2. Modify hubs/organization.py:
-   - Process intervals: "1h", "24h" from existing API call
-   - Store historical data in coordinator
+   - Process multiple intervals (1h, 24h) from the existing API call
+   - Store historical aggregates in organization hub data
 
-3. Add transformer in data/transformers.py:
-   - Extract min, max, avg from interval data
+3. Add transformer logic in data/transformers.py:
+   - Extract min/max/avg from interval data
    - Calculate trend direction from delta
 
 FILES TO MODIFY:
@@ -510,7 +260,6 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/hubs/organization.py
 - custom_components/meraki_dashboard/data/transformers.py
 - custom_components/meraki_dashboard/const.py
-
 --------------------------------------------------------------------------------
 ## 12. Switch Port Historical Usage & Traffic Analytics
 --------------------------------------------------------------------------------
@@ -523,9 +272,10 @@ Add historical usage data for switch ports, enabling bandwidth trending
 and capacity planning sensors.
 
 CURRENT STATE:
-- Only real-time port status and traffic metrics tracked
-- No historical trend data available
-- Port utilization/traffic collected but not fully exposed
+- Switch hubs collect port status with usageInKb (timespan=3600) plus packet stats.
+- data/transformers.py already aggregates current port utilization/traffic,
+  but no history/trend entities exist.
+- Port utilization/traffic is not configured for HA long-term statistics.
 
 IMPLEMENTATION:
 1. Add new sensor descriptors in devices/ms.py:
@@ -548,7 +298,6 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/hubs/network.py
 - custom_components/meraki_dashboard/const.py
 - custom_components/meraki_dashboard/config_flow.py
-
 --------------------------------------------------------------------------------
 ## 13. Firmware Upgrade Timing Details
 --------------------------------------------------------------------------------
@@ -584,6 +333,7 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/hubs/organization.py
 - custom_components/meraki_dashboard/const.py
 
+PARTIALLY IMPLEMENTED (2026-01-07): Alerts overview and severity counts per network are available, but taxonomy and resolution tracking are not implemented.
 --------------------------------------------------------------------------------
 ## 14. Alert Category Taxonomy + Resolution Tracking
 --------------------------------------------------------------------------------
@@ -596,9 +346,11 @@ Add structured alert categorization and resolution time tracking, enabling
 better alert filtering and SLA monitoring in Home Assistant automations.
 
 CURRENT STATE:
-- Only alert count tracked at organization level
-- No breakdown by category, severity, or type
-- No resolution time tracking
+- Organization hub fetches assurance alerts overview by network and stores
+  severity counts in recent_alerts plus total active alerts.
+- Sensors exist for alerts_count and recent_alerts attributes; alerting_devices
+  is derived from device statuses.
+- No category taxonomy mapping or resolution time tracking.
 
 IMPLEMENTATION:
 1. Add organization-level sensors in devices/organization.py:
@@ -625,6 +377,7 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/const.py
 - translations/en.json
 
+PARTIALLY IMPLEMENTED (2026-01-07): CPU load sensor exists but currently relies on a heuristic; no 1m/15m sensors or true CPU metrics.
 --------------------------------------------------------------------------------
 ## 15. Wireless CPU Load Monitoring
 --------------------------------------------------------------------------------
@@ -637,13 +390,14 @@ Complete CPU load monitoring for MR wireless devices using real API data
 instead of heuristics.
 
 CURRENT STATE:
-- CPU load sensor exists (MR_SENSOR_CPU_LOAD_5MIN) but may use heuristics
-- const.py and transformers define cpu_load_5min
-- mr.py may not fully expose CPU sensors
+- MR_SENSOR_CPU_LOAD_5MIN exists and transformer expects cpu.cpuLoad5.
+- hubs/network.py _async_get_cpu_load uses getDeviceWirelessStatus and falls
+  back to a client-count heuristic when CPU metrics are unavailable.
+- No cpu_load_1m or cpu_load_15m sensors.
 
 IMPLEMENTATION:
 1. Verify CPU data fetching in hubs/network.py:
-   - Check getDeviceWirelessStatus response for CPU metrics
+   - Confirm getDeviceWirelessStatus (or another endpoint) returns real CPU metrics
    - Add dedicated CPU endpoint call if available
 
 2. Add additional CPU sensors in devices/mr.py:
@@ -651,7 +405,7 @@ IMPLEMENTATION:
    - cpu_load_5m (5 minute average)
    - cpu_load_15m (15 minute average)
 
-3. Add transformer for CPU normalization:
+3. Add transformer normalization for CPU data:
    - Convert to percentage if needed
    - Handle load average format
 
@@ -661,7 +415,6 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/devices/mr.py
 - custom_components/meraki_dashboard/hubs/network.py
 - custom_components/meraki_dashboard/data/transformers.py
-
 --------------------------------------------------------------------------------
 ## 16. AutoVPN Status Entities for HA Visibility
 --------------------------------------------------------------------------------
@@ -744,6 +497,7 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/devices/mr.py
 - custom_components/meraki_dashboard/hubs/network.py
 
+PARTIALLY IMPLEMENTED (2026-01-07): Port utilization/traffic/packet data is collected and transformed, but entities are not exposed in devices/ms.py or the entity factory.
 --------------------------------------------------------------------------------
 ## 18. Surface Additional MS Metrics Already Collected
 --------------------------------------------------------------------------------
@@ -756,9 +510,10 @@ Expose switch port metrics that are already being collected but not surfaced
 as entities (utilization, traffic, packet stats).
 
 CURRENT STATE:
-- Switch hub collects port utilization/traffic/packet stats
-- Entities not created for all available metrics
-- Data exists in coordinator but not exposed
+- const.py defines port utilization/traffic metrics and packet counters/rates.
+- data/transformers.py aggregates these values from port status and packetCounters.
+- hubs/network.py collects port status and packet statistics data.
+- devices/ms.py and entities/factory.py do not expose these metrics yet.
 
 IMPLEMENTATION:
 1. Add SensorEntityDescriptions in devices/ms.py:
@@ -781,9 +536,11 @@ IMPLEMENTATION:
 
 FILES TO MODIFY:
 - custom_components/meraki_dashboard/devices/ms.py
+- custom_components/meraki_dashboard/entities/factory.py
 - custom_components/meraki_dashboard/const.py
 - custom_components/meraki_dashboard/config_flow.py (if adding option)
 
+PARTIALLY IMPLEMENTED (2026-01-07): SSID data is already fetched and counts are exposed, but there are no per-SSID entities.
 --------------------------------------------------------------------------------
 ## 19. SSID-Level Wireless Metrics
 --------------------------------------------------------------------------------
@@ -796,9 +553,10 @@ Add per-SSID sensors for wireless networks enabling granular WiFi monitoring
 by network name.
 
 CURRENT STATE:
-- SSID count tracked
-- SSID data fetched via getNetworkWirelessSsids
-- Individual SSID metrics not exposed as entities
+- hubs/network.py fetches SSIDs via getNetworkWirelessSsids and stores them in
+  wireless_data.
+- MR device/network sensors already expose SSID count, enabled SSIDs, open SSIDs.
+- No per-SSID entities or allowlist/blocklist options.
 
 IMPLEMENTATION:
 1. Create SSID-specific sensors:
@@ -824,7 +582,6 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/hubs/network.py
 - custom_components/meraki_dashboard/const.py
 - custom_components/meraki_dashboard/config_flow.py
-
 --------------------------------------------------------------------------------
 ## 20. Enhanced MT Sensor Alert Profiles
 --------------------------------------------------------------------------------
@@ -939,6 +696,7 @@ FILES TO MODIFY:
                     SECTION 6: LOWER PRIORITY - OPTIMIZATION & QUALITY
 ================================================================================
 
+PARTIALLY IMPLEMENTED (2026-01-07): Per-device MR calls are now batched and cached, but bulk/org-level endpoints are not used.
 --------------------------------------------------------------------------------
 ## 23. Reduce MR API Load with Bulk Endpoints
 --------------------------------------------------------------------------------
@@ -951,10 +709,10 @@ Replace per-device API calls with bulk/org-level endpoints to reduce API
 load and avoid rate limiting on large wireless deployments.
 
 CURRENT STATE:
-- MR setup calls per device: getDeviceClients, getDeviceWirelessConnectionStats,
-  getDeviceWirelessLatencyStats
-- Network with 10 MR devices = 30+ API calls in setup
-- Risk of hitting 10 calls/sec rate limit
+- Per-device calls remain for getDeviceClients, getDeviceWirelessConnectionStats,
+  and getDeviceWirelessLatencyStats.
+- These calls are batched via batch_api_calls and cached to reduce churn.
+- getOrganizationWirelessDevicesEthernetStatuses is already used at org level.
 
 IMPLEMENTATION:
 1. Investigate bulk endpoints:
@@ -973,8 +731,8 @@ IMPLEMENTATION:
 
 FILES TO MODIFY:
 - custom_components/meraki_dashboard/hubs/network.py
+- custom_components/meraki_dashboard/utils/helpers.py
 - custom_components/meraki_dashboard/utils/cache.py (if exists, or create)
-
 --------------------------------------------------------------------------------
 ## 24. HA-Focused Diagnostics Panel
 --------------------------------------------------------------------------------
@@ -1005,6 +763,7 @@ FILES TO MODIFY:
 - custom_components/meraki_dashboard/devices/organization.py
 - custom_components/meraki_dashboard/const.py
 
+PARTIALLY IMPLEMENTED (2026-01-07): Migration logic exists with validation/rollback for v1→v2, but no migration changelog or repairs reporting.
 --------------------------------------------------------------------------------
 ## 25. Configuration Migration Framework
 --------------------------------------------------------------------------------
@@ -1017,8 +776,9 @@ Improve config entry migration to handle schema changes gracefully across
 version upgrades with rollback support.
 
 CURRENT STATE:
-- Basic migration in config_flow.py
-- Version tracking exists (CONFIG_ENTRY_VERSION)
+- config/migration.py implements v1→v2 migration with validation and rollback.
+- async_migrate_entry in __init__.py delegates to the migration module.
+- No MIGRATION_CHANGELOG, no repairs reporting, and only version 2 handled.
 
 IMPLEMENTATION:
 1. Document migration versions:
@@ -1035,8 +795,8 @@ IMPLEMENTATION:
 
 FILES TO MODIFY:
 - custom_components/meraki_dashboard/config_flow.py
-- custom_components/meraki_dashboard/config/migration.py (NEW)
-
+- custom_components/meraki_dashboard/config/migration.py
+- docs/ (add migration changelog)
 --------------------------------------------------------------------------------
 ## 26. Integration Test Coverage Expansion
 --------------------------------------------------------------------------------
@@ -1074,53 +834,134 @@ FILES TO CREATE:
 - tests/test_organization_multinetwork.py (NEW)
 
 ================================================================================
-                    EXCLUDED ITEMS (with reasoning)
+                    SECTION 7: SDK 2.1.0 FEATURE CANDIDATES
 ================================================================================
+New SDK scopes/modules and helpers are available in 2.1.0; these are optional
+feature candidates if we want to expand coverage beyond current device types.
 
-The following items from the source files were excluded from this consolidated
-list after codebase validation and value assessment:
+--------------------------------------------------------------------------------
+## 27. Wireless Controller Telemetry (wirelessController scope)
+--------------------------------------------------------------------------------
+Complexity: MEDIUM
+Value: MEDIUM
+Priority: LOW
 
-1. DOCUMENTATION/TRANSLATIONS (#14 from todos.txt)
-   Reason: Ongoing maintenance task, not a discrete improvement. Should be done
-   alongside each feature implementation, not as standalone work.
+DESCRIPTION:
+Expose Wireless Controller (WLC) telemetry now that the SDK provides the
+wirelessController scope (async + sync). Useful for controller health,
+redundancy, interface status, and AP join health.
 
-2. IPV6 LOCAL ADDRESS TRACKING (#1.7 from todos-claude.txt)
-   Reason: Very low value (rated LOW/LOW). Adds minimal user benefit for the
-   implementation effort. IPv6 client count provides negligible automation value.
+IMPLEMENTATION:
+1. Define new sensor keys + descriptions:
+   - controller_status, redundancy_state, active_controller, interface_status
+2. Add a new hub fetcher (organization or network scoped depending on API).
+3. Create transformer mappings and entity registrations.
+4. Add tests with fixtures for WLC payloads.
 
-3. SWITCH STP PORT FAST TRUNK (#1.10 from todos-claude.txt)
-   Reason: Niche use case (rated LOW/LOW). STP configuration monitoring provides
-   limited value for home/small business deployments. Enterprise users typically
-   use dedicated network monitoring tools.
+FILES TO MODIFY/CREATE:
+- custom_components/meraki_dashboard/const.py
+- custom_components/meraki_dashboard/devices/wireless_controller.py (NEW)
+- custom_components/meraki_dashboard/data/transformers.py
+- custom_components/meraki_dashboard/entities/factory.py
+- custom_components/meraki_dashboard/hubs/organization.py
+- tests/ (new fixtures + sensor tests)
 
-4. CONFIGURABLE LOGGING VERBOSITY (#3.3 from todos-claude.txt)
-   Reason: Adds unnecessary complexity. Existing third-party library logging
-   suppression and HA's built-in logging configuration are adequate. Users can
-   enable debug logging through HA's standard mechanisms.
+--------------------------------------------------------------------------------
+## 28. Campus Gateway Health & Redundancy (campusGateway scope)
+--------------------------------------------------------------------------------
+Complexity: MEDIUM
+Value: MEDIUM
+Priority: LOW
 
-5. DASHBOARD CARD CONFIGURATION SUGGESTIONS (#4.1 from todos-claude.txt)
-   Reason: Documentation-only task, not a code improvement. Better addressed
-   in project documentation or community wiki rather than in integration code.
+DESCRIPTION:
+Add campus gateway health monitoring using the new campusGateway scope.
+Potential metrics: gateway status, tunnel health, redundancy/failover state.
 
-6. ENTITY NAMING CONSISTENCY (#4.2 from todos-claude.txt)
-   Reason: Would break existing user setups. Entity ID changes would orphan
-   existing automations, dashboards, and history. Migration path would be
-   complex and disruptive. Current naming is functional.
+IMPLEMENTATION:
+1. Add gateway status + redundancy sensors.
+2. Wire API calls through org hub with throttling.
+3. Normalize payloads in transformers + add tests.
 
-7. DEVICE DISCOVERY NOTIFICATIONS (#4.3 from todos-claude.txt)
-   Reason: Low value - achievable via HA automations. Users can create
-   automations triggered by new entity registration. Adding built-in
-   notifications adds complexity for marginal benefit.
+FILES TO MODIFY/CREATE:
+- custom_components/meraki_dashboard/const.py
+- custom_components/meraki_dashboard/devices/campus_gateway.py (NEW)
+- custom_components/meraki_dashboard/data/transformers.py
+- custom_components/meraki_dashboard/entities/factory.py
+- custom_components/meraki_dashboard/hubs/organization.py
+- tests/ (fixtures + sensor tests)
 
-8. REPAIR ISSUE ENHANCEMENTS (#4.4 from todos-claude.txt)
-   Reason: Current 3 repair types (API expired, network access lost, discovery
-   failed) are adequate. Additional repair flows add maintenance burden without
-   proportional user benefit.
+--------------------------------------------------------------------------------
+## 29. Spaces Occupancy & Location Analytics (spaces scope)
+--------------------------------------------------------------------------------
+Complexity: LARGE
+Value: MEDIUM
+Priority: LOW
 
-9. MOCK API RESPONSE UPDATES (#5.2 from todos-claude.txt)
-    Reason: Not a standalone task. Test fixture updates should be done as part
-    of each feature implementation to ensure accuracy. Listed as part of testing
-    requirements in implementation notes.
+DESCRIPTION:
+Expose Meraki Spaces analytics (occupancy, dwell, entry/exit counts) now that
+the SDK includes the spaces scope and async client support.
+
+IMPLEMENTATION:
+1. Add configuration option to enable Spaces polling (privacy + API cost).
+2. Add org-level sensors:
+   - occupancy_count, entry_count, exit_count, dwell_time_avg
+3. Add optional per-space entities if API supports zone granularity.
+4. Add transformers + fixtures + tests.
+
+FILES TO MODIFY/CREATE:
+- custom_components/meraki_dashboard/const.py
+- custom_components/meraki_dashboard/config_flow.py
+- custom_components/meraki_dashboard/devices/spaces.py (NEW)
+- custom_components/meraki_dashboard/data/transformers.py
+- custom_components/meraki_dashboard/entities/factory.py
+- custom_components/meraki_dashboard/hubs/organization.py
+- tests/ (fixtures + sensor tests)
+
+--------------------------------------------------------------------------------
+## 30. NAC Policy & Posture Visibility (nac scope)
+--------------------------------------------------------------------------------
+Complexity: MEDIUM
+Value: MEDIUM
+Priority: LOW
+
+DESCRIPTION:
+Add NAC-related org diagnostics (policy compliance counts, auth failures,
+posture state breakdowns) using the new nac scope in the SDK.
+
+IMPLEMENTATION:
+1. Define NAC diagnostic sensors (compliance count, failures, posture states).
+2. Add new API calls via org hub with throttling.
+3. Add transformers + tests for NAC payloads.
+
+FILES TO MODIFY/CREATE:
+- custom_components/meraki_dashboard/const.py
+- custom_components/meraki_dashboard/devices/nac.py (NEW)
+- custom_components/meraki_dashboard/data/transformers.py
+- custom_components/meraki_dashboard/entities/factory.py
+- custom_components/meraki_dashboard/hubs/organization.py
+- tests/ (fixtures + sensor tests)
+
+--------------------------------------------------------------------------------
+## 31. Array-of-Objects Query Filters (encode_params helper)
+--------------------------------------------------------------------------------
+Complexity: SMALL
+Value: MEDIUM
+Priority: LOW
+
+DESCRIPTION:
+The SDK now supports array-of-objects query params and documents encode_params.
+This could simplify advanced filtering for endpoints that accept complex query
+objects, reducing client-side post-processing.
+
+IMPLEMENTATION:
+1. Identify endpoints that accept complex filters (alerts, events, clients).
+2. Use encode_params (or SDK native support) to pass structured filters.
+3. Add unit tests validating query parameter generation.
+
+FILES TO MODIFY:
+- custom_components/meraki_dashboard/hubs/organization.py
+- custom_components/meraki_dashboard/hubs/network.py
+- tests/ (helper or unit tests for filter params)
 
 ================================================================================
                     IMPLEMENTATION NOTES FOR LLM AGENTS
@@ -1141,6 +982,7 @@ list after codebase validation and value assessment:
    - All new sensors need test coverage
    - Use existing builder patterns (MerakiDeviceBuilder, SensorDataBuilder)
    - Add JSON fixtures for new API responses
+   - Where methods are changed that result in tests failing due to new changes, fix the test or make new tests for new functionality.
    - Run `make lint` and `make test` before submitting
 
 4. API DOCUMENTATION:
@@ -1161,4 +1003,5 @@ list after codebase validation and value assessment:
    - #3 (Rate limiting) required for new device types adding more API calls
    - #4 (Entity cleanup) prevents orphan issues as new entities are added
 
+You must never run any git stage or commit commands.
 ================================================================================
