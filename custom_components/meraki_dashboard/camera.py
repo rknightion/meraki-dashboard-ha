@@ -82,6 +82,7 @@ class MerakiMVCamera(MerakiCoordinatorEntity, Camera):
         config_entry_id: str,
         network_hub: Any,
     ) -> None:
+        """Initialize the Meraki MV camera entity."""
         description = EntityDescription(key="camera", name="Camera")
         MerakiCoordinatorEntity.__init__(
             self, coordinator, device, description, config_entry_id, network_hub
