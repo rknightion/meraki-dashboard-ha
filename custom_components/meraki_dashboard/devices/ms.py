@@ -404,6 +404,24 @@ class MerakiMSSensor(MerakiSensorEntity):
             coordinator, device, description, config_entry_id, coordinator.network_hub
         )
 
+        org_id = coordinator.network_hub.organization_hub.organization_id
+        base_url = coordinator.network_hub.organization_hub._base_url.replace(
+            "/api/v1", ""
+        )
+
+        self._attr_device_info = cast(
+            DeviceInfo,
+            DeviceInfoBuilder()
+            .for_network_hub(
+                coordinator.network_hub.network_id,
+                coordinator.network_hub.device_type,
+                coordinator.network_hub.hub_name,
+                org_id,
+                base_url,
+            )
+            .build(),
+        )
+
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""

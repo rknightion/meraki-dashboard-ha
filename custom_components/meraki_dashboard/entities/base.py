@@ -122,6 +122,10 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for device registry."""
+        attr_device_info = getattr(self, "_attr_device_info", None)
+        if attr_device_info:
+            return cast(DeviceInfo, attr_device_info)
+
         network_id = self._device.get("networkId", "unknown")
         device_type = self._get_device_type()
 
