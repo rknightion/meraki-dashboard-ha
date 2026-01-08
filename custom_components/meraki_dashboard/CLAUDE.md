@@ -24,7 +24,7 @@ custom_components/meraki_dashboard/
 
 -   `async_setup_entry` (`__init__.py`) validates config, constructs a `MerakiOrganizationHub`, and registers platforms. Any new initialization logic must hook into domain data (`hass.data[DOMAIN][entry_id]`).
 -   `async_unload_entry` must clean up hubs, coordinators, and timers. Extend unload logic here if you add background tasks.
--   Never instantiate `meraki.DashboardAPI` directly outside `MerakiOrganizationHub`; that class centralizes SDK configuration and logging suppression.
+-   Never instantiate `meraki.aio.AsyncDashboardAPI` directly outside `MerakiOrganizationHub`; that class centralizes SDK configuration and logging suppression.
 
 ## Data Flow
 

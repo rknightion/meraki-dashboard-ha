@@ -106,16 +106,17 @@ graph TB
 
 ### SDK Usage
 
-The integration exclusively uses the official Meraki Python SDK:
+The integration exclusively uses the official Meraki Python SDK (async client):
 
 ```python
 import meraki
 
-dashboard = meraki.DashboardAPI(
-    api_key=api_key,
+async with meraki.aio.AsyncDashboardAPI(
+    api_key,
     suppress_logging=True,
-    output_log=False
-)
+    output_log=False,
+) as dashboard:
+    ...
 ```
 
 ### Error Handling

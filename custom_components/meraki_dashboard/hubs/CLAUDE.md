@@ -12,13 +12,13 @@ Instructions for `custom_components/meraki_dashboard/hubs/`, which encapsulates 
 
 Responsibilities:
 
--   Construct the shared `meraki.DashboardAPI` client with logging suppression.
+-   Construct the shared `meraki.aio.AsyncDashboardAPI` client with logging suppression.
 -   Discover networks via `dashboard.organizations.getOrganizationNetworks` and populate `self.networks`.
 -   Schedule tiered refresh timers using `async_track_time_interval` for static (licenses), semi-static (device statuses, memory usage), and dynamic (alerts, clients) data. Always unregister timers in `async_unload`.
 -   Aggregate metrics such as `total_api_calls`, `failed_api_calls`, and `_api_call_durations` for diagnostics.
 -   Filter enabled device types using config entry options (`CONF_ENABLED_DEVICE_TYPES`, `CONF_SELECTED_DEVICES`).
 
-`async_create_network_hubs` iterates over `self.networks`, fetches devices via `dashboard.networks.getNetworkDevices`, and instantiates `MerakiNetworkHub` objects keyed as `"{network_id}_{device_type}"`. Extend this method if new device families require preprocessing, and update `MerakiConfigSchema` accordingly.
+`async_create_network_hubs` iterates over `self.networks`, fetches devices via `dashboard.organizations.getOrganizationDevices` (filtered by `networkIds` and paginated), and instantiates `MerakiNetworkHub` objects keyed as `"{network_id}_{device_type}"`. Extend this method if new device families require preprocessing, and update `MerakiConfigSchema` accordingly.
 
 ## MerakiNetworkHub
 
@@ -35,11 +35,11 @@ Core behaviors:
 
 -   Wrap all hub-level API methods with `@handle_api_errors` and `@with_standard_retries` (imported from `..utils.error_handling` / `..utils.retry`).
 -   Use `@performance_monitor` identifiers such as `hub_update_cycle`, `sensor_data_fetch`, and `hub_api_call` to maintain consistent metrics.
--   Increment `MerakiOrganizationHub.total_api_calls` / `failed_api_calls` whenever hubs invoke SDK methods so diagnostics stay accurate.
+-   Route all SDK calls through `MerakiOrganizationHub.async_api_call` so rate limiting and diagnostics (`total_api_calls` / `failed_api_calls`) stay accurate.
 
 ## Guardrails
 
--   Never instantiate a new `DashboardAPI` inside `network.py`; rely on the organization hub’s client.
+-   Never instantiate a new `AsyncDashboardAPI` inside `network.py`; rely on the organization hub’s client.
 -   Do not mutate `hass.data[DOMAIN][entry_id]["network_hubs"]` outside the organization hub setup/unload paths.
 -   When adding timers or background tasks, append the unsubscribe callback to `MerakiNetworkHub._discovery_unsub` or the organization hub’s `_static/_semi_static/_dynamic` unsub references and clear them in `async_unload`.
 -   Use constants from `const.py` for device type keys and configuration options; keep option key construction (`auto_discovery_key`) consistent with existing patterns.
