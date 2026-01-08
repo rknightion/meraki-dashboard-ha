@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 import meraki
+import meraki.aio
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
@@ -14,7 +15,7 @@ from homeassistant.core import callback
 from homeassistant.exceptions import ConfigValidationError
 from homeassistant.helpers import selector
 from homeassistant.helpers.selector import Selector
-from meraki.exceptions import APIError
+from meraki.exceptions import APIError, AsyncAPIError
 
 from .config.schemas import (
     APIKeyConfig,
@@ -77,6 +78,27 @@ from .utils import sanitize_device_name
 from .utils.device_info import determine_device_type, get_device_display_name
 
 _LOGGER = logging.getLogger(__name__)
+
+MERAKI_API_ERRORS = (APIError, AsyncAPIError)
+
+
+def _extract_error_status(err: Exception) -> int | None:
+    """Extract an HTTP status code from a Meraki SDK error."""
+    status = (
+        getattr(err, "status", None)
+        or getattr(err, "status_code", None)
+        or getattr(err, "statusCode", None)
+    )
+    if status is not None:
+        return status
+
+    response = getattr(err, "response", None)
+    if response is not None:
+        return getattr(response, "status", None) or getattr(
+            response, "status_code", None
+        )
+    return None
+
 
 # Sentinel value for finishing hub configuration
 HUB_SELECTION_DONE = "__done__"
@@ -141,21 +163,18 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 BaseURLConfig(self._base_url)
 
                 # Test the API key by getting organizations
-                dashboard = await self.hass.async_add_executor_job(
-                    lambda: meraki.DashboardAPI(
-                        user_input[CONF_API_KEY],
-                        base_url=self._base_url,
-                        caller=USER_AGENT,
-                        log_file_prefix=None,  # Disable file logging
-                        print_console=False,  # Disable console logging from SDK
-                        output_log=False,  # Disable SDK output logging
-                        suppress_logging=True,  # Suppress verbose SDK logging
+                async with meraki.aio.AsyncDashboardAPI(
+                    user_input[CONF_API_KEY],
+                    base_url=self._base_url,
+                    caller=USER_AGENT,
+                    log_file_prefix=None,  # Disable file logging
+                    print_console=False,  # Disable console logging from SDK
+                    output_log=False,  # Disable SDK output logging
+                    suppress_logging=True,  # Suppress verbose SDK logging
+                ) as dashboard:
+                    self._organizations = (
+                        await dashboard.organizations.getOrganizations()
                     )
-                )
-
-                self._organizations = await self.hass.async_add_executor_job(
-                    dashboard.organizations.getOrganizations
-                )
 
                 if not self._organizations:
                     errors["base"] = "no_organizations"
@@ -166,15 +185,21 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except ConfigValidationError as err:
                 errors["base"] = "invalid_format"
                 _LOGGER.error("Configuration validation error: %s", err)
-            except APIError as err:
-                if err.status == 401:
+            except MERAKI_API_ERRORS as err:
+                status = _extract_error_status(err)
+                if status == 401:
                     errors["base"] = "invalid_auth"
                 else:
                     errors["base"] = "cannot_connect"
                 _LOGGER.error("Error connecting to Meraki Dashboard: %s", err)
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception")
-                errors["base"] = "unknown"
+            except Exception as err:  # pylint: disable=broad-except
+                status = _extract_error_status(err)
+                if status == 401:
+                    _LOGGER.debug("Authentication failed during setup: %s", err)
+                    errors["base"] = "invalid_auth"
+                else:
+                    _LOGGER.exception("Unexpected exception")
+                    errors["base"] = "unknown"
 
         return self.async_show_form(
             step_id="user",
@@ -224,48 +249,57 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 # Try to get available devices
                 try:
-                    dashboard = await self.hass.async_add_executor_job(
-                        lambda: meraki.DashboardAPI(
-                            self._api_key,
-                            base_url=self._base_url,
-                            caller=USER_AGENT,
-                            log_file_prefix=None,  # Disable file logging
-                            print_console=False,  # Disable console logging from SDK
-                            output_log=False,  # Disable SDK output logging
-                            suppress_logging=True,  # Suppress verbose SDK logging
+                    async with meraki.aio.AsyncDashboardAPI(
+                        self._api_key,
+                        base_url=self._base_url,
+                        caller=USER_AGENT,
+                        log_file_prefix=None,  # Disable file logging
+                        print_console=False,  # Disable console logging from SDK
+                        output_log=False,  # Disable SDK output logging
+                        suppress_logging=True,  # Suppress verbose SDK logging
+                    ) as dashboard:
+                        # Get all networks for the organization
+                        networks = (
+                            await dashboard.organizations.getOrganizationNetworks(
+                                org_id,
+                                total_pages="all",
+                            )
                         )
-                    )
 
-                    # Get all networks for the organization
-                    networks = await self.hass.async_add_executor_job(
-                        dashboard.organizations.getOrganizationNetworks, org_id
-                    )
+                        network_name_map = {
+                            network["id"]: network.get("name", "Unknown")
+                            for network in networks
+                            if network.get("id")
+                        }
 
-                    # Get all MT devices across networks
-                    self._available_devices = []
-                    for network in networks:
-                        try:
-                            devices = await self.hass.async_add_executor_job(
-                                dashboard.networks.getNetworkDevices, network["id"]
+                        # Get all devices across networks (paginated)
+                        self._available_devices = []
+                        if network_name_map:
+                            devices = (
+                                await dashboard.organizations.getOrganizationDevices(
+                                    org_id,
+                                    networkIds=list(network_name_map.keys()),
+                                    perPage=1000,
+                                    total_pages="all",
+                                )
                             )
+                        else:
+                            devices = []
 
-                            for device in devices:
-                                device_type = determine_device_type(device)
-                                # Include all supported device types for selection
-                                if device_type in {
-                                    SENSOR_TYPE_MT,
-                                    SENSOR_TYPE_MR,
-                                    SENSOR_TYPE_MS,
-                                    SENSOR_TYPE_MV,
-                                }:
-                                    # Store network name for display
-                                    device["network_name"] = network["name"]
-                                    self._available_devices.append(device)
-
-                        except APIError:
-                            _LOGGER.warning(
-                                "Failed to get devices for network %s", network["name"]
-                            )
+                        for device in devices:
+                            device_type = determine_device_type(device)
+                            # Include all supported device types for selection
+                            if device_type in {
+                                SENSOR_TYPE_MT,
+                                SENSOR_TYPE_MR,
+                                SENSOR_TYPE_MS,
+                                SENSOR_TYPE_MV,
+                            }:
+                                # Store network name for display
+                                device["network_name"] = network_name_map.get(
+                                    device.get("networkId"), "Unknown"
+                                )
+                                self._available_devices.append(device)
 
                     if self._available_devices:
                         # Store name for use in device selection step
@@ -526,7 +560,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             base_url = reauth_entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL)
 
             try:
-                dashboard = meraki.DashboardAPI(
+                async with meraki.aio.AsyncDashboardAPI(
                     api_key=api_key,
                     base_url=base_url,
                     single_request_timeout=30,
@@ -535,13 +569,10 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     print_console=False,
                     output_log=False,
                     caller=USER_AGENT,
-                )
-
-                # Test API access with the organization we're configured for
-                org_id = reauth_entry.data[CONF_ORGANIZATION_ID]
-                await self.hass.async_add_executor_job(
-                    dashboard.organizations.getOrganization, org_id
-                )
+                ) as dashboard:
+                    # Test API access with the organization we're configured for
+                    org_id = reauth_entry.data[CONF_ORGANIZATION_ID]
+                    await dashboard.organizations.getOrganization(org_id)
 
                 # Update the config entry with the new API key
                 new_data = dict(reauth_entry.data)
@@ -556,8 +587,9 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                 return self.async_abort(reason="reauth_successful")
 
-            except APIError as err:
-                if err.status == 401:
+            except MERAKI_API_ERRORS as err:
+                status = _extract_error_status(err)
+                if status == 401:
                     return self.async_show_form(
                         step_id="reauth",
                         data_schema=vol.Schema(
@@ -570,7 +602,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             "organization_name": reauth_entry.title,
                         },
                     )
-                elif err.status == 403:
+                elif status == 403:
                     return self.async_show_form(
                         step_id="reauth",
                         data_schema=vol.Schema(
@@ -596,7 +628,21 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             "organization_name": reauth_entry.title,
                         },
                     )
-            except Exception:
+            except Exception as err:
+                status = _extract_error_status(err)
+                if status == 401:
+                    return self.async_show_form(
+                        step_id="reauth",
+                        data_schema=vol.Schema(
+                            {
+                                vol.Required(CONF_API_KEY): str,
+                            }
+                        ),
+                        errors={"base": "invalid_auth"},
+                        description_placeholders={
+                            "organization_name": reauth_entry.title,
+                        },
+                    )
                 return self.async_show_form(
                     step_id="reauth",
                     data_schema=vol.Schema(
@@ -1170,20 +1216,17 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             api_key = user_input[CONF_API_KEY]
             base_url = self.config_entry.data.get(CONF_BASE_URL, DEFAULT_BASE_URL)
 
-            # Create a temporary client to test the API key
-            dashboard = meraki.DashboardAPI(
-                api_key=api_key,
-                base_url=base_url,
-                suppress_logging=True,
-                print_console=False,
-                output_log=False,
-            )
-
             try:
-                # Test the API key by fetching organizations
-                organizations = await self.hass.async_add_executor_job(
-                    dashboard.organizations.getOrganizations
-                )
+                # Create a temporary client to test the API key
+                async with meraki.aio.AsyncDashboardAPI(
+                    api_key=api_key,
+                    base_url=base_url,
+                    suppress_logging=True,
+                    print_console=False,
+                    output_log=False,
+                ) as dashboard:
+                    # Test the API key by fetching organizations
+                    organizations = await dashboard.organizations.getOrganizations()
 
                 if organizations:
                     # Valid API key - update the config entry
@@ -1204,17 +1247,26 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 else:
                     errors["base"] = "no_organizations"
 
-            except APIError as err:
-                if err.status == 401:
+            except MERAKI_API_ERRORS as err:
+                status = _extract_error_status(err)
+                if status == 401:
                     errors["base"] = "invalid_auth"
-                elif err.status == 403:
+                elif status == 403:
                     errors["base"] = "invalid_permissions"
                 else:
                     _LOGGER.error("API error during key update: %s", err)
                     errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error during API key update")
-                errors["base"] = "unknown"
+            except Exception as err:
+                status = _extract_error_status(err)
+                if status == 401:
+                    _LOGGER.debug("Authentication failed during key update: %s", err)
+                    errors["base"] = "invalid_auth"
+                elif status == 403:
+                    _LOGGER.debug("Permission error during key update: %s", err)
+                    errors["base"] = "invalid_permissions"
+                else:
+                    _LOGGER.exception("Unexpected error during API key update")
+                    errors["base"] = "unknown"
 
         return self.async_show_form(
             step_id="api_key",
