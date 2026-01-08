@@ -148,16 +148,24 @@ MV_SENSOR_MOTION_BASED_RETENTION_ENABLED: Final = "motion_based_retention_enable
 MV_SENSOR_AUDIO_RECORDING_ENABLED: Final = "audio_recording_enabled"
 MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED: Final = "restricted_bandwidth_mode_enabled"
 MV_SENSOR_MOTION_DETECTOR_VERSION: Final = "motion_detector_version"
+MV_SENSOR_MOTION_DETECTION_ENABLED: Final = "motion_detection_enabled"
+MV_SENSOR_RECENT_MOTION_DETECTED: Final = "recent_motion_detected"
 MV_SENSOR_EXTERNAL_RTSP_ENABLED: Final = "external_rtsp_enabled"
 MV_SENSOR_CUSTOM_ANALYTICS_ENABLED: Final = "custom_analytics_enabled"
 MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID: Final = "custom_analytics_artifact_id"
 MV_SENSOR_DETECTIONS_PERSON: Final = "detections_person"
 MV_SENSOR_DETECTIONS_VEHICLE: Final = "detections_vehicle"
 MV_SENSOR_DETECTIONS_TOTAL: Final = "detections_total"
+MV_SENSOR_RECORDING_STATUS: Final = "recording_status"
+MV_SENSOR_STORAGE_USAGE_PERCENT: Final = "storage_usage_percent"
 
 # Organization-level metrics
 ORG_SENSOR_API_CALLS: Final = "api_calls"
 ORG_SENSOR_FAILED_API_CALLS: Final = "failed_api_calls"
+ORG_SENSOR_API_CALLS_PER_MINUTE: Final = "api_calls_per_minute"
+ORG_SENSOR_API_THROTTLE_EVENTS: Final = "api_throttle_events"
+ORG_SENSOR_API_RATE_LIMIT_QUEUE_DEPTH: Final = "api_rate_limit_queue_depth"
+ORG_SENSOR_API_THROTTLE_WAIT_SECONDS_TOTAL: Final = "api_throttle_wait_seconds_total"
 ORG_SENSOR_DEVICE_COUNT: Final = "device_count"
 ORG_SENSOR_NETWORK_COUNT: Final = "network_count"
 ORG_SENSOR_OFFLINE_DEVICES: Final = "offline_devices"
@@ -205,11 +213,25 @@ REGIONAL_BASE_URLS: Final = {
     "US Government": "https://api.gov-meraki.com/api/v1",
 }
 
+# API rate limiting defaults
+API_RATE_LIMIT_PER_SECOND: Final = 10
+API_RATE_LIMIT_MAX_CONCURRENT: Final = 5
+API_THROTTLE_WINDOW_MINUTES: Final = 60
+EVENT_FETCH_TIMEOUT_SECONDS: Final = 15
+
+# API call priority levels (lower value = higher priority)
+API_PRIORITY_HIGH: Final = 0
+API_PRIORITY_NORMAL: Final = 10
+API_PRIORITY_LOW: Final = 20
+
 # Scan intervals (in seconds)
 DEFAULT_SCAN_INTERVAL: Final = 300  # 5 minutes
 MIN_SCAN_INTERVAL: Final = 30  # 30 seconds minimum (for MT fast refresh)
 DEFAULT_DISCOVERY_INTERVAL: Final = 3600  # 1 hour
 MIN_DISCOVERY_INTERVAL: Final = 300  # 5 minutes
+
+# Entity registry cleanup safeguards
+ENTITY_REMOVAL_MIN_DISCOVERY_PASSES: Final = 2
 
 # Device type specific intervals (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS: Final = {
@@ -325,6 +347,11 @@ MT_BINARY_SENSOR_METRICS: Final = [
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
     MT_SENSOR_WATER,
+]
+
+MV_BINARY_SENSOR_METRICS: Final = [
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
 ]
 
 MT_EVENT_SENSOR_METRICS: Final = [
