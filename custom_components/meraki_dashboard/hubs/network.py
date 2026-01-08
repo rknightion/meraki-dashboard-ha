@@ -1019,6 +1019,43 @@ class MerakiNetworkHub:
                             cache_key, result or [], self._get_long_cache_ttl()
                         )
 
+            # Phase 2: Fetch switch port profiles (network-level)
+            port_profiles: list[dict[str, Any]] = []
+            port_profiles_by_id: dict[str, dict[str, Any]] = {}
+            port_profiles_cache_key = self._cache_key("port_profiles")
+            cached_port_profiles = get_cached_api_response(port_profiles_cache_key)
+            if cached_port_profiles is not None:
+                port_profiles = cached_port_profiles
+            elif self.dashboard and hasattr(
+                self.dashboard.switch, "getNetworkSwitchPortsProfiles"
+            ):
+                try:
+                    port_profiles = await self.organization_hub.async_api_call(
+                        self.dashboard.switch.getNetworkSwitchPortsProfiles,
+                        self.network_id,
+                        priority=API_PRIORITY_LOW,
+                    )
+                except Exception as err:
+                    _LOGGER.debug(
+                        "Could not get switch port profiles for %s: %s",
+                        self.network_name,
+                        err,
+                    )
+                    port_profiles = []
+                cache_api_response(
+                    port_profiles_cache_key,
+                    port_profiles or [],
+                    self._get_long_cache_ttl(),
+                )
+
+            if isinstance(port_profiles, list):
+                for profile in port_profiles:
+                    profile_id = profile.get("profileId")
+                    if profile_id:
+                        port_profiles_by_id[str(profile_id)] = profile
+            else:
+                port_profiles = []
+
             # Phase 2: Batch API calls for power modules (if method exists)
             if (
                 devices_needing_power_modules
@@ -1077,6 +1114,18 @@ class MerakiNetworkHub:
                 # Process port configs
                 port_configs = port_config_cache.get(device_serial, [])
                 for port_config in port_configs:
+                    profile = port_config.get("profile")
+                    if isinstance(profile, dict):
+                        profile_id = profile.get("id")
+                        if profile_id:
+                            profile_data = port_profiles_by_id.get(str(profile_id))
+                            profile_name = None
+                            if profile_data:
+                                profile_name = profile_data.get("name")
+                            if not profile_name:
+                                profile_name = profile.get("iname")
+                            if profile_name:
+                                profile["name"] = profile_name
                     port_config["device_serial"] = device_serial
                     port_config["device_name"] = device_name
                 all_port_configs.extend(port_configs)
@@ -1201,6 +1250,7 @@ class MerakiNetworkHub:
                 "devices_info": devices_info,  # Add aggregated device info
                 "ports_status": all_ports_status,
                 "port_configs": all_port_configs,
+                "port_profiles": port_profiles,
                 "power_modules": all_power_modules,
                 "packet_statistics": packet_statistics,
                 "stp_priorities": stp_priorities,
@@ -1219,6 +1269,75 @@ class MerakiNetworkHub:
 
         except Exception as err:
             _LOGGER.error("Error getting switch data for %s: %s", self.hub_name, err)
+
+    def _update_cached_switch_port_config(
+        self,
+        device_serial: str,
+        port_id: str,
+        updates: dict[str, Any],
+    ) -> None:
+        """Update cached switch port configuration after a change."""
+        cache_key = self._cache_key("port_config", device_serial)
+        cached_configs = get_cached_api_response(cache_key)
+        updated = False
+
+        if isinstance(cached_configs, list):
+            for port_config in cached_configs:
+                if str(port_config.get("portId")) == str(port_id):
+                    port_config.update(updates)
+                    updated = True
+                    break
+
+            if updated:
+                cache_api_response(
+                    cache_key, cached_configs, self._get_long_cache_ttl()
+                )
+
+        if self.switch_data and isinstance(self.switch_data.get("port_configs"), list):
+            for port_config in self.switch_data["port_configs"]:
+                if port_config.get("device_serial") == device_serial and str(
+                    port_config.get("portId")
+                ) == str(port_id):
+                    port_config.update(updates)
+                    break
+
+    @with_standard_retries("realtime")
+    @handle_api_errors(log_errors=True, convert_connection_errors=False)
+    async def async_update_switch_port(
+        self,
+        device_serial: str,
+        port_id: str,
+        **settings: Any,
+    ) -> dict[str, Any] | None:
+        """Update switch port configuration for a device."""
+        if not self.dashboard:
+            return None
+        if not hasattr(self.dashboard.switch, "updateDeviceSwitchPort"):
+            _LOGGER.debug(
+                "Switch port update method not available for %s", device_serial
+            )
+            return None
+
+        try:
+            response = await self.organization_hub.async_api_call(
+                self.dashboard.switch.updateDeviceSwitchPort,
+                device_serial,
+                priority=API_PRIORITY_HIGH,
+                portId=str(port_id),
+                **settings,
+            )
+            self._update_cached_switch_port_config(
+                device_serial, str(port_id), settings
+            )
+            return response if isinstance(response, dict) else None
+        except Exception as err:
+            _LOGGER.debug(
+                "Switch port update failed for %s port %s: %s",
+                device_serial,
+                port_id,
+                err,
+            )
+        return None
 
     def _resolve_camera_method(self, method_name: str) -> Callable[..., Any] | None:
         """Resolve a camera-related SDK method across possible namespaces."""
