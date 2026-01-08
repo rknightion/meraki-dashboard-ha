@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from .config.migration import async_migrate_config_entry
 from .config.schemas import MerakiConfigSchema
@@ -526,6 +527,32 @@ async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
+async def _async_cleanup_entry_registries(hass: HomeAssistant, entry_id: str) -> None:
+    """Remove entity and device registry entries for a config entry."""
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+
+    try:
+        entity_entries = er.async_entries_for_config_entry(entity_registry, entry_id)
+        for entry in entity_entries:
+            entity_registry.async_remove(entry.entity_id)
+
+        device_entries = dr.async_entries_for_config_entry(device_registry, entry_id)
+        for device_entry in device_entries:
+            device_registry.async_remove_device(device_entry.id)
+
+        _LOGGER.debug(
+            "Cleaned registry entries for %s: %d entities, %d devices",
+            entry_id,
+            len(entity_entries),
+            len(device_entries),
+        )
+    except Exception as err:
+        _LOGGER.error(
+            "Failed to clean registry entries for %s: %s", entry_id, err, exc_info=True
+        )
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry.
 
@@ -562,3 +589,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.services.async_remove(DOMAIN, SERVICE_SET_CAMERA_RTSP)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle removal of a config entry."""
+    # Preserve entity registry entries on reload; cleanup happens on removal.
+    await _async_cleanup_entry_registries(hass, entry.entry_id)
