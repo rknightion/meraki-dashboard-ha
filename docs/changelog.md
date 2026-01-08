@@ -11,6 +11,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.36.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.35.0...v0.36.0) (2026-01-08)
+
+
+### Features
+
+* add camera platform support ([31920a6](https://github.com/rknightion/meraki-dashboard-ha/commit/31920a6df0793fe473ca8a9e25a00714f2bd5961))
+* add MV camera data transformer ([0580a0c](https://github.com/rknightion/meraki-dashboard-ha/commit/0580a0cec87bb6781ef44705538793ba4d98dbb6))
+* add MV camera hub data handling ([ec5ea47](https://github.com/rknightion/meraki-dashboard-ha/commit/ec5ea478644abdfc1c67e912dbd204d55f38a031))
+* add MV camera support to const and types ([84dede4](https://github.com/rknightion/meraki-dashboard-ha/commit/84dede43018511c4b67a537ce016e11af8e34d11))
+* add MV capability detection ([0cb8222](https://github.com/rknightion/meraki-dashboard-ha/commit/0cb8222579f12598d27f2c266ebde12dfc67ffda))
+* add MV coordinator and sensor setup ([e402a58](https://github.com/rknightion/meraki-dashboard-ha/commit/e402a588b711ac58a0b14d377ef612a6c92a41e6))
+* add MV device sensor entities ([a6316f8](https://github.com/rknightion/meraki-dashboard-ha/commit/a6316f85a4fc7528d2551a63e9f73d0070b3ea85))
+* add MV entity factory registrations ([d590e93](https://github.com/rknightion/meraki-dashboard-ha/commit/d590e932aa321294eacf4fdd9476ce73b56c16e7))
+* add MV support to config and discovery ([90d3e6e](https://github.com/rknightion/meraki-dashboard-ha/commit/90d3e6ecebb0a59a5c5a7b23d844d82d9b0c12cd))
+* add MV support to platform registration ([55f6cdb](https://github.com/rknightion/meraki-dashboard-ha/commit/55f6cdb461c380610a811e1a2793ced6ce8f1601))
+* add MV switch entity for RTSP control ([353b44b](https://github.com/rknightion/meraki-dashboard-ha/commit/353b44b5d4944a9e91a37742df7cbbc0394c81a4))
+* add set_camera_rtsp service ([c6fba9f](https://github.com/rknightion/meraki-dashboard-ha/commit/c6fba9fa0da35021ac3d63652db455519688bdd4))
+* **config:** use async Meraki client and robust error handling ([149390d](https://github.com/rknightion/meraki-dashboard-ha/commit/149390d4d6a8ea7ba1d2ae12b6e9cac3f1246d84))
+* **const:** define new MV/org metrics and rate limits ([d24a2ba](https://github.com/rknightion/meraki-dashboard-ha/commit/d24a2ba52b602dad7164f5cd7e83112ae2d36375))
+* **devices:** add MV sensor descriptions and org rate sensors ([ac7fd3c](https://github.com/rknightion/meraki-dashboard-ha/commit/ac7fd3c2d64493f439b059538d2021c2bd7110db))
+* **mv:** add MV binary sensors and camera init docstrings ([4250a84](https://github.com/rknightion/meraki-dashboard-ha/commit/4250a842ac585b53c633c77a7af05a8e49ce0727))
+* **rate:** add async Meraki rate limiter utility ([2be2ae0](https://github.com/rknightion/meraki-dashboard-ha/commit/2be2ae01a0febd7a11f478649e8fc0b68fb507fc))
+* **transform:** extend MV transformers and org metrics ([a6231fe](https://github.com/rknightion/meraki-dashboard-ha/commit/a6231fe8c11c849c5b71b35fa416fbd56857d637))
+
+
+### Performance Improvements
+
+* **coordinator:** entity cleanup and event timeouts ([ec3e626](https://github.com/rknightion/meraki-dashboard-ha/commit/ec3e626c488d067d71c2db8af10031969ce1c916))
+
+
+### Documentation
+
+* add camera service documentation ([136c3b2](https://github.com/rknightion/meraki-dashboard-ha/commit/136c3b2328cdfc7abcb0a0ddd575d4eb140788a4))
+* update supported entities documentation ([3e33b14](https://github.com/rknightion/meraki-dashboard-ha/commit/3e33b14fa79bb79b5430467f35709e2c9247df57))
+* update translation documentation ([e9c6d94](https://github.com/rknightion/meraki-dashboard-ha/commit/e9c6d94460476c053903befefb31844ad981e9f3))
+
+
+### Miscellaneous Chores
+
+* add cache and stats config translations ([6ef0a69](https://github.com/rknightion/meraki-dashboard-ha/commit/6ef0a698296dc78b01704e041a0435bc5cac26c5))
+* bits ([dabd294](https://github.com/rknightion/meraki-dashboard-ha/commit/dabd294bc550053655a2096478ecec4104d7261a))
+* **core:** registry cleanup and unload hooks ([55e3f51](https://github.com/rknightion/meraki-dashboard-ha/commit/55e3f518f4e8f37c5be6e4c289897976ea56ba13))
+* **deps:** lock file maintenance ([#227](https://github.com/rknightion/meraki-dashboard-ha/issues/227)) ([05b8a2e](https://github.com/rknightion/meraki-dashboard-ha/commit/05b8a2e9aeccd36d1cd4b16f00f5ccc42b1b6b70))
+* **deps:** lock file maintenance ([#228](https://github.com/rknightion/meraki-dashboard-ha/issues/228)) ([c782913](https://github.com/rknightion/meraki-dashboard-ha/commit/c782913cf5c98c2aa8f12c07a52cb9f6e01acdc8))
+* **deps:** update anthropics/claude-code-action digest to c9ec2b0 ([#229](https://github.com/rknightion/meraki-dashboard-ha/issues/229)) ([528d3a1](https://github.com/rknightion/meraki-dashboard-ha/commit/528d3a1dcc1558fd2753000556dd7ce44e870527))
+* **deps:** update astral-sh/setup-uv action to v7.2.0 ([#230](https://github.com/rknightion/meraki-dashboard-ha/issues/230)) ([000a17c](https://github.com/rknightion/meraki-dashboard-ha/commit/000a17c862f869a93d007259c7a41c89d3e95b43))
+* docs ([52f9583](https://github.com/rknightion/meraki-dashboard-ha/commit/52f9583a81c3d8e223c5c915773067e64b87116c))
+* migrate changelog to docs directory ([80bcfcc](https://github.com/rknightion/meraki-dashboard-ha/commit/80bcfcccceb38703784b9a4fb986354a76364c55))
+* secs ([9ba72d9](https://github.com/rknightion/meraki-dashboard-ha/commit/9ba72d98667a14e73cbe2884ebea6288d71c7893))
+* updates ([f9eb060](https://github.com/rknightion/meraki-dashboard-ha/commit/f9eb0606e1b1aa0721c75a320541ed8df505e9d4))
+
+
+### Code Refactoring
+
+* **api:** async API call routing and batch invocation ([2135d11](https://github.com/rknightion/meraki-dashboard-ha/commit/2135d11e633faf230226824cbaabbc0a69291734))
+* improve config flow hub settings UI ([7d107e0](https://github.com/rknightion/meraki-dashboard-ha/commit/7d107e043dc16e11aae50f67bc386e66032af5b0))
+
 ## [0.35.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.34.0...v0.35.0) (2025-12-22)
 
 
