@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, SENSOR_TYPE_MV
+from .const import (
+    DOMAIN,
+    ENTITY_REMOVAL_MIN_DISCOVERY_PASSES,
+    EVENT_FETCH_TIMEOUT_SECONDS,
+    SENSOR_TYPE_MV,
+)
 from .types import CoordinatorData, MerakiDeviceData
 from .utils import performance_monitor
 from .utils.error_handling import handle_api_errors
@@ -62,6 +70,10 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
         self._update_count = 0
         self._failed_updates = 0
         self._last_update_duration: float | None = None
+        self._known_device_serials: set[str] = set()
+        self._valid_entity_unique_ids: set[str] = set()
+        self._missing_device_serials: dict[str, int] = {}
+        self._last_cleanup_discovery_time: datetime | None = None
 
         _LOGGER.debug(
             "Device coordinator initialized for %s (%s) with %d devices and %d second update interval",
@@ -125,7 +137,15 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
 
                 # Also fetch network events for wireless devices
                 try:
-                    await self.hub.async_fetch_network_events()
+                    await asyncio.wait_for(
+                        self.hub.async_fetch_network_events(),
+                        timeout=EVENT_FETCH_TIMEOUT_SECONDS,
+                    )
+                except TimeoutError:
+                    _LOGGER.debug(
+                        "Timed out fetching wireless network events for %s",
+                        self.hub.hub_name,
+                    )
                 except Exception as event_err:
                     _LOGGER.debug(
                         "Failed to fetch wireless network events: %s", event_err
@@ -140,7 +160,15 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
 
                 # Also fetch network events for switch devices
                 try:
-                    await self.hub.async_fetch_network_events()
+                    await asyncio.wait_for(
+                        self.hub.async_fetch_network_events(),
+                        timeout=EVENT_FETCH_TIMEOUT_SECONDS,
+                    )
+                except TimeoutError:
+                    _LOGGER.debug(
+                        "Timed out fetching switch network events for %s",
+                        self.hub.hub_name,
+                    )
                 except Exception as event_err:
                     _LOGGER.debug(
                         "Failed to fetch switch network events: %s", event_err
@@ -176,6 +204,8 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
                     self._last_update_duration,
                 )
 
+            await self._async_cleanup_entity_registry()
+
             return data
 
         except Exception as err:
@@ -204,3 +234,186 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
             delay_seconds,
             lambda: self.hass.async_create_task(self.async_request_refresh()),
         )
+
+    def _get_current_device_serials(self) -> set[str]:
+        """Return the set of device serials currently tracked by the hub."""
+        devices = getattr(self.hub, "devices", [])
+        serials: set[str] = set()
+        for device in devices:
+            if not isinstance(device, dict):
+                continue
+            serial = device.get("serial")
+            if isinstance(serial, str) and serial:
+                serials.add(serial)
+        return serials
+
+    async def _async_cleanup_entity_registry(self) -> None:
+        """Clean up orphaned entities when devices are removed or filtered."""
+        current_serials = self._get_current_device_serials()
+        hub_last_discovery_time = getattr(self.hub, "_last_discovery_time", None)
+
+        if hub_last_discovery_time is None:
+            _LOGGER.debug(
+                "Entity cleanup skipped for %s: device discovery has not completed yet",
+                self.hub.hub_name,
+            )
+            return
+
+        if getattr(self.hub, "_discovery_in_progress", False):
+            _LOGGER.debug(
+                "Entity cleanup skipped for %s: device discovery in progress",
+                self.hub.hub_name,
+            )
+            return
+
+        if self._last_cleanup_discovery_time == hub_last_discovery_time:
+            _LOGGER.debug(
+                "Entity cleanup skipped for %s: no new discovery cycle",
+                self.hub.hub_name,
+            )
+            return
+
+        self._last_cleanup_discovery_time = hub_last_discovery_time
+
+        device_registry = dr.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
+
+        hub_identifier = (DOMAIN, f"{self.hub.network_id}_{self.hub.device_type}")
+        hub_device_entry = device_registry.async_get_device(
+            identifiers={hub_identifier}
+        )
+
+        if not hub_device_entry:
+            _LOGGER.debug(
+                "Entity cleanup skipped for %s: network hub not found in device registry",
+                self.hub.hub_name,
+            )
+            return
+
+        try:
+            # Local import avoids circular dependency during module initialization.
+            from .entities.factory import extract_device_serial_from_identifier
+
+            device_entries = [
+                entry
+                for entry in dr.async_entries_for_config_entry(
+                    device_registry, self.config_entry.entry_id
+                )
+                if entry.via_device_id == hub_device_entry.id
+            ]
+
+            orphaned_entries: list[tuple[dr.DeviceEntry, str]] = []
+            valid_device_entries: list[dr.DeviceEntry] = []
+            pending_serials: list[str] = []
+            observed_serials: set[str] = set()
+
+            for device_entry in device_entries:
+                serial = None
+                for identifier_domain, identifier in device_entry.identifiers:
+                    if identifier_domain != DOMAIN:
+                        continue
+                    serial = extract_device_serial_from_identifier(
+                        self.config_entry.entry_id, identifier
+                    )
+                    if serial:
+                        break
+
+                if not serial:
+                    continue
+                observed_serials.add(serial)
+
+                if serial in current_serials:
+                    valid_device_entries.append(device_entry)
+                    self._missing_device_serials.pop(serial, None)
+                else:
+                    missing_count = self._missing_device_serials.get(serial, 0) + 1
+                    self._missing_device_serials[serial] = missing_count
+
+                    if missing_count >= ENTITY_REMOVAL_MIN_DISCOVERY_PASSES:
+                        orphaned_entries.append((device_entry, serial))
+                    else:
+                        pending_serials.append(serial)
+                        valid_device_entries.append(device_entry)
+
+            removed_entities = 0
+            removed_devices = 0
+            removed_serials: list[str] = []
+            removed_entity_ids: list[str] = []
+            removed_device_labels: list[str] = []
+
+            for device_entry, serial in orphaned_entries:
+                entity_entries = er.async_entries_for_device(
+                    entity_registry, device_entry.id
+                )
+                for entity_entry in entity_entries:
+                    if entity_entry.config_entry_id != self.config_entry.entry_id:
+                        continue
+                    entity_registry.async_remove(entity_entry.entity_id)
+                    removed_entities += 1
+                    removed_entity_ids.append(entity_entry.entity_id)
+
+                if not er.async_entries_for_device(entity_registry, device_entry.id):
+                    device_registry.async_remove_device(device_entry.id)
+                    removed_devices += 1
+                    device_name = device_entry.name_by_user or device_entry.name
+                    if device_name:
+                        removed_device_labels.append(f"{device_name} ({serial})")
+                    else:
+                        removed_device_labels.append(serial)
+
+                removed_serials.append(serial)
+                self._missing_device_serials.pop(serial, None)
+
+            if pending_serials:
+                _LOGGER.debug(
+                    "Orphan cleanup deferred for %d devices in %s (missing < %d discovery cycles): %s",
+                    len(pending_serials),
+                    self.hub.hub_name,
+                    ENTITY_REMOVAL_MIN_DISCOVERY_PASSES,
+                    ", ".join(sorted(set(pending_serials))),
+                )
+
+            if removed_entities or removed_devices:
+                removed_entities_log = (
+                    ", ".join(sorted(set(removed_entity_ids))) or "none"
+                )
+                removed_devices_log = (
+                    ", ".join(sorted(set(removed_device_labels))) or "none"
+                )
+                _LOGGER.warning(
+                    "Removed %d orphan entities for %d devices in %s: entities=%s; devices=%s",
+                    removed_entities,
+                    removed_devices,
+                    self.hub.hub_name,
+                    removed_entities_log,
+                    removed_devices_log,
+                )
+                _LOGGER.debug(
+                    "Orphan cleanup removed devices in %s: %s",
+                    self.hub.hub_name,
+                    ", ".join(sorted(set(removed_serials))),
+                )
+
+            # Prune missing tracker entries for devices no longer in the registry.
+            for serial in list(self._missing_device_serials.keys()):
+                if serial not in observed_serials:
+                    self._missing_device_serials.pop(serial, None)
+
+            valid_unique_ids: set[str] = set()
+            for device_entry in valid_device_entries:
+                for entity_entry in er.async_entries_for_device(
+                    entity_registry, device_entry.id
+                ):
+                    if entity_entry.unique_id:
+                        valid_unique_ids.add(entity_entry.unique_id)
+
+            self._valid_entity_unique_ids = valid_unique_ids
+            self._known_device_serials = current_serials
+
+        except Exception as err:
+            _LOGGER.error(
+                "Failed to clean entity registry for %s: %s",
+                self.hub.hub_name,
+                err,
+                exc_info=True,
+            )
