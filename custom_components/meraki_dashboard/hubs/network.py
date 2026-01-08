@@ -12,6 +12,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.event import async_track_time_interval
 
 from ..const import (
+    API_PRIORITY_HIGH,
+    API_PRIORITY_LOW,
+    API_PRIORITY_NORMAL,
     CONF_AUTO_DISCOVERY,
     CONF_DISCOVERY_INTERVAL,
     CONF_EXTENDED_CACHE_TTL,
@@ -444,14 +447,15 @@ class MerakiNetworkHub:
                 )
                 all_devices = cached_devices
             else:
-                # Get all devices in the network
-                api_start_time = self.hass.loop.time()
-                all_devices = await self.hass.async_add_executor_job(
-                    self.dashboard.networks.getNetworkDevices, self.network_id
+                # Get all devices in the network (paginated)
+                all_devices = await self.organization_hub.async_api_call(
+                    self.dashboard.organizations.getOrganizationDevices,
+                    self.organization_id,
+                    priority=API_PRIORITY_LOW,
+                    networkIds=[self.network_id],
+                    perPage=1000,
+                    total_pages="all",
                 )
-                api_duration = self.hass.loop.time() - api_start_time
-                self.organization_hub.total_api_calls += 1
-                self.organization_hub._track_api_call_duration(api_duration)
 
                 # Filter devices by type
                 type_devices = []
@@ -525,7 +529,6 @@ class MerakiNetworkHub:
                 )
 
         except Exception as err:
-            self.organization_hub.failed_api_calls += 1
             self.organization_hub.last_api_call_error = str(err)
             _LOGGER.error(
                 "Error discovering devices for %s: %s",
@@ -552,10 +555,11 @@ class MerakiNetworkHub:
             ssid_cache_key = self._cache_key("ssids")
             ssids = get_cached_api_response(ssid_cache_key)
             if ssids is None:
-                ssids = await self.hass.async_add_executor_job(
-                    self.dashboard.wireless.getNetworkWirelessSsids, self.network_id
+                ssids = await self.organization_hub.async_api_call(
+                    self.dashboard.wireless.getNetworkWirelessSsids,
+                    self.network_id,
+                    priority=API_PRIORITY_LOW,
                 )
-                self.organization_hub.total_api_calls += 1
                 cache_api_response(ssid_cache_key, ssids, self._get_long_cache_ttl())
 
             # Use already discovered and filtered wireless devices
@@ -610,9 +614,13 @@ class MerakiNetworkHub:
                     if device_serial:
                         api_calls.append(
                             (
-                                dashboard.devices.getDeviceClients,
-                                (device_serial,),
-                                {"timespan": 3600},
+                                self.organization_hub.async_api_call,
+                                (dashboard.devices.getDeviceClients, device_serial),
+                                {
+                                    "priority": API_PRIORITY_NORMAL,
+                                    "timespan": 3600,
+                                    "total_pages": "all",
+                                },
                             )
                         )
                         serials_in_batch.append(device_serial)
@@ -622,7 +630,6 @@ class MerakiNetworkHub:
                     results = await batch_api_calls(
                         self.hass, api_calls, max_concurrent=5
                     )
-                    self.organization_hub.total_api_calls += len(api_calls)
 
                     # Process results
                     for i, result in enumerate(results):
@@ -763,7 +770,6 @@ class MerakiNetworkHub:
 
         except Exception as err:
             _LOGGER.error("Error getting wireless data for %s: %s", self.hub_name, err)
-            self.organization_hub.failed_api_calls += 1
 
     async def _async_get_channel_utilization(
         self, wireless_devices: Sequence[dict[str, Any] | MerakiDeviceData]
@@ -794,21 +800,12 @@ class MerakiNetworkHub:
                 self.network_name,
             )
 
-            # Wrapper function for API call
-            def get_channel_utilization():
-                if self.dashboard is None:
-                    return []
-                return (
-                    self.dashboard.networks.getNetworkNetworkHealthChannelUtilization(
-                        self.network_id,
-                        timespan=600,  # 10 minutes (minimum supported)
-                    )
-                )
-
-            utilization_data = await self.hass.async_add_executor_job(
-                get_channel_utilization
+            utilization_data = await self.organization_hub.async_api_call(
+                self.dashboard.networks.getNetworkNetworkHealthChannelUtilization,
+                self.network_id,
+                priority=API_PRIORITY_NORMAL,
+                timespan=600,  # 10 minutes (minimum supported)
             )
-            self.organization_hub.total_api_calls += 1
 
             # Process the utilization data
             for device_data in utilization_data:
@@ -861,7 +858,6 @@ class MerakiNetworkHub:
                 self.network_name,
                 err,
             )
-            self.organization_hub.failed_api_calls += 1
 
         return channel_utilization
 
@@ -963,14 +959,16 @@ class MerakiNetworkHub:
                 dashboard = self.dashboard
                 api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
                     (
-                        dashboard.switch.getDeviceSwitchPortsStatuses,
-                        (serial,),
-                        {"timespan": 3600},
+                        self.organization_hub.async_api_call,
+                        (dashboard.switch.getDeviceSwitchPortsStatuses, serial),
+                        {
+                            "priority": API_PRIORITY_NORMAL,
+                            "timespan": 3600,
+                        },
                     )
                     for serial in devices_needing_port_status
                 ]
                 results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-                self.organization_hub.total_api_calls += len(api_calls)
 
                 for i, result in enumerate(results):
                     device_serial = devices_needing_port_status[i]
@@ -996,11 +994,14 @@ class MerakiNetworkHub:
                 )
                 dashboard = self.dashboard
                 api_calls = [
-                    (dashboard.switch.getDeviceSwitchPorts, (serial,), {})
+                    (
+                        self.organization_hub.async_api_call,
+                        (dashboard.switch.getDeviceSwitchPorts, serial),
+                        {"priority": API_PRIORITY_LOW},
+                    )
                     for serial in devices_needing_port_config
                 ]
                 results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-                self.organization_hub.total_api_calls += len(api_calls)
 
                 for i, result in enumerate(results):
                     device_serial = devices_needing_port_config[i]
@@ -1033,14 +1034,13 @@ class MerakiNetworkHub:
                 dashboard = self.dashboard
                 api_calls = [
                     (
-                        dashboard.switch.getDeviceSwitchPowerModulesStatuses,
-                        (serial,),
-                        {},
+                        self.organization_hub.async_api_call,
+                        (dashboard.switch.getDeviceSwitchPowerModulesStatuses, serial),
+                        {"priority": API_PRIORITY_LOW},
                     )
                     for serial in devices_needing_power_modules
                 ]
                 results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-                self.organization_hub.total_api_calls += len(api_calls)
 
                 for i, result in enumerate(results):
                     device_serial = devices_needing_power_modules[i]
@@ -1219,7 +1219,6 @@ class MerakiNetworkHub:
 
         except Exception as err:
             _LOGGER.error("Error getting switch data for %s: %s", self.hub_name, err)
-            self.organization_hub.failed_api_calls += 1
 
     def _resolve_camera_method(self, method_name: str) -> Callable[..., Any] | None:
         """Resolve a camera-related SDK method across possible namespaces."""
@@ -1236,7 +1235,7 @@ class MerakiNetworkHub:
 
         return None
 
-    def _get_device_camera_video_settings(
+    async def _get_device_camera_video_settings(
         self, device_serial: str
     ) -> dict[str, Any] | None:
         """Fetch camera video settings using the current API path."""
@@ -1248,7 +1247,12 @@ class MerakiNetworkHub:
             "operation": "getDeviceCameraVideoSettings",
         }
         resource = f"/devices/{device_serial}/camera/video/settings"
-        return self.dashboard._session.get(metadata, resource)
+        return await self.organization_hub.async_api_call(
+            self.dashboard._session.get,
+            metadata,
+            resource,
+            priority=API_PRIORITY_NORMAL,
+        )
 
     @with_standard_retries("realtime")
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
@@ -1266,10 +1270,7 @@ class MerakiNetworkHub:
                 return cached
 
         try:
-            response = await self.hass.async_add_executor_job(
-                self._get_device_camera_video_settings, device_serial
-            )
-            self.organization_hub.total_api_calls += 1
+            response = await self._get_device_camera_video_settings(device_serial)
             if isinstance(response, dict):
                 cache_api_response(cache_key, response, self._get_standard_cache_ttl())
                 if self.camera_data and isinstance(
@@ -1284,7 +1285,6 @@ class MerakiNetworkHub:
             _LOGGER.debug(
                 "Could not refresh video settings for %s: %s", device_serial, err
             )
-            self.organization_hub.failed_api_calls += 1
 
         return None
 
@@ -1321,10 +1321,16 @@ class MerakiNetworkHub:
             quality_cache: dict[str, dict[str, Any]] = {}
             video_cache: dict[str, dict[str, Any]] = {}
             analytics_cache: dict[str, dict[str, Any]] = {}
+            sense_cache: dict[str, dict[str, Any]] = {}
+            analytics_recent_cache: dict[str, Any] = {}
+            analytics_live_cache: dict[str, Any] = {}
 
             devices_needing_quality: list[str] = []
             devices_needing_video: list[str] = []
             devices_needing_analytics: list[str] = []
+            devices_needing_sense: list[str] = []
+            devices_needing_analytics_recent: list[str] = []
+            devices_needing_analytics_live: list[str] = []
 
             for device in camera_devices:
                 device_serial = device.get("serial")
@@ -1364,19 +1370,47 @@ class MerakiNetworkHub:
                 elif device_serial not in offline_serials:
                     devices_needing_analytics.append(device_serial)
 
+                sense_cache_key = self._cache_key("camera_sense", device_serial)
+                cached_sense = get_cached_api_response(sense_cache_key)
+                if cached_sense is not None:
+                    sense_cache[device_serial] = cached_sense
+                elif device_serial not in offline_serials:
+                    devices_needing_sense.append(device_serial)
+
+                analytics_recent_cache_key = self._cache_key(
+                    "camera_analytics_recent", device_serial
+                )
+                cached_recent = get_cached_api_response(analytics_recent_cache_key)
+                if cached_recent is not None:
+                    analytics_recent_cache[device_serial] = cached_recent
+                elif device_serial not in offline_serials:
+                    devices_needing_analytics_recent.append(device_serial)
+
+                analytics_live_cache_key = self._cache_key(
+                    "camera_analytics_live", device_serial
+                )
+                cached_live = get_cached_api_response(analytics_live_cache_key)
+                if cached_live is not None:
+                    analytics_live_cache[device_serial] = cached_live
+                elif device_serial not in offline_serials:
+                    devices_needing_analytics_live.append(device_serial)
+
             # Fetch quality & retention settings
             quality_method = self._resolve_camera_method(
                 "getDeviceCameraQualityAndRetention"
             )
             if quality_method and devices_needing_quality:
                 quality_api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
-                    (quality_method, (serial,), {})
+                    (
+                        self.organization_hub.async_api_call,
+                        (quality_method, serial),
+                        {"priority": API_PRIORITY_NORMAL},
+                    )
                     for serial in devices_needing_quality
                 ]
                 results = await batch_api_calls(
                     self.hass, quality_api_calls, max_concurrent=5
                 )
-                self.organization_hub.total_api_calls += len(quality_api_calls)
 
                 for i, result in enumerate(results):
                     device_serial = devices_needing_quality[i]
@@ -1405,7 +1439,6 @@ class MerakiNetworkHub:
                 results = await batch_api_calls(
                     self.hass, video_api_calls, max_concurrent=5
                 )
-                self.organization_hub.total_api_calls += len(video_api_calls)
 
                 for i, result in enumerate(results):
                     device_serial = devices_needing_video[i]
@@ -1433,13 +1466,16 @@ class MerakiNetworkHub:
                 analytics_api_calls: list[
                     tuple[Any, tuple[Any, ...], dict[str, Any]]
                 ] = [
-                    (analytics_method, (serial,), {})
+                    (
+                        self.organization_hub.async_api_call,
+                        (analytics_method, serial),
+                        {"priority": API_PRIORITY_NORMAL},
+                    )
                     for serial in devices_needing_analytics
                 ]
                 results = await batch_api_calls(
                     self.hass, analytics_api_calls, max_concurrent=5
                 )
-                self.organization_hub.total_api_calls += len(analytics_api_calls)
 
                 for i, result in enumerate(results):
                     device_serial = devices_needing_analytics[i]
@@ -1461,6 +1497,116 @@ class MerakiNetworkHub:
                     else:
                         cache_api_response(cache_key, {}, self._get_long_cache_ttl())
 
+            sense_method = self._resolve_camera_method("getDeviceCameraSense")
+            if sense_method and devices_needing_sense:
+                sense_api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                    (
+                        self.organization_hub.async_api_call,
+                        (sense_method, serial),
+                        {"priority": API_PRIORITY_NORMAL},
+                    )
+                    for serial in devices_needing_sense
+                ]
+                results = await batch_api_calls(
+                    self.hass, sense_api_calls, max_concurrent=5
+                )
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_sense[i]
+                    cache_key = self._cache_key("camera_sense", device_serial)
+                    if isinstance(result, Exception):
+                        _LOGGER.debug(
+                            "Could not get camera sense settings for %s: %s",
+                            device_serial,
+                            result,
+                        )
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+                    elif isinstance(result, dict):
+                        sense_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_long_cache_ttl()
+                        )
+                    else:
+                        cache_api_response(cache_key, {}, self._get_long_cache_ttl())
+
+            analytics_recent_method = self._resolve_camera_method(
+                "getDeviceCameraAnalyticsRecent"
+            )
+            if analytics_recent_method and devices_needing_analytics_recent:
+                recent_api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                    (
+                        self.organization_hub.async_api_call,
+                        (analytics_recent_method, serial),
+                        {"priority": API_PRIORITY_NORMAL},
+                    )
+                    for serial in devices_needing_analytics_recent
+                ]
+                results = await batch_api_calls(
+                    self.hass, recent_api_calls, max_concurrent=5
+                )
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_analytics_recent[i]
+                    cache_key = self._cache_key(
+                        "camera_analytics_recent", device_serial
+                    )
+                    if isinstance(result, Exception):
+                        _LOGGER.debug(
+                            "Could not get camera analytics recent for %s: %s",
+                            device_serial,
+                            result,
+                        )
+                        cache_api_response(
+                            cache_key, {}, self._get_standard_cache_ttl()
+                        )
+                    elif isinstance(result, list | dict):
+                        analytics_recent_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_standard_cache_ttl()
+                        )
+                    else:
+                        cache_api_response(
+                            cache_key, {}, self._get_standard_cache_ttl()
+                        )
+
+            analytics_live_method = self._resolve_camera_method(
+                "getDeviceCameraAnalyticsLive"
+            )
+            if analytics_live_method and devices_needing_analytics_live:
+                live_api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
+                    (
+                        self.organization_hub.async_api_call,
+                        (analytics_live_method, serial),
+                        {"priority": API_PRIORITY_NORMAL},
+                    )
+                    for serial in devices_needing_analytics_live
+                ]
+                results = await batch_api_calls(
+                    self.hass, live_api_calls, max_concurrent=5
+                )
+
+                for i, result in enumerate(results):
+                    device_serial = devices_needing_analytics_live[i]
+                    cache_key = self._cache_key("camera_analytics_live", device_serial)
+                    if isinstance(result, Exception):
+                        _LOGGER.debug(
+                            "Could not get camera analytics live for %s: %s",
+                            device_serial,
+                            result,
+                        )
+                        cache_api_response(
+                            cache_key, {}, self._get_standard_cache_ttl()
+                        )
+                    elif isinstance(result, dict):
+                        analytics_live_cache[device_serial] = result
+                        cache_api_response(
+                            cache_key, result, self._get_standard_cache_ttl()
+                        )
+                    else:
+                        cache_api_response(
+                            cache_key, {}, self._get_standard_cache_ttl()
+                        )
+
             profile_ids: set[str] = set()
             for quality_data in quality_cache.values():
                 if isinstance(quality_data, dict):
@@ -1478,10 +1624,11 @@ class MerakiNetworkHub:
                     )
                     if profiles_method:
                         try:
-                            profiles = await self.hass.async_add_executor_job(
-                                profiles_method, self.network_id
+                            profiles = await self.organization_hub.async_api_call(
+                                profiles_method,
+                                self.network_id,
+                                priority=API_PRIORITY_NORMAL,
                             )
-                            self.organization_hub.total_api_calls += 1
                             if isinstance(profiles, list):
                                 cached_profiles = profiles
                                 cache_api_response(
@@ -1493,13 +1640,42 @@ class MerakiNetworkHub:
                             _LOGGER.debug(
                                 "Could not fetch camera quality profiles: %s", err
                             )
-                            self.organization_hub.failed_api_calls += 1
 
                 if isinstance(cached_profiles, list):
                     for profile in cached_profiles:
                         profile_id = profile.get("id")
                         if profile_id in profile_ids:
                             profiles_by_id[profile_id] = profile
+
+            schedules_by_id: dict[str, dict[str, Any]] = {}
+            schedules_cache_key = self._cache_key("camera_schedules")
+            cached_schedules = get_cached_api_response(schedules_cache_key)
+            if cached_schedules is None:
+                schedules_method = self._resolve_camera_method(
+                    "getNetworkCameraSchedules"
+                )
+                if schedules_method:
+                    try:
+                        schedules = await self.organization_hub.async_api_call(
+                            schedules_method,
+                            self.network_id,
+                            priority=API_PRIORITY_NORMAL,
+                        )
+                        if isinstance(schedules, list):
+                            cached_schedules = schedules
+                            cache_api_response(
+                                schedules_cache_key,
+                                schedules,
+                                self._get_long_cache_ttl(),
+                            )
+                    except Exception as err:
+                        _LOGGER.debug("Could not fetch camera schedules: %s", err)
+
+            if isinstance(cached_schedules, list):
+                for schedule in cached_schedules:
+                    schedule_id = schedule.get("id")
+                    if schedule_id:
+                        schedules_by_id[schedule_id] = schedule
 
             # Fetch camera boundaries (areas/lines) and detections history
             boundaries_cache_key = self._cache_key("camera_boundaries")
@@ -1517,27 +1693,27 @@ class MerakiNetworkHub:
 
                 if areas_method:
                     try:
-                        areas = await self.hass.async_add_executor_job(
-                            areas_method, self.organization_id
+                        areas = await self.organization_hub.async_api_call(
+                            areas_method,
+                            self.organization_id,
+                            priority=API_PRIORITY_NORMAL,
                         )
-                        self.organization_hub.total_api_calls += 1
                         if isinstance(areas, list):
                             boundaries.extend(areas)
                     except Exception as err:
                         _LOGGER.debug("Could not fetch camera areas: %s", err)
-                        self.organization_hub.failed_api_calls += 1
 
                 if lines_method:
                     try:
-                        lines = await self.hass.async_add_executor_job(
-                            lines_method, self.organization_id
+                        lines = await self.organization_hub.async_api_call(
+                            lines_method,
+                            self.organization_id,
+                            priority=API_PRIORITY_NORMAL,
                         )
-                        self.organization_hub.total_api_calls += 1
                         if isinstance(lines, list):
                             boundaries.extend(lines)
                     except Exception as err:
                         _LOGGER.debug("Could not fetch camera lines: %s", err)
-                        self.organization_hub.failed_api_calls += 1
 
                 if boundaries:
                     cache_api_response(
@@ -1601,28 +1777,23 @@ class MerakiNetworkHub:
                     params.append(("boundaryTypes[]", boundary_type))
 
                 try:
-
-                    def get_detection_history():
-                        if not self.dashboard:
-                            return None
-                        metadata = {
-                            "tags": ["camera", "configure", "detections"],
-                            "operation": (
-                                "getOrganizationCameraDetectionsHistoryByBoundaryByInterval"
-                            ),
-                        }
-                        resource = (
-                            f"/organizations/{self.organization_id}"
-                            "/camera/detections/history/byBoundary/byInterval"
-                        )
-                        return self.dashboard._session.get(
-                            metadata, resource, params=params
-                        )
-
-                    response = await self.hass.async_add_executor_job(
-                        get_detection_history
+                    metadata = {
+                        "tags": ["camera", "configure", "detections"],
+                        "operation": (
+                            "getOrganizationCameraDetectionsHistoryByBoundaryByInterval"
+                        ),
+                    }
+                    resource = (
+                        f"/organizations/{self.organization_id}"
+                        "/camera/detections/history/byBoundary/byInterval"
                     )
-                    self.organization_hub.total_api_calls += 1
+                    response = await self.organization_hub.async_api_call(
+                        self.dashboard._session.get,
+                        metadata,
+                        resource,
+                        priority=API_PRIORITY_NORMAL,
+                        params=params,
+                    )
                     if isinstance(response, list):
                         cached_detections = response
                         cache_api_response(
@@ -1632,7 +1803,6 @@ class MerakiNetworkHub:
                         )
                 except Exception as err:
                     _LOGGER.debug("Could not fetch camera detections history: %s", err)
-                    self.organization_hub.failed_api_calls += 1
 
             if isinstance(cached_detections, list):
                 for entry in cached_detections:
@@ -1684,6 +1854,12 @@ class MerakiNetworkHub:
                     return quality_data
 
                 enriched = dict(quality_data)
+                schedule_id = (
+                    enriched.get("recordingScheduleId")
+                    or enriched.get("scheduleId")
+                    or profile.get("recordingScheduleId")
+                    or profile.get("scheduleId")
+                )
                 for field in (
                     "motionBasedRetentionEnabled",
                     "audioRecordingEnabled",
@@ -1692,6 +1868,13 @@ class MerakiNetworkHub:
                 ):
                     if field not in enriched and field in profile:
                         enriched[field] = profile.get(field)
+
+                if schedule_id and schedule_id in schedules_by_id:
+                    schedule = schedules_by_id[schedule_id]
+                    enriched.setdefault("recordingScheduleId", schedule_id)
+                    schedule_name = schedule.get("name")
+                    if schedule_name:
+                        enriched.setdefault("recordingScheduleName", schedule_name)
 
                 video_settings = profile.get("videoSettings")
                 if isinstance(video_settings, dict):
@@ -1731,6 +1914,14 @@ class MerakiNetworkHub:
                     device_info["videoSettings"] = video_cache[device_serial]
                 if device_serial in analytics_cache:
                     device_info["customAnalytics"] = analytics_cache[device_serial]
+                if device_serial in sense_cache:
+                    device_info["senseSettings"] = sense_cache[device_serial]
+                if device_serial in analytics_recent_cache:
+                    device_info["analyticsRecent"] = analytics_recent_cache[
+                        device_serial
+                    ]
+                if device_serial in analytics_live_cache:
+                    device_info["analyticsLive"] = analytics_live_cache[device_serial]
                 if device_serial in detections_by_device:
                     detections = detections_by_device[device_serial]
                     detections["by_object_type"] = dict(
@@ -1755,7 +1946,6 @@ class MerakiNetworkHub:
 
         except Exception as err:
             _LOGGER.error("Error getting camera data for %s: %s", self.hub_name, err)
-            self.organization_hub.failed_api_calls += 1
 
     @with_standard_retries("realtime")
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
@@ -1783,17 +1973,16 @@ class MerakiNetworkHub:
             payload["fullframe"] = fullframe
 
         try:
-
-            def generate_snapshot():
-                return method(device_serial, **payload)
-
-            response = await self.hass.async_add_executor_job(generate_snapshot)
-            self.organization_hub.total_api_calls += 1
+            response = await self.organization_hub.async_api_call(
+                method,
+                device_serial,
+                priority=API_PRIORITY_HIGH,
+                **payload,
+            )
             if isinstance(response, dict):
                 return response
         except Exception as err:
             _LOGGER.debug("Snapshot generation failed for %s: %s", device_serial, err)
-            self.organization_hub.failed_api_calls += 1
 
         return None
 
@@ -1820,17 +2009,16 @@ class MerakiNetworkHub:
             payload["timestamp"] = timestamp
 
         try:
-
-            def get_video_link():
-                return method(device_serial, **payload)
-
-            response = await self.hass.async_add_executor_job(get_video_link)
-            self.organization_hub.total_api_calls += 1
+            response = await self.organization_hub.async_api_call(
+                method,
+                device_serial,
+                priority=API_PRIORITY_HIGH,
+                **payload,
+            )
             if isinstance(response, dict):
                 return response
         except Exception as err:
             _LOGGER.debug("Video link fetch failed for %s: %s", device_serial, err)
-            self.organization_hub.failed_api_calls += 1
 
         return None
 
@@ -1854,12 +2042,12 @@ class MerakiNetworkHub:
             return None
 
         try:
-
-            def update_settings():
-                return method(device_serial, externalRtspEnabled=external_rtsp_enabled)
-
-            response = await self.hass.async_add_executor_job(update_settings)
-            self.organization_hub.total_api_calls += 1
+            response = await self.organization_hub.async_api_call(
+                method,
+                device_serial,
+                priority=API_PRIORITY_HIGH,
+                externalRtspEnabled=external_rtsp_enabled,
+            )
             if isinstance(response, dict):
                 updated_settings = response
                 if "rtspUrl" not in response:
@@ -1887,7 +2075,6 @@ class MerakiNetworkHub:
                 device_serial,
                 err,
             )
-            self.organization_hub.failed_api_calls += 1
 
         return None
 
@@ -1922,33 +2109,20 @@ class MerakiNetworkHub:
                 self.hub_name,
                 serials,
             )
-            start_time = self.hass.loop.time()
-
-            # Create wrapper function for API call
-            def get_sensor_readings_with_serials(
-                org_id: str, device_serials: list[str]
-            ) -> list[dict[str, Any]]:
-                if self.dashboard is None:
-                    raise RuntimeError("Dashboard API not initialized")
-                return self.dashboard.sensor.getOrganizationSensorReadingsLatest(
-                    org_id, serials=device_serials
-                )
 
             # Get sensor readings - ALWAYS fresh, no caching for actual sensor data
-            all_readings = await self.hass.async_add_executor_job(
-                get_sensor_readings_with_serials,
+            all_readings = await self.organization_hub.async_api_call(
+                self.dashboard.sensor.getOrganizationSensorReadingsLatest,
                 self.organization_id,
-                serials,
+                priority=API_PRIORITY_HIGH,
+                serials=serials,
             )
-            self.organization_hub.total_api_calls += 1
             self.organization_hub.last_api_call_error = None
 
-            api_duration = round((self.hass.loop.time() - start_time) * 1000, 2)
             _LOGGER.debug(
-                "API call completed in %sms for %s, received %d fresh readings",
-                api_duration,
-                self.hub_name,
+                "Received %d fresh readings for %s",
                 len(all_readings) if all_readings else 0,
+                self.hub_name,
             )
 
             # Organize readings by serial number
@@ -1986,7 +2160,6 @@ class MerakiNetworkHub:
             return result
 
         except Exception as err:
-            self.organization_hub.failed_api_calls += 1
             self.organization_hub.last_api_call_error = str(err)
             _LOGGER.error("Error getting sensor data for %s: %s", self.hub_name, err)
             return {}
@@ -2045,17 +2218,14 @@ class MerakiNetworkHub:
                 self.network_name,
             )
 
-            # Get events with a reasonable page size
-            # Create a wrapper function to properly pass keyword arguments
-            def get_network_events():
-                return self.dashboard.networks.getNetworkEvents(
-                    self.network_id,
-                    productType=product_type,
-                    perPage=50,  # Reasonable page size
-                )
-
-            response = await self.hass.async_add_executor_job(get_network_events)
-            self.organization_hub.total_api_calls += 1
+            # Get events with pagination
+            response = await self.organization_hub.async_api_call(
+                self.dashboard.networks.getNetworkEvents,
+                self.network_id,
+                priority=API_PRIORITY_HIGH,
+                productType=product_type,
+                perPage=100,  # Reasonable page size
+            )
 
             # Handle API response format
             if isinstance(response, dict):
@@ -2110,7 +2280,6 @@ class MerakiNetworkHub:
             return new_events
 
         except Exception as err:
-            self.organization_hub.failed_api_calls += 1
             _LOGGER.error(
                 "Error fetching network events for %s: %s", self.hub_name, err
             )
@@ -2289,15 +2458,17 @@ class MerakiNetworkHub:
             dashboard = self.dashboard
             api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
                 (
-                    dashboard.wireless.getDeviceWirelessConnectionStats,
-                    (serial,),
-                    {"timespan": 1800},  # 30 minutes
+                    self.organization_hub.async_api_call,
+                    (dashboard.wireless.getDeviceWirelessConnectionStats, serial),
+                    {
+                        "priority": API_PRIORITY_NORMAL,
+                        "timespan": 1800,  # 30 minutes
+                    },
                 )
                 for serial in devices_needing_data
             ]
 
             results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-            self.organization_hub.total_api_calls += len(api_calls)
 
             # Process results
             for i, result in enumerate(results):
@@ -2369,15 +2540,17 @@ class MerakiNetworkHub:
             dashboard = self.dashboard
             api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
                 (
-                    dashboard.wireless.getDeviceWirelessLatencyStats,
-                    (serial,),
-                    {"timespan": 300},  # 5 minutes
+                    self.organization_hub.async_api_call,
+                    (dashboard.wireless.getDeviceWirelessLatencyStats, serial),
+                    {
+                        "priority": API_PRIORITY_NORMAL,
+                        "timespan": 300,  # 5 minutes
+                    },
                 )
                 for serial in devices_needing_data
             ]
 
             results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-            self.organization_hub.total_api_calls += len(api_calls)
 
             # Process results
             for i, result in enumerate(results):
@@ -2441,12 +2614,15 @@ class MerakiNetworkHub:
 
             dashboard = self.dashboard
             api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
-                (dashboard.wireless.getDeviceWirelessStatus, (serial,), {})
+                (
+                    self.organization_hub.async_api_call,
+                    (dashboard.wireless.getDeviceWirelessStatus, serial),
+                    {"priority": API_PRIORITY_NORMAL},
+                )
                 for serial in devices_needing_data
             ]
 
             results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-            self.organization_hub.total_api_calls += len(api_calls)
 
             # Process results
             for i, result in enumerate(results):
@@ -2534,15 +2710,17 @@ class MerakiNetworkHub:
             dashboard = self.dashboard
             api_calls: list[tuple[Any, tuple[Any, ...], dict[str, Any]]] = [
                 (
-                    dashboard.switch.getDeviceSwitchPortsStatusesPackets,
-                    (serial,),
-                    {"timespan": 300},  # 5 minutes
+                    self.organization_hub.async_api_call,
+                    (dashboard.switch.getDeviceSwitchPortsStatusesPackets, serial),
+                    {
+                        "priority": API_PRIORITY_NORMAL,
+                        "timespan": 300,  # 5 minutes
+                    },
                 )
                 for serial in devices_needing_data
             ]
 
             results = await batch_api_calls(self.hass, api_calls, max_concurrent=5)
-            self.organization_hub.total_api_calls += len(api_calls)
 
             # Process results
             for i, result in enumerate(results):
@@ -2589,11 +2767,12 @@ class MerakiNetworkHub:
             # Get networks to check STP settings - use org hub's cached networks
             networks = self.organization_hub.networks or []
             if not networks:
-                networks = await self.hass.async_add_executor_job(
+                networks = await self.organization_hub.async_api_call(
                     self.dashboard.organizations.getOrganizationNetworks,
                     self.organization_id,
+                    priority=API_PRIORITY_LOW,
+                    total_pages="all",
                 )
-                self.organization_hub.total_api_calls += 1
 
             # Find this network's STP settings
             for network in networks:
@@ -2605,11 +2784,13 @@ class MerakiNetworkHub:
 
                         if switch_settings is None:
                             # Get switch settings for the network
-                            switch_settings = await self.hass.async_add_executor_job(
-                                self.dashboard.switch.getNetworkSwitchSettings,
-                                self.network_id,
+                            switch_settings = (
+                                await self.organization_hub.async_api_call(
+                                    self.dashboard.switch.getNetworkSwitchSettings,
+                                    self.network_id,
+                                    priority=API_PRIORITY_LOW,
+                                )
                             )
-                            self.organization_hub.total_api_calls += 1
                             cache_api_response(
                                 settings_cache_key,
                                 switch_settings,
