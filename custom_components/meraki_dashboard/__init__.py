@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from typing import Any
@@ -10,7 +11,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
@@ -26,6 +27,7 @@ from .const import (
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVALS,
+    CONF_MS_PORT_EXCLUSIONS,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
@@ -34,6 +36,7 @@ from .const import (
     CONF_SEMI_STATIC_DATA_INTERVAL,
     CONF_STATIC_DATA_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL,
+    DEFAULT_MS_POE_CYCLE_DELAY_SECONDS,
     DEFAULT_SCAN_INTERVAL,
     DEVICE_TYPE_SCAN_INTERVALS,
     DOMAIN,
@@ -45,6 +48,7 @@ from .const import (
     SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
     SENSOR_TYPE_MV,
+    SERVICE_CYCLE_SWITCH_PORT_POE,
     SERVICE_SET_CAMERA_RTSP,
     STATIC_DATA_REFRESH_INTERVAL,
 )
@@ -96,6 +100,20 @@ SERVICE_SET_CAMERA_RTSP_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_CYCLE_SWITCH_PORT_POE_SCHEMA = vol.Schema(
+    {
+        vol.Required("serial"): cv.string,
+        vol.Optional("port_id"): cv.string,
+        vol.Optional("ports"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Optional(
+            "delay_seconds",
+            default=DEFAULT_MS_POE_CYCLE_DELAY_SECONDS,
+        ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional("confirm", default=False): cv.boolean,
+        vol.Optional("config_entry_id"): cv.string,
+    }
+)
+
 
 async def _async_handle_set_camera_rtsp(hass: HomeAssistant, call: ServiceCall) -> None:
     """Handle service call to enable/disable external RTSP for a camera."""
@@ -141,20 +159,156 @@ async def _async_handle_set_camera_rtsp(hass: HomeAssistant, call: ServiceCall) 
     _LOGGER.warning("No MV camera found for serial %s", serial)
 
 
+async def _async_handle_cycle_switch_port_poe(
+    hass: HomeAssistant, call: ServiceCall
+) -> None:
+    """Handle service call to cycle PoE on switch ports."""
+    serial = call.data["serial"]
+    port_id = call.data.get("port_id")
+    ports: list[str] = call.data.get("ports", [])
+    delay_seconds = call.data.get("delay_seconds", DEFAULT_MS_POE_CYCLE_DELAY_SECONDS)
+    entry_id = call.data.get("config_entry_id")
+
+    port_list: list[str] = []
+    if port_id:
+        port_list.append(str(port_id))
+    port_list.extend([str(p) for p in ports if str(p) not in port_list])
+
+    port_list = [p.strip() for p in port_list if str(p).strip()]
+
+    if not port_list:
+        raise HomeAssistantError("At least one port_id or ports entry is required")
+
+    domain_entries = hass.data.get(DOMAIN, {})
+    entries_to_check: dict[str, Any] = {}
+    if entry_id:
+        entry_data = domain_entries.get(entry_id)
+        if entry_data:
+            entries_to_check[entry_id] = entry_data
+    else:
+        entries_to_check = domain_entries
+
+    for entry_key, entry_data in entries_to_check.items():
+        entry = hass.config_entries.async_get_entry(entry_key)
+        options = entry.options if entry else {}
+        exclusion_list = options.get(CONF_MS_PORT_EXCLUSIONS, [])
+        exclusions: set[str] = set()
+        for entry in exclusion_list:
+            if not isinstance(entry, str):
+                continue
+            cleaned = entry.strip()
+            if not cleaned:
+                continue
+            if ":" in cleaned:
+                serial_part, port_part = cleaned.split(":", 1)
+            elif "/" in cleaned:
+                serial_part, port_part = cleaned.split("/", 1)
+            else:
+                continue
+            serial_part = serial_part.strip().upper()
+            port_part = port_part.strip()
+            if not serial_part or not port_part:
+                continue
+            exclusions.add(f"{serial_part}:{port_part}")
+        network_hubs = entry_data.get("network_hubs", {})
+        coordinators = entry_data.get("coordinators", {})
+        for hub_id, hub in network_hubs.items():
+            if hub.device_type != SENSOR_TYPE_MS:
+                continue
+            if not any(
+                device.get("serial") == serial for device in getattr(hub, "devices", [])
+            ):
+                continue
+
+            coordinator = coordinators.get(hub_id)
+            if not coordinator:
+                coordinator = next(
+                    (
+                        coord
+                        for coord in coordinators.values()
+                        if coord.network_hub == hub
+                    ),
+                    None,
+                )
+
+            profile_bound_ports: set[str] = set()
+            if coordinator and coordinator.data:
+                port_configs = coordinator.data.get("port_configs", []) or []
+                for port_config in port_configs:
+                    if port_config.get("device_serial") != serial:
+                        continue
+                    profile = port_config.get("profile")
+                    if isinstance(profile, dict) and profile.get("enabled"):
+                        port_id_value = port_config.get("portId")
+                        if port_id_value is not None:
+                            profile_bound_ports.add(str(port_id_value))
+
+            for target_port in port_list:
+                port_ref = f"{serial.upper()}:{target_port}"
+                if port_ref in exclusions:
+                    raise HomeAssistantError(
+                        f"Port {target_port} on {serial} is excluded from control"
+                    )
+                if target_port in profile_bound_ports:
+                    raise HomeAssistantError(
+                        f"Port {target_port} on {serial} is bound to a port profile"
+                    )
+
+            for target_port in port_list:
+                await hub.async_update_switch_port(
+                    serial,
+                    target_port,
+                    poeEnabled=False,
+                )
+
+            if delay_seconds:
+                await asyncio.sleep(delay_seconds)
+
+            for target_port in port_list:
+                await hub.async_update_switch_port(
+                    serial,
+                    target_port,
+                    poeEnabled=True,
+                )
+
+            if coordinator:
+                await coordinator.async_request_refresh()
+
+            _LOGGER.debug(
+                "Cycled PoE for %s port(s) on %s with %ss delay",
+                len(port_list),
+                serial,
+                delay_seconds,
+            )
+            return
+
+    _LOGGER.warning("No MS switch found for serial %s", serial)
+
+
 async def async_register_services(hass: HomeAssistant) -> None:
     """Register integration services once."""
-    if hass.services.has_service(DOMAIN, SERVICE_SET_CAMERA_RTSP):
-        return
 
     async def _handle_service(call: ServiceCall) -> None:
-        await _async_handle_set_camera_rtsp(hass, call)
+        if call.service == SERVICE_SET_CAMERA_RTSP:
+            await _async_handle_set_camera_rtsp(hass, call)
+            return
+        if call.service == SERVICE_CYCLE_SWITCH_PORT_POE:
+            await _async_handle_cycle_switch_port_poe(hass, call)
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_SET_CAMERA_RTSP,
-        _handle_service,
-        schema=SERVICE_SET_CAMERA_RTSP_SCHEMA,
-    )
+    if not hass.services.has_service(DOMAIN, SERVICE_SET_CAMERA_RTSP):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_CAMERA_RTSP,
+            _handle_service,
+            schema=SERVICE_SET_CAMERA_RTSP_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_CYCLE_SWITCH_PORT_POE):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CYCLE_SWITCH_PORT_POE,
+            _handle_service,
+            schema=SERVICE_CYCLE_SWITCH_PORT_POE_SCHEMA,
+        )
 
 
 def _build_startup_summary(
@@ -587,6 +741,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok and DOMAIN in hass.data and not hass.data[DOMAIN]:
         hass.services.async_remove(DOMAIN, SERVICE_SET_CAMERA_RTSP)
+        hass.services.async_remove(DOMAIN, SERVICE_CYCLE_SWITCH_PORT_POE)
 
     return unload_ok
 
