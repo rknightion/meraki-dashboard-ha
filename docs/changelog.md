@@ -11,6 +11,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.36.0...v0.37.0) (2026-01-08)
+
+
+### Features
+
+* **config:** Add MS port exclusion safety ([f9b8ff9](https://github.com/rknightion/meraki-dashboard-ha/commit/f9b8ff9c92b7e22f54acccca4e9c07c061021fe7))
+* **config:** add MS port exclusions option ([d0b832c](https://github.com/rknightion/meraki-dashboard-ha/commit/d0b832c34b86a34e3abea96060e3a8c27858956c))
+* **const:** add MS port constants ([7ed803d](https://github.com/rknightion/meraki-dashboard-ha/commit/7ed803db08e04948ee55a3b22c41af143534ab19))
+* **hub:** fetch port profiles and update ports ([73fd88a](https://github.com/rknightion/meraki-dashboard-ha/commit/73fd88a011666dd1833b7d68cd5adbf7ec1146ba))
+* **i18n:** add service schema and translations ([ff7e3ef](https://github.com/rknightion/meraki-dashboard-ha/commit/ff7e3efc06300969fe0ffaa2d4a3dec990ac40ac))
+* **service:** add cycle_switch_port_poe service ([1826703](https://github.com/rknightion/meraki-dashboard-ha/commit/1826703a8fc09f7e01c87e66d5dc2230e9572ed2))
+* **switch:** add MS switch port control entities ([056043b](https://github.com/rknightion/meraki-dashboard-ha/commit/056043bb3685eadc9336afeb51b69cc97a1e4b34))
+* **types:** add switch port typed defs ([b927a1e](https://github.com/rknightion/meraki-dashboard-ha/commit/b927a1e7b918d42920f6b48882b55547efc8cd0a))
+
+
+### Miscellaneous Chores
+
+* chore:  ([bad8db1](https://github.com/rknightion/meraki-dashboard-ha/commit/bad8db18f13a44b821f501ab2855521b82b353ab))
+* **manifest:** normalize manifest formatting ([190eda5](https://github.com/rknightion/meraki-dashboard-ha/commit/190eda501e2b2309760077bc1b2cf476b380c0dc))
+* secrets baseline ([3b02edc](https://github.com/rknightion/meraki-dashboard-ha/commit/3b02edcf4ba7560a939bdca048289b299b4dadf8))
+
+
+### Code Refactoring
+
+* **rate_limiter:** improve queue typing ([e1fe17d](https://github.com/rknightion/meraki-dashboard-ha/commit/e1fe17dcda91f29429c9447be3f80c1380bb84d8))
+
 ## [0.36.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.35.0...v0.36.0) (2026-01-08)
 
 
