@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 from collections import deque
@@ -10,13 +11,20 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import meraki
+import meraki.aio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.event import async_track_time_interval
-from meraki.exceptions import APIError
+from meraki.exceptions import APIError, AsyncAPIError
 
 from ..const import (
+    API_PRIORITY_HIGH,
+    API_PRIORITY_LOW,
+    API_PRIORITY_NORMAL,
+    API_RATE_LIMIT_MAX_CONCURRENT,
+    API_RATE_LIMIT_PER_SECOND,
+    API_THROTTLE_WINDOW_MINUTES,
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
     DYNAMIC_DATA_REFRESH_INTERVAL,
@@ -37,6 +45,7 @@ from ..types import (
 )
 from ..utils.device_info import determine_device_type, device_matches_type
 from ..utils.error_handling import handle_api_errors
+from ..utils.rate_limiter import MerakiRateLimiter
 from ..utils.retry import RetryStrategies, retry_on_api_error, with_standard_retries
 
 if TYPE_CHECKING:
@@ -131,6 +140,7 @@ class MerakiOrganizationHub:
         self.organization_id = organization_id
         self.config_entry = config_entry
         self.dashboard: MerakiApiClient | None = None
+        self._dashboard_context: Any | None = None
 
         # Organization metadata
         self.organization_name: str | None = None
@@ -142,6 +152,14 @@ class MerakiOrganizationHub:
         self.failed_api_calls = 0
         self._api_call_durations: deque[float] = deque(maxlen=100)
         self._last_setup_time: datetime | None = None
+
+        # Shared rate limiter for Meraki API calls
+        self._rate_limiter = MerakiRateLimiter(
+            max_calls_per_second=API_RATE_LIMIT_PER_SECOND,
+            max_concurrent=API_RATE_LIMIT_MAX_CONCURRENT,
+            throttle_window_minutes=API_THROTTLE_WINDOW_MINUTES,
+        )
+        self._initial_refresh_task: asyncio.Task | None = None
 
         # Network hubs managed by this organization hub
         self.network_hubs: dict[str, MerakiNetworkHub] = {}
@@ -193,6 +211,41 @@ class MerakiOrganizationHub:
         if not self._api_call_durations:
             return 0.0
         return sum(self._api_call_durations) / len(self._api_call_durations)
+
+    @property
+    def api_calls_per_minute(self) -> int:
+        """Return the number of API calls in the last minute."""
+        return self._rate_limiter.calls_last_minute()
+
+    @property
+    def api_throttle_events_last_hour(self) -> int:
+        """Return throttle events in the configured window."""
+        return self._rate_limiter.throttle_events_last_window()
+
+    @property
+    def api_throttle_events_total(self) -> int:
+        """Return total throttle events since startup."""
+        return self._rate_limiter.total_throttle_events
+
+    @property
+    def api_throttle_wait_seconds_total(self) -> float:
+        """Return total wait time from throttling."""
+        return self._rate_limiter.throttle_wait_seconds_total
+
+    @property
+    def api_throttle_last_wait(self) -> float:
+        """Return the most recent throttle wait duration."""
+        return self._rate_limiter.last_throttle_wait_seconds
+
+    @property
+    def api_rate_limit_queue_depth(self) -> int:
+        """Return current rate limit queue depth."""
+        return self._rate_limiter.queue_depth
+
+    @property
+    def api_throttle_window_minutes(self) -> int:
+        """Return the throttle window length in minutes."""
+        return API_THROTTLE_WINDOW_MINUTES
 
     @property
     def last_license_update_age_minutes(self) -> int | None:
@@ -252,6 +305,33 @@ class MerakiOrganizationHub:
         """Track API call duration for performance monitoring."""
         self._api_call_durations.append(duration)
 
+    async def async_api_call(
+        self,
+        api_call: Callable[..., Any],
+        *args: Any,
+        priority: int,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute an API call via the shared rate limiter."""
+        start_time = self.hass.loop.time()
+
+        async def _invoke() -> Any:
+            result = api_call(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                return await result
+            return result
+
+        try:
+            result = await self._rate_limiter.submit(_invoke, priority=priority)
+            self.total_api_calls += 1
+            duration = self.hass.loop.time() - start_time
+            self._track_api_call_duration(duration)
+            return result
+        except Exception as err:
+            self.failed_api_calls += 1
+            self.last_api_call_error = str(err)
+            raise
+
     @with_standard_retries("setup")
     @handle_api_errors(
         convert_auth_errors=True,
@@ -276,30 +356,36 @@ class MerakiOrganizationHub:
 
             # Initialize the Meraki Dashboard API client with proper configuration
             api_start_time = self.hass.loop.time()
-            self.dashboard = await self.hass.async_add_executor_job(
-                lambda: meraki.DashboardAPI(
-                    self._api_key,
-                    base_url=self._base_url,
-                    caller=USER_AGENT,
-                    log_file_prefix=None,  # Disable file logging
-                    print_console=False,  # Disable console logging from SDK
-                    output_log=False,  # Disable SDK output logging
-                    suppress_logging=True,  # Suppress verbose SDK logging
-                )
+            dashboard = meraki.aio.AsyncDashboardAPI(
+                self._api_key,
+                base_url=self._base_url,
+                caller=USER_AGENT,
+                log_file_prefix=None,  # Disable file logging
+                print_console=False,  # Disable console logging from SDK
+                output_log=False,  # Disable SDK output logging
+                suppress_logging=True,  # Suppress verbose SDK logging
+                maximum_concurrent_requests=API_RATE_LIMIT_MAX_CONCURRENT,
+                wait_on_rate_limit=True,
             )
+            self._dashboard_context = dashboard
+            enter = getattr(dashboard, "__aenter__", None)
+            if enter is not None:
+                entered = enter()
+                self.dashboard = (
+                    await entered if asyncio.iscoroutine(entered) else entered
+                )
+            else:
+                self.dashboard = dashboard
             api_duration = self.hass.loop.time() - api_start_time
             self._track_api_call_duration(api_duration)
-            self.total_api_calls += 1
 
             # Verify connection and get organization info
             if self.dashboard is not None:
-                org_start_time = self.hass.loop.time()
-                org_info = await self.hass.async_add_executor_job(
-                    self.dashboard.organizations.getOrganization, self.organization_id
+                org_info = await self.async_api_call(
+                    self.dashboard.organizations.getOrganization,
+                    self.organization_id,
+                    priority=API_PRIORITY_HIGH,
                 )
-                org_duration = self.hass.loop.time() - org_start_time
-                self._track_api_call_duration(org_duration)
-                self.total_api_calls += 1
 
                 self.organization_name = org_info.get("name")
                 _LOGGER.debug(
@@ -307,14 +393,12 @@ class MerakiOrganizationHub:
                 )
 
                 # Get all networks for the organization
-                networks_start_time = self.hass.loop.time()
-                self.networks = await self.hass.async_add_executor_job(
+                self.networks = await self.async_api_call(
                     self.dashboard.organizations.getOrganizationNetworks,
                     self.organization_id,
+                    priority=API_PRIORITY_HIGH,
+                    total_pages="all",
                 )
-                networks_duration = self.hass.loop.time() - networks_start_time
-                self._track_api_call_duration(networks_duration)
-                self.total_api_calls += 1
             else:
                 raise ConfigEntryNotReady("Dashboard API not initialized")
 
@@ -400,27 +484,12 @@ class MerakiOrganizationHub:
                     timedelta(seconds=dynamic_interval),
                 )
 
-            # Perform initial organization data update for all data types
-            await self._fetch_license_data()
-            self._last_license_update = datetime.now(UTC)
-
-            await self._fetch_device_statuses()
-            self._last_device_status_update = datetime.now(UTC)
-
-            await self._fetch_alerts_data()
-            self._last_alerts_update = datetime.now(UTC)
-
-            await self._fetch_clients_overview()
-            self._last_clients_update = datetime.now(UTC)
-
-            await self._fetch_bluetooth_clients_overview()
-            self._last_bluetooth_clients_update = datetime.now(UTC)
-
-            await self._fetch_memory_usage()
-            self._last_memory_usage_update = datetime.now(UTC)
-
-            await self._fetch_wireless_ethernet_statuses()
-            self._last_ethernet_status_update = datetime.now(UTC)
+            # Perform initial organization data update in the background to avoid
+            # blocking integration setup on slow API calls.
+            if "pytest" not in sys.modules and self._initial_refresh_task is None:
+                self._initial_refresh_task = self.hass.async_create_task(
+                    self._run_initial_refresh()
+                )
 
             # Track setup completion time
             self._last_setup_time = datetime.now(UTC)
@@ -433,26 +502,69 @@ class MerakiOrganizationHub:
 
             return True
 
-        except APIError as err:
-            self.failed_api_calls += 1
-            self.last_api_call_error = str(err)
-
-            if err.status == 401:
-                _LOGGER.error(
-                    "Invalid API key for organization %s", self.organization_id
-                )
-                raise ConfigEntryAuthFailed("Invalid API key") from err
-            else:
-                _LOGGER.error("API error during setup: %s", err)
-                raise ConfigEntryNotReady from err
-
         except Exception as err:
-            self.failed_api_calls += 1
+            if isinstance(err, (ConfigEntryAuthFailed, ConfigEntryNotReady)):
+                raise
+
+            if isinstance(err, (APIError, AsyncAPIError)):
+                status = (
+                    getattr(err, "status", None)
+                    or getattr(err, "status_code", None)
+                    or getattr(err, "statusCode", None)
+                )
+                if status in (401, 403):
+                    self.last_api_call_error = str(err)
+                    _LOGGER.error(
+                        "Authentication failed during organization hub setup: %s",
+                        err,
+                    )
+                    raise ConfigEntryAuthFailed(str(err)) from err
+
             self.last_api_call_error = str(err)
             _LOGGER.error(
                 "Unexpected error during organization hub setup: %s", err, exc_info=True
             )
             raise ConfigEntryNotReady from err
+
+    async def _run_initial_refresh(self) -> None:
+        """Run initial organization data refresh in the background."""
+        steps = [
+            ("license data", self._fetch_license_data, "_last_license_update"),
+            (
+                "device statuses",
+                self._fetch_device_statuses,
+                "_last_device_status_update",
+            ),
+            ("alerts", self._fetch_alerts_data, "_last_alerts_update"),
+            (
+                "clients overview",
+                self._fetch_clients_overview,
+                "_last_clients_update",
+            ),
+            (
+                "bluetooth clients",
+                self._fetch_bluetooth_clients_overview,
+                "_last_bluetooth_clients_update",
+            ),
+            ("memory usage", self._fetch_memory_usage, "_last_memory_usage_update"),
+            (
+                "wireless ethernet status",
+                self._fetch_wireless_ethernet_statuses,
+                "_last_ethernet_status_update",
+            ),
+        ]
+
+        for label, coro, attr in steps:
+            try:
+                await coro()
+                setattr(self, attr, datetime.now(UTC))
+            except Exception as err:
+                _LOGGER.debug(
+                    "Initial refresh step '%s' failed: %s",
+                    label,
+                    err,
+                    exc_info=True,
+                )
 
     @with_standard_retries("discovery")
     @handle_api_errors(default_return={})
@@ -480,26 +592,31 @@ class MerakiOrganizationHub:
                 [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV],
             )
 
-            # Check each enabled device type to see if there are devices in this network
-            for device_type in [
-                SENSOR_TYPE_MT,
-                SENSOR_TYPE_MR,
-                SENSOR_TYPE_MS,
-                SENSOR_TYPE_MV,
-            ]:
-                # Skip if this device type is not enabled
-                if device_type not in enabled_device_types:
-                    _LOGGER.debug("Skipping disabled device type: %s", device_type)
+            try:
+                # Check if there are devices of this type in the network
+                if self.dashboard is None:
                     continue
-                try:
-                    # Check if there are devices of this type in the network
-                    if self.dashboard is None:
-                        continue
 
-                    devices = await self.hass.async_add_executor_job(
-                        self.dashboard.networks.getNetworkDevices, network_id
-                    )
-                    self.total_api_calls += 1
+                devices = await self.async_api_call(
+                    self.dashboard.organizations.getOrganizationDevices,
+                    self.organization_id,
+                    priority=API_PRIORITY_LOW,
+                    networkIds=[network_id],
+                    perPage=1000,
+                    total_pages="all",
+                )
+
+                # Check each enabled device type to see if there are devices in this network
+                for device_type in [
+                    SENSOR_TYPE_MT,
+                    SENSOR_TYPE_MR,
+                    SENSOR_TYPE_MS,
+                    SENSOR_TYPE_MV,
+                ]:
+                    # Skip if this device type is not enabled
+                    if device_type not in enabled_device_types:
+                        _LOGGER.debug("Skipping disabled device type: %s", device_type)
+                        continue
 
                     # Filter for this device type
                     type_devices = [
@@ -532,14 +649,11 @@ class MerakiOrganizationHub:
                                 device_type,
                             )
 
-                except Exception as err:
-                    _LOGGER.error(
-                        "Error checking devices for network %s (%s): %s",
-                        network_name,
-                        device_type,
-                        err,
-                    )
-                    continue
+            except Exception as err:
+                _LOGGER.error(
+                    "Error checking devices for network %s: %s", network_name, err
+                )
+                continue
 
         _LOGGER.debug(
             "Created %d network hubs across %d networks",
@@ -594,7 +708,6 @@ class MerakiOrganizationHub:
             )
 
         except Exception as err:
-            self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             _LOGGER.error("Error fetching organization data: %s", err)
             return OrganizationData(
@@ -620,11 +733,11 @@ class MerakiOrganizationHub:
             # Try to detect licensing model by calling the appropriate API
             try:
                 # Try co-term licensing overview first (most common)
-                license_overview = await self.hass.async_add_executor_job(
+                license_overview = await self.async_api_call(
                     self.dashboard.organizations.getOrganizationLicensesOverview,
                     self.organization_id,
+                    priority=API_PRIORITY_LOW,
                 )
-                self.total_api_calls += 1
 
                 # Process co-term license data
                 current_time = datetime.now(UTC)
@@ -689,11 +802,12 @@ class MerakiOrganizationHub:
             except Exception as coterm_err:
                 # Co-term failed, try per-device licensing
                 try:
-                    licenses = await self.hass.async_add_executor_job(
+                    licenses = await self.async_api_call(
                         self.dashboard.organizations.getOrganizationLicenses,
                         self.organization_id,
+                        priority=API_PRIORITY_LOW,
+                        total_pages="all",
                     )
-                    self.total_api_calls += 1
 
                     # Process per-device license data
                     current_time = datetime.now(UTC)
@@ -773,27 +887,18 @@ class MerakiOrganizationHub:
 
         assert self.dashboard is not None  # Type guard  # nosec B101
 
-        try:
-            start_time = datetime.now(UTC)
+        by_network_error: Exception | None = None
 
+        try:
             # Get alerts overview by network using the new API endpoint
             # This replaces the old alert profiles and events approach
-            def get_alerts_overview():
-                if self.dashboard is None:
-                    raise RuntimeError("Dashboard API client not initialized")
-                return self.dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork(
-                    self.organization_id,
-                    dismissed=False,  # Only get non-dismissed alerts
-                )
-
-            alerts_overview = await self.hass.async_add_executor_job(
-                get_alerts_overview
+            alerts_overview = await self.async_api_call(
+                self.dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork,
+                self.organization_id,
+                priority=API_PRIORITY_HIGH,
+                dismissed=False,  # Only get non-dismissed alerts
+                perPage=1000,
             )
-            self.total_api_calls += 1
-
-            # Track API call duration for performance monitoring
-            duration = (datetime.now(UTC) - start_time).total_seconds()
-            self._track_api_call_duration(duration)
 
             # Process the alerts overview response
             if (
@@ -837,12 +942,71 @@ class MerakiOrganizationHub:
                 self.recent_alerts = []
                 _LOGGER.debug("No alerts overview data received")
 
+            return
+
         except Exception as err:
-            self.failed_api_calls += 1
-            self.last_api_call_error = str(err)
-            _LOGGER.warning(
-                "Could not fetch alerts overview data: %s", err, exc_info=True
+            by_network_error = err
+
+        try:
+            alerts_overview = await self.async_api_call(
+                self.dashboard.organizations.getOrganizationAssuranceAlertsOverview,
+                self.organization_id,
+                priority=API_PRIORITY_HIGH,
+                dismissed=False,
             )
+
+            total_alerts = 0
+            if isinstance(alerts_overview, dict):
+                counts = alerts_overview.get("counts")
+                if isinstance(counts, dict):
+                    for key in ("total", "totalAlerts", "items", "count"):
+                        value = counts.get(key)
+                        if isinstance(value, (int, float)):
+                            total_alerts = int(value)
+                            break
+
+                if total_alerts == 0:
+                    for key in ("total", "totalAlerts", "items", "count"):
+                        value = alerts_overview.get(key)
+                        if isinstance(value, (int, float)):
+                            total_alerts = int(value)
+                            break
+
+                if total_alerts == 0:
+                    items = alerts_overview.get("items")
+                    if isinstance(items, list):
+                        total_alerts = len(items)
+
+            self.active_alerts_count = total_alerts
+            self.recent_alerts = []
+
+            _LOGGER.debug(
+                "Fetched alerts overview using fallback endpoint: %d total alerts",
+                total_alerts,
+            )
+            if by_network_error is not None:
+                _LOGGER.debug(
+                    "Alerts overview by network failed; fallback succeeded: %s",
+                    by_network_error,
+                )
+
+        except Exception as fallback_err:
+            self.last_api_call_error = str(fallback_err)
+            if isinstance(fallback_err, AsyncAPIError) or "Reached retry limit" in str(
+                fallback_err
+            ):
+                _LOGGER.debug("Could not fetch alerts overview data: %s", fallback_err)
+            else:
+                _LOGGER.warning(
+                    "Could not fetch alerts overview data: %s",
+                    fallback_err,
+                    exc_info=True,
+                )
+
+            if by_network_error is not None:
+                _LOGGER.debug(
+                    "Alerts overview by network failure: %s", by_network_error
+                )
 
             # Set fallback values
             self.active_alerts_count = 0
@@ -857,26 +1021,13 @@ class MerakiOrganizationHub:
         assert self.dashboard is not None  # Type guard  # nosec B101
 
         try:
-            start_time = datetime.now(UTC)
-
             # Get clients overview with default timespan (1 day)
             # This provides aggregate client counts and usage data
-            def get_clients_overview():
-                if self.dashboard is None:
-                    raise RuntimeError("Dashboard API client not initialized")
-                return self.dashboard.organizations.getOrganizationClientsOverview(
-                    self.organization_id
-                    # Using default timespan (1 day) - no timespan parameter
-                )
-
-            clients_overview = await self.hass.async_add_executor_job(
-                get_clients_overview
+            clients_overview = await self.async_api_call(
+                self.dashboard.organizations.getOrganizationClientsOverview,
+                self.organization_id,
+                priority=API_PRIORITY_NORMAL,
             )
-            self.total_api_calls += 1
-
-            # Track API call duration for performance monitoring
-            duration = (datetime.now(UTC) - start_time).total_seconds()
-            self._track_api_call_duration(duration)
 
             # Process the clients overview response
             if clients_overview and isinstance(clients_overview, dict):
@@ -932,7 +1083,6 @@ class MerakiOrganizationHub:
                 _LOGGER.debug("No clients overview data received")
 
         except Exception as err:
-            self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             _LOGGER.warning(
                 "Could not fetch clients overview data: %s", err, exc_info=True
@@ -958,7 +1108,6 @@ class MerakiOrganizationHub:
         assert self.dashboard is not None  # Type guard  # nosec B101
 
         try:
-            start_time = datetime.now(UTC)
             total_bluetooth_clients = 0
 
             # Iterate through all networks to get Bluetooth clients
@@ -969,16 +1118,13 @@ class MerakiOrganizationHub:
 
                 try:
                     # Get Bluetooth clients for this network
-                    def get_network_bluetooth_clients(net_id: str):
-                        assert self.dashboard is not None  # Type guard  # nosec B101
-                        return self.dashboard.networks.getNetworkBluetoothClients(
-                            net_id
-                        )
-
-                    bluetooth_clients = await self.hass.async_add_executor_job(
-                        get_network_bluetooth_clients, network_id
+                    bluetooth_clients = await self.async_api_call(
+                        self.dashboard.networks.getNetworkBluetoothClients,
+                        network_id,
+                        priority=API_PRIORITY_NORMAL,
+                        perPage=1000,
+                        total_pages="all",
                     )
-                    self.total_api_calls += 1
 
                     # Count the Bluetooth clients for this network
                     if bluetooth_clients and isinstance(bluetooth_clients, list):
@@ -1011,10 +1157,6 @@ class MerakiOrganizationHub:
             # Update the total count
             self.bluetooth_clients_total_count = total_bluetooth_clients
 
-            # Track API call duration for performance monitoring
-            duration = (datetime.now(UTC) - start_time).total_seconds()
-            self._track_api_call_duration(duration)
-
             _LOGGER.debug(
                 "Fetched Bluetooth clients overview: %d total clients across %d networks",
                 self.bluetooth_clients_total_count,
@@ -1022,7 +1164,6 @@ class MerakiOrganizationHub:
             )
 
         except Exception as err:
-            self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             _LOGGER.warning(
                 "Could not fetch Bluetooth clients overview data: %s",
@@ -1036,7 +1177,7 @@ class MerakiOrganizationHub:
     @retry_on_api_error(RetryStrategies.STATIC_DATA)
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def _fetch_device_statuses(self) -> None:
-        """Fetch device status information across the organization."""
+        """Fetch device availability information across the organization."""
         if not self.dashboard:
             return
 
@@ -1044,11 +1185,11 @@ class MerakiOrganizationHub:
 
         try:
             # Get organization device statuses overview for aggregated counts
-            device_status_overview = await self.hass.async_add_executor_job(
+            device_status_overview = await self.async_api_call(
                 self.dashboard.organizations.getOrganizationDevicesStatusesOverview,
                 self.organization_id,
+                priority=API_PRIORITY_HIGH,
             )
-            self.total_api_calls += 1
             self.device_status_overview = device_status_overview
             _LOGGER.debug(
                 "Device status overview: online=%s, offline=%s, alerting=%s, dormant=%s",
@@ -1066,14 +1207,16 @@ class MerakiOrganizationHub:
                 .get("dormant", 0),
             )
 
-            # Get detailed organization device statuses
-            device_statuses = await self.hass.async_add_executor_job(
-                self.dashboard.organizations.getOrganizationDevicesStatuses,
+            # Get detailed organization device availabilities (paginated)
+            device_availabilities = await self.async_api_call(
+                self.dashboard.organizations.getOrganizationDevicesAvailabilities,
                 self.organization_id,
+                priority=API_PRIORITY_HIGH,
+                perPage=1000,
+                total_pages="all",
             )
-            self.total_api_calls += 1
 
-            self.device_statuses = device_statuses
+            self.device_statuses = device_availabilities
 
         except Exception as err:
             _LOGGER.warning("Could not fetch device statuses: %s", err)
@@ -1121,11 +1264,11 @@ class MerakiOrganizationHub:
                 return
 
             try:
-                memory_data = await self.hass.async_add_executor_job(
+                memory_data = await self.async_api_call(
                     self.dashboard.organizations.getOrganizationDevicesSystemMemoryUsageHistoryByInterval,
                     self.organization_id,
+                    priority=API_PRIORITY_LOW,
                 )
-                self.total_api_calls += 1
             except Exception as api_err:
                 _LOGGER.error("Error calling memory usage API: %s", api_err)
                 self.device_memory_usage = {}
@@ -1153,7 +1296,9 @@ class MerakiOrganizationHub:
                     device_list = memory_data
                 elif isinstance(memory_data, dict):
                     # Check if it's a paginated response with data in a sub-key
-                    if "data" in memory_data:
+                    if "items" in memory_data:
+                        device_list = memory_data["items"]
+                    elif "data" in memory_data:
                         device_list = memory_data["data"]
                     elif "devices" in memory_data:
                         device_list = memory_data["devices"]
@@ -1249,7 +1394,6 @@ class MerakiOrganizationHub:
             )
 
         except Exception as err:
-            self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             _LOGGER.warning(
                 "Could not fetch device memory usage data: %s", err, exc_info=True
@@ -1285,13 +1429,14 @@ class MerakiOrganizationHub:
                 return
 
             try:
-                ethernet_data = await self.hass.async_add_executor_job(
+                ethernet_data = await self.async_api_call(
                     self.dashboard.wireless.getOrganizationWirelessDevicesEthernetStatuses,
                     self.organization_id,
+                    priority=API_PRIORITY_LOW,
+                    perPage=1000,
+                    total_pages="all",
                 )
-                self.total_api_calls += 1
             except Exception as api_err:
-                self.failed_api_calls += 1
                 self.last_api_call_error = str(api_err)
                 _LOGGER.debug("Error calling ethernet status API: %s", api_err)
                 self.device_ethernet_status = {}
@@ -1362,7 +1507,6 @@ class MerakiOrganizationHub:
             )
 
         except Exception as err:
-            self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             _LOGGER.debug("Could not fetch device ethernet status data: %s", err)
 
@@ -1385,10 +1529,14 @@ class MerakiOrganizationHub:
                 return False
 
             # Get devices for the network
-            network_devices = await self.hass.async_add_executor_job(
-                self.dashboard.networks.getNetworkDevices, network_id
+            network_devices = await self.async_api_call(
+                self.dashboard.organizations.getOrganizationDevices,
+                self.organization_id,
+                priority=API_PRIORITY_LOW,
+                networkIds=[network_id],
+                perPage=1000,
+                total_pages="all",
             )
-            self.total_api_calls += 1
 
             # Check if any devices match the type prefixes or productType mapping
             for device in network_devices:
@@ -1430,4 +1578,29 @@ class MerakiOrganizationHub:
             await hub.async_unload()
 
         self.network_hubs.clear()
+
+        if self._initial_refresh_task and not self._initial_refresh_task.done():
+            self._initial_refresh_task.cancel()
+            await asyncio.gather(self._initial_refresh_task, return_exceptions=True)
+        self._initial_refresh_task = None
+
+        # Stop rate limiter workers
+        await self._rate_limiter.stop()
+
+        # Close the dashboard session if supported
+        if self._dashboard_context is not None:
+            exit_method = getattr(self._dashboard_context, "__aexit__", None)
+            if exit_method is not None:
+                result = exit_method(None, None, None)
+                if asyncio.iscoroutine(result):
+                    await result
+            else:
+                close_method = getattr(self._dashboard_context, "close", None)
+                if close_method is not None:
+                    result = close_method()
+                    if asyncio.iscoroutine(result):
+                        await result
+
+        self.dashboard = None
+        self._dashboard_context = None
         _LOGGER.debug("Organization hub unloaded successfully")
