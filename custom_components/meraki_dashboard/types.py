@@ -290,6 +290,47 @@ class SwitchPortStatus(TypedDict, total=False):
     device_serial: str | None  # Added for aggregation
 
 
+class SwitchPortConfig(TypedDict, total=False):
+    """Type definition for switch port configuration."""
+
+    portId: str
+    name: str | None
+    tags: list[str] | None
+    enabled: bool | None
+    poeEnabled: bool | None
+    type: str | None
+    vlan: int | None
+    voiceVlan: int | None
+    allowedVlans: str | None
+    isolationEnabled: bool | None
+    rstpEnabled: bool | None
+    stpGuard: str | None
+    linkNegotiation: str | None
+    portScheduleId: str | None
+    udld: str | None
+    accessPolicyType: str | None
+    stormControlEnabled: bool | None
+    profile: SwitchPortProfileBinding | None
+    device_serial: str | None
+    device_name: str | None
+
+
+class SwitchPortProfileBinding(TypedDict, total=False):
+    """Type definition for switch port profile binding."""
+
+    enabled: bool
+    id: str
+    name: str | None
+    iname: str | None
+
+
+class SwitchPortProfile(TypedDict, total=False):
+    """Type definition for switch port profile."""
+
+    profileId: str
+    name: str | None
+
+
 class SwitchStats(TypedDict, total=False):
     """Type definition for switch statistics."""
 
@@ -352,6 +393,8 @@ class MSCoordinatorData(TypedDict, total=False):
 
     devices_info: list[SwitchStats]
     ports_status: list[SwitchPortStatus]
+    port_configs: list[SwitchPortConfig]
+    port_profiles: list[SwitchPortProfile]
     power_modules: list[dict[str, Any]]
     memory_usage: list[MemoryUsageData]
 
