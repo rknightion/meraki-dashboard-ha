@@ -50,13 +50,21 @@ from ..const import (
     MV_SENSOR_DETECTIONS_VEHICLE,
     MV_SENSOR_EXTERNAL_RTSP_ENABLED,
     MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
+    MV_SENSOR_MOTION_DETECTION_ENABLED,
     MV_SENSOR_MOTION_DETECTOR_VERSION,
     MV_SENSOR_QUALITY,
+    MV_SENSOR_RECENT_MOTION_DETECTED,
+    MV_SENSOR_RECORDING_STATUS,
     MV_SENSOR_RESOLUTION,
     MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
     MV_SENSOR_RETENTION_PROFILE_ID,
+    MV_SENSOR_STORAGE_USAGE_PERCENT,
     ORG_SENSOR_ALERTS_COUNT,
     ORG_SENSOR_API_CALLS,
+    ORG_SENSOR_API_CALLS_PER_MINUTE,
+    ORG_SENSOR_API_RATE_LIMIT_QUEUE_DEPTH,
+    ORG_SENSOR_API_THROTTLE_EVENTS,
+    ORG_SENSOR_API_THROTTLE_WAIT_SECONDS_TOTAL,
     ORG_SENSOR_DEVICE_COUNT,
     ORG_SENSOR_FAILED_API_CALLS,
     ORG_SENSOR_LICENSE_EXPIRING,
@@ -740,6 +748,10 @@ class MVCameraDataTransformer(DataTransformer):
                 transformed[MV_SENSOR_MOTION_BASED_RETENTION_ENABLED] = (
                     1 if quality_data.get("motionBasedRetentionEnabled") else 0
                 )
+                if MV_SENSOR_MOTION_DETECTION_ENABLED not in transformed:
+                    transformed[MV_SENSOR_MOTION_DETECTION_ENABLED] = (
+                        1 if quality_data.get("motionBasedRetentionEnabled") else 0
+                    )
             if "audioRecordingEnabled" in quality_data:
                 transformed[MV_SENSOR_AUDIO_RECORDING_ENABLED] = (
                     1 if quality_data.get("audioRecordingEnabled") else 0
@@ -773,6 +785,21 @@ class MVCameraDataTransformer(DataTransformer):
                     custom_analytics.get("artifactId")
                 )
 
+        sense_settings = raw_data.get("senseSettings", {}) or {}
+        if isinstance(sense_settings, dict):
+            if "senseEnabled" in sense_settings:
+                transformed[MV_SENSOR_MOTION_DETECTION_ENABLED] = (
+                    1 if sense_settings.get("senseEnabled") else 0
+                )
+
+        recording_status = self._extract_recording_status(raw_data)
+        if recording_status is not None:
+            transformed[MV_SENSOR_RECORDING_STATUS] = recording_status
+
+        storage_usage = self._extract_storage_usage_percent(raw_data)
+        if storage_usage is not None:
+            transformed[MV_SENSOR_STORAGE_USAGE_PERCENT] = storage_usage
+
         detections = raw_data.get("detections", {}) or {}
         if isinstance(detections, dict):
             transformed[MV_SENSOR_DETECTIONS_TOTAL] = SafeExtractor.safe_int(
@@ -787,7 +814,115 @@ class MVCameraDataTransformer(DataTransformer):
                     by_object_type.get("vehicle", 0)
                 )
 
+        recent_motion = self._extract_recent_motion(raw_data, transformed)
+        if recent_motion is not None:
+            transformed[MV_SENSOR_RECENT_MOTION_DETECTED] = 1 if recent_motion else 0
+
         return transformed
+
+    def _extract_recording_status(self, raw_data: dict[str, Any]) -> str | None:
+        """Extract recording status from known fields."""
+        for key in ("recordingStatus", "recording_status", "recordingMode"):
+            value = raw_data.get(key)
+            if isinstance(value, str) and value:
+                return value
+
+        recording = raw_data.get("recording")
+        if isinstance(recording, dict):
+            if "status" in recording and isinstance(recording.get("status"), str):
+                return recording.get("status")
+            if "enabled" in recording:
+                return "enabled" if recording.get("enabled") else "disabled"
+
+        quality_data = raw_data.get("qualityAndRetention", {}) or {}
+        if isinstance(quality_data, dict):
+            schedule_name = quality_data.get("recordingScheduleName")
+            if isinstance(schedule_name, str) and schedule_name:
+                return schedule_name
+            schedule_id = quality_data.get("recordingScheduleId") or quality_data.get(
+                "scheduleId"
+            )
+            if schedule_id:
+                return "scheduled"
+            if "motionBasedRetentionEnabled" in quality_data:
+                return (
+                    "motion_based"
+                    if quality_data.get("motionBasedRetentionEnabled")
+                    else "continuous"
+                )
+
+        return None
+
+    def _extract_storage_usage_percent(self, raw_data: dict[str, Any]) -> float | None:
+        """Extract storage usage percent from known fields."""
+        candidate_values = [
+            raw_data.get("storageUsagePercent"),
+            SafeExtractor.get_nested_value(raw_data, "storage", "usagePercent"),
+            SafeExtractor.get_nested_value(raw_data, "storage", "usedPercent"),
+            SafeExtractor.get_nested_value(raw_data, "storage", "percentUsed"),
+            SafeExtractor.get_nested_value(raw_data, "storage", "percentFull"),
+            SafeExtractor.get_nested_value(raw_data, "storageUsage", "percent"),
+            SafeExtractor.get_nested_value(
+                raw_data, "qualityAndRetention", "storageUsagePercent"
+            ),
+        ]
+
+        value = next(
+            (candidate for candidate in candidate_values if candidate is not None), None
+        )
+        if value is None:
+            return None
+
+        try:
+            percent = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        if 0 <= percent <= 1:
+            percent *= 100
+
+        return round(percent, 1)
+
+    def _extract_recent_motion(
+        self, raw_data: dict[str, Any], transformed: dict[str, Any]
+    ) -> bool | None:
+        """Derive recent motion state from analytics or detections."""
+        analytics_live = raw_data.get("analyticsLive")
+        if isinstance(analytics_live, dict):
+            zones = analytics_live.get("zones", {})
+            if isinstance(zones, dict):
+                for zone_data in zones.values():
+                    if isinstance(zone_data, dict):
+                        if any(
+                            SafeExtractor.safe_int(count) > 0
+                            for count in zone_data.values()
+                        ):
+                            return True
+
+        analytics_recent = raw_data.get("analyticsRecent")
+        if isinstance(analytics_recent, list):
+            for record in analytics_recent:
+                if not isinstance(record, dict):
+                    continue
+                entrances = SafeExtractor.safe_int(record.get("entrances", 0))
+                average_count = SafeExtractor.safe_float(
+                    record.get("averageCount", 0.0)
+                )
+                if entrances > 0 or average_count > 0:
+                    return True
+        elif isinstance(analytics_recent, dict):
+            entrances = SafeExtractor.safe_int(analytics_recent.get("entrances", 0))
+            average_count = SafeExtractor.safe_float(
+                analytics_recent.get("averageCount", 0.0)
+            )
+            if entrances > 0 or average_count > 0:
+                return True
+
+        detections_total = transformed.get(MV_SENSOR_DETECTIONS_TOTAL)
+        if isinstance(detections_total, int | float):
+            return detections_total > 0
+
+        return None
 
 
 class OrganizationDataTransformer(DataTransformer):
@@ -1375,6 +1510,30 @@ def transform_api_calls(value: Any) -> int:
 def transform_failed_api_calls(value: Any) -> int:
     """Transform failed API calls count."""
     return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(ORG_SENSOR_API_CALLS_PER_MINUTE)
+def transform_api_calls_per_minute(value: Any) -> int:
+    """Transform API calls per minute count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(ORG_SENSOR_API_THROTTLE_EVENTS)
+def transform_api_throttle_events(value: Any) -> int:
+    """Transform API throttle events count."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(ORG_SENSOR_API_RATE_LIMIT_QUEUE_DEPTH)
+def transform_api_rate_limit_queue_depth(value: Any) -> int:
+    """Transform API rate limit queue depth."""
+    return SafeExtractor.safe_int(value)
+
+
+@TransformerRegistry.register(ORG_SENSOR_API_THROTTLE_WAIT_SECONDS_TOTAL)
+def transform_api_throttle_wait_seconds_total(value: Any) -> float:
+    """Transform total throttle wait time in seconds."""
+    return SafeExtractor.safe_float(value)
 
 
 @TransformerRegistry.register(ORG_SENSOR_DEVICE_COUNT)
