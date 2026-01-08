@@ -86,6 +86,7 @@
           "long_cache_ttl": "TTL de cache long",
           "mr_enable_latency_stats": "Activer les statistiques de latence/perte de paquets MR",
           "ms_enable_packet_stats": "Activer les statistiques de paquets MS",
+          "ms_port_exclusions": "Ports de switch exclus",
           "bluetooth_clients_enabled": "Activer le suivi des clients Bluetooth",
           "update_api_key": "Mettre à jour la clé API",
           "scan_interval": "Intervalle de mise à jour",
@@ -105,6 +106,7 @@
           "long_cache_ttl": "Durée du cache pour les données qui changent rarement comme les configurations de ports et les priorités STP (en minutes). Par défaut : 60 minutes. Les changements de configuration sont rares, donc un cache plus long est recommandé.",
           "mr_enable_latency_stats": "Récupère les statistiques de latence et de perte de paquets pour les points d'accès sans fil MR. Désactivez pour réduire les appels API si vous n'avez pas besoin de ces métriques.",
           "ms_enable_packet_stats": "Récupère les statistiques de paquets (broadcast, multicast, erreurs) pour les ports de commutateurs MS. Désactivez pour réduire les appels API si vous n'avez pas besoin de métriques de paquets détaillées.",
+          "ms_port_exclusions": "Ports à exclure du contrôle PoE et de l'activation/désactivation des ports. Saisissez un port par ligne au format SERIAL:PORT_ID (exemple : Q2XX-XXXX-XXXX:1).",
           "bluetooth_clients_enabled": "Suit les clients Bluetooth connectés à vos réseaux. Désactivez pour réduire les appels API si vous n'utilisez pas le suivi Bluetooth.",
           "update_api_key": "Cochez cette case pour mettre à jour votre clé API Meraki Dashboard. Vous serez invité à saisir la nouvelle clé à l'étape suivante.",
           "scan_interval": "Fréquence de mise à jour des données des capteurs (en secondes). Exemples : 30 = 30 s, 60 = 1 min, 300 = 5 min, 600 = 10 min. Les capteurs MT peuvent descendre jusqu'à 1 seconde avec l'actualisation rapide activée. Les autres types d'appareils ont un minimum de 60 secondes (1 minute).",
@@ -192,6 +194,10 @@
     "discover_all_devices": {
       "name": "Découvrir tous les appareils",
       "description": "Rechercher de nouveaux appareils sur l'ensemble des réseaux"
+    },
+    "cycle_switch_port_poe": {
+      "name": "Cycler le PoE d'un port de switch",
+      "description": "Cycler l'alimentation PoE pour un ou plusieurs ports de switch (arrêt puis redémarrage)"
     },
     "set_camera_rtsp": {
       "name": "Définir le RTSP de la caméra",

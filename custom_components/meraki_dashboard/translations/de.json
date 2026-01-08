@@ -86,6 +86,7 @@
           "long_cache_ttl": "Lange Cache-TTL",
           "mr_enable_latency_stats": "MR-Latenz-/Paketverluststatistiken aktivieren",
           "ms_enable_packet_stats": "MS-Paketstatistiken aktivieren",
+          "ms_port_exclusions": "Ausgeschlossene Switch-Ports",
           "bluetooth_clients_enabled": "Bluetooth-Client-Tracking aktivieren",
           "update_api_key": "API-Schlüssel aktualisieren",
           "scan_interval": "Aktualisierungsintervall",
@@ -105,6 +106,7 @@
           "long_cache_ttl": "Cache-Dauer für selten wechselnde Daten wie Port-Konfigurationen und STP-Prioritäten (in Minuten). Standard: 60 Minuten. Konfigurationsänderungen sind selten, daher wird längeres Caching empfohlen.",
           "mr_enable_latency_stats": "Ruft Latenz- und Paketverluststatistiken für MR-WLAN-Access Points ab. Deaktivieren, um API-Aufrufe zu reduzieren, wenn du diese Metriken nicht benötigst.",
           "ms_enable_packet_stats": "Ruft Paketstatistiken (Broadcast, Multicast, Fehler) für MS-Switch-Ports ab. Deaktivieren, um API-Aufrufe zu reduzieren, wenn du keine detaillierten Paketmetriken benötigst.",
+          "ms_port_exclusions": "Ports, die von PoE- und Port-Steuerung ausgeschlossen werden. Gib einen Eintrag pro Zeile im Format SERIAL:PORT_ID ein (Beispiel: Q2XX-XXXX-XXXX:1).",
           "bluetooth_clients_enabled": "Verfolge Bluetooth-Clients, die mit deinen Netzwerken verbunden sind. Deaktivieren, um API-Aufrufe zu reduzieren, wenn du Bluetooth-Tracking nicht nutzt.",
           "update_api_key": "Aktiviere dieses Kontrollkästchen, um deinen Meraki Dashboard-API-Schlüssel zu aktualisieren. Du wirst im nächsten Schritt zur Eingabe des neuen Schlüssels aufgefordert.",
           "scan_interval": "Wie häufig Sensordaten aktualisiert werden (in Sekunden). Beispiele: 30 = 30 s, 60 = 1 min, 300 = 5 min, 600 = 10 min. MT-Sensoren können mit aktivierter Schnellaktualisierung bis auf 1 Sekunde heruntergehen. Andere Gerätetypen haben ein Minimum von 60 Sekunden (1 Minute).",
@@ -192,6 +194,10 @@
     "discover_all_devices": {
       "name": "Alle Geräte entdecken",
       "description": "Sucht in allen Netzwerken nach neuen Geräten"
+    },
+    "cycle_switch_port_poe": {
+      "name": "PoE für Switch-Port zyklisch schalten",
+      "description": "Schaltet PoE für einen oder mehrere Switch-Ports aus und wieder ein"
     },
     "set_camera_rtsp": {
       "name": "Kamera-RTSP festlegen",

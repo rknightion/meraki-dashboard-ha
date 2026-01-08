@@ -86,6 +86,7 @@
           "long_cache_ttl": "TTL de caché largo",
           "mr_enable_latency_stats": "Habilitar estadísticas de latencia/pérdida de paquetes de MR",
           "ms_enable_packet_stats": "Habilitar estadísticas de paquetes de MS",
+          "ms_port_exclusions": "Puertos de switch excluidos",
           "bluetooth_clients_enabled": "Habilitar seguimiento de clientes Bluetooth",
           "update_api_key": "Actualizar clave API",
           "scan_interval": "Intervalo de actualización",
@@ -105,6 +106,7 @@
           "long_cache_ttl": "Duración de la caché para datos que cambian raramente, como configuraciones de puertos y prioridades STP (en minutos). Predeterminado: 60 minutos. Los cambios de configuración son poco frecuentes, por lo que se recomienda un caché más largo.",
           "mr_enable_latency_stats": "Obtiene estadísticas de latencia y pérdida de paquetes para puntos de acceso inalámbricos MR. Desactívalo para reducir llamadas a la API si no necesitas estas métricas.",
           "ms_enable_packet_stats": "Obtiene estadísticas de paquetes (broadcast, multicast, errores) para puertos de conmutadores MS. Desactívalo para reducir llamadas a la API si no necesitas métricas detalladas de paquetes.",
+          "ms_port_exclusions": "Puertos a excluir del control PoE y habilitar/deshabilitar puertos. Introduce uno por línea en formato SERIAL:PORT_ID (ejemplo: Q2XX-XXXX-XXXX:1).",
           "bluetooth_clients_enabled": "Realiza seguimiento de los clientes Bluetooth conectados a tus redes. Desactívalo para reducir llamadas a la API si no usas el seguimiento Bluetooth.",
           "update_api_key": "Marca esta casilla para actualizar tu clave API de Meraki Dashboard. Se te pedirá la nueva clave en el siguiente paso.",
           "scan_interval": "Frecuencia con la que se actualizan los datos de los sensores (en segundos). Ejemplos: 30 = 30 s, 60 = 1 min, 300 = 5 min, 600 = 10 min. Los sensores MT pueden llegar hasta 1 segundo con la actualización rápida habilitada. Otros tipos de dispositivo tienen un mínimo de 60 segundos (1 minuto).",
@@ -192,6 +194,10 @@
     "discover_all_devices": {
       "name": "Descubrir todos los dispositivos",
       "description": "Buscar nuevos dispositivos en todas las redes"
+    },
+    "cycle_switch_port_poe": {
+      "name": "Ciclar PoE de puerto de switch",
+      "description": "Cicla la energía PoE para uno o más puertos del switch (apagar y encender)"
     },
     "set_camera_rtsp": {
       "name": "Configurar RTSP de la cámara",

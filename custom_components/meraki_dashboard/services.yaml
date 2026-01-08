@@ -22,3 +22,53 @@ set_camera_rtsp:
       required: false
       selector:
         text:
+
+cycle_switch_port_poe:
+  name: Cycle Switch Port PoE
+  description: Cycle PoE power for one or more switch ports (off then on).
+  fields:
+    serial:
+      name: Serial
+      description: Switch serial number.
+      required: true
+      example: Q2XX-XXXX-XXXX
+      selector:
+        text:
+    port_id:
+      name: Port ID
+      description: Single port ID to cycle. Use either port_id or ports.
+      required: false
+      example: "1"
+      selector:
+        text:
+    ports:
+      name: Ports
+      description: List of port IDs to cycle on the same switch.
+      required: false
+      example: ["1", "2", "5"]
+      selector:
+        object:
+    delay_seconds:
+      name: Delay (seconds)
+      description: Time to wait between disabling and re-enabling PoE.
+      required: false
+      example: 5
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 1
+          mode: box
+    confirm:
+      name: Confirm Bulk Cycle
+      description: Optional confirmation flag retained for compatibility.
+      required: false
+      example: true
+      selector:
+        boolean:
+    config_entry_id:
+      name: Config Entry ID
+      description: Optional config entry ID when multiple integrations are configured.
+      required: false
+      selector:
+        text:
