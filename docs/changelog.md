@@ -11,6 +11,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.0...v0.37.1) (2026-01-19)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#234](https://github.com/rknightion/meraki-dashboard-ha/issues/234)) ([d575066](https://github.com/rknightion/meraki-dashboard-ha/commit/d57506613a4accc3e38949a712f19e58f5f7757c))
+* **deps:** lock file maintenance ([#236](https://github.com/rknightion/meraki-dashboard-ha/issues/236)) ([12e117d](https://github.com/rknightion/meraki-dashboard-ha/commit/12e117dcc129ed9482c0dc47fa2ff7f72fbc85c3))
+* **deps:** update anthropics/claude-code-action digest to 1b8ee3b ([#232](https://github.com/rknightion/meraki-dashboard-ha/issues/232)) ([7c1ba01](https://github.com/rknightion/meraki-dashboard-ha/commit/7c1ba01bde4653484b8c8d837beaa886e76cd814))
+* **deps:** update anthropics/claude-code-action digest to a017b83 ([#235](https://github.com/rknightion/meraki-dashboard-ha/issues/235)) ([1e317cb](https://github.com/rknightion/meraki-dashboard-ha/commit/1e317cb56ebe2c77cea43b452d1c0625244555a5))
+
 ## [0.37.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.36.0...v0.37.0) (2026-01-08)
 
 
