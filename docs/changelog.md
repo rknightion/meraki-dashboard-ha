@@ -11,6 +11,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.0...v0.37.1) (2026-01-28)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#234](https://github.com/rknightion/meraki-dashboard-ha/issues/234)) ([d575066](https://github.com/rknightion/meraki-dashboard-ha/commit/d57506613a4accc3e38949a712f19e58f5f7757c))
+* **deps:** lock file maintenance ([#236](https://github.com/rknightion/meraki-dashboard-ha/issues/236)) ([12e117d](https://github.com/rknightion/meraki-dashboard-ha/commit/12e117dcc129ed9482c0dc47fa2ff7f72fbc85c3))
+* **deps:** lock file maintenance ([#243](https://github.com/rknightion/meraki-dashboard-ha/issues/243)) ([f4529cc](https://github.com/rknightion/meraki-dashboard-ha/commit/f4529cc5c0a1038b2469a468810b5437d63b7adb))
+* **deps:** update actions/checkout action to v6.0.2 ([#239](https://github.com/rknightion/meraki-dashboard-ha/issues/239)) ([2a15d48](https://github.com/rknightion/meraki-dashboard-ha/commit/2a15d486ca6e2d1b15923b87de31ee24a5d2fb31))
+* **deps:** update actions/setup-python action to v6.2.0 ([#238](https://github.com/rknightion/meraki-dashboard-ha/issues/238)) ([4f7d33c](https://github.com/rknightion/meraki-dashboard-ha/commit/4f7d33c85e0c0eaef841a463bd96d5f28f7088b1))
+* **deps:** update anthropics/claude-code-action digest to 1b8ee3b ([#232](https://github.com/rknightion/meraki-dashboard-ha/issues/232)) ([7c1ba01](https://github.com/rknightion/meraki-dashboard-ha/commit/7c1ba01bde4653484b8c8d837beaa886e76cd814))
+* **deps:** update anthropics/claude-code-action digest to 2316a9a ([#237](https://github.com/rknightion/meraki-dashboard-ha/issues/237)) ([c8c82fa](https://github.com/rknightion/meraki-dashboard-ha/commit/c8c82faf781514d6388dc9b57a581df46325d72e))
+* **deps:** update anthropics/claude-code-action digest to 231bd75 ([#247](https://github.com/rknightion/meraki-dashboard-ha/issues/247)) ([afb6354](https://github.com/rknightion/meraki-dashboard-ha/commit/afb63546ff676a89f3365d9416f9b413a21a7ec9))
+* **deps:** update anthropics/claude-code-action digest to 2804b41 ([#240](https://github.com/rknightion/meraki-dashboard-ha/issues/240)) ([b2de2c6](https://github.com/rknightion/meraki-dashboard-ha/commit/b2de2c6b91c482c678607ed3dd1f41e2928a8822))
+* **deps:** update anthropics/claude-code-action digest to 2817c54 ([#248](https://github.com/rknightion/meraki-dashboard-ha/issues/248)) ([188c32a](https://github.com/rknightion/meraki-dashboard-ha/commit/188c32a10a2e35edd7a6265e7b29d4e2dce6d304))
+* **deps:** update anthropics/claude-code-action digest to 4126f9d ([#246](https://github.com/rknightion/meraki-dashboard-ha/issues/246)) ([1eeb4a5](https://github.com/rknightion/meraki-dashboard-ha/commit/1eeb4a55c8c64041df23a6d778dc29c794289d0f))
+* **deps:** update anthropics/claude-code-action digest to 8341a56 ([#241](https://github.com/rknightion/meraki-dashboard-ha/issues/241)) ([70c0401](https://github.com/rknightion/meraki-dashboard-ha/commit/70c040178b7a0a7eada8ec169ab1af30ec12cce1))
+* **deps:** update anthropics/claude-code-action digest to a017b83 ([#235](https://github.com/rknightion/meraki-dashboard-ha/issues/235)) ([1e317cb](https://github.com/rknightion/meraki-dashboard-ha/commit/1e317cb56ebe2c77cea43b452d1c0625244555a5))
+* **deps:** update anthropics/claude-code-action digest to f642197 ([#242](https://github.com/rknightion/meraki-dashboard-ha/issues/242)) ([a7fa5bb](https://github.com/rknightion/meraki-dashboard-ha/commit/a7fa5bb154be09d4d9aa9f10a610b532b8ab7f99))
+* **deps:** update home-assistant/actions digest to 55b4a5d ([#245](https://github.com/rknightion/meraki-dashboard-ha/issues/245)) ([6d6db0a](https://github.com/rknightion/meraki-dashboard-ha/commit/6d6db0a0728d72e8d47f5d97755cd45e8cceaed7))
+* **deps:** update step-security/harden-runner action to v2.14.1 ([#244](https://github.com/rknightion/meraki-dashboard-ha/issues/244)) ([2d55e4b](https://github.com/rknightion/meraki-dashboard-ha/commit/2d55e4b4903692802a84b933c0682ce91aafc7ed))
+
 ## [0.37.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.36.0...v0.37.0) (2026-01-08)
 
 
