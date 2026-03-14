@@ -1,0 +1,14 @@
+title: Meraki Dashboard Home Assistant Integration Documentation
+description: A comprehensive Home Assistant custom integration for monitoring Cisco Meraki Dashboard devices with real-time metrics and hub-based architecture
+tags:
+  - home-assistant
+  - cisco-meraki
+  - network-monitoring
+  - smart-home
+image: assets/social-card.png
+twitter:
+  creator: "@rknightion"
+  site: "@rknightion"
+robots: index,follow
+language: en
+canonical_base: https://m7kni.io/meraki-dashboard-ha/
