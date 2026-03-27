@@ -11,6 +11,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.4](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.3...v0.37.4) (2026-03-27)
+
+
+### Bug Fixes
+
+* exclude vendor directory from linting and add strict=False to zip calls ([8ee60af](https://github.com/rknightion/meraki-dashboard-ha/commit/8ee60af50f329963adc4031613a3e54c1bc101c6))
+* lint ([41fd66b](https://github.com/rknightion/meraki-dashboard-ha/commit/41fd66b623ba9fba6b03990409d87c5937a33926))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#259](https://github.com/rknightion/meraki-dashboard-ha/issues/259)) ([735d5b5](https://github.com/rknightion/meraki-dashboard-ha/commit/735d5b5d4ebc20207566743c5d7c6a2c13ced8fe))
+
 ## [0.37.3](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.2...v0.37.3) (2026-03-27)
 
 
