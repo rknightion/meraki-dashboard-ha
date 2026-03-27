@@ -2,8 +2,10 @@ import logging
 import os
 
 from . import aio  # noqa: F401 — ensure subpackage is importable as meraki.aio
+from ._version import __version__  # noqa: E402
 from .api.administered import Administered
 from .api.appliance import Appliance
+
 # Batch class imports
 from .api.batch import Batch
 from .api.camera import Camera
@@ -20,39 +22,39 @@ from .api.spaces import Spaces
 from .api.switch import Switch
 from .api.wireless import Wireless
 from .api.wirelessController import WirelessController
+
 # Config import
 from .config import (
-    API_KEY_ENVIRONMENT_VARIABLE,
-    DEFAULT_BASE_URL,
-    SINGLE_REQUEST_TIMEOUT,
-    CERTIFICATE_PATH,
-    REQUESTS_PROXY,
-    WAIT_ON_RATE_LIMIT,
-    NGINX_429_RETRY_WAIT_TIME,
     ACTION_BATCH_RETRY_WAIT_TIME,
+    API_KEY_ENVIRONMENT_VARIABLE,
+    BE_GEO_ID,
+    CERTIFICATE_PATH,
+    DEFAULT_BASE_URL,
+    INHERIT_LOGGING_CONFIG,
+    LOG_FILE_PREFIX,
+    LOG_PATH,
+    MAXIMUM_RETRIES,
+    MERAKI_PYTHON_SDK_CALLER,
     NETWORK_DELETE_RETRY_WAIT_TIME,
+    NGINX_429_RETRY_WAIT_TIME,
+    OUTPUT_LOG,
+    PRINT_TO_CONSOLE,
+    REQUESTS_PROXY,
     RETRY_4XX_ERROR,
     RETRY_4XX_ERROR_WAIT_TIME,
-    MAXIMUM_RETRIES,
-    OUTPUT_LOG,
-    LOG_PATH,
-    LOG_FILE_PREFIX,
-    PRINT_TO_CONSOLE,
-    SUPPRESS_LOGGING,
-    INHERIT_LOGGING_CONFIG,
     SIMULATE_API_CALLS,
-    BE_GEO_ID,
-    MERAKI_PYTHON_SDK_CALLER,
+    SINGLE_REQUEST_TIMEOUT,
+    SUPPRESS_LOGGING,
     USE_ITERATOR_FOR_GET_PAGES,
+    WAIT_ON_RATE_LIMIT,
 )
 from .rest_session import *
-from ._version import __version__  # noqa: E402
-__api_version__ = '1.68.0'
+
+__api_version__ = "1.68.0"
 
 
-class DashboardAPI(object):
-    """
-    **Creates a persistent Meraki dashboard API session**
+class DashboardAPI:
+    """**Creates a persistent Meraki dashboard API session**
 
     - api_key (string): API key generated in dashboard; can also be set as an environment variable MERAKI_DASHBOARD_API_KEY
     - base_url (string): preceding all endpoint resources
@@ -109,10 +111,10 @@ class DashboardAPI(object):
             raise APIKeyError()
 
         # Pull the BE GEO ID from an environment variable if present
-        be_geo_id = be_geo_id or os.environ.get('BE_GEO_ID')
+        be_geo_id = be_geo_id or os.environ.get("BE_GEO_ID")
 
         # Pull the caller from an environment variable if present
-        caller = caller or os.environ.get('MERAKI_PYTHON_SDK_CALLER')
+        caller = caller or os.environ.get("MERAKI_PYTHON_SDK_CALLER")
 
         use_iterator_for_get_pages = use_iterator_for_get_pages
         inherit_logging_config = inherit_logging_config
@@ -125,16 +127,16 @@ class DashboardAPI(object):
                 self._logger.setLevel(logging.DEBUG)
 
                 formatter = logging.Formatter(
-                    fmt='%(asctime)s %(name)12s: %(levelname)8s > %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S'
+                    fmt="%(asctime)s %(name)12s: %(levelname)8s > %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S"
                 )
                 handler_console = logging.StreamHandler()
                 handler_console.setFormatter(formatter)
 
                 if output_log:
-                    if log_path and log_path[-1] != '/':
-                        log_path += '/'
-                    self._log_file = f'{log_path}{log_file_prefix}_log__{datetime.now():%Y-%m-%d_%H-%M-%S}.log'
+                    if log_path and log_path[-1] != "/":
+                        log_path += "/"
+                    self._log_file = f"{log_path}{log_file_prefix}_log__{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
                     handler_log = logging.FileHandler(
                         filename=self._log_file
                     )

@@ -5,12 +5,11 @@ class AsyncWirelessController:
     def __init__(self, session):
         super().__init__()
         self._session = session
-        
 
 
-    def getOrganizationWirelessControllerAvailabilitiesChangeHistory(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List connectivity data of wireless LAN controllers in an organization**
+
+    def getOrganizationWirelessControllerAvailabilitiesChangeHistory(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List connectivity data of wireless LAN controllers in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-availabilities-change-history
 
         - organizationId (string): Organization ID
@@ -28,28 +27,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'availabilities', 'changeHistory'],
-            'operation': 'getOrganizationWirelessControllerAvailabilitiesChangeHistory'
+            "tags": ["wirelessController", "monitor", "availabilities", "changeHistory"],
+            "operation": "getOrganizationWirelessControllerAvailabilitiesChangeHistory"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/availabilities/changeHistory'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/availabilities/changeHistory"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerClientsOverviewHistoryByDeviceByInterval(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless client counts of wireless LAN controllers over time in an organization**
+
+    def getOrganizationWirelessControllerClientsOverviewHistoryByDeviceByInterval(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless client counts of wireless LAN controllers over time in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-clients-overview-history-by-device-by-interval
 
         - organizationId (string): Organization ID
@@ -69,28 +67,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'clients', 'overview', 'history', 'byDevice', 'byInterval'],
-            'operation': 'getOrganizationWirelessControllerClientsOverviewHistoryByDeviceByInterval'
+            "tags": ["wirelessController", "monitor", "clients", "overview", "history", "byDevice", "byInterval"],
+            "operation": "getOrganizationWirelessControllerClientsOverviewHistoryByDeviceByInterval"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/clients/overview/history/byDevice/byInterval'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/clients/overview/history/byDevice/byInterval"
 
-        query_params = ['networkIds', 'serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', 'resolution', ]
+        query_params = ["networkIds", "serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", "resolution", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['networkIds', 'serials', ]
+        array_params = ["networkIds", "serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerConnections(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List all access points associated with wireless LAN controllers in an organization**
+
+    def getOrganizationWirelessControllerConnections(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List all access points associated with wireless LAN controllers in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-connections
 
         - organizationId (string): Organization ID
@@ -106,28 +103,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'connections'],
-            'operation': 'getOrganizationWirelessControllerConnections'
+            "tags": ["wirelessController", "monitor", "connections"],
+            "operation": "getOrganizationWirelessControllerConnections"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/connections'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/connections"
 
-        query_params = ['networkIds', 'controllerSerials', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["networkIds", "controllerSerials", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['networkIds', 'controllerSerials', ]
+        array_params = ["networkIds", "controllerSerials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesL2ByDevice(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless LAN controller layer 2 interfaces in an organization**
+
+    def getOrganizationWirelessControllerDevicesInterfacesL2ByDevice(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless LAN controller layer 2 interfaces in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-l-2-by-device
 
         - organizationId (string): Organization ID
@@ -145,28 +141,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'l2', 'byDevice'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesL2ByDevice'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "l2", "byDevice"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesL2ByDevice"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/l2/byDevice'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/l2/byDevice"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesL2StatusesChangeHistoryByDevice(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless LAN controller layer 2 interfaces history status in an organization**
+
+    def getOrganizationWirelessControllerDevicesInterfacesL2StatusesChangeHistoryByDevice(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless LAN controller layer 2 interfaces history status in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-l-2-statuses-change-history-by-device
 
         - organizationId (string): Organization ID
@@ -185,28 +180,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'l2', 'statuses', 'changeHistory', 'byDevice'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesL2StatusesChangeHistoryByDevice'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "l2", "statuses", "changeHistory", "byDevice"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesL2StatusesChangeHistoryByDevice"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/l2/statuses/changeHistory/byDevice'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/l2/statuses/changeHistory/byDevice"
 
-        query_params = ['serials', 'includeInterfacesWithoutChanges', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "includeInterfacesWithoutChanges", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesL2UsageHistoryByInterval(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless LAN controller layer 2 interfaces history usage in an organization**
+
+    def getOrganizationWirelessControllerDevicesInterfacesL2UsageHistoryByInterval(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless LAN controller layer 2 interfaces history usage in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-l-2-usage-history-by-interval
 
         - organizationId (string): Organization ID
@@ -224,28 +218,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'l2', 'usage', 'history', 'byInterval'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesL2UsageHistoryByInterval'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "l2", "usage", "history", "byInterval"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesL2UsageHistoryByInterval"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/l2/usage/history/byInterval'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/l2/usage/history/byInterval"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesL3ByDevice(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless LAN controller layer 3 interfaces in an organization**
+
+    def getOrganizationWirelessControllerDevicesInterfacesL3ByDevice(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless LAN controller layer 3 interfaces in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-l-3-by-device
 
         - organizationId (string): Organization ID
@@ -263,28 +256,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'l3', 'byDevice'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesL3ByDevice'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "l3", "byDevice"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesL3ByDevice"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/l3/byDevice'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/l3/byDevice"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesL3StatusesChangeHistoryByDevice(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless LAN controller layer 3 interfaces history status in an organization**
+
+    def getOrganizationWirelessControllerDevicesInterfacesL3StatusesChangeHistoryByDevice(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless LAN controller layer 3 interfaces history status in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-l-3-statuses-change-history-by-device
 
         - organizationId (string): Organization ID
@@ -303,28 +295,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'l3', 'statuses', 'changeHistory', 'byDevice'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesL3StatusesChangeHistoryByDevice'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "l3", "statuses", "changeHistory", "byDevice"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesL3StatusesChangeHistoryByDevice"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/l3/statuses/changeHistory/byDevice'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/l3/statuses/changeHistory/byDevice"
 
-        query_params = ['serials', 'includeInterfacesWithoutChanges', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "includeInterfacesWithoutChanges", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesL3UsageHistoryByInterval(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List wireless LAN controller layer 3 interfaces history usage in an organization**
+
+    def getOrganizationWirelessControllerDevicesInterfacesL3UsageHistoryByInterval(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List wireless LAN controller layer 3 interfaces history usage in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-l-3-usage-history-by-interval
 
         - organizationId (string): Organization ID
@@ -342,28 +333,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'l3', 'usage', 'history', 'byInterval'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesL3UsageHistoryByInterval'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "l3", "usage", "history", "byInterval"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesL3UsageHistoryByInterval"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/l3/usage/history/byInterval'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/l3/usage/history/byInterval"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesPacketsOverviewByDevice(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Retrieve the packet counters for the interfaces of a Wireless LAN controller**
+
+    def getOrganizationWirelessControllerDevicesInterfacesPacketsOverviewByDevice(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**Retrieve the packet counters for the interfaces of a Wireless LAN controller**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-packets-overview-by-device
 
         - organizationId (string): Organization ID
@@ -382,28 +372,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'packets', 'overview', 'byDevice'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesPacketsOverviewByDevice'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "packets", "overview", "byDevice"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesPacketsOverviewByDevice"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/packets/overview/byDevice'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/packets/overview/byDevice"
 
-        query_params = ['serials', 'names', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "names", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', 'names', ]
+        array_params = ["serials", "names", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesInterfacesUsageHistoryByInterval(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Retrieve the traffic for the interfaces of a Wireless LAN controller**
+
+    def getOrganizationWirelessControllerDevicesInterfacesUsageHistoryByInterval(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**Retrieve the traffic for the interfaces of a Wireless LAN controller**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-interfaces-usage-history-by-interval
 
         - organizationId (string): Organization ID
@@ -422,28 +411,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'interfaces', 'usage', 'history', 'byInterval'],
-            'operation': 'getOrganizationWirelessControllerDevicesInterfacesUsageHistoryByInterval'
+            "tags": ["wirelessController", "monitor", "devices", "interfaces", "usage", "history", "byInterval"],
+            "operation": "getOrganizationWirelessControllerDevicesInterfacesUsageHistoryByInterval"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/interfaces/usage/history/byInterval'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/interfaces/usage/history/byInterval"
 
-        query_params = ['serials', 'names', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "names", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', 'names', ]
+        array_params = ["serials", "names", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesRedundancyFailoverHistory(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List the failover events of wireless LAN controllers in an organization**
+
+    def getOrganizationWirelessControllerDevicesRedundancyFailoverHistory(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List the failover events of wireless LAN controllers in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-redundancy-failover-history
 
         - organizationId (string): Organization ID
@@ -461,28 +449,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'redundancy', 'failover', 'history'],
-            'operation': 'getOrganizationWirelessControllerDevicesRedundancyFailoverHistory'
+            "tags": ["wirelessController", "monitor", "devices", "redundancy", "failover", "history"],
+            "operation": "getOrganizationWirelessControllerDevicesRedundancyFailoverHistory"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/redundancy/failover/history'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/redundancy/failover/history"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesRedundancyStatuses(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List redundancy details of wireless LAN controllers in an organization**
+
+    def getOrganizationWirelessControllerDevicesRedundancyStatuses(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List redundancy details of wireless LAN controllers in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-redundancy-statuses
 
         - organizationId (string): Organization ID
@@ -497,28 +484,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'redundancy', 'statuses'],
-            'operation': 'getOrganizationWirelessControllerDevicesRedundancyStatuses'
+            "tags": ["wirelessController", "monitor", "devices", "redundancy", "statuses"],
+            "operation": "getOrganizationWirelessControllerDevicesRedundancyStatuses"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/redundancy/statuses'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/redundancy/statuses"
 
-        query_params = ['serials', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerDevicesSystemUtilizationHistoryByInterval(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List cpu utilization data of wireless LAN controllers in an organization**
+
+    def getOrganizationWirelessControllerDevicesSystemUtilizationHistoryByInterval(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List cpu utilization data of wireless LAN controllers in an organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-devices-system-utilization-history-by-interval
 
         - organizationId (string): Organization ID
@@ -536,28 +522,27 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'devices', 'system', 'utilization', 'history', 'byInterval'],
-            'operation': 'getOrganizationWirelessControllerDevicesSystemUtilizationHistoryByInterval'
+            "tags": ["wirelessController", "monitor", "devices", "system", "utilization", "history", "byInterval"],
+            "operation": "getOrganizationWirelessControllerDevicesSystemUtilizationHistoryByInterval"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/devices/system/utilization/history/byInterval'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/devices/system/utilization/history/byInterval"
 
-        query_params = ['serials', 't0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["serials", "t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', ]
+        array_params = ["serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getOrganizationWirelessControllerOverviewByDevice(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List the overview information of wireless LAN controllers in an organization and it is updated every minute.**
+
+    def getOrganizationWirelessControllerOverviewByDevice(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List the overview information of wireless LAN controllers in an organization and it is updated every minute.**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-wireless-controller-overview-by-device
 
         - organizationId (string): Organization ID
@@ -573,20 +558,20 @@ class AsyncWirelessController:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['wirelessController', 'monitor', 'overview', 'byDevice'],
-            'operation': 'getOrganizationWirelessControllerOverviewByDevice'
+            "tags": ["wirelessController", "monitor", "overview", "byDevice"],
+            "operation": "getOrganizationWirelessControllerOverviewByDevice"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/wirelessController/overview/byDevice'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/wirelessController/overview/byDevice"
 
-        query_params = ['networkIds', 'serials', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["networkIds", "serials", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['networkIds', 'serials', ]
+        array_params = ["networkIds", "serials", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+

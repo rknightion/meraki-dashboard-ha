@@ -2,15 +2,14 @@
 class APIKeyError(Exception):
     def __init__(self):
         self.message = "Meraki API key needs to be defined"
-        super(APIKeyError, self).__init__(self.message)
+        super().__init__(self.message)
 
     def __repr__(self):
         return self.message
 
 
 class APIResponseError(Exception):
-    """
-    Exception class raised from HTTP class methods. Used as a single catch-all error for any possible
+    """Exception class raised from HTTP class methods. Used as a single catch-all error for any possible
     requests exception error that might happen during communication with Meraki API to simplify caller coding.
     """
 
@@ -64,7 +63,7 @@ class APIError(Exception):
                 self.message += (
                     "please wait a minute if the key or org was just newly created."
                 )
-        super(APIError, self).__init__(
+        super().__init__(
             f"{self.tag}, {self.operation} - {self.status} {self.reason}, {self.message}"
         )
 
@@ -109,13 +108,13 @@ class PythonVersionError(Exception):
         super().__init__(self.message)
 
 
-class SessionInputError(Exception): 
+class SessionInputError(Exception):
     """Exception raised for unsupported session inputs."""
-    
+
     def __init__(self, argument, value, message, doc_link):
         self.argument = argument
         self.value = value
         self.message = message
         self.doc_link = doc_link
-        
-        super().__init__(f'{self.message} {self.doc_link}')
+
+        super().__init__(f"{self.message} {self.doc_link}")

@@ -1,15 +1,13 @@
-import urllib
 
 
-class ActionBatchSensor(object):
+class ActionBatchSensor:
     def __init__(self):
-        super(ActionBatchSensor, self).__init__()
-        
+        super().__init__()
+
 
 
     def createDeviceSensorCommand(self, serial: str, operation: str):
-        """
-        **Sends a command to a sensor**
+        """**Sends a command to a sensor**
         https://developer.cisco.com/meraki/api-v1/#!create-device-sensor-command
 
         - serial (string): Serial
@@ -18,17 +16,17 @@ class ActionBatchSensor(object):
 
         kwargs = locals()
 
-        if 'operation' in kwargs:
-            options = ['cycleDownstreamPower', 'disableDownstreamPower', 'enableDownstreamPower', 'refreshData']
-            assert kwargs['operation'] in options, f'''"operation" cannot be "{kwargs['operation']}", & must be set to one of: {options}'''
+        if "operation" in kwargs:
+            options = ["cycleDownstreamPower", "disableDownstreamPower", "enableDownstreamPower", "refreshData"]
+            assert kwargs["operation"] in options, f""""operation" cannot be "{kwargs['operation']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['sensor', 'configure', 'commands'],
-            'operation': 'createDeviceSensorCommand'
+            "tags": ["sensor", "configure", "commands"],
+            "operation": "createDeviceSensorCommand"
         }
-        resource = f'/devices/{serial}/sensor/commands'
+        resource = f"/devices/{serial}/sensor/commands"
 
-        body_params = ['operation', ]
+        body_params = ["operation", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -36,15 +34,14 @@ class ActionBatchSensor(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateDeviceSensorRelationships(self, serial: str, **kwargs):
-        """
-        **Assign one or more sensor roles to a given sensor or camera device.**
+        """**Assign one or more sensor roles to a given sensor or camera device.**
         https://developer.cisco.com/meraki/api-v1/#!update-device-sensor-relationships
 
         - serial (string): Serial
@@ -54,12 +51,12 @@ class ActionBatchSensor(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['sensor', 'configure', 'relationships'],
-            'operation': 'updateDeviceSensorRelationships'
+            "tags": ["sensor", "configure", "relationships"],
+            "operation": "updateDeviceSensorRelationships"
         }
-        resource = f'/devices/{serial}/sensor/relationships'
+        resource = f"/devices/{serial}/sensor/relationships"
 
-        body_params = ['livestream', ]
+        body_params = ["livestream", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -67,15 +64,14 @@ class ActionBatchSensor(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkSensorAlertsProfile(self, networkId: str, name: str, conditions: list, **kwargs):
-        """
-        **Creates a sensor alert profile for a network.**
+        """**Creates a sensor alert profile for a network.**
         https://developer.cisco.com/meraki/api-v1/#!create-network-sensor-alerts-profile
 
         - networkId (string): Network ID
@@ -91,12 +87,12 @@ class ActionBatchSensor(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['sensor', 'configure', 'alerts', 'profiles'],
-            'operation': 'createNetworkSensorAlertsProfile'
+            "tags": ["sensor", "configure", "alerts", "profiles"],
+            "operation": "createNetworkSensorAlertsProfile"
         }
-        resource = f'/networks/{networkId}/sensor/alerts/profiles'
+        resource = f"/networks/{networkId}/sensor/alerts/profiles"
 
-        body_params = ['name', 'schedule', 'conditions', 'recipients', 'serials', 'includeSensorUrl', 'message', ]
+        body_params = ["name", "schedule", "conditions", "recipients", "serials", "includeSensorUrl", "message", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -104,15 +100,14 @@ class ActionBatchSensor(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkSensorAlertsProfile(self, networkId: str, id: str, **kwargs):
-        """
-        **Updates a sensor alert profile for a network.**
+        """**Updates a sensor alert profile for a network.**
         https://developer.cisco.com/meraki/api-v1/#!update-network-sensor-alerts-profile
 
         - networkId (string): Network ID
@@ -129,12 +124,12 @@ class ActionBatchSensor(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['sensor', 'configure', 'alerts', 'profiles'],
-            'operation': 'updateNetworkSensorAlertsProfile'
+            "tags": ["sensor", "configure", "alerts", "profiles"],
+            "operation": "updateNetworkSensorAlertsProfile"
         }
-        resource = f'/networks/{networkId}/sensor/alerts/profiles/{id}'
+        resource = f"/networks/{networkId}/sensor/alerts/profiles/{id}"
 
-        body_params = ['name', 'schedule', 'conditions', 'recipients', 'serials', 'includeSensorUrl', 'message', ]
+        body_params = ["name", "schedule", "conditions", "recipients", "serials", "includeSensorUrl", "message", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -142,15 +137,14 @@ class ActionBatchSensor(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkSensorAlertsProfile(self, networkId: str, id: str):
-        """
-        **Deletes a sensor alert profile from a network.**
+        """**Deletes a sensor alert profile from a network.**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-sensor-alerts-profile
 
         - networkId (string): Network ID
@@ -158,25 +152,24 @@ class ActionBatchSensor(object):
         """
 
         metadata = {
-            'tags': ['sensor', 'configure', 'alerts', 'profiles'],
-            'operation': 'deleteNetworkSensorAlertsProfile'
+            "tags": ["sensor", "configure", "alerts", "profiles"],
+            "operation": "deleteNetworkSensorAlertsProfile"
         }
-        resource = f'/networks/{networkId}/sensor/alerts/profiles/{id}'
+        resource = f"/networks/{networkId}/sensor/alerts/profiles/{id}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkSensorMqttBroker(self, networkId: str, mqttBrokerId: str, enabled: bool):
-        """
-        **Update the sensor settings of an MQTT broker**
+        """**Update the sensor settings of an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!update-network-sensor-mqtt-broker
 
         - networkId (string): Network ID
@@ -187,12 +180,12 @@ class ActionBatchSensor(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['sensor', 'configure', 'mqttBrokers'],
-            'operation': 'updateNetworkSensorMqttBroker'
+            "tags": ["sensor", "configure", "mqttBrokers"],
+            "operation": "updateNetworkSensorMqttBroker"
         }
-        resource = f'/networks/{networkId}/sensor/mqttBrokers/{mqttBrokerId}'
+        resource = f"/networks/{networkId}/sensor/mqttBrokers/{mqttBrokerId}"
 
-        body_params = ['enabled', ]
+        body_params = ["enabled", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -200,7 +193,7 @@ class ActionBatchSensor(object):
             "body": payload
         }
         return action
-        
+
 
 
 

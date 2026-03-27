@@ -5,12 +5,11 @@ class AsyncLicensing:
     def __init__(self, session):
         super().__init__()
         self._session = session
-        
+
 
 
     def getAdministeredLicensingSubscriptionEntitlements(self, **kwargs):
-        """
-        **Retrieve the list of purchasable entitlements**
+        """**Retrieve the list of purchasable entitlements**
         https://developer.cisco.com/meraki/api-v1/#!get-administered-licensing-subscription-entitlements
 
         - skus (array): Filter to entitlements with the specified SKUs
@@ -19,27 +18,26 @@ class AsyncLicensing:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['licensing', 'configure', 'subscription', 'entitlements'],
-            'operation': 'getAdministeredLicensingSubscriptionEntitlements'
+            "tags": ["licensing", "configure", "subscription", "entitlements"],
+            "operation": "getAdministeredLicensingSubscriptionEntitlements"
         }
-        resource = f'/administered/licensing/subscription/entitlements'
+        resource = "/administered/licensing/subscription/entitlements"
 
-        query_params = ['skus', ]
+        query_params = ["skus", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['skus', ]
+        array_params = ["skus", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get(metadata, resource, params)
-        
 
 
-    def getAdministeredLicensingSubscriptionSubscriptions(self, organizationIds: list, total_pages=1, direction='next', **kwargs):
-        """
-        **List available subscriptions**
+
+    def getAdministeredLicensingSubscriptionSubscriptions(self, organizationIds: list, total_pages=1, direction="next", **kwargs):
+        """**List available subscriptions**
         https://developer.cisco.com/meraki/api-v1/#!get-administered-licensing-subscription-subscriptions
 
         - organizationIds (array): Organizations to get associated subscriptions for
@@ -60,27 +58,26 @@ class AsyncLicensing:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['licensing', 'configure', 'subscription', 'subscriptions'],
-            'operation': 'getAdministeredLicensingSubscriptionSubscriptions'
+            "tags": ["licensing", "configure", "subscription", "subscriptions"],
+            "operation": "getAdministeredLicensingSubscriptionSubscriptions"
         }
-        resource = f'/administered/licensing/subscription/subscriptions'
+        resource = "/administered/licensing/subscription/subscriptions"
 
-        query_params = ['perPage', 'startingAfter', 'endingBefore', 'subscriptionIds', 'organizationIds', 'statuses', 'productTypes', 'skus', 'name', 'startDate', 'endDate', ]
+        query_params = ["perPage", "startingAfter", "endingBefore", "subscriptionIds", "organizationIds", "statuses", "productTypes", "skus", "name", "startDate", "endDate", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['subscriptionIds', 'organizationIds', 'statuses', 'productTypes', 'skus', ]
+        array_params = ["subscriptionIds", "organizationIds", "statuses", "productTypes", "skus", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def claimAdministeredLicensingSubscriptionSubscriptions(self, claimKey: str, organizationId: str, **kwargs):
-        """
-        **Claim a subscription into an organization.**
+        """**Claim a subscription into an organization.**
         https://developer.cisco.com/meraki/api-v1/#!claim-administered-licensing-subscription-subscriptions
 
         - claimKey (string): The subscription's claim key
@@ -93,21 +90,20 @@ class AsyncLicensing:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['licensing', 'configure', 'subscription', 'subscriptions'],
-            'operation': 'claimAdministeredLicensingSubscriptionSubscriptions'
+            "tags": ["licensing", "configure", "subscription", "subscriptions"],
+            "operation": "claimAdministeredLicensingSubscriptionSubscriptions"
         }
-        resource = f'/administered/licensing/subscription/subscriptions/claim'
+        resource = "/administered/licensing/subscription/subscriptions/claim"
 
-        body_params = ['claimKey', 'organizationId', 'name', 'description', ]
+        body_params = ["claimKey", "organizationId", "name", "description", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def validateAdministeredLicensingSubscriptionSubscriptionsClaimKey(self, claimKey: str):
-        """
-        **Find a subscription by claim key**
+        """**Find a subscription by claim key**
         https://developer.cisco.com/meraki/api-v1/#!validate-administered-licensing-subscription-subscriptions-claim-key
 
         - claimKey (string): The subscription's claim key
@@ -116,21 +112,20 @@ class AsyncLicensing:
         kwargs = locals()
 
         metadata = {
-            'tags': ['licensing', 'configure', 'subscription', 'subscriptions', 'claimKey'],
-            'operation': 'validateAdministeredLicensingSubscriptionSubscriptionsClaimKey'
+            "tags": ["licensing", "configure", "subscription", "subscriptions", "claimKey"],
+            "operation": "validateAdministeredLicensingSubscriptionSubscriptionsClaimKey"
         }
-        resource = f'/administered/licensing/subscription/subscriptions/claimKey/validate'
+        resource = "/administered/licensing/subscription/subscriptions/claimKey/validate"
 
-        body_params = ['claimKey', ]
+        body_params = ["claimKey", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getAdministeredLicensingSubscriptionSubscriptionsComplianceStatuses(self, organizationIds: list, **kwargs):
-        """
-        **Get compliance status for requested subscriptions**
+        """**Get compliance status for requested subscriptions**
         https://developer.cisco.com/meraki/api-v1/#!get-administered-licensing-subscription-subscriptions-compliance-statuses
 
         - organizationIds (array): Organizations to get subscription compliance information for
@@ -140,27 +135,26 @@ class AsyncLicensing:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['licensing', 'configure', 'subscription', 'subscriptions', 'compliance', 'statuses'],
-            'operation': 'getAdministeredLicensingSubscriptionSubscriptionsComplianceStatuses'
+            "tags": ["licensing", "configure", "subscription", "subscriptions", "compliance", "statuses"],
+            "operation": "getAdministeredLicensingSubscriptionSubscriptionsComplianceStatuses"
         }
-        resource = f'/administered/licensing/subscription/subscriptions/compliance/statuses'
+        resource = "/administered/licensing/subscription/subscriptions/compliance/statuses"
 
-        query_params = ['organizationIds', 'subscriptionIds', ]
+        query_params = ["organizationIds", "subscriptionIds", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['organizationIds', 'subscriptionIds', ]
+        array_params = ["organizationIds", "subscriptionIds", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get(metadata, resource, params)
-        
+
 
 
     def bindAdministeredLicensingSubscriptionSubscription(self, subscriptionId: str, **kwargs):
-        """
-        **Bind networks to a subscription**
+        """**Bind networks to a subscription**
         https://developer.cisco.com/meraki/api-v1/#!bind-administered-licensing-subscription-subscription
 
         - subscriptionId (string): Subscription ID
@@ -171,22 +165,21 @@ class AsyncLicensing:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['licensing', 'configure', 'subscription', 'subscriptions'],
-            'operation': 'bindAdministeredLicensingSubscriptionSubscription'
+            "tags": ["licensing", "configure", "subscription", "subscriptions"],
+            "operation": "bindAdministeredLicensingSubscriptionSubscription"
         }
-        subscriptionId = urllib.parse.quote(str(subscriptionId), safe='')
-        resource = f'/administered/licensing/subscription/subscriptions/{subscriptionId}/bind'
+        subscriptionId = urllib.parse.quote(str(subscriptionId), safe="")
+        resource = f"/administered/licensing/subscription/subscriptions/{subscriptionId}/bind"
 
-        body_params = ['networkIds', ]
+        body_params = ["networkIds", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
 
 
-    def getOrganizationLicensingCotermLicenses(self, organizationId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List the licenses in a coterm organization**
+
+    def getOrganizationLicensingCotermLicenses(self, organizationId: str, total_pages=1, direction="next", **kwargs):
+        """**List the licenses in a coterm organization**
         https://developer.cisco.com/meraki/api-v1/#!get-organization-licensing-coterm-licenses
 
         - organizationId (string): Organization ID
@@ -202,22 +195,21 @@ class AsyncLicensing:
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['licensing', 'configure', 'coterm', 'licenses'],
-            'operation': 'getOrganizationLicensingCotermLicenses'
+            "tags": ["licensing", "configure", "coterm", "licenses"],
+            "operation": "getOrganizationLicensingCotermLicenses"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/licensing/coterm/licenses'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/licensing/coterm/licenses"
 
-        query_params = ['perPage', 'startingAfter', 'endingBefore', 'invalidated', 'expired', ]
+        query_params = ["perPage", "startingAfter", "endingBefore", "invalidated", "expired", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def moveOrganizationLicensingCotermLicenses(self, organizationId: str, destination: dict, licenses: list):
-        """
-        **Moves a license to a different organization (coterm only)**
+        """**Moves a license to a different organization (coterm only)**
         https://developer.cisco.com/meraki/api-v1/#!move-organization-licensing-coterm-licenses
 
         - organizationId (string): Organization ID
@@ -228,14 +220,14 @@ class AsyncLicensing:
         kwargs = locals()
 
         metadata = {
-            'tags': ['licensing', 'configure', 'coterm', 'licenses'],
-            'operation': 'moveOrganizationLicensingCotermLicenses'
+            "tags": ["licensing", "configure", "coterm", "licenses"],
+            "operation": "moveOrganizationLicensingCotermLicenses"
         }
-        organizationId = urllib.parse.quote(str(organizationId), safe='')
-        resource = f'/organizations/{organizationId}/licensing/coterm/licenses/move'
+        organizationId = urllib.parse.quote(str(organizationId), safe="")
+        resource = f"/organizations/{organizationId}/licensing/coterm/licenses/move"
 
-        body_params = ['destination', 'licenses', ]
+        body_params = ["destination", "licenses", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+

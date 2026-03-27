@@ -7,7 +7,6 @@ import ast
 from pathlib import Path
 from typing import Any
 
-
 UNIT_NAME_MAP: dict[str, str] = {
     "PERCENTAGE": "%",
     "CONCENTRATION_PARTS_PER_MILLION": "ppm",
@@ -682,8 +681,8 @@ def main():
             "",
             "Entities follow Home Assistant naming conventions:",
             "",
-            "- **Device Name**: Uses the Meraki device name (e.g., \"Office Sensor\", \"Main Switch\")",
-            "- **Entity Name**: Combines device name with metric (e.g., \"Office Sensor Temperature\")",
+            '- **Device Name**: Uses the Meraki device name (e.g., "Office Sensor", "Main Switch")',
+            '- **Entity Name**: Combines device name with metric (e.g., "Office Sensor Temperature")',
             "- **Entity ID**: Sanitized version (e.g., `sensor.office_sensor_temperature`)",
             "",
             "## Update Intervals",

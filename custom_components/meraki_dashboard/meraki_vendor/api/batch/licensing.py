@@ -1,7 +1,6 @@
-import urllib
 
 
-class ActionBatchLicensing(object):
+class ActionBatchLicensing:
     def __init__(self):
-        super(ActionBatchLicensing, self).__init__()
-        
+        super().__init__()
+

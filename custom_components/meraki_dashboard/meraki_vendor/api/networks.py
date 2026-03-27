@@ -1,35 +1,33 @@
 import urllib
 
 
-class Networks(object):
+class Networks:
     def __init__(self, session):
-        super(Networks, self).__init__()
+        super().__init__()
         self._session = session
-        
+
 
 
     def getNetwork(self, networkId: str):
-        """
-        **Return a network**
+        """**Return a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'getNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "getNetwork"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetwork(self, networkId: str, **kwargs):
-        """
-        **Update a network**
+        """**Update a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network
 
         - networkId (string): Network ID
@@ -43,41 +41,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'updateNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "updateNetwork"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}"
 
-        body_params = ['name', 'timeZone', 'tags', 'enrollmentString', 'notes', ]
+        body_params = ["name", "timeZone", "tags", "enrollmentString", "notes", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetwork(self, networkId: str):
-        """
-        **Delete a network**
+        """**Delete a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'deleteNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "deleteNetwork"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}"
 
         return self._session.delete(metadata, resource)
-        
 
 
-    def getNetworkAlertsHistory(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Return the alert history for this network**
+
+    def getNetworkAlertsHistory(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**Return the alert history for this network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-alerts-history
 
         - networkId (string): Network ID
@@ -91,41 +87,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'alerts', 'history'],
-            'operation': 'getNetworkAlertsHistory'
+            "tags": ["networks", "monitor", "alerts", "history"],
+            "operation": "getNetworkAlertsHistory"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/alerts/history'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/alerts/history"
 
-        query_params = ['perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkAlertsSettings(self, networkId: str):
-        """
-        **Return the alert configuration for this network**
+        """**Return the alert configuration for this network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-alerts-settings
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'alerts', 'settings'],
-            'operation': 'getNetworkAlertsSettings'
+            "tags": ["networks", "configure", "alerts", "settings"],
+            "operation": "getNetworkAlertsSettings"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/alerts/settings'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/alerts/settings"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkAlertsSettings(self, networkId: str, **kwargs):
-        """
-        **Update the alert configuration for this network**
+        """**Update the alert configuration for this network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-alerts-settings
 
         - networkId (string): Network ID
@@ -137,22 +131,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'alerts', 'settings'],
-            'operation': 'updateNetworkAlertsSettings'
+            "tags": ["networks", "configure", "alerts", "settings"],
+            "operation": "updateNetworkAlertsSettings"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/alerts/settings'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/alerts/settings"
 
-        body_params = ['defaultDestinations', 'alerts', 'muting', ]
+        body_params = ["defaultDestinations", "alerts", "muting", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def bindNetwork(self, networkId: str, configTemplateId: str, **kwargs):
-        """
-        **Bind a network to a template.**
+        """**Bind a network to a template.**
         https://developer.cisco.com/meraki/api-v1/#!bind-network
 
         - networkId (string): Network ID
@@ -163,22 +156,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'bindNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "bindNetwork"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/bind'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/bind"
 
-        body_params = ['configTemplateId', 'autoBind', ]
+        body_params = ["configTemplateId", "autoBind", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
 
 
-    def getNetworkBluetoothClients(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List the Bluetooth clients seen by APs in this network**
+
+    def getNetworkBluetoothClients(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**List the Bluetooth clients seen by APs in this network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-bluetooth-clients
 
         - networkId (string): Network ID
@@ -195,22 +187,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'bluetoothClients'],
-            'operation': 'getNetworkBluetoothClients'
+            "tags": ["networks", "monitor", "bluetoothClients"],
+            "operation": "getNetworkBluetoothClients"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/bluetoothClients'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/bluetoothClients"
 
-        query_params = ['t0', 'timespan', 'perPage', 'startingAfter', 'endingBefore', 'includeConnectivityHistory', ]
+        query_params = ["t0", "timespan", "perPage", "startingAfter", "endingBefore", "includeConnectivityHistory", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkBluetoothClient(self, networkId: str, bluetoothClientId: str, **kwargs):
-        """
-        **Return a Bluetooth client**
+        """**Return a Bluetooth client**
         https://developer.cisco.com/meraki/api-v1/#!get-network-bluetooth-client
 
         - networkId (string): Network ID
@@ -222,23 +213,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'bluetoothClients'],
-            'operation': 'getNetworkBluetoothClient'
+            "tags": ["networks", "monitor", "bluetoothClients"],
+            "operation": "getNetworkBluetoothClient"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        bluetoothClientId = urllib.parse.quote(str(bluetoothClientId), safe='')
-        resource = f'/networks/{networkId}/bluetoothClients/{bluetoothClientId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        bluetoothClientId = urllib.parse.quote(str(bluetoothClientId), safe="")
+        resource = f"/networks/{networkId}/bluetoothClients/{bluetoothClientId}"
 
-        query_params = ['includeConnectivityHistory', 'connectivityHistoryTimespan', ]
+        query_params = ["includeConnectivityHistory", "connectivityHistoryTimespan", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
 
 
-    def getNetworkClients(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **List the clients that have used this network in the timespan**
+
+    def getNetworkClients(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**List the clients that have used this network in the timespan**
         https://developer.cisco.com/meraki/api-v1/#!get-network-clients
 
         - networkId (string): Network ID
@@ -265,28 +255,27 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients'],
-            'operation': 'getNetworkClients'
+            "tags": ["networks", "monitor", "clients"],
+            "operation": "getNetworkClients"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/clients'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/clients"
 
-        query_params = ['t0', 'timespan', 'perPage', 'startingAfter', 'endingBefore', 'statuses', 'ip', 'ip6', 'ip6Local', 'mac', 'os', 'pskGroup', 'description', 'vlan', 'namedVlan', 'recentDeviceConnections', ]
+        query_params = ["t0", "timespan", "perPage", "startingAfter", "endingBefore", "statuses", "ip", "ip6", "ip6Local", "mac", "os", "pskGroup", "description", "vlan", "namedVlan", "recentDeviceConnections", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['statuses', 'recentDeviceConnections', ]
+        array_params = ["statuses", "recentDeviceConnections", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getNetworkClientsApplicationUsage(self, networkId: str, clients: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Return the application usage data for clients**
+
+    def getNetworkClientsApplicationUsage(self, networkId: str, clients: str, total_pages=1, direction="next", **kwargs):
+        """**Return the application usage data for clients**
         https://developer.cisco.com/meraki/api-v1/#!get-network-clients-application-usage
 
         - networkId (string): Network ID
@@ -304,27 +293,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'ssidNumber' in kwargs:
+        if "ssidNumber" in kwargs:
             options = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-            assert kwargs['ssidNumber'] in options, f'''"ssidNumber" cannot be "{kwargs['ssidNumber']}", & must be set to one of: {options}'''
+            assert kwargs["ssidNumber"] in options, f""""ssidNumber" cannot be "{kwargs['ssidNumber']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients', 'applicationUsage'],
-            'operation': 'getNetworkClientsApplicationUsage'
+            "tags": ["networks", "monitor", "clients", "applicationUsage"],
+            "operation": "getNetworkClientsApplicationUsage"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/clients/applicationUsage'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/clients/applicationUsage"
 
-        query_params = ['clients', 'ssidNumber', 'perPage', 'startingAfter', 'endingBefore', 't0', 't1', 'timespan', ]
+        query_params = ["clients", "ssidNumber", "perPage", "startingAfter", "endingBefore", "t0", "t1", "timespan", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
 
 
-    def getNetworkClientsBandwidthUsageHistory(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Returns a timeseries of total traffic consumption rates for all clients on a network within a given timespan, in megabits per second.**
+
+    def getNetworkClientsBandwidthUsageHistory(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**Returns a timeseries of total traffic consumption rates for all clients on a network within a given timespan, in megabits per second.**
         https://developer.cisco.com/meraki/api-v1/#!get-network-clients-bandwidth-usage-history
 
         - networkId (string): Network ID
@@ -341,22 +329,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients', 'bandwidthUsageHistory'],
-            'operation': 'getNetworkClientsBandwidthUsageHistory'
+            "tags": ["networks", "monitor", "clients", "bandwidthUsageHistory"],
+            "operation": "getNetworkClientsBandwidthUsageHistory"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/clients/bandwidthUsageHistory'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/clients/bandwidthUsageHistory"
 
-        query_params = ['t0', 't1', 'timespan', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["t0", "t1", "timespan", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkClientsOverview(self, networkId: str, **kwargs):
-        """
-        **Return overview statistics for network clients**
+        """**Return overview statistics for network clients**
         https://developer.cisco.com/meraki/api-v1/#!get-network-clients-overview
 
         - networkId (string): Network ID
@@ -369,22 +356,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients', 'overview'],
-            'operation': 'getNetworkClientsOverview'
+            "tags": ["networks", "monitor", "clients", "overview"],
+            "operation": "getNetworkClientsOverview"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/clients/overview'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/clients/overview"
 
-        query_params = ['t0', 't1', 'timespan', 'resolution', ]
+        query_params = ["t0", "t1", "timespan", "resolution", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
+
 
 
     def provisionNetworkClients(self, networkId: str, clients: list, devicePolicy: str, **kwargs):
-        """
-        **Provisions a client with a name and policy**
+        """**Provisions a client with a name and policy**
         https://developer.cisco.com/meraki/api-v1/#!provision-network-clients
 
         - networkId (string): Network ID
@@ -397,27 +383,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'devicePolicy' in kwargs:
-            options = ['Allowed', 'Blocked', 'Group policy', 'Normal', 'Per connection']
-            assert kwargs['devicePolicy'] in options, f'''"devicePolicy" cannot be "{kwargs['devicePolicy']}", & must be set to one of: {options}'''
+        if "devicePolicy" in kwargs:
+            options = ["Allowed", "Blocked", "Group policy", "Normal", "Per connection"]
+            assert kwargs["devicePolicy"] in options, f""""devicePolicy" cannot be "{kwargs['devicePolicy']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'clients'],
-            'operation': 'provisionNetworkClients'
+            "tags": ["networks", "configure", "clients"],
+            "operation": "provisionNetworkClients"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/clients/provision'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/clients/provision"
 
-        body_params = ['clients', 'devicePolicy', 'groupPolicyId', 'policiesBySecurityAppliance', 'policiesBySsid', ]
+        body_params = ["clients", "devicePolicy", "groupPolicyId", "policiesBySecurityAppliance", "policiesBySsid", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
 
 
-    def getNetworkClientsUsageHistories(self, networkId: str, clients: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Return the usage histories for clients**
+
+    def getNetworkClientsUsageHistories(self, networkId: str, clients: str, total_pages=1, direction="next", **kwargs):
+        """**Return the usage histories for clients**
         https://developer.cisco.com/meraki/api-v1/#!get-network-clients-usage-histories
 
         - networkId (string): Network ID
@@ -435,27 +420,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'ssidNumber' in kwargs:
+        if "ssidNumber" in kwargs:
             options = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-            assert kwargs['ssidNumber'] in options, f'''"ssidNumber" cannot be "{kwargs['ssidNumber']}", & must be set to one of: {options}'''
+            assert kwargs["ssidNumber"] in options, f""""ssidNumber" cannot be "{kwargs['ssidNumber']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients', 'usageHistories'],
-            'operation': 'getNetworkClientsUsageHistories'
+            "tags": ["networks", "monitor", "clients", "usageHistories"],
+            "operation": "getNetworkClientsUsageHistories"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/clients/usageHistories'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/clients/usageHistories"
 
-        query_params = ['clients', 'ssidNumber', 'perPage', 'startingAfter', 'endingBefore', 't0', 't1', 'timespan', ]
+        query_params = ["clients", "ssidNumber", "perPage", "startingAfter", "endingBefore", "t0", "t1", "timespan", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkClient(self, networkId: str, clientId: str):
-        """
-        **Return the client associated with the given identifier**
+        """**Return the client associated with the given identifier**
         https://developer.cisco.com/meraki/api-v1/#!get-network-client
 
         - networkId (string): Network ID
@@ -463,20 +447,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients'],
-            'operation': 'getNetworkClient'
+            "tags": ["networks", "monitor", "clients"],
+            "operation": "getNetworkClient"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def getNetworkClientPolicy(self, networkId: str, clientId: str):
-        """
-        **Return the policy assigned to a client on the network**
+        """**Return the policy assigned to a client on the network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-client-policy
 
         - networkId (string): Network ID
@@ -484,20 +467,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'clients', 'policy'],
-            'operation': 'getNetworkClientPolicy'
+            "tags": ["networks", "configure", "clients", "policy"],
+            "operation": "getNetworkClientPolicy"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}/policy'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}/policy"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkClientPolicy(self, networkId: str, clientId: str, devicePolicy: str, **kwargs):
-        """
-        **Update the policy assigned to a client on the network**
+        """**Update the policy assigned to a client on the network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-client-policy
 
         - networkId (string): Network ID
@@ -509,23 +491,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'clients', 'policy'],
-            'operation': 'updateNetworkClientPolicy'
+            "tags": ["networks", "configure", "clients", "policy"],
+            "operation": "updateNetworkClientPolicy"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}/policy'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}/policy"
 
-        body_params = ['devicePolicy', 'groupPolicyId', ]
+        body_params = ["devicePolicy", "groupPolicyId", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkClientSplashAuthorizationStatus(self, networkId: str, clientId: str):
-        """
-        **Return the splash authorization for a client, for each SSID they've associated with through splash**
+        """**Return the splash authorization for a client, for each SSID they've associated with through splash**
         https://developer.cisco.com/meraki/api-v1/#!get-network-client-splash-authorization-status
 
         - networkId (string): Network ID
@@ -533,20 +514,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'clients', 'splashAuthorizationStatus'],
-            'operation': 'getNetworkClientSplashAuthorizationStatus'
+            "tags": ["networks", "configure", "clients", "splashAuthorizationStatus"],
+            "operation": "getNetworkClientSplashAuthorizationStatus"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}/splashAuthorizationStatus'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}/splashAuthorizationStatus"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkClientSplashAuthorizationStatus(self, networkId: str, clientId: str, ssids: dict):
-        """
-        **Update a client's splash authorization**
+        """**Update a client's splash authorization**
         https://developer.cisco.com/meraki/api-v1/#!update-network-client-splash-authorization-status
 
         - networkId (string): Network ID
@@ -557,23 +537,22 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'clients', 'splashAuthorizationStatus'],
-            'operation': 'updateNetworkClientSplashAuthorizationStatus'
+            "tags": ["networks", "configure", "clients", "splashAuthorizationStatus"],
+            "operation": "updateNetworkClientSplashAuthorizationStatus"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}/splashAuthorizationStatus'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}/splashAuthorizationStatus"
 
-        body_params = ['ssids', ]
+        body_params = ["ssids", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
 
 
-    def getNetworkClientTrafficHistory(self, networkId: str, clientId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Return the client's network traffic data over time**
+
+    def getNetworkClientTrafficHistory(self, networkId: str, clientId: str, total_pages=1, direction="next", **kwargs):
+        """**Return the client's network traffic data over time**
         https://developer.cisco.com/meraki/api-v1/#!get-network-client-traffic-history
 
         - networkId (string): Network ID
@@ -588,23 +567,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients', 'trafficHistory'],
-            'operation': 'getNetworkClientTrafficHistory'
+            "tags": ["networks", "monitor", "clients", "trafficHistory"],
+            "operation": "getNetworkClientTrafficHistory"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}/trafficHistory'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}/trafficHistory"
 
-        query_params = ['perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkClientUsageHistory(self, networkId: str, clientId: str):
-        """
-        **Return the client's daily usage history**
+        """**Return the client's daily usage history**
         https://developer.cisco.com/meraki/api-v1/#!get-network-client-usage-history
 
         - networkId (string): Network ID
@@ -612,39 +590,37 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'monitor', 'clients', 'usageHistory'],
-            'operation': 'getNetworkClientUsageHistory'
+            "tags": ["networks", "monitor", "clients", "usageHistory"],
+            "operation": "getNetworkClientUsageHistory"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        clientId = urllib.parse.quote(str(clientId), safe='')
-        resource = f'/networks/{networkId}/clients/{clientId}/usageHistory'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        clientId = urllib.parse.quote(str(clientId), safe="")
+        resource = f"/networks/{networkId}/clients/{clientId}/usageHistory"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def getNetworkDevices(self, networkId: str):
-        """
-        **List the devices in a network**
+        """**List the devices in a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-devices
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices'],
-            'operation': 'getNetworkDevices'
+            "tags": ["networks", "configure", "devices"],
+            "operation": "getNetworkDevices"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/devices'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/devices"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def claimNetworkDevices(self, networkId: str, serials: list, **kwargs):
-        """
-        **Claim devices into a network. (Note: for recently claimed devices, it may take a few minutes for API requests against that device to succeed)**
+        """**Claim devices into a network. (Note: for recently claimed devices, it may take a few minutes for API requests against that device to succeed)**
         https://developer.cisco.com/meraki/api-v1/#!claim-network-devices
 
         - networkId (string): Network ID
@@ -656,22 +632,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices'],
-            'operation': 'claimNetworkDevices'
+            "tags": ["networks", "configure", "devices"],
+            "operation": "claimNetworkDevices"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/devices/claim'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/devices/claim"
 
-        body_params = ['serials', 'detailsByDevice', ]
+        body_params = ["serials", "detailsByDevice", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def vmxNetworkDevicesClaim(self, networkId: str, size: str):
-        """
-        **Claim a vMX into a network**
+        """**Claim a vMX into a network**
         https://developer.cisco.com/meraki/api-v1/#!vmx-network-devices-claim
 
         - networkId (string): Network ID
@@ -680,27 +655,26 @@ class Networks(object):
 
         kwargs = locals()
 
-        if 'size' in kwargs:
-            options = ['100', 'large', 'medium', 'small', 'xlarge']
-            assert kwargs['size'] in options, f'''"size" cannot be "{kwargs['size']}", & must be set to one of: {options}'''
+        if "size" in kwargs:
+            options = ["100", "large", "medium", "small", "xlarge"]
+            assert kwargs["size"] in options, f""""size" cannot be "{kwargs['size']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices', 'claim'],
-            'operation': 'vmxNetworkDevicesClaim'
+            "tags": ["networks", "configure", "devices", "claim"],
+            "operation": "vmxNetworkDevicesClaim"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/devices/claim/vmx'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/devices/claim/vmx"
 
-        body_params = ['size', ]
+        body_params = ["size", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def removeNetworkDevices(self, networkId: str, serial: str):
-        """
-        **Remove a single device**
+        """**Remove a single device**
         https://developer.cisco.com/meraki/api-v1/#!remove-network-devices
 
         - networkId (string): Network ID
@@ -710,22 +684,21 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices'],
-            'operation': 'removeNetworkDevices'
+            "tags": ["networks", "configure", "devices"],
+            "operation": "removeNetworkDevices"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/devices/remove'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/devices/remove"
 
-        body_params = ['serial', ]
+        body_params = ["serial", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
 
 
-    def getNetworkEvents(self, networkId: str, total_pages=1, direction='prev', event_log_end_time=None, **kwargs):
-        """
-        **List the events for the network**
+
+    def getNetworkEvents(self, networkId: str, total_pages=1, direction="prev", event_log_end_time=None, **kwargs):
+        """**List the events for the network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-events
 
         - networkId (string): Network ID
@@ -753,71 +726,68 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'productType' in kwargs:
-            options = ['appliance', 'camera', 'campusGateway', 'cellularGateway', 'secureConnect', 'switch', 'systemsManager', 'wireless', 'wirelessController']
-            assert kwargs['productType'] in options, f'''"productType" cannot be "{kwargs['productType']}", & must be set to one of: {options}'''
+        if "productType" in kwargs:
+            options = ["appliance", "camera", "campusGateway", "cellularGateway", "secureConnect", "switch", "systemsManager", "wireless", "wirelessController"]
+            assert kwargs["productType"] in options, f""""productType" cannot be "{kwargs['productType']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'monitor', 'events'],
-            'operation': 'getNetworkEvents'
+            "tags": ["networks", "monitor", "events"],
+            "operation": "getNetworkEvents"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/events'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/events"
 
-        query_params = ['productType', 'includedEventTypes', 'excludedEventTypes', 'deviceMac', 'deviceSerial', 'deviceName', 'clientIp', 'clientMac', 'clientName', 'smDeviceMac', 'smDeviceName', 'eventDetails', 'eventSeverity', 'isCatalyst', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["productType", "includedEventTypes", "excludedEventTypes", "deviceMac", "deviceSerial", "deviceName", "clientIp", "clientMac", "clientName", "smDeviceMac", "smDeviceName", "eventDetails", "eventSeverity", "isCatalyst", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['includedEventTypes', 'excludedEventTypes', ]
+        array_params = ["includedEventTypes", "excludedEventTypes", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction, event_log_end_time)
-        
+
 
 
     def getNetworkEventsEventTypes(self, networkId: str):
-        """
-        **List the event type to human-readable description**
+        """**List the event type to human-readable description**
         https://developer.cisco.com/meraki/api-v1/#!get-network-events-event-types
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'monitor', 'events', 'eventTypes'],
-            'operation': 'getNetworkEventsEventTypes'
+            "tags": ["networks", "monitor", "events", "eventTypes"],
+            "operation": "getNetworkEventsEventTypes"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/events/eventTypes'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/events/eventTypes"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def getNetworkFirmwareUpgrades(self, networkId: str):
-        """
-        **Get firmware upgrade information for a network**
+        """**Get firmware upgrade information for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-firmware-upgrades
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades'],
-            'operation': 'getNetworkFirmwareUpgrades'
+            "tags": ["networks", "configure", "firmwareUpgrades"],
+            "operation": "getNetworkFirmwareUpgrades"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkFirmwareUpgrades(self, networkId: str, **kwargs):
-        """
-        **Update firmware upgrade information for a network**
+        """**Update firmware upgrade information for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-firmware-upgrades
 
         - networkId (string): Network ID
@@ -829,22 +799,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades'],
-            'operation': 'updateNetworkFirmwareUpgrades'
+            "tags": ["networks", "configure", "firmwareUpgrades"],
+            "operation": "updateNetworkFirmwareUpgrades"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades"
 
-        body_params = ['upgradeWindow', 'timezone', 'products', ]
+        body_params = ["upgradeWindow", "timezone", "products", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def createNetworkFirmwareUpgradesRollback(self, networkId: str, reasons: list, **kwargs):
-        """
-        **Rollback a Firmware Upgrade For A Network**
+        """**Rollback a Firmware Upgrade For A Network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-firmware-upgrades-rollback
 
         - networkId (string): Network ID
@@ -856,46 +825,44 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'product' in kwargs:
-            options = ['appliance', 'camera', 'cellularGateway', 'secureConnect', 'switch', 'switchCatalyst', 'wireless', 'wirelessController']
-            assert kwargs['product'] in options, f'''"product" cannot be "{kwargs['product']}", & must be set to one of: {options}'''
+        if "product" in kwargs:
+            options = ["appliance", "camera", "cellularGateway", "secureConnect", "switch", "switchCatalyst", "wireless", "wirelessController"]
+            assert kwargs["product"] in options, f""""product" cannot be "{kwargs['product']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'rollbacks'],
-            'operation': 'createNetworkFirmwareUpgradesRollback'
+            "tags": ["networks", "configure", "firmwareUpgrades", "rollbacks"],
+            "operation": "createNetworkFirmwareUpgradesRollback"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/rollbacks'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/rollbacks"
 
-        body_params = ['product', 'time', 'reasons', 'toVersion', ]
+        body_params = ["product", "time", "reasons", "toVersion", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkFirmwareUpgradesStagedEvents(self, networkId: str):
-        """
-        **Get the Staged Upgrade Event from a network**
+        """**Get the Staged Upgrade Event from a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-firmware-upgrades-staged-events
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'events'],
-            'operation': 'getNetworkFirmwareUpgradesStagedEvents'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "events"],
+            "operation": "getNetworkFirmwareUpgradesStagedEvents"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/events'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/events"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkFirmwareUpgradesStagedEvent(self, networkId: str, stages: list, **kwargs):
-        """
-        **Create a Staged Upgrade Event for a network**
+        """**Create a Staged Upgrade Event for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-firmware-upgrades-staged-event
 
         - networkId (string): Network ID
@@ -906,22 +873,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'events'],
-            'operation': 'createNetworkFirmwareUpgradesStagedEvent'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "events"],
+            "operation": "createNetworkFirmwareUpgradesStagedEvent"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/events'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/events"
 
-        body_params = ['products', 'stages', ]
+        body_params = ["products", "stages", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def updateNetworkFirmwareUpgradesStagedEvents(self, networkId: str, stages: list):
-        """
-        **Update the Staged Upgrade Event for a network**
+        """**Update the Staged Upgrade Event for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-firmware-upgrades-staged-events
 
         - networkId (string): Network ID
@@ -931,41 +897,39 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'events'],
-            'operation': 'updateNetworkFirmwareUpgradesStagedEvents'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "events"],
+            "operation": "updateNetworkFirmwareUpgradesStagedEvents"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/events'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/events"
 
-        body_params = ['stages', ]
+        body_params = ["stages", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deferNetworkFirmwareUpgradesStagedEvents(self, networkId: str):
-        """
-        **Postpone by 1 week all pending staged upgrade stages for a network**
+        """**Postpone by 1 week all pending staged upgrade stages for a network**
         https://developer.cisco.com/meraki/api-v1/#!defer-network-firmware-upgrades-staged-events
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'events'],
-            'operation': 'deferNetworkFirmwareUpgradesStagedEvents'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "events"],
+            "operation": "deferNetworkFirmwareUpgradesStagedEvents"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/events/defer'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/events/defer"
 
         return self._session.post(metadata, resource)
-        
+
 
 
     def rollbacksNetworkFirmwareUpgradesStagedEvents(self, networkId: str, stages: list, **kwargs):
-        """
-        **Rollback a Staged Upgrade Event for a network**
+        """**Rollback a Staged Upgrade Event for a network**
         https://developer.cisco.com/meraki/api-v1/#!rollbacks-network-firmware-upgrades-staged-events
 
         - networkId (string): Network ID
@@ -976,41 +940,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'events'],
-            'operation': 'rollbacksNetworkFirmwareUpgradesStagedEvents'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "events"],
+            "operation": "rollbacksNetworkFirmwareUpgradesStagedEvents"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/events/rollbacks'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/events/rollbacks"
 
-        body_params = ['stages', 'reasons', ]
+        body_params = ["stages", "reasons", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkFirmwareUpgradesStagedGroups(self, networkId: str):
-        """
-        **List of Staged Upgrade Groups in a network**
+        """**List of Staged Upgrade Groups in a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-firmware-upgrades-staged-groups
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'getNetworkFirmwareUpgradesStagedGroups'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "getNetworkFirmwareUpgradesStagedGroups"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkFirmwareUpgradesStagedGroup(self, networkId: str, name: str, isDefault: bool, **kwargs):
-        """
-        **Create a Staged Upgrade Group for a network**
+        """**Create a Staged Upgrade Group for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-firmware-upgrades-staged-group
 
         - networkId (string): Network ID
@@ -1023,22 +985,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'createNetworkFirmwareUpgradesStagedGroup'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "createNetworkFirmwareUpgradesStagedGroup"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups"
 
-        body_params = ['name', 'description', 'isDefault', 'assignedDevices', ]
+        body_params = ["name", "description", "isDefault", "assignedDevices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkFirmwareUpgradesStagedGroup(self, networkId: str, groupId: str):
-        """
-        **Get a Staged Upgrade Group from a network**
+        """**Get a Staged Upgrade Group from a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-firmware-upgrades-staged-group
 
         - networkId (string): Network ID
@@ -1046,20 +1007,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'getNetworkFirmwareUpgradesStagedGroup'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "getNetworkFirmwareUpgradesStagedGroup"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        groupId = urllib.parse.quote(str(groupId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        groupId = urllib.parse.quote(str(groupId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkFirmwareUpgradesStagedGroup(self, networkId: str, groupId: str, name: str, isDefault: bool, **kwargs):
-        """
-        **Update a Staged Upgrade Group for a network**
+        """**Update a Staged Upgrade Group for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-firmware-upgrades-staged-group
 
         - networkId (string): Network ID
@@ -1073,23 +1033,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'updateNetworkFirmwareUpgradesStagedGroup'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "updateNetworkFirmwareUpgradesStagedGroup"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        groupId = urllib.parse.quote(str(groupId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        groupId = urllib.parse.quote(str(groupId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}"
 
-        body_params = ['name', 'description', 'isDefault', 'assignedDevices', ]
+        body_params = ["name", "description", "isDefault", "assignedDevices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetworkFirmwareUpgradesStagedGroup(self, networkId: str, groupId: str):
-        """
-        **Delete a Staged Upgrade Group**
+        """**Delete a Staged Upgrade Group**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-firmware-upgrades-staged-group
 
         - networkId (string): Network ID
@@ -1097,39 +1056,37 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'deleteNetworkFirmwareUpgradesStagedGroup'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "deleteNetworkFirmwareUpgradesStagedGroup"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        groupId = urllib.parse.quote(str(groupId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        groupId = urllib.parse.quote(str(groupId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def getNetworkFirmwareUpgradesStagedStages(self, networkId: str):
-        """
-        **Order of Staged Upgrade Groups in a network**
+        """**Order of Staged Upgrade Groups in a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-firmware-upgrades-staged-stages
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'stages'],
-            'operation': 'getNetworkFirmwareUpgradesStagedStages'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "stages"],
+            "operation": "getNetworkFirmwareUpgradesStagedStages"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/stages'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/stages"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkFirmwareUpgradesStagedStages(self, networkId: str, **kwargs):
-        """
-        **Assign Staged Upgrade Group order in the sequence.**
+        """**Assign Staged Upgrade Group order in the sequence.**
         https://developer.cisco.com/meraki/api-v1/#!update-network-firmware-upgrades-staged-stages
 
         - networkId (string): Network ID
@@ -1139,41 +1096,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'stages'],
-            'operation': 'updateNetworkFirmwareUpgradesStagedStages'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "stages"],
+            "operation": "updateNetworkFirmwareUpgradesStagedStages"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/stages'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/stages"
 
-        body_params = ['_json', ]
+        body_params = ["_json", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkFloorPlans(self, networkId: str):
-        """
-        **List the floor plans that belong to your network**
+        """**List the floor plans that belong to your network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-floor-plans
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'getNetworkFloorPlans'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "getNetworkFloorPlans"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/floorPlans'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/floorPlans"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkFloorPlan(self, networkId: str, name: str, imageContents: str, **kwargs):
-        """
-        **Upload a floor plan**
+        """**Upload a floor plan**
         https://developer.cisco.com/meraki/api-v1/#!create-network-floor-plan
 
         - networkId (string): Network ID
@@ -1190,22 +1145,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'createNetworkFloorPlan'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "createNetworkFloorPlan"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/floorPlans'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/floorPlans"
 
-        body_params = ['name', 'center', 'bottomLeftCorner', 'bottomRightCorner', 'topLeftCorner', 'topRightCorner', 'floorNumber', 'imageContents', ]
+        body_params = ["name", "center", "bottomLeftCorner", "bottomRightCorner", "topLeftCorner", "topRightCorner", "floorNumber", "imageContents", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def batchNetworkFloorPlansAutoLocateJobs(self, networkId: str, jobs: list):
-        """
-        **Schedule auto locate jobs for one or more floor plans in a network**
+        """**Schedule auto locate jobs for one or more floor plans in a network**
         https://developer.cisco.com/meraki/api-v1/#!batch-network-floor-plans-auto-locate-jobs
 
         - networkId (string): Network ID
@@ -1215,22 +1169,21 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'batchNetworkFloorPlansAutoLocateJobs'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "batchNetworkFloorPlansAutoLocateJobs"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/batch'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/batch"
 
-        body_params = ['jobs', ]
+        body_params = ["jobs", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def cancelNetworkFloorPlansAutoLocateJob(self, networkId: str, jobId: str):
-        """
-        **Cancel a scheduled or running auto locate job**
+        """**Cancel a scheduled or running auto locate job**
         https://developer.cisco.com/meraki/api-v1/#!cancel-network-floor-plans-auto-locate-job
 
         - networkId (string): Network ID
@@ -1238,20 +1191,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'cancelNetworkFloorPlansAutoLocateJob'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "cancelNetworkFloorPlansAutoLocateJob"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        jobId = urllib.parse.quote(str(jobId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/cancel'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        jobId = urllib.parse.quote(str(jobId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/cancel"
 
         return self._session.post(metadata, resource)
-        
+
 
 
     def publishNetworkFloorPlansAutoLocateJob(self, networkId: str, jobId: str, **kwargs):
-        """
-        **Update the status of a finished auto locate job to be published, and update device locations**
+        """**Update the status of a finished auto locate job to be published, and update device locations**
         https://developer.cisco.com/meraki/api-v1/#!publish-network-floor-plans-auto-locate-job
 
         - networkId (string): Network ID
@@ -1262,23 +1214,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'publishNetworkFloorPlansAutoLocateJob'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "publishNetworkFloorPlansAutoLocateJob"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        jobId = urllib.parse.quote(str(jobId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/publish'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        jobId = urllib.parse.quote(str(jobId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/publish"
 
-        body_params = ['devices', ]
+        body_params = ["devices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def recalculateNetworkFloorPlansAutoLocateJob(self, networkId: str, jobId: str, **kwargs):
-        """
-        **Trigger auto locate recalculation for a job, and optionally set anchors**
+        """**Trigger auto locate recalculation for a job, and optionally set anchors**
         https://developer.cisco.com/meraki/api-v1/#!recalculate-network-floor-plans-auto-locate-job
 
         - networkId (string): Network ID
@@ -1289,23 +1240,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'recalculateNetworkFloorPlansAutoLocateJob'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "recalculateNetworkFloorPlansAutoLocateJob"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        jobId = urllib.parse.quote(str(jobId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/recalculate'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        jobId = urllib.parse.quote(str(jobId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/recalculate"
 
-        body_params = ['devices', ]
+        body_params = ["devices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def batchNetworkFloorPlansDevicesUpdate(self, networkId: str, assignments: list):
-        """
-        **Update floorplan assignments for a batch of devices**
+        """**Update floorplan assignments for a batch of devices**
         https://developer.cisco.com/meraki/api-v1/#!batch-network-floor-plans-devices-update
 
         - networkId (string): Network ID
@@ -1315,22 +1265,21 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'devices'],
-            'operation': 'batchNetworkFloorPlansDevicesUpdate'
+            "tags": ["networks", "configure", "floorPlans", "devices"],
+            "operation": "batchNetworkFloorPlansDevicesUpdate"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/devices/batchUpdate'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/devices/batchUpdate"
 
-        body_params = ['assignments', ]
+        body_params = ["assignments", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkFloorPlan(self, networkId: str, floorPlanId: str):
-        """
-        **Find a floor plan by ID**
+        """**Find a floor plan by ID**
         https://developer.cisco.com/meraki/api-v1/#!get-network-floor-plan
 
         - networkId (string): Network ID
@@ -1338,20 +1287,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'getNetworkFloorPlan'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "getNetworkFloorPlan"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        floorPlanId = urllib.parse.quote(str(floorPlanId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/{floorPlanId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        floorPlanId = urllib.parse.quote(str(floorPlanId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/{floorPlanId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkFloorPlan(self, networkId: str, floorPlanId: str, **kwargs):
-        """
-        **Update a floor plan's geolocation and other meta data**
+        """**Update a floor plan's geolocation and other meta data**
         https://developer.cisco.com/meraki/api-v1/#!update-network-floor-plan
 
         - networkId (string): Network ID
@@ -1369,23 +1317,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'updateNetworkFloorPlan'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "updateNetworkFloorPlan"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        floorPlanId = urllib.parse.quote(str(floorPlanId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/{floorPlanId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        floorPlanId = urllib.parse.quote(str(floorPlanId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/{floorPlanId}"
 
-        body_params = ['name', 'center', 'bottomLeftCorner', 'bottomRightCorner', 'topLeftCorner', 'topRightCorner', 'floorNumber', 'imageContents', ]
+        body_params = ["name", "center", "bottomLeftCorner", "bottomRightCorner", "topLeftCorner", "topRightCorner", "floorNumber", "imageContents", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetworkFloorPlan(self, networkId: str, floorPlanId: str):
-        """
-        **Destroy a floor plan**
+        """**Destroy a floor plan**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-floor-plan
 
         - networkId (string): Network ID
@@ -1393,39 +1340,37 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'deleteNetworkFloorPlan'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "deleteNetworkFloorPlan"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        floorPlanId = urllib.parse.quote(str(floorPlanId), safe='')
-        resource = f'/networks/{networkId}/floorPlans/{floorPlanId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        floorPlanId = urllib.parse.quote(str(floorPlanId), safe="")
+        resource = f"/networks/{networkId}/floorPlans/{floorPlanId}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def getNetworkGroupPolicies(self, networkId: str):
-        """
-        **List the group policies in a network**
+        """**List the group policies in a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-group-policies
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'getNetworkGroupPolicies'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "getNetworkGroupPolicies"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/groupPolicies'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/groupPolicies"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkGroupPolicy(self, networkId: str, name: str, **kwargs):
-        """
-        **Create a group policy**
+        """**Create a group policy**
         https://developer.cisco.com/meraki/api-v1/#!create-network-group-policy
 
         - networkId (string): Network ID
@@ -1444,27 +1389,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'splashAuthSettings' in kwargs:
-            options = ['bypass', 'network default']
-            assert kwargs['splashAuthSettings'] in options, f'''"splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}'''
+        if "splashAuthSettings" in kwargs:
+            options = ["bypass", "network default"]
+            assert kwargs["splashAuthSettings"] in options, f""""splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'createNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "createNetworkGroupPolicy"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/groupPolicies'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/groupPolicies"
 
-        body_params = ['name', 'scheduling', 'bandwidth', 'firewallAndTrafficShaping', 'contentFiltering', 'splashAuthSettings', 'vlanTagging', 'bonjourForwarding', ]
+        body_params = ["name", "scheduling", "bandwidth", "firewallAndTrafficShaping", "contentFiltering", "splashAuthSettings", "vlanTagging", "bonjourForwarding", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkGroupPolicy(self, networkId: str, groupPolicyId: str):
-        """
-        **Display a group policy**
+        """**Display a group policy**
         https://developer.cisco.com/meraki/api-v1/#!get-network-group-policy
 
         - networkId (string): Network ID
@@ -1472,20 +1416,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'getNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "getNetworkGroupPolicy"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        groupPolicyId = urllib.parse.quote(str(groupPolicyId), safe='')
-        resource = f'/networks/{networkId}/groupPolicies/{groupPolicyId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        groupPolicyId = urllib.parse.quote(str(groupPolicyId), safe="")
+        resource = f"/networks/{networkId}/groupPolicies/{groupPolicyId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkGroupPolicy(self, networkId: str, groupPolicyId: str, **kwargs):
-        """
-        **Update a group policy**
+        """**Update a group policy**
         https://developer.cisco.com/meraki/api-v1/#!update-network-group-policy
 
         - networkId (string): Network ID
@@ -1505,28 +1448,27 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'splashAuthSettings' in kwargs:
-            options = ['bypass', 'network default']
-            assert kwargs['splashAuthSettings'] in options, f'''"splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}'''
+        if "splashAuthSettings" in kwargs:
+            options = ["bypass", "network default"]
+            assert kwargs["splashAuthSettings"] in options, f""""splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'updateNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "updateNetworkGroupPolicy"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        groupPolicyId = urllib.parse.quote(str(groupPolicyId), safe='')
-        resource = f'/networks/{networkId}/groupPolicies/{groupPolicyId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        groupPolicyId = urllib.parse.quote(str(groupPolicyId), safe="")
+        resource = f"/networks/{networkId}/groupPolicies/{groupPolicyId}"
 
-        body_params = ['name', 'scheduling', 'bandwidth', 'firewallAndTrafficShaping', 'contentFiltering', 'splashAuthSettings', 'vlanTagging', 'bonjourForwarding', ]
+        body_params = ["name", "scheduling", "bandwidth", "firewallAndTrafficShaping", "contentFiltering", "splashAuthSettings", "vlanTagging", "bonjourForwarding", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetworkGroupPolicy(self, networkId: str, groupPolicyId: str, **kwargs):
-        """
-        **Delete a group policy**
+        """**Delete a group policy**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-group-policy
 
         - networkId (string): Network ID
@@ -1537,61 +1479,58 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'deleteNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "deleteNetworkGroupPolicy"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        groupPolicyId = urllib.parse.quote(str(groupPolicyId), safe='')
-        resource = f'/networks/{networkId}/groupPolicies/{groupPolicyId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        groupPolicyId = urllib.parse.quote(str(groupPolicyId), safe="")
+        resource = f"/networks/{networkId}/groupPolicies/{groupPolicyId}"
 
-        query_params = ['force', ]
+        query_params = ["force", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.delete(metadata, resource, params)
-        
+
 
 
     def getNetworkHealthAlerts(self, networkId: str):
-        """
-        **Return all global alerts on this network**
+        """**Return all global alerts on this network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-health-alerts
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'health', 'alerts'],
-            'operation': 'getNetworkHealthAlerts'
+            "tags": ["networks", "configure", "health", "alerts"],
+            "operation": "getNetworkHealthAlerts"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/health/alerts'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/health/alerts"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def getNetworkMerakiAuthUsers(self, networkId: str):
-        """
-        **List the authorized users configured under Meraki Authentication for a network (splash guest or RADIUS users for a wireless network, or client VPN users for a MX network)**
+        """**List the authorized users configured under Meraki Authentication for a network (splash guest or RADIUS users for a wireless network, or client VPN users for a MX network)**
         https://developer.cisco.com/meraki/api-v1/#!get-network-meraki-auth-users
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'getNetworkMerakiAuthUsers'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "getNetworkMerakiAuthUsers"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/merakiAuthUsers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/merakiAuthUsers"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkMerakiAuthUser(self, networkId: str, email: str, authorizations: list, **kwargs):
-        """
-        **Authorize a user configured with Meraki Authentication for a network (currently supports 802.1X, splash guest, and client VPN users, and currently, organizations have a 50,000 user cap)**
+        """**Authorize a user configured with Meraki Authentication for a network (currently supports 802.1X, splash guest, and client VPN users, and currently, organizations have a 50,000 user cap)**
         https://developer.cisco.com/meraki/api-v1/#!create-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -1606,27 +1545,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'accountType' in kwargs:
-            options = ['802.1X', 'Client VPN', 'Guest']
-            assert kwargs['accountType'] in options, f'''"accountType" cannot be "{kwargs['accountType']}", & must be set to one of: {options}'''
+        if "accountType" in kwargs:
+            options = ["802.1X", "Client VPN", "Guest"]
+            assert kwargs["accountType"] in options, f""""accountType" cannot be "{kwargs['accountType']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'createNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "createNetworkMerakiAuthUser"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/merakiAuthUsers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/merakiAuthUsers"
 
-        body_params = ['email', 'name', 'password', 'accountType', 'emailPasswordToUser', 'isAdmin', 'authorizations', ]
+        body_params = ["email", "name", "password", "accountType", "emailPasswordToUser", "isAdmin", "authorizations", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkMerakiAuthUser(self, networkId: str, merakiAuthUserId: str):
-        """
-        **Return the Meraki Auth splash guest, RADIUS, or client VPN user**
+        """**Return the Meraki Auth splash guest, RADIUS, or client VPN user**
         https://developer.cisco.com/meraki/api-v1/#!get-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -1634,20 +1572,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'getNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "getNetworkMerakiAuthUser"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        merakiAuthUserId = urllib.parse.quote(str(merakiAuthUserId), safe='')
-        resource = f'/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        merakiAuthUserId = urllib.parse.quote(str(merakiAuthUserId), safe="")
+        resource = f"/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def deleteNetworkMerakiAuthUser(self, networkId: str, merakiAuthUserId: str, **kwargs):
-        """
-        **Delete an 802.1X RADIUS user, or deauthorize and optionally delete a splash guest or client VPN user.**
+        """**Delete an 802.1X RADIUS user, or deauthorize and optionally delete a splash guest or client VPN user.**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -1658,23 +1595,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'deleteNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "deleteNetworkMerakiAuthUser"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        merakiAuthUserId = urllib.parse.quote(str(merakiAuthUserId), safe='')
-        resource = f'/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        merakiAuthUserId = urllib.parse.quote(str(merakiAuthUserId), safe="")
+        resource = f"/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}"
 
-        query_params = ['delete', ]
+        query_params = ["delete", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.delete(metadata, resource, params)
-        
+
 
 
     def updateNetworkMerakiAuthUser(self, networkId: str, merakiAuthUserId: str, **kwargs):
-        """
-        **Update a user configured with Meraki Authentication (currently, 802.1X RADIUS, splash guest, and client VPN users can be updated)**
+        """**Update a user configured with Meraki Authentication (currently, 802.1X RADIUS, splash guest, and client VPN users can be updated)**
         https://developer.cisco.com/meraki/api-v1/#!update-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -1688,42 +1624,40 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'updateNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "updateNetworkMerakiAuthUser"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        merakiAuthUserId = urllib.parse.quote(str(merakiAuthUserId), safe='')
-        resource = f'/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        merakiAuthUserId = urllib.parse.quote(str(merakiAuthUserId), safe="")
+        resource = f"/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}"
 
-        body_params = ['name', 'password', 'emailPasswordToUser', 'authorizations', ]
+        body_params = ["name", "password", "emailPasswordToUser", "authorizations", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkMqttBrokers(self, networkId: str):
-        """
-        **List the MQTT brokers for this network**
+        """**List the MQTT brokers for this network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-mqtt-brokers
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'getNetworkMqttBrokers'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "getNetworkMqttBrokers"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/mqttBrokers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/mqttBrokers"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkMqttBroker(self, networkId: str, name: str, host: str, port: int, **kwargs):
-        """
-        **Add an MQTT broker**
+        """**Add an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!create-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -1737,22 +1671,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'createNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "createNetworkMqttBroker"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/mqttBrokers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/mqttBrokers"
 
-        body_params = ['name', 'host', 'port', 'security', 'authentication', ]
+        body_params = ["name", "host", "port", "security", "authentication", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkMqttBroker(self, networkId: str, mqttBrokerId: str):
-        """
-        **Return an MQTT broker**
+        """**Return an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!get-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -1760,20 +1693,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'getNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "getNetworkMqttBroker"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        mqttBrokerId = urllib.parse.quote(str(mqttBrokerId), safe='')
-        resource = f'/networks/{networkId}/mqttBrokers/{mqttBrokerId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        mqttBrokerId = urllib.parse.quote(str(mqttBrokerId), safe="")
+        resource = f"/networks/{networkId}/mqttBrokers/{mqttBrokerId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkMqttBroker(self, networkId: str, mqttBrokerId: str, **kwargs):
-        """
-        **Update an MQTT broker**
+        """**Update an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!update-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -1788,23 +1720,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'updateNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "updateNetworkMqttBroker"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        mqttBrokerId = urllib.parse.quote(str(mqttBrokerId), safe='')
-        resource = f'/networks/{networkId}/mqttBrokers/{mqttBrokerId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        mqttBrokerId = urllib.parse.quote(str(mqttBrokerId), safe="")
+        resource = f"/networks/{networkId}/mqttBrokers/{mqttBrokerId}"
 
-        body_params = ['name', 'host', 'port', 'security', 'authentication', ]
+        body_params = ["name", "host", "port", "security", "authentication", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetworkMqttBroker(self, networkId: str, mqttBrokerId: str):
-        """
-        **Delete an MQTT broker**
+        """**Delete an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -1812,39 +1743,37 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'deleteNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "deleteNetworkMqttBroker"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        mqttBrokerId = urllib.parse.quote(str(mqttBrokerId), safe='')
-        resource = f'/networks/{networkId}/mqttBrokers/{mqttBrokerId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        mqttBrokerId = urllib.parse.quote(str(mqttBrokerId), safe="")
+        resource = f"/networks/{networkId}/mqttBrokers/{mqttBrokerId}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def getNetworkNetflow(self, networkId: str):
-        """
-        **Return the NetFlow traffic reporting settings for a network**
+        """**Return the NetFlow traffic reporting settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-netflow
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'netflow'],
-            'operation': 'getNetworkNetflow'
+            "tags": ["networks", "configure", "netflow"],
+            "operation": "getNetworkNetflow"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/netflow'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/netflow"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkNetflow(self, networkId: str, **kwargs):
-        """
-        **Update the NetFlow traffic reporting settings for a network**
+        """**Update the NetFlow traffic reporting settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-netflow
 
         - networkId (string): Network ID
@@ -1858,22 +1787,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'netflow'],
-            'operation': 'updateNetworkNetflow'
+            "tags": ["networks", "configure", "netflow"],
+            "operation": "updateNetworkNetflow"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/netflow'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/netflow"
 
-        body_params = ['reportingEnabled', 'collectorIp', 'collectorPort', 'etaEnabled', 'etaDstPort', ]
+        body_params = ["reportingEnabled", "collectorIp", "collectorPort", "etaEnabled", "etaDstPort", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
 
 
-    def getNetworkNetworkHealthChannelUtilization(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Get the channel utilization over each radio for all APs in a network.**
+
+    def getNetworkNetworkHealthChannelUtilization(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**Get the channel utilization over each radio for all APs in a network.**
         https://developer.cisco.com/meraki/api-v1/#!get-network-network-health-channel-utilization
 
         - networkId (string): Network ID
@@ -1891,22 +1819,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'monitor', 'networkHealth', 'channelUtilization'],
-            'operation': 'getNetworkNetworkHealthChannelUtilization'
+            "tags": ["networks", "monitor", "networkHealth", "channelUtilization"],
+            "operation": "getNetworkNetworkHealthChannelUtilization"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/networkHealth/channelUtilization'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/networkHealth/channelUtilization"
 
-        query_params = ['t0', 't1', 'timespan', 'resolution', 'perPage', 'startingAfter', 'endingBefore', ]
+        query_params = ["t0", "t1", "timespan", "resolution", "perPage", "startingAfter", "endingBefore", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkPiiPiiKeys(self, networkId: str, **kwargs):
-        """
-        **List the keys required to access Personally Identifiable Information (PII) for a given identifier**
+        """**List the keys required to access Personally Identifiable Information (PII) for a given identifier**
         https://developer.cisco.com/meraki/api-v1/#!get-network-pii-pii-keys
 
         - networkId (string): Network ID
@@ -1921,41 +1848,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'piiKeys'],
-            'operation': 'getNetworkPiiPiiKeys'
+            "tags": ["networks", "configure", "pii", "piiKeys"],
+            "operation": "getNetworkPiiPiiKeys"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/pii/piiKeys'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/pii/piiKeys"
 
-        query_params = ['username', 'email', 'mac', 'serial', 'imei', 'bluetoothMac', ]
+        query_params = ["username", "email", "mac", "serial", "imei", "bluetoothMac", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
+
 
 
     def getNetworkPiiRequests(self, networkId: str):
-        """
-        **List the PII requests for this network or organization**
+        """**List the PII requests for this network or organization**
         https://developer.cisco.com/meraki/api-v1/#!get-network-pii-requests
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'requests'],
-            'operation': 'getNetworkPiiRequests'
+            "tags": ["networks", "configure", "pii", "requests"],
+            "operation": "getNetworkPiiRequests"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/pii/requests'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/pii/requests"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkPiiRequest(self, networkId: str, **kwargs):
-        """
-        **Submit a new delete or restrict processing PII request**
+        """**Submit a new delete or restrict processing PII request**
         https://developer.cisco.com/meraki/api-v1/#!create-network-pii-request
 
         - networkId (string): Network ID
@@ -1970,27 +1895,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'type' in kwargs:
-            options = ['delete', 'restrict processing']
-            assert kwargs['type'] in options, f'''"type" cannot be "{kwargs['type']}", & must be set to one of: {options}'''
+        if "type" in kwargs:
+            options = ["delete", "restrict processing"]
+            assert kwargs["type"] in options, f""""type" cannot be "{kwargs['type']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'requests'],
-            'operation': 'createNetworkPiiRequest'
+            "tags": ["networks", "configure", "pii", "requests"],
+            "operation": "createNetworkPiiRequest"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/pii/requests'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/pii/requests"
 
-        body_params = ['type', 'datasets', 'username', 'email', 'mac', 'smDeviceId', 'smUserId', ]
+        body_params = ["type", "datasets", "username", "email", "mac", "smDeviceId", "smUserId", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkPiiRequest(self, networkId: str, requestId: str):
-        """
-        **Return a PII request**
+        """**Return a PII request**
         https://developer.cisco.com/meraki/api-v1/#!get-network-pii-request
 
         - networkId (string): Network ID
@@ -1998,20 +1922,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'requests'],
-            'operation': 'getNetworkPiiRequest'
+            "tags": ["networks", "configure", "pii", "requests"],
+            "operation": "getNetworkPiiRequest"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        requestId = urllib.parse.quote(str(requestId), safe='')
-        resource = f'/networks/{networkId}/pii/requests/{requestId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        requestId = urllib.parse.quote(str(requestId), safe="")
+        resource = f"/networks/{networkId}/pii/requests/{requestId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def deleteNetworkPiiRequest(self, networkId: str, requestId: str):
-        """
-        **Delete a restrict processing PII request**
+        """**Delete a restrict processing PII request**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-pii-request
 
         - networkId (string): Network ID
@@ -2019,20 +1942,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'requests'],
-            'operation': 'deleteNetworkPiiRequest'
+            "tags": ["networks", "configure", "pii", "requests"],
+            "operation": "deleteNetworkPiiRequest"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        requestId = urllib.parse.quote(str(requestId), safe='')
-        resource = f'/networks/{networkId}/pii/requests/{requestId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        requestId = urllib.parse.quote(str(requestId), safe="")
+        resource = f"/networks/{networkId}/pii/requests/{requestId}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def getNetworkPiiSmDevicesForKey(self, networkId: str, **kwargs):
-        """
-        **Given a piece of Personally Identifiable Information (PII), return the Systems Manager device ID(s) associated with that identifier**
+        """**Given a piece of Personally Identifiable Information (PII), return the Systems Manager device ID(s) associated with that identifier**
         https://developer.cisco.com/meraki/api-v1/#!get-network-pii-sm-devices-for-key
 
         - networkId (string): Network ID
@@ -2047,22 +1969,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'smDevicesForKey'],
-            'operation': 'getNetworkPiiSmDevicesForKey'
+            "tags": ["networks", "configure", "pii", "smDevicesForKey"],
+            "operation": "getNetworkPiiSmDevicesForKey"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/pii/smDevicesForKey'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/pii/smDevicesForKey"
 
-        query_params = ['username', 'email', 'mac', 'serial', 'imei', 'bluetoothMac', ]
+        query_params = ["username", "email", "mac", "serial", "imei", "bluetoothMac", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
+
 
 
     def getNetworkPiiSmOwnersForKey(self, networkId: str, **kwargs):
-        """
-        **Given a piece of Personally Identifiable Information (PII), return the Systems Manager owner ID(s) associated with that identifier**
+        """**Given a piece of Personally Identifiable Information (PII), return the Systems Manager owner ID(s) associated with that identifier**
         https://developer.cisco.com/meraki/api-v1/#!get-network-pii-sm-owners-for-key
 
         - networkId (string): Network ID
@@ -2077,22 +1998,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'pii', 'smOwnersForKey'],
-            'operation': 'getNetworkPiiSmOwnersForKey'
+            "tags": ["networks", "configure", "pii", "smOwnersForKey"],
+            "operation": "getNetworkPiiSmOwnersForKey"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/pii/smOwnersForKey'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/pii/smOwnersForKey"
 
-        query_params = ['username', 'email', 'mac', 'serial', 'imei', 'bluetoothMac', ]
+        query_params = ["username", "email", "mac", "serial", "imei", "bluetoothMac", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
 
 
-    def getNetworkPoliciesByClient(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Get policies for all clients with policies**
+
+    def getNetworkPoliciesByClient(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**Get policies for all clients with policies**
         https://developer.cisco.com/meraki/api-v1/#!get-network-policies-by-client
 
         - networkId (string): Network ID
@@ -2108,41 +2028,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'policies', 'byClient'],
-            'operation': 'getNetworkPoliciesByClient'
+            "tags": ["networks", "configure", "policies", "byClient"],
+            "operation": "getNetworkPoliciesByClient"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/policies/byClient'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/policies/byClient"
 
-        query_params = ['perPage', 'startingAfter', 'endingBefore', 't0', 'timespan', ]
+        query_params = ["perPage", "startingAfter", "endingBefore", "t0", "timespan", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def getNetworkSettings(self, networkId: str):
-        """
-        **Return the settings for a network**
+        """**Return the settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-settings
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'settings'],
-            'operation': 'getNetworkSettings'
+            "tags": ["networks", "configure", "settings"],
+            "operation": "getNetworkSettings"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/settings'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/settings"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkSettings(self, networkId: str, **kwargs):
-        """
-        **Update the settings for a network**
+        """**Update the settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-settings
 
         - networkId (string): Network ID
@@ -2156,41 +2074,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'settings'],
-            'operation': 'updateNetworkSettings'
+            "tags": ["networks", "configure", "settings"],
+            "operation": "updateNetworkSettings"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/settings'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/settings"
 
-        body_params = ['localStatusPageEnabled', 'remoteStatusPageEnabled', 'localStatusPage', 'securePort', 'namedVlans', ]
+        body_params = ["localStatusPageEnabled", "remoteStatusPageEnabled", "localStatusPage", "securePort", "namedVlans", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkSnmp(self, networkId: str):
-        """
-        **Return the SNMP settings for a network**
+        """**Return the SNMP settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-snmp
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'snmp'],
-            'operation': 'getNetworkSnmp'
+            "tags": ["networks", "configure", "snmp"],
+            "operation": "getNetworkSnmp"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/snmp'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/snmp"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkSnmp(self, networkId: str, **kwargs):
-        """
-        **Update the SNMP settings for a network**
+        """**Update the SNMP settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-snmp
 
         - networkId (string): Network ID
@@ -2201,27 +2117,26 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'access' in kwargs:
-            options = ['community', 'none', 'users']
-            assert kwargs['access'] in options, f'''"access" cannot be "{kwargs['access']}", & must be set to one of: {options}'''
+        if "access" in kwargs:
+            options = ["community", "none", "users"]
+            assert kwargs["access"] in options, f""""access" cannot be "{kwargs['access']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'snmp'],
-            'operation': 'updateNetworkSnmp'
+            "tags": ["networks", "configure", "snmp"],
+            "operation": "updateNetworkSnmp"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/snmp'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/snmp"
 
-        body_params = ['access', 'communityString', 'users', ]
+        body_params = ["access", "communityString", "users", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkSplashLoginAttempts(self, networkId: str, **kwargs):
-        """
-        **List the splash login attempts for a network**
+        """**List the splash login attempts for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-splash-login-attempts
 
         - networkId (string): Network ID
@@ -2232,65 +2147,62 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'ssidNumber' in kwargs:
+        if "ssidNumber" in kwargs:
             options = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-            assert kwargs['ssidNumber'] in options, f'''"ssidNumber" cannot be "{kwargs['ssidNumber']}", & must be set to one of: {options}'''
+            assert kwargs["ssidNumber"] in options, f""""ssidNumber" cannot be "{kwargs['ssidNumber']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'monitor', 'splashLoginAttempts'],
-            'operation': 'getNetworkSplashLoginAttempts'
+            "tags": ["networks", "monitor", "splashLoginAttempts"],
+            "operation": "getNetworkSplashLoginAttempts"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/splashLoginAttempts'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/splashLoginAttempts"
 
-        query_params = ['ssidNumber', 'loginIdentifier', 'timespan', ]
+        query_params = ["ssidNumber", "loginIdentifier", "timespan", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
+
 
 
     def splitNetwork(self, networkId: str):
-        """
-        **Split a combined network into individual networks for each type of device**
+        """**Split a combined network into individual networks for each type of device**
         https://developer.cisco.com/meraki/api-v1/#!split-network
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'splitNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "splitNetwork"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/split'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/split"
 
         return self._session.post(metadata, resource)
-        
+
 
 
     def getNetworkSyslogServers(self, networkId: str):
-        """
-        **List the syslog servers for a network**
+        """**List the syslog servers for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-syslog-servers
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'syslogServers'],
-            'operation': 'getNetworkSyslogServers'
+            "tags": ["networks", "configure", "syslogServers"],
+            "operation": "getNetworkSyslogServers"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/syslogServers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/syslogServers"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkSyslogServers(self, networkId: str, servers: list):
-        """
-        **Update the syslog servers for a network**
+        """**Update the syslog servers for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-syslog-servers
 
         - networkId (string): Network ID
@@ -2300,41 +2212,39 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'syslogServers'],
-            'operation': 'updateNetworkSyslogServers'
+            "tags": ["networks", "configure", "syslogServers"],
+            "operation": "updateNetworkSyslogServers"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/syslogServers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/syslogServers"
 
-        body_params = ['servers', ]
+        body_params = ["servers", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkTopologyLinkLayer(self, networkId: str):
-        """
-        **List the LLDP and CDP information for all discovered devices and connections in a network**
+        """**List the LLDP and CDP information for all discovered devices and connections in a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-topology-link-layer
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'monitor', 'topology', 'linkLayer'],
-            'operation': 'getNetworkTopologyLinkLayer'
+            "tags": ["networks", "monitor", "topology", "linkLayer"],
+            "operation": "getNetworkTopologyLinkLayer"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/topology/linkLayer'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/topology/linkLayer"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def getNetworkTraffic(self, networkId: str, **kwargs):
-        """
-        **Return the traffic analysis data for this network**
+        """**Return the traffic analysis data for this network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-traffic
 
         - networkId (string): Network ID
@@ -2345,116 +2255,111 @@ class Networks(object):
 
         kwargs.update(locals())
 
-        if 'deviceType' in kwargs:
-            options = ['appliance', 'combined', 'switch', 'wireless']
-            assert kwargs['deviceType'] in options, f'''"deviceType" cannot be "{kwargs['deviceType']}", & must be set to one of: {options}'''
+        if "deviceType" in kwargs:
+            options = ["appliance", "combined", "switch", "wireless"]
+            assert kwargs["deviceType"] in options, f""""deviceType" cannot be "{kwargs['deviceType']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'monitor', 'traffic'],
-            'operation': 'getNetworkTraffic'
+            "tags": ["networks", "monitor", "traffic"],
+            "operation": "getNetworkTraffic"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/traffic'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/traffic"
 
-        query_params = ['t0', 'timespan', 'deviceType', ]
+        query_params = ["t0", "timespan", "deviceType", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
         return self._session.get(metadata, resource, params)
-        
+
 
 
     def getNetworkTrafficAnalysis(self, networkId: str):
-        """
-        **Return the traffic analysis settings for a network**
+        """**Return the traffic analysis settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-traffic-analysis
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'trafficAnalysis'],
-            'operation': 'getNetworkTrafficAnalysis'
+            "tags": ["networks", "configure", "trafficAnalysis"],
+            "operation": "getNetworkTrafficAnalysis"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/trafficAnalysis'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/trafficAnalysis"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkTrafficAnalysis(self, networkId: str, **kwargs):
-        """
-        **Update the traffic analysis settings for a network**
+        """**Update the traffic analysis settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-traffic-analysis
 
         - networkId (string): Network ID
         - mode (string):     The traffic analysis mode for the network. Can be one of 'disabled' (do not collect traffic types),
-    'basic' (collect generic traffic categories), or 'detailed' (collect destination hostnames).
+        'basic' (collect generic traffic categories), or 'detailed' (collect destination hostnames).
 
         - customPieChartItems (array): The list of items that make up the custom pie chart for traffic reporting.
         """
 
         kwargs.update(locals())
 
-        if 'mode' in kwargs:
-            options = ['basic', 'detailed', 'disabled']
-            assert kwargs['mode'] in options, f'''"mode" cannot be "{kwargs['mode']}", & must be set to one of: {options}'''
+        if "mode" in kwargs:
+            options = ["basic", "detailed", "disabled"]
+            assert kwargs["mode"] in options, f""""mode" cannot be "{kwargs['mode']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'trafficAnalysis'],
-            'operation': 'updateNetworkTrafficAnalysis'
+            "tags": ["networks", "configure", "trafficAnalysis"],
+            "operation": "updateNetworkTrafficAnalysis"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/trafficAnalysis'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/trafficAnalysis"
 
-        body_params = ['mode', 'customPieChartItems', ]
+        body_params = ["mode", "customPieChartItems", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def getNetworkTrafficShapingApplicationCategories(self, networkId: str):
-        """
-        **Returns the application categories for traffic shaping rules**
+        """**Returns the application categories for traffic shaping rules**
         https://developer.cisco.com/meraki/api-v1/#!get-network-traffic-shaping-application-categories
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'trafficShaping', 'applicationCategories'],
-            'operation': 'getNetworkTrafficShapingApplicationCategories'
+            "tags": ["networks", "configure", "trafficShaping", "applicationCategories"],
+            "operation": "getNetworkTrafficShapingApplicationCategories"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/trafficShaping/applicationCategories'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/trafficShaping/applicationCategories"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def getNetworkTrafficShapingDscpTaggingOptions(self, networkId: str):
-        """
-        **Returns the available DSCP tagging options for your traffic shaping rules.**
+        """**Returns the available DSCP tagging options for your traffic shaping rules.**
         https://developer.cisco.com/meraki/api-v1/#!get-network-traffic-shaping-dscp-tagging-options
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'trafficShaping', 'dscpTaggingOptions'],
-            'operation': 'getNetworkTrafficShapingDscpTaggingOptions'
+            "tags": ["networks", "configure", "trafficShaping", "dscpTaggingOptions"],
+            "operation": "getNetworkTrafficShapingDscpTaggingOptions"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/trafficShaping/dscpTaggingOptions'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/trafficShaping/dscpTaggingOptions"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def unbindNetwork(self, networkId: str, **kwargs):
-        """
-        **Unbind a network from a template.**
+        """**Unbind a network from a template.**
         https://developer.cisco.com/meraki/api-v1/#!unbind-network
 
         - networkId (string): Network ID
@@ -2464,41 +2369,39 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'unbindNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "unbindNetwork"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/unbind'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/unbind"
 
-        body_params = ['retainConfigs', ]
+        body_params = ["retainConfigs", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkVlanProfiles(self, networkId: str):
-        """
-        **List VLAN profiles for a network**
+        """**List VLAN profiles for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-vlan-profiles
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'getNetworkVlanProfiles'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "getNetworkVlanProfiles"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkVlanProfile(self, networkId: str, name: str, vlanNames: list, vlanGroups: list, iname: str):
-        """
-        **Create a VLAN profile for a network**
+        """**Create a VLAN profile for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-vlan-profile
 
         - networkId (string): Network ID
@@ -2511,22 +2414,21 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'createNetworkVlanProfile'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "createNetworkVlanProfile"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles"
 
-        body_params = ['name', 'vlanNames', 'vlanGroups', 'iname', ]
+        body_params = ["name", "vlanNames", "vlanGroups", "iname", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
 
 
-    def getNetworkVlanProfilesAssignmentsByDevice(self, networkId: str, total_pages=1, direction='next', **kwargs):
-        """
-        **Get the assigned VLAN Profiles for devices in a network**
+
+    def getNetworkVlanProfilesAssignmentsByDevice(self, networkId: str, total_pages=1, direction="next", **kwargs):
+        """**Get the assigned VLAN Profiles for devices in a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-vlan-profiles-assignments-by-device
 
         - networkId (string): Network ID
@@ -2543,28 +2445,27 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles', 'assignments', 'byDevice'],
-            'operation': 'getNetworkVlanProfilesAssignmentsByDevice'
+            "tags": ["networks", "configure", "vlanProfiles", "assignments", "byDevice"],
+            "operation": "getNetworkVlanProfilesAssignmentsByDevice"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles/assignments/byDevice'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles/assignments/byDevice"
 
-        query_params = ['perPage', 'startingAfter', 'endingBefore', 'serials', 'productTypes', 'stackIds', ]
+        query_params = ["perPage", "startingAfter", "endingBefore", "serials", "productTypes", "stackIds", ]
         params = {k.strip(): v for k, v in kwargs.items() if k.strip() in query_params}
 
-        array_params = ['serials', 'productTypes', 'stackIds', ]
+        array_params = ["serials", "productTypes", "stackIds", ]
         for k, v in kwargs.items():
             if k.strip() in array_params:
-                params[f'{k.strip()}[]'] = kwargs[f'{k}']
+                params[f"{k.strip()}[]"] = kwargs[f"{k}"]
                 params.pop(k.strip())
 
         return self._session.get_pages(metadata, resource, params, total_pages, direction)
-        
+
 
 
     def reassignNetworkVlanProfilesAssignments(self, networkId: str, serials: list, stackIds: list, **kwargs):
-        """
-        **Update the assigned VLAN Profile for devices in a network**
+        """**Update the assigned VLAN Profile for devices in a network**
         https://developer.cisco.com/meraki/api-v1/#!reassign-network-vlan-profiles-assignments
 
         - networkId (string): Network ID
@@ -2576,22 +2477,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles', 'assignments'],
-            'operation': 'reassignNetworkVlanProfilesAssignments'
+            "tags": ["networks", "configure", "vlanProfiles", "assignments"],
+            "operation": "reassignNetworkVlanProfilesAssignments"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles/assignments/reassign'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles/assignments/reassign"
 
-        body_params = ['vlanProfile', 'serials', 'stackIds', ]
+        body_params = ["vlanProfile", "serials", "stackIds", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkVlanProfile(self, networkId: str, iname: str):
-        """
-        **Get an existing VLAN profile of a network**
+        """**Get an existing VLAN profile of a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-vlan-profile
 
         - networkId (string): Network ID
@@ -2599,20 +2499,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'getNetworkVlanProfile'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "getNetworkVlanProfile"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        iname = urllib.parse.quote(str(iname), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles/{iname}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        iname = urllib.parse.quote(str(iname), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles/{iname}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkVlanProfile(self, networkId: str, iname: str, name: str, vlanNames: list, vlanGroups: list):
-        """
-        **Update an existing VLAN profile of a network**
+        """**Update an existing VLAN profile of a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-vlan-profile
 
         - networkId (string): Network ID
@@ -2625,23 +2524,22 @@ class Networks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'updateNetworkVlanProfile'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "updateNetworkVlanProfile"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        iname = urllib.parse.quote(str(iname), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles/{iname}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        iname = urllib.parse.quote(str(iname), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles/{iname}"
 
-        body_params = ['name', 'vlanNames', 'vlanGroups', ]
+        body_params = ["name", "vlanNames", "vlanGroups", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetworkVlanProfile(self, networkId: str, iname: str):
-        """
-        **Delete a VLAN profile of a network**
+        """**Delete a VLAN profile of a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-vlan-profile
 
         - networkId (string): Network ID
@@ -2649,39 +2547,37 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'deleteNetworkVlanProfile'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "deleteNetworkVlanProfile"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        iname = urllib.parse.quote(str(iname), safe='')
-        resource = f'/networks/{networkId}/vlanProfiles/{iname}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        iname = urllib.parse.quote(str(iname), safe="")
+        resource = f"/networks/{networkId}/vlanProfiles/{iname}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def getNetworkWebhooksHttpServers(self, networkId: str):
-        """
-        **List the HTTP servers for a network**
+        """**List the HTTP servers for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-webhooks-http-servers
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'httpServers'],
-            'operation': 'getNetworkWebhooksHttpServers'
+            "tags": ["networks", "configure", "webhooks", "httpServers"],
+            "operation": "getNetworkWebhooksHttpServers"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/webhooks/httpServers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/webhooks/httpServers"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkWebhooksHttpServer(self, networkId: str, name: str, url: str, **kwargs):
-        """
-        **Add an HTTP server to a network**
+        """**Add an HTTP server to a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-webhooks-http-server
 
         - networkId (string): Network ID
@@ -2694,22 +2590,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'httpServers'],
-            'operation': 'createNetworkWebhooksHttpServer'
+            "tags": ["networks", "configure", "webhooks", "httpServers"],
+            "operation": "createNetworkWebhooksHttpServer"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/webhooks/httpServers'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/webhooks/httpServers"
 
-        body_params = ['name', 'url', 'sharedSecret', 'payloadTemplate', ]
+        body_params = ["name", "url", "sharedSecret", "payloadTemplate", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkWebhooksHttpServer(self, networkId: str, httpServerId: str):
-        """
-        **Return an HTTP server for a network**
+        """**Return an HTTP server for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-webhooks-http-server
 
         - networkId (string): Network ID
@@ -2717,20 +2612,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'httpServers'],
-            'operation': 'getNetworkWebhooksHttpServer'
+            "tags": ["networks", "configure", "webhooks", "httpServers"],
+            "operation": "getNetworkWebhooksHttpServer"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        httpServerId = urllib.parse.quote(str(httpServerId), safe='')
-        resource = f'/networks/{networkId}/webhooks/httpServers/{httpServerId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        httpServerId = urllib.parse.quote(str(httpServerId), safe="")
+        resource = f"/networks/{networkId}/webhooks/httpServers/{httpServerId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def updateNetworkWebhooksHttpServer(self, networkId: str, httpServerId: str, **kwargs):
-        """
-        **Update an HTTP server**
+        """**Update an HTTP server**
         https://developer.cisco.com/meraki/api-v1/#!update-network-webhooks-http-server
 
         - networkId (string): Network ID
@@ -2743,23 +2637,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'httpServers'],
-            'operation': 'updateNetworkWebhooksHttpServer'
+            "tags": ["networks", "configure", "webhooks", "httpServers"],
+            "operation": "updateNetworkWebhooksHttpServer"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        httpServerId = urllib.parse.quote(str(httpServerId), safe='')
-        resource = f'/networks/{networkId}/webhooks/httpServers/{httpServerId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        httpServerId = urllib.parse.quote(str(httpServerId), safe="")
+        resource = f"/networks/{networkId}/webhooks/httpServers/{httpServerId}"
 
-        body_params = ['name', 'sharedSecret', 'payloadTemplate', ]
+        body_params = ["name", "sharedSecret", "payloadTemplate", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def deleteNetworkWebhooksHttpServer(self, networkId: str, httpServerId: str):
-        """
-        **Delete an HTTP server from a network**
+        """**Delete an HTTP server from a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-webhooks-http-server
 
         - networkId (string): Network ID
@@ -2767,39 +2660,37 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'httpServers'],
-            'operation': 'deleteNetworkWebhooksHttpServer'
+            "tags": ["networks", "configure", "webhooks", "httpServers"],
+            "operation": "deleteNetworkWebhooksHttpServer"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        httpServerId = urllib.parse.quote(str(httpServerId), safe='')
-        resource = f'/networks/{networkId}/webhooks/httpServers/{httpServerId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        httpServerId = urllib.parse.quote(str(httpServerId), safe="")
+        resource = f"/networks/{networkId}/webhooks/httpServers/{httpServerId}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def getNetworkWebhooksPayloadTemplates(self, networkId: str):
-        """
-        **List the webhook payload templates for a network**
+        """**List the webhook payload templates for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-webhooks-payload-templates
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'getNetworkWebhooksPayloadTemplates'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "getNetworkWebhooksPayloadTemplates"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def createNetworkWebhooksPayloadTemplate(self, networkId: str, name: str, **kwargs):
-        """
-        **Create a webhook payload template for a network**
+        """**Create a webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -2813,22 +2704,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'createNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "createNetworkWebhooksPayloadTemplate"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates"
 
-        body_params = ['name', 'body', 'headers', 'bodyFile', 'headersFile', ]
+        body_params = ["name", "body", "headers", "bodyFile", "headersFile", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkWebhooksPayloadTemplate(self, networkId: str, payloadTemplateId: str):
-        """
-        **Get the webhook payload template for a network**
+        """**Get the webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -2836,20 +2726,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'getNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "getNetworkWebhooksPayloadTemplate"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        payloadTemplateId = urllib.parse.quote(str(payloadTemplateId), safe='')
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        payloadTemplateId = urllib.parse.quote(str(payloadTemplateId), safe="")
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}"
 
         return self._session.get(metadata, resource)
-        
+
 
 
     def deleteNetworkWebhooksPayloadTemplate(self, networkId: str, payloadTemplateId: str):
-        """
-        **Destroy a webhook payload template for a network**
+        """**Destroy a webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -2857,20 +2746,19 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'deleteNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "deleteNetworkWebhooksPayloadTemplate"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        payloadTemplateId = urllib.parse.quote(str(payloadTemplateId), safe='')
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        payloadTemplateId = urllib.parse.quote(str(payloadTemplateId), safe="")
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}"
 
         return self._session.delete(metadata, resource)
-        
+
 
 
     def updateNetworkWebhooksPayloadTemplate(self, networkId: str, payloadTemplateId: str, **kwargs):
-        """
-        **Update a webhook payload template for a network**
+        """**Update a webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -2885,23 +2773,22 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'updateNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "updateNetworkWebhooksPayloadTemplate"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        payloadTemplateId = urllib.parse.quote(str(payloadTemplateId), safe='')
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        payloadTemplateId = urllib.parse.quote(str(payloadTemplateId), safe="")
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}"
 
-        body_params = ['name', 'body', 'headers', 'bodyFile', 'headersFile', ]
+        body_params = ["name", "body", "headers", "bodyFile", "headersFile", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.put(metadata, resource, payload)
-        
+
 
 
     def createNetworkWebhooksWebhookTest(self, networkId: str, url: str, **kwargs):
-        """
-        **Send a test webhook for a network**
+        """**Send a test webhook for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-webhooks-webhook-test
 
         - networkId (string): Network ID
@@ -2915,22 +2802,21 @@ class Networks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'webhookTests'],
-            'operation': 'createNetworkWebhooksWebhookTest'
+            "tags": ["networks", "configure", "webhooks", "webhookTests"],
+            "operation": "createNetworkWebhooksWebhookTest"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        resource = f'/networks/{networkId}/webhooks/webhookTests'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        resource = f"/networks/{networkId}/webhooks/webhookTests"
 
-        body_params = ['url', 'sharedSecret', 'payloadTemplateId', 'payloadTemplateName', 'alertTypeId', ]
+        body_params = ["url", "sharedSecret", "payloadTemplateId", "payloadTemplateName", "alertTypeId", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
 
         return self._session.post(metadata, resource, payload)
-        
+
 
 
     def getNetworkWebhooksWebhookTest(self, networkId: str, webhookTestId: str):
-        """
-        **Return the status of a webhook test for a network**
+        """**Return the status of a webhook test for a network**
         https://developer.cisco.com/meraki/api-v1/#!get-network-webhooks-webhook-test
 
         - networkId (string): Network ID
@@ -2938,12 +2824,12 @@ class Networks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'webhookTests'],
-            'operation': 'getNetworkWebhooksWebhookTest'
+            "tags": ["networks", "configure", "webhooks", "webhookTests"],
+            "operation": "getNetworkWebhooksWebhookTest"
         }
-        networkId = urllib.parse.quote(str(networkId), safe='')
-        webhookTestId = urllib.parse.quote(str(webhookTestId), safe='')
-        resource = f'/networks/{networkId}/webhooks/webhookTests/{webhookTestId}'
+        networkId = urllib.parse.quote(str(networkId), safe="")
+        webhookTestId = urllib.parse.quote(str(webhookTestId), safe="")
+        resource = f"/networks/{networkId}/webhooks/webhookTests/{webhookTestId}"
 
         return self._session.get(metadata, resource)
-        
+

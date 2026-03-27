@@ -423,7 +423,6 @@ class TestMerakiNetworkHub:
     ):
         """Test wireless data setup with API error."""
         from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
-
         from custom_components.meraki_dashboard.utils.cache import clear_api_cache
 
         # Clear cache to ensure clean test state
@@ -543,7 +542,6 @@ class TestMerakiNetworkHub:
     ):
         """Test switch data setup with API error."""
         from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
-
         from custom_components.meraki_dashboard.utils.cache import clear_api_cache
 
         # Clear cache to ensure clean test state

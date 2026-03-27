@@ -1,7 +1,6 @@
-import urllib
 
 
-class ActionBatchWirelessController(object):
+class ActionBatchWirelessController:
     def __init__(self):
-        super(ActionBatchWirelessController, self).__init__()
-        
+        super().__init__()
+

@@ -1,7 +1,6 @@
-import urllib
 
 
-class ActionBatchAdministered(object):
+class ActionBatchAdministered:
     def __init__(self):
-        super(ActionBatchAdministered, self).__init__()
-        
+        super().__init__()
+

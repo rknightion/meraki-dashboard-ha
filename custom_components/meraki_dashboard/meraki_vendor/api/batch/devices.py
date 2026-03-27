@@ -1,15 +1,13 @@
-import urllib
 
 
-class ActionBatchDevices(object):
+class ActionBatchDevices:
     def __init__(self):
-        super(ActionBatchDevices, self).__init__()
-        
+        super().__init__()
+
 
 
     def updateDevice(self, serial: str, **kwargs):
-        """
-        **Update the attributes of a device**
+        """**Update the attributes of a device**
         https://developer.cisco.com/meraki/api-v1/#!update-device
 
         - serial (string): Serial
@@ -27,12 +25,12 @@ class ActionBatchDevices(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['devices', 'configure'],
-            'operation': 'updateDevice'
+            "tags": ["devices", "configure"],
+            "operation": "updateDevice"
         }
-        resource = f'/devices/{serial}'
+        resource = f"/devices/{serial}"
 
-        body_params = ['name', 'tags', 'lat', 'lng', 'address', 'notes', 'moveMapMarker', 'switchProfileId', 'floorPlanId', ]
+        body_params = ["name", "tags", "lat", "lng", "address", "notes", "moveMapMarker", "switchProfileId", "floorPlanId", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -40,15 +38,14 @@ class ActionBatchDevices(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createDeviceLiveToolsLedsBlink(self, serial: str, duration: int, **kwargs):
-        """
-        **Enqueue a job to blink LEDs on a device**
+        """**Enqueue a job to blink LEDs on a device**
         https://developer.cisco.com/meraki/api-v1/#!create-device-live-tools-leds-blink
 
         - serial (string): Serial
@@ -59,12 +56,12 @@ class ActionBatchDevices(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['devices', 'liveTools', 'leds', 'blink'],
-            'operation': 'createDeviceLiveToolsLedsBlink'
+            "tags": ["devices", "liveTools", "leds", "blink"],
+            "operation": "createDeviceLiveToolsLedsBlink"
         }
-        resource = f'/devices/{serial}/liveTools/leds/blink'
+        resource = f"/devices/{serial}/liveTools/leds/blink"
 
-        body_params = ['duration', 'callback', ]
+        body_params = ["duration", "callback", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -72,15 +69,14 @@ class ActionBatchDevices(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createDeviceLiveToolsThroughputTest(self, serial: str, **kwargs):
-        """
-        **Enqueue a job to test a device throughput, the test will run for 10 secs to test throughput**
+        """**Enqueue a job to test a device throughput, the test will run for 10 secs to test throughput**
         https://developer.cisco.com/meraki/api-v1/#!create-device-live-tools-throughput-test
 
         - serial (string): Serial
@@ -90,12 +86,12 @@ class ActionBatchDevices(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['devices', 'liveTools', 'throughputTest'],
-            'operation': 'createDeviceLiveToolsThroughputTest'
+            "tags": ["devices", "liveTools", "throughputTest"],
+            "operation": "createDeviceLiveToolsThroughputTest"
         }
-        resource = f'/devices/{serial}/liveTools/throughputTest'
+        resource = f"/devices/{serial}/liveTools/throughputTest"
 
-        body_params = ['callback', ]
+        body_params = ["callback", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -103,15 +99,14 @@ class ActionBatchDevices(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateDeviceManagementInterface(self, serial: str, **kwargs):
-        """
-        **Update the management interface settings for a device**
+        """**Update the management interface settings for a device**
         https://developer.cisco.com/meraki/api-v1/#!update-device-management-interface
 
         - serial (string): Serial
@@ -122,12 +117,12 @@ class ActionBatchDevices(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['devices', 'configure', 'managementInterface'],
-            'operation': 'updateDeviceManagementInterface'
+            "tags": ["devices", "configure", "managementInterface"],
+            "operation": "updateDeviceManagementInterface"
         }
-        resource = f'/devices/{serial}/managementInterface'
+        resource = f"/devices/{serial}/managementInterface"
 
-        body_params = ['wan1', 'wan2', ]
+        body_params = ["wan1", "wan2", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -135,7 +130,7 @@ class ActionBatchDevices(object):
             "body": payload
         }
         return action
-        
+
 
 
 

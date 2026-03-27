@@ -16,8 +16,6 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.selector import Selector
 
 from . import meraki_vendor as meraki
-from .meraki_vendor.exceptions import APIError, AsyncAPIError
-
 from .config.schemas import (
     APIKeyConfig,
     BaseURLConfig,
@@ -76,6 +74,7 @@ from .const import (
     SENSOR_TYPE_MV,
     USER_AGENT,
 )
+from .meraki_vendor.exceptions import APIError, AsyncAPIError
 from .utils import sanitize_device_name
 from .utils.device_info import determine_device_type, get_device_display_name
 

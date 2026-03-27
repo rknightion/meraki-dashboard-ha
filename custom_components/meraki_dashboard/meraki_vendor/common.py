@@ -1,8 +1,9 @@
 import platform
-from .exceptions import *
 import re
 import sys
 import urllib.parse
+
+from .exceptions import *
 
 
 def check_python_version():
@@ -30,7 +31,7 @@ def validate_user_agent(be_geo_id, caller):
     # Validate that it follows the expected format
     user_agent = dict()
 
-    allowed_format_in_regex = r'^[A-Za-z0-9]+(?:/[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*(-[a-z]+)?)? [A-Za-z-0-9]+$'
+    allowed_format_in_regex = r"^[A-Za-z0-9]+(?:/[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*(-[a-z]+)?)? [A-Za-z-0-9]+$"
 
     if caller and re.match(allowed_format_in_regex, caller):
         user_agent["caller"] = caller
@@ -54,10 +55,10 @@ def validate_user_agent(be_geo_id, caller):
 
 
 def reject_v0_base_url(self):
-    if 'v0' in self._base_url:
-        sys.exit(f'This library does not support dashboard API v0 ({self._base_url} was configured as the base'
-                 f' URL).  API v0 has been end of life since 2020 August 5.')
-    elif self._base_url[-1] == '/':
+    if "v0" in self._base_url:
+        sys.exit(f"This library does not support dashboard API v0 ({self._base_url} was configured as the base"
+                 f" URL).  API v0 has been end of life since 2020 August 5.")
+    elif self._base_url[-1] == "/":
         self._base_url = self._base_url[:-1]
 
 
@@ -75,7 +76,7 @@ def use_iterator_for_get_pages_setter(self, value):
 
 
 def validate_base_url(self, url):
-    allowed_domains = ['meraki.com', 'meraki.ca', 'meraki.cn', 'meraki.in', 'gov-meraki.com']
+    allowed_domains = ["meraki.com", "meraki.ca", "meraki.cn", "meraki.in", "gov-meraki.com"]
     parsed_url = urllib.parse.urlparse(url)
     if any(domain in parsed_url.netloc for domain in allowed_domains):
         abs_url = url

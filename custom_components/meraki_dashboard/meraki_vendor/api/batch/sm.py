@@ -1,15 +1,13 @@
-import urllib
 
 
-class ActionBatchSm(object):
+class ActionBatchSm:
     def __init__(self):
-        super(ActionBatchSm, self).__init__()
-        
+        super().__init__()
+
 
 
     def deleteNetworkSmUserAccessDevice(self, networkId: str, userAccessDeviceId: str):
-        """
-        **Delete a User Access Device**
+        """**Delete a User Access Device**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-sm-user-access-device
 
         - networkId (string): Network ID
@@ -17,25 +15,24 @@ class ActionBatchSm(object):
         """
 
         metadata = {
-            'tags': ['sm', 'configure', 'userAccessDevices'],
-            'operation': 'deleteNetworkSmUserAccessDevice'
+            "tags": ["sm", "configure", "userAccessDevices"],
+            "operation": "deleteNetworkSmUserAccessDevice"
         }
-        resource = f'/networks/{networkId}/sm/userAccessDevices/{userAccessDeviceId}'
+        resource = f"/networks/{networkId}/sm/userAccessDevices/{userAccessDeviceId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def createOrganizationSmAdminsRole(self, organizationId: str, name: str, **kwargs):
-        """
-        **Create a Limited Access Role**
+        """**Create a Limited Access Role**
         https://developer.cisco.com/meraki/api-v1/#!create-organization-sm-admins-role
 
         - organizationId (string): Organization ID
@@ -46,17 +43,17 @@ class ActionBatchSm(object):
 
         kwargs.update(locals())
 
-        if 'scope' in kwargs:
-            options = ['all_tags', 'some', 'without_all_tags', 'without_some']
-            assert kwargs['scope'] in options, f'''"scope" cannot be "{kwargs['scope']}", & must be set to one of: {options}'''
+        if "scope" in kwargs:
+            options = ["all_tags", "some", "without_all_tags", "without_some"]
+            assert kwargs["scope"] in options, f""""scope" cannot be "{kwargs['scope']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['sm', 'configure', 'admins', 'roles'],
-            'operation': 'createOrganizationSmAdminsRole'
+            "tags": ["sm", "configure", "admins", "roles"],
+            "operation": "createOrganizationSmAdminsRole"
         }
-        resource = f'/organizations/{organizationId}/sm/admins/roles'
+        resource = f"/organizations/{organizationId}/sm/admins/roles"
 
-        body_params = ['name', 'scope', 'tags', ]
+        body_params = ["name", "scope", "tags", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -64,15 +61,14 @@ class ActionBatchSm(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateOrganizationSmAdminsRole(self, organizationId: str, roleId: str, **kwargs):
-        """
-        **Update a Limited Access Role**
+        """**Update a Limited Access Role**
         https://developer.cisco.com/meraki/api-v1/#!update-organization-sm-admins-role
 
         - organizationId (string): Organization ID
@@ -84,17 +80,17 @@ class ActionBatchSm(object):
 
         kwargs.update(locals())
 
-        if 'scope' in kwargs:
-            options = ['all_tags', 'some', 'without_all_tags', 'without_some']
-            assert kwargs['scope'] in options, f'''"scope" cannot be "{kwargs['scope']}", & must be set to one of: {options}'''
+        if "scope" in kwargs:
+            options = ["all_tags", "some", "without_all_tags", "without_some"]
+            assert kwargs["scope"] in options, f""""scope" cannot be "{kwargs['scope']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['sm', 'configure', 'admins', 'roles'],
-            'operation': 'updateOrganizationSmAdminsRole'
+            "tags": ["sm", "configure", "admins", "roles"],
+            "operation": "updateOrganizationSmAdminsRole"
         }
-        resource = f'/organizations/{organizationId}/sm/admins/roles/{roleId}'
+        resource = f"/organizations/{organizationId}/sm/admins/roles/{roleId}"
 
-        body_params = ['name', 'scope', 'tags', ]
+        body_params = ["name", "scope", "tags", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -102,15 +98,14 @@ class ActionBatchSm(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteOrganizationSmAdminsRole(self, organizationId: str, roleId: str):
-        """
-        **Delete a Limited Access Role**
+        """**Delete a Limited Access Role**
         https://developer.cisco.com/meraki/api-v1/#!delete-organization-sm-admins-role
 
         - organizationId (string): Organization ID
@@ -118,25 +113,24 @@ class ActionBatchSm(object):
         """
 
         metadata = {
-            'tags': ['sm', 'configure', 'admins', 'roles'],
-            'operation': 'deleteOrganizationSmAdminsRole'
+            "tags": ["sm", "configure", "admins", "roles"],
+            "operation": "deleteOrganizationSmAdminsRole"
         }
-        resource = f'/organizations/{organizationId}/sm/admins/roles/{roleId}'
+        resource = f"/organizations/{organizationId}/sm/admins/roles/{roleId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def updateOrganizationSmSentryPoliciesAssignments(self, organizationId: str, items: list):
-        """
-        **Update an Organizations Sentry Policies using the provided list**
+        """**Update an Organizations Sentry Policies using the provided list**
         https://developer.cisco.com/meraki/api-v1/#!update-organization-sm-sentry-policies-assignments
 
         - organizationId (string): Organization ID
@@ -146,12 +140,12 @@ class ActionBatchSm(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['sm', 'configure', 'sentry', 'policies', 'assignments'],
-            'operation': 'updateOrganizationSmSentryPoliciesAssignments'
+            "tags": ["sm", "configure", "sentry", "policies", "assignments"],
+            "operation": "updateOrganizationSmSentryPoliciesAssignments"
         }
-        resource = f'/organizations/{organizationId}/sm/sentry/policies/assignments'
+        resource = f"/organizations/{organizationId}/sm/sentry/policies/assignments"
 
-        body_params = ['items', ]
+        body_params = ["items", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -159,7 +153,7 @@ class ActionBatchSm(object):
             "body": payload
         }
         return action
-        
+
 
 
 

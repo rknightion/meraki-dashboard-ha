@@ -1,15 +1,13 @@
-import urllib
 
 
-class ActionBatchNetworks(object):
+class ActionBatchNetworks:
     def __init__(self):
-        super(ActionBatchNetworks, self).__init__()
-        
+        super().__init__()
+
 
 
     def updateNetwork(self, networkId: str, **kwargs):
-        """
-        **Update a network**
+        """**Update a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network
 
         - networkId (string): Network ID
@@ -23,12 +21,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'updateNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "updateNetwork"
         }
-        resource = f'/networks/{networkId}'
+        resource = f"/networks/{networkId}"
 
-        body_params = ['name', 'timeZone', 'tags', 'enrollmentString', 'notes', ]
+        body_params = ["name", "timeZone", "tags", "enrollmentString", "notes", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -36,40 +34,38 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetwork(self, networkId: str):
-        """
-        **Delete a network**
+        """**Delete a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'deleteNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "deleteNetwork"
         }
-        resource = f'/networks/{networkId}'
+        resource = f"/networks/{networkId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def bindNetwork(self, networkId: str, configTemplateId: str, **kwargs):
-        """
-        **Bind a network to a template.**
+        """**Bind a network to a template.**
         https://developer.cisco.com/meraki/api-v1/#!bind-network
 
         - networkId (string): Network ID
@@ -80,12 +76,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'bindNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "bindNetwork"
         }
-        resource = f'/networks/{networkId}/bind'
+        resource = f"/networks/{networkId}/bind"
 
-        body_params = ['configTemplateId', 'autoBind', ]
+        body_params = ["configTemplateId", "autoBind", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -93,15 +89,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def provisionNetworkClients(self, networkId: str, clients: list, devicePolicy: str, **kwargs):
-        """
-        **Provisions a client with a name and policy**
+        """**Provisions a client with a name and policy**
         https://developer.cisco.com/meraki/api-v1/#!provision-network-clients
 
         - networkId (string): Network ID
@@ -114,17 +109,17 @@ class ActionBatchNetworks(object):
 
         kwargs.update(locals())
 
-        if 'devicePolicy' in kwargs:
-            options = ['Allowed', 'Blocked', 'Group policy', 'Normal', 'Per connection']
-            assert kwargs['devicePolicy'] in options, f'''"devicePolicy" cannot be "{kwargs['devicePolicy']}", & must be set to one of: {options}'''
+        if "devicePolicy" in kwargs:
+            options = ["Allowed", "Blocked", "Group policy", "Normal", "Per connection"]
+            assert kwargs["devicePolicy"] in options, f""""devicePolicy" cannot be "{kwargs['devicePolicy']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'clients'],
-            'operation': 'provisionNetworkClients'
+            "tags": ["networks", "configure", "clients"],
+            "operation": "provisionNetworkClients"
         }
-        resource = f'/networks/{networkId}/clients/provision'
+        resource = f"/networks/{networkId}/clients/provision"
 
-        body_params = ['clients', 'devicePolicy', 'groupPolicyId', 'policiesBySecurityAppliance', 'policiesBySsid', ]
+        body_params = ["clients", "devicePolicy", "groupPolicyId", "policiesBySecurityAppliance", "policiesBySsid", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -132,15 +127,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def claimNetworkDevices(self, networkId: str, serials: list, **kwargs):
-        """
-        **Claim devices into a network. (Note: for recently claimed devices, it may take a few minutes for API requests against that device to succeed)**
+        """**Claim devices into a network. (Note: for recently claimed devices, it may take a few minutes for API requests against that device to succeed)**
         https://developer.cisco.com/meraki/api-v1/#!claim-network-devices
 
         - networkId (string): Network ID
@@ -152,12 +146,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices'],
-            'operation': 'claimNetworkDevices'
+            "tags": ["networks", "configure", "devices"],
+            "operation": "claimNetworkDevices"
         }
-        resource = f'/networks/{networkId}/devices/claim'
+        resource = f"/networks/{networkId}/devices/claim"
 
-        body_params = ['serials', 'detailsByDevice', ]
+        body_params = ["serials", "detailsByDevice", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -165,15 +159,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def vmxNetworkDevicesClaim(self, networkId: str, size: str):
-        """
-        **Claim a vMX into a network**
+        """**Claim a vMX into a network**
         https://developer.cisco.com/meraki/api-v1/#!vmx-network-devices-claim
 
         - networkId (string): Network ID
@@ -182,17 +175,17 @@ class ActionBatchNetworks(object):
 
         kwargs = locals()
 
-        if 'size' in kwargs:
-            options = ['100', 'large', 'medium', 'small', 'xlarge']
-            assert kwargs['size'] in options, f'''"size" cannot be "{kwargs['size']}", & must be set to one of: {options}'''
+        if "size" in kwargs:
+            options = ["100", "large", "medium", "small", "xlarge"]
+            assert kwargs["size"] in options, f""""size" cannot be "{kwargs['size']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices', 'claim'],
-            'operation': 'vmxNetworkDevicesClaim'
+            "tags": ["networks", "configure", "devices", "claim"],
+            "operation": "vmxNetworkDevicesClaim"
         }
-        resource = f'/networks/{networkId}/devices/claim/vmx'
+        resource = f"/networks/{networkId}/devices/claim/vmx"
 
-        body_params = ['size', ]
+        body_params = ["size", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -200,15 +193,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def removeNetworkDevices(self, networkId: str, serial: str):
-        """
-        **Remove a single device**
+        """**Remove a single device**
         https://developer.cisco.com/meraki/api-v1/#!remove-network-devices
 
         - networkId (string): Network ID
@@ -218,12 +210,12 @@ class ActionBatchNetworks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'devices'],
-            'operation': 'removeNetworkDevices'
+            "tags": ["networks", "configure", "devices"],
+            "operation": "removeNetworkDevices"
         }
-        resource = f'/networks/{networkId}/devices/remove'
+        resource = f"/networks/{networkId}/devices/remove"
 
-        body_params = ['serial', ]
+        body_params = ["serial", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -231,15 +223,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkFirmwareUpgrades(self, networkId: str, **kwargs):
-        """
-        **Update firmware upgrade information for a network**
+        """**Update firmware upgrade information for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-firmware-upgrades
 
         - networkId (string): Network ID
@@ -251,12 +242,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades'],
-            'operation': 'updateNetworkFirmwareUpgrades'
+            "tags": ["networks", "configure", "firmwareUpgrades"],
+            "operation": "updateNetworkFirmwareUpgrades"
         }
-        resource = f'/networks/{networkId}/firmwareUpgrades'
+        resource = f"/networks/{networkId}/firmwareUpgrades"
 
-        body_params = ['upgradeWindow', 'timezone', 'products', ]
+        body_params = ["upgradeWindow", "timezone", "products", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -264,15 +255,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkFirmwareUpgradesRollback(self, networkId: str, reasons: list, **kwargs):
-        """
-        **Rollback a Firmware Upgrade For A Network**
+        """**Rollback a Firmware Upgrade For A Network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-firmware-upgrades-rollback
 
         - networkId (string): Network ID
@@ -284,17 +274,17 @@ class ActionBatchNetworks(object):
 
         kwargs.update(locals())
 
-        if 'product' in kwargs:
-            options = ['appliance', 'camera', 'cellularGateway', 'secureConnect', 'switch', 'switchCatalyst', 'wireless', 'wirelessController']
-            assert kwargs['product'] in options, f'''"product" cannot be "{kwargs['product']}", & must be set to one of: {options}'''
+        if "product" in kwargs:
+            options = ["appliance", "camera", "cellularGateway", "secureConnect", "switch", "switchCatalyst", "wireless", "wirelessController"]
+            assert kwargs["product"] in options, f""""product" cannot be "{kwargs['product']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'rollbacks'],
-            'operation': 'createNetworkFirmwareUpgradesRollback'
+            "tags": ["networks", "configure", "firmwareUpgrades", "rollbacks"],
+            "operation": "createNetworkFirmwareUpgradesRollback"
         }
-        resource = f'/networks/{networkId}/firmwareUpgrades/rollbacks'
+        resource = f"/networks/{networkId}/firmwareUpgrades/rollbacks"
 
-        body_params = ['product', 'time', 'reasons', 'toVersion', ]
+        body_params = ["product", "time", "reasons", "toVersion", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -302,15 +292,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkFirmwareUpgradesStagedGroup(self, networkId: str, name: str, isDefault: bool, **kwargs):
-        """
-        **Create a Staged Upgrade Group for a network**
+        """**Create a Staged Upgrade Group for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-firmware-upgrades-staged-group
 
         - networkId (string): Network ID
@@ -323,12 +312,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'createNetworkFirmwareUpgradesStagedGroup'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "createNetworkFirmwareUpgradesStagedGroup"
         }
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups'
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups"
 
-        body_params = ['name', 'description', 'isDefault', 'assignedDevices', ]
+        body_params = ["name", "description", "isDefault", "assignedDevices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -336,15 +325,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkFirmwareUpgradesStagedGroup(self, networkId: str, groupId: str):
-        """
-        **Delete a Staged Upgrade Group**
+        """**Delete a Staged Upgrade Group**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-firmware-upgrades-staged-group
 
         - networkId (string): Network ID
@@ -352,25 +340,24 @@ class ActionBatchNetworks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'firmwareUpgrades', 'staged', 'groups'],
-            'operation': 'deleteNetworkFirmwareUpgradesStagedGroup'
+            "tags": ["networks", "configure", "firmwareUpgrades", "staged", "groups"],
+            "operation": "deleteNetworkFirmwareUpgradesStagedGroup"
         }
-        resource = f'/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}'
+        resource = f"/networks/{networkId}/firmwareUpgrades/staged/groups/{groupId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def batchNetworkFloorPlansAutoLocateJobs(self, networkId: str, jobs: list):
-        """
-        **Schedule auto locate jobs for one or more floor plans in a network**
+        """**Schedule auto locate jobs for one or more floor plans in a network**
         https://developer.cisco.com/meraki/api-v1/#!batch-network-floor-plans-auto-locate-jobs
 
         - networkId (string): Network ID
@@ -380,12 +367,12 @@ class ActionBatchNetworks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'batchNetworkFloorPlansAutoLocateJobs'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "batchNetworkFloorPlansAutoLocateJobs"
         }
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/batch'
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/batch"
 
-        body_params = ['jobs', ]
+        body_params = ["jobs", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -393,15 +380,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def cancelNetworkFloorPlansAutoLocateJob(self, networkId: str, jobId: str):
-        """
-        **Cancel a scheduled or running auto locate job**
+        """**Cancel a scheduled or running auto locate job**
         https://developer.cisco.com/meraki/api-v1/#!cancel-network-floor-plans-auto-locate-job
 
         - networkId (string): Network ID
@@ -409,25 +395,24 @@ class ActionBatchNetworks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'cancelNetworkFloorPlansAutoLocateJob'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "cancelNetworkFloorPlansAutoLocateJob"
         }
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/cancel'
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/cancel"
 
         action = {
             "resource": resource,
             "operation": "cancel",
         }
         return action
-        
+
 
 
 
 
 
     def publishNetworkFloorPlansAutoLocateJob(self, networkId: str, jobId: str, **kwargs):
-        """
-        **Update the status of a finished auto locate job to be published, and update device locations**
+        """**Update the status of a finished auto locate job to be published, and update device locations**
         https://developer.cisco.com/meraki/api-v1/#!publish-network-floor-plans-auto-locate-job
 
         - networkId (string): Network ID
@@ -438,12 +423,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'publishNetworkFloorPlansAutoLocateJob'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "publishNetworkFloorPlansAutoLocateJob"
         }
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/publish'
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/publish"
 
-        body_params = ['devices', ]
+        body_params = ["devices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -451,15 +436,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def recalculateNetworkFloorPlansAutoLocateJob(self, networkId: str, jobId: str, **kwargs):
-        """
-        **Trigger auto locate recalculation for a job, and optionally set anchors**
+        """**Trigger auto locate recalculation for a job, and optionally set anchors**
         https://developer.cisco.com/meraki/api-v1/#!recalculate-network-floor-plans-auto-locate-job
 
         - networkId (string): Network ID
@@ -470,12 +454,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'autoLocate', 'jobs'],
-            'operation': 'recalculateNetworkFloorPlansAutoLocateJob'
+            "tags": ["networks", "configure", "floorPlans", "autoLocate", "jobs"],
+            "operation": "recalculateNetworkFloorPlansAutoLocateJob"
         }
-        resource = f'/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/recalculate'
+        resource = f"/networks/{networkId}/floorPlans/autoLocate/jobs/{jobId}/recalculate"
 
-        body_params = ['devices', ]
+        body_params = ["devices", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -483,15 +467,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def batchNetworkFloorPlansDevicesUpdate(self, networkId: str, assignments: list):
-        """
-        **Update floorplan assignments for a batch of devices**
+        """**Update floorplan assignments for a batch of devices**
         https://developer.cisco.com/meraki/api-v1/#!batch-network-floor-plans-devices-update
 
         - networkId (string): Network ID
@@ -501,12 +484,12 @@ class ActionBatchNetworks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans', 'devices'],
-            'operation': 'batchNetworkFloorPlansDevicesUpdate'
+            "tags": ["networks", "configure", "floorPlans", "devices"],
+            "operation": "batchNetworkFloorPlansDevicesUpdate"
         }
-        resource = f'/networks/{networkId}/floorPlans/devices/batchUpdate'
+        resource = f"/networks/{networkId}/floorPlans/devices/batchUpdate"
 
-        body_params = ['assignments', ]
+        body_params = ["assignments", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -514,15 +497,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkFloorPlan(self, networkId: str, floorPlanId: str, **kwargs):
-        """
-        **Update a floor plan's geolocation and other meta data**
+        """**Update a floor plan's geolocation and other meta data**
         https://developer.cisco.com/meraki/api-v1/#!update-network-floor-plan
 
         - networkId (string): Network ID
@@ -540,12 +522,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'updateNetworkFloorPlan'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "updateNetworkFloorPlan"
         }
-        resource = f'/networks/{networkId}/floorPlans/{floorPlanId}'
+        resource = f"/networks/{networkId}/floorPlans/{floorPlanId}"
 
-        body_params = ['name', 'center', 'bottomLeftCorner', 'bottomRightCorner', 'topLeftCorner', 'topRightCorner', 'floorNumber', 'imageContents', ]
+        body_params = ["name", "center", "bottomLeftCorner", "bottomRightCorner", "topLeftCorner", "topRightCorner", "floorNumber", "imageContents", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -553,15 +535,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkFloorPlan(self, networkId: str, floorPlanId: str):
-        """
-        **Destroy a floor plan**
+        """**Destroy a floor plan**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-floor-plan
 
         - networkId (string): Network ID
@@ -569,25 +550,24 @@ class ActionBatchNetworks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'floorPlans'],
-            'operation': 'deleteNetworkFloorPlan'
+            "tags": ["networks", "configure", "floorPlans"],
+            "operation": "deleteNetworkFloorPlan"
         }
-        resource = f'/networks/{networkId}/floorPlans/{floorPlanId}'
+        resource = f"/networks/{networkId}/floorPlans/{floorPlanId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkGroupPolicy(self, networkId: str, name: str, **kwargs):
-        """
-        **Create a group policy**
+        """**Create a group policy**
         https://developer.cisco.com/meraki/api-v1/#!create-network-group-policy
 
         - networkId (string): Network ID
@@ -606,17 +586,17 @@ class ActionBatchNetworks(object):
 
         kwargs.update(locals())
 
-        if 'splashAuthSettings' in kwargs:
-            options = ['bypass', 'network default']
-            assert kwargs['splashAuthSettings'] in options, f'''"splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}'''
+        if "splashAuthSettings" in kwargs:
+            options = ["bypass", "network default"]
+            assert kwargs["splashAuthSettings"] in options, f""""splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'createNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "createNetworkGroupPolicy"
         }
-        resource = f'/networks/{networkId}/groupPolicies'
+        resource = f"/networks/{networkId}/groupPolicies"
 
-        body_params = ['name', 'scheduling', 'bandwidth', 'firewallAndTrafficShaping', 'contentFiltering', 'splashAuthSettings', 'vlanTagging', 'bonjourForwarding', ]
+        body_params = ["name", "scheduling", "bandwidth", "firewallAndTrafficShaping", "contentFiltering", "splashAuthSettings", "vlanTagging", "bonjourForwarding", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -624,15 +604,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkGroupPolicy(self, networkId: str, groupPolicyId: str, **kwargs):
-        """
-        **Update a group policy**
+        """**Update a group policy**
         https://developer.cisco.com/meraki/api-v1/#!update-network-group-policy
 
         - networkId (string): Network ID
@@ -652,17 +631,17 @@ class ActionBatchNetworks(object):
 
         kwargs.update(locals())
 
-        if 'splashAuthSettings' in kwargs:
-            options = ['bypass', 'network default']
-            assert kwargs['splashAuthSettings'] in options, f'''"splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}'''
+        if "splashAuthSettings" in kwargs:
+            options = ["bypass", "network default"]
+            assert kwargs["splashAuthSettings"] in options, f""""splashAuthSettings" cannot be "{kwargs['splashAuthSettings']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'updateNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "updateNetworkGroupPolicy"
         }
-        resource = f'/networks/{networkId}/groupPolicies/{groupPolicyId}'
+        resource = f"/networks/{networkId}/groupPolicies/{groupPolicyId}"
 
-        body_params = ['name', 'scheduling', 'bandwidth', 'firewallAndTrafficShaping', 'contentFiltering', 'splashAuthSettings', 'vlanTagging', 'bonjourForwarding', ]
+        body_params = ["name", "scheduling", "bandwidth", "firewallAndTrafficShaping", "contentFiltering", "splashAuthSettings", "vlanTagging", "bonjourForwarding", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -670,15 +649,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkGroupPolicy(self, networkId: str, groupPolicyId: str, **kwargs):
-        """
-        **Delete a group policy**
+        """**Delete a group policy**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-group-policy
 
         - networkId (string): Network ID
@@ -689,25 +667,24 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'groupPolicies'],
-            'operation': 'deleteNetworkGroupPolicy'
+            "tags": ["networks", "configure", "groupPolicies"],
+            "operation": "deleteNetworkGroupPolicy"
         }
-        resource = f'/networks/{networkId}/groupPolicies/{groupPolicyId}'
+        resource = f"/networks/{networkId}/groupPolicies/{groupPolicyId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkMerakiAuthUser(self, networkId: str, email: str, authorizations: list, **kwargs):
-        """
-        **Authorize a user configured with Meraki Authentication for a network (currently supports 802.1X, splash guest, and client VPN users, and currently, organizations have a 50,000 user cap)**
+        """**Authorize a user configured with Meraki Authentication for a network (currently supports 802.1X, splash guest, and client VPN users, and currently, organizations have a 50,000 user cap)**
         https://developer.cisco.com/meraki/api-v1/#!create-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -722,17 +699,17 @@ class ActionBatchNetworks(object):
 
         kwargs.update(locals())
 
-        if 'accountType' in kwargs:
-            options = ['802.1X', 'Client VPN', 'Guest']
-            assert kwargs['accountType'] in options, f'''"accountType" cannot be "{kwargs['accountType']}", & must be set to one of: {options}'''
+        if "accountType" in kwargs:
+            options = ["802.1X", "Client VPN", "Guest"]
+            assert kwargs["accountType"] in options, f""""accountType" cannot be "{kwargs['accountType']}", & must be set to one of: {options}"""
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'createNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "createNetworkMerakiAuthUser"
         }
-        resource = f'/networks/{networkId}/merakiAuthUsers'
+        resource = f"/networks/{networkId}/merakiAuthUsers"
 
-        body_params = ['email', 'name', 'password', 'accountType', 'emailPasswordToUser', 'isAdmin', 'authorizations', ]
+        body_params = ["email", "name", "password", "accountType", "emailPasswordToUser", "isAdmin", "authorizations", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -740,15 +717,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkMerakiAuthUser(self, networkId: str, merakiAuthUserId: str, **kwargs):
-        """
-        **Delete an 802.1X RADIUS user, or deauthorize and optionally delete a splash guest or client VPN user.**
+        """**Delete an 802.1X RADIUS user, or deauthorize and optionally delete a splash guest or client VPN user.**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -759,25 +735,24 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'deleteNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "deleteNetworkMerakiAuthUser"
         }
-        resource = f'/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}'
+        resource = f"/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkMerakiAuthUser(self, networkId: str, merakiAuthUserId: str, **kwargs):
-        """
-        **Update a user configured with Meraki Authentication (currently, 802.1X RADIUS, splash guest, and client VPN users can be updated)**
+        """**Update a user configured with Meraki Authentication (currently, 802.1X RADIUS, splash guest, and client VPN users can be updated)**
         https://developer.cisco.com/meraki/api-v1/#!update-network-meraki-auth-user
 
         - networkId (string): Network ID
@@ -791,12 +766,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'merakiAuthUsers'],
-            'operation': 'updateNetworkMerakiAuthUser'
+            "tags": ["networks", "configure", "merakiAuthUsers"],
+            "operation": "updateNetworkMerakiAuthUser"
         }
-        resource = f'/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}'
+        resource = f"/networks/{networkId}/merakiAuthUsers/{merakiAuthUserId}"
 
-        body_params = ['name', 'password', 'emailPasswordToUser', 'authorizations', ]
+        body_params = ["name", "password", "emailPasswordToUser", "authorizations", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -804,15 +779,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkMqttBroker(self, networkId: str, name: str, host: str, port: int, **kwargs):
-        """
-        **Add an MQTT broker**
+        """**Add an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!create-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -826,12 +800,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'createNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "createNetworkMqttBroker"
         }
-        resource = f'/networks/{networkId}/mqttBrokers'
+        resource = f"/networks/{networkId}/mqttBrokers"
 
-        body_params = ['name', 'host', 'port', 'security', 'authentication', ]
+        body_params = ["name", "host", "port", "security", "authentication", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -839,15 +813,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkMqttBroker(self, networkId: str, mqttBrokerId: str, **kwargs):
-        """
-        **Update an MQTT broker**
+        """**Update an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!update-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -862,12 +835,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'updateNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "updateNetworkMqttBroker"
         }
-        resource = f'/networks/{networkId}/mqttBrokers/{mqttBrokerId}'
+        resource = f"/networks/{networkId}/mqttBrokers/{mqttBrokerId}"
 
-        body_params = ['name', 'host', 'port', 'security', 'authentication', ]
+        body_params = ["name", "host", "port", "security", "authentication", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -875,15 +848,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkMqttBroker(self, networkId: str, mqttBrokerId: str):
-        """
-        **Delete an MQTT broker**
+        """**Delete an MQTT broker**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-mqtt-broker
 
         - networkId (string): Network ID
@@ -891,25 +863,24 @@ class ActionBatchNetworks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'mqttBrokers'],
-            'operation': 'deleteNetworkMqttBroker'
+            "tags": ["networks", "configure", "mqttBrokers"],
+            "operation": "deleteNetworkMqttBroker"
         }
-        resource = f'/networks/{networkId}/mqttBrokers/{mqttBrokerId}'
+        resource = f"/networks/{networkId}/mqttBrokers/{mqttBrokerId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkSettings(self, networkId: str, **kwargs):
-        """
-        **Update the settings for a network**
+        """**Update the settings for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-settings
 
         - networkId (string): Network ID
@@ -923,12 +894,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'settings'],
-            'operation': 'updateNetworkSettings'
+            "tags": ["networks", "configure", "settings"],
+            "operation": "updateNetworkSettings"
         }
-        resource = f'/networks/{networkId}/settings'
+        resource = f"/networks/{networkId}/settings"
 
-        body_params = ['localStatusPageEnabled', 'remoteStatusPageEnabled', 'localStatusPage', 'securePort', 'namedVlans', ]
+        body_params = ["localStatusPageEnabled", "remoteStatusPageEnabled", "localStatusPage", "securePort", "namedVlans", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -936,40 +907,38 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def splitNetwork(self, networkId: str):
-        """
-        **Split a combined network into individual networks for each type of device**
+        """**Split a combined network into individual networks for each type of device**
         https://developer.cisco.com/meraki/api-v1/#!split-network
 
         - networkId (string): Network ID
         """
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'splitNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "splitNetwork"
         }
-        resource = f'/networks/{networkId}/split'
+        resource = f"/networks/{networkId}/split"
 
         action = {
             "resource": resource,
             "operation": "create",
         }
         return action
-        
+
 
 
 
 
 
     def unbindNetwork(self, networkId: str, **kwargs):
-        """
-        **Unbind a network from a template.**
+        """**Unbind a network from a template.**
         https://developer.cisco.com/meraki/api-v1/#!unbind-network
 
         - networkId (string): Network ID
@@ -979,12 +948,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure'],
-            'operation': 'unbindNetwork'
+            "tags": ["networks", "configure"],
+            "operation": "unbindNetwork"
         }
-        resource = f'/networks/{networkId}/unbind'
+        resource = f"/networks/{networkId}/unbind"
 
-        body_params = ['retainConfigs', ]
+        body_params = ["retainConfigs", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -992,15 +961,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkVlanProfile(self, networkId: str, name: str, vlanNames: list, vlanGroups: list, iname: str):
-        """
-        **Create a VLAN profile for a network**
+        """**Create a VLAN profile for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-vlan-profile
 
         - networkId (string): Network ID
@@ -1013,12 +981,12 @@ class ActionBatchNetworks(object):
         kwargs = locals()
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'createNetworkVlanProfile'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "createNetworkVlanProfile"
         }
-        resource = f'/networks/{networkId}/vlanProfiles'
+        resource = f"/networks/{networkId}/vlanProfiles"
 
-        body_params = ['name', 'vlanNames', 'vlanGroups', 'iname', ]
+        body_params = ["name", "vlanNames", "vlanGroups", "iname", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -1026,15 +994,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkVlanProfile(self, networkId: str, iname: str):
-        """
-        **Delete a VLAN profile of a network**
+        """**Delete a VLAN profile of a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-vlan-profile
 
         - networkId (string): Network ID
@@ -1042,25 +1009,24 @@ class ActionBatchNetworks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'vlanProfiles'],
-            'operation': 'deleteNetworkVlanProfile'
+            "tags": ["networks", "configure", "vlanProfiles"],
+            "operation": "deleteNetworkVlanProfile"
         }
-        resource = f'/networks/{networkId}/vlanProfiles/{iname}'
+        resource = f"/networks/{networkId}/vlanProfiles/{iname}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def createNetworkWebhooksPayloadTemplate(self, networkId: str, name: str, **kwargs):
-        """
-        **Create a webhook payload template for a network**
+        """**Create a webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!create-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -1074,12 +1040,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'createNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "createNetworkWebhooksPayloadTemplate"
         }
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates'
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates"
 
-        body_params = ['name', 'body', 'headers', 'bodyFile', 'headersFile', ]
+        body_params = ["name", "body", "headers", "bodyFile", "headersFile", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -1087,15 +1053,14 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 
 
 
     def deleteNetworkWebhooksPayloadTemplate(self, networkId: str, payloadTemplateId: str):
-        """
-        **Destroy a webhook payload template for a network**
+        """**Destroy a webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!delete-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -1103,25 +1068,24 @@ class ActionBatchNetworks(object):
         """
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'deleteNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "deleteNetworkWebhooksPayloadTemplate"
         }
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}'
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}"
 
         action = {
             "resource": resource,
             "operation": "destroy",
         }
         return action
-        
+
 
 
 
 
 
     def updateNetworkWebhooksPayloadTemplate(self, networkId: str, payloadTemplateId: str, **kwargs):
-        """
-        **Update a webhook payload template for a network**
+        """**Update a webhook payload template for a network**
         https://developer.cisco.com/meraki/api-v1/#!update-network-webhooks-payload-template
 
         - networkId (string): Network ID
@@ -1136,12 +1100,12 @@ class ActionBatchNetworks(object):
         kwargs.update(locals())
 
         metadata = {
-            'tags': ['networks', 'configure', 'webhooks', 'payloadTemplates'],
-            'operation': 'updateNetworkWebhooksPayloadTemplate'
+            "tags": ["networks", "configure", "webhooks", "payloadTemplates"],
+            "operation": "updateNetworkWebhooksPayloadTemplate"
         }
-        resource = f'/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}'
+        resource = f"/networks/{networkId}/webhooks/payloadTemplates/{payloadTemplateId}"
 
-        body_params = ['name', 'body', 'headers', 'bodyFile', 'headersFile', ]
+        body_params = ["name", "body", "headers", "bodyFile", "headersFile", ]
         payload = {k.strip(): v for k, v in kwargs.items() if k.strip() in body_params}
         action = {
             "resource": resource,
@@ -1149,7 +1113,7 @@ class ActionBatchNetworks(object):
             "body": payload
         }
         return action
-        
+
 
 
 

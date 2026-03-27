@@ -16,8 +16,6 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.event import async_track_time_interval
 
 from .. import meraki_vendor as meraki
-from ..meraki_vendor.exceptions import APIError, AsyncAPIError
-
 from ..const import (
     API_PRIORITY_HIGH,
     API_PRIORITY_LOW,
@@ -36,6 +34,7 @@ from ..const import (
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
 )
+from ..meraki_vendor.exceptions import APIError, AsyncAPIError
 from ..types import (
     DeviceStatus,
     MemoryUsageData,

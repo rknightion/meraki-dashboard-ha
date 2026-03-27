@@ -2,17 +2,15 @@ import asyncio
 import json
 import random
 import ssl
-import sys
 import time
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import datetime
 
 import aiohttp
 
 from .._version import __version__
 from ..common import *
 from ..config import *
-from ..rest_session import user_agent_extended
 
 
 # Main module interface
@@ -130,7 +128,7 @@ class AsyncRestSession:
         kwargs.setdefault("timeout", self._single_request_timeout)
 
         # Ensure proper base URL
-        allowed_domains = ['meraki.com', 'meraki.cn']
+        allowed_domains = ["meraki.com", "meraki.cn"]
 
         # aiohttp manipulates URLs as instances of the yarl.URL class
         if not isinstance(url, str):
@@ -251,16 +249,16 @@ class AsyncRestSession:
                             message = None
 
                     # Check for specific concurrency errors
-                    network_delete_concurrency_error_text = 'This may be due to concurrent requests to delete networks.'
-                    action_batch_concurrency_error = {'errors': [
-                        'Too many concurrently executing batches. Maximum is 5 confirmed but not yet executed batches.']
+                    network_delete_concurrency_error_text = "This may be due to concurrent requests to delete networks."
+                    action_batch_concurrency_error = {"errors": [
+                        "Too many concurrently executing batches. Maximum is 5 confirmed but not yet executed batches."]
                     }
                     # Check specifically for network delete concurrency error
-                    if message_is_dict and 'errors' in message.keys() \
-                            and network_delete_concurrency_error_text in message['errors'][0]:
+                    if message_is_dict and "errors" in message.keys() \
+                            and network_delete_concurrency_error_text in message["errors"][0]:
                         wait = random.randint(15, self._network_delete_retry_wait_time)
                         if self._logger:
-                            self._logger.warning(f'{tag}, {operation} - {status} {reason}, retrying in {wait} seconds')
+                            self._logger.warning(f"{tag}, {operation} - {status} {reason}, retrying in {wait} seconds")
                         time.sleep(wait)
                         retries -= 1
                         if retries == 0:
