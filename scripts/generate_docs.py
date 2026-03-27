@@ -120,7 +120,7 @@ def safe_eval(node: ast.AST, values: dict[str, Any]) -> Any:
     if isinstance(node, ast.Dict):
         return {
             safe_eval(key, values): safe_eval(value, values)
-            for key, value in zip(node.keys, node.values)
+            for key, value in zip(node.keys, node.values, strict=False)
         }
     if isinstance(node, ast.List):
         return [safe_eval(elt, values) for elt in node.elts]
@@ -302,7 +302,7 @@ def extract_description_dicts(
                 continue
 
             entries: list[dict[str, Any]] = []
-            for key_node, entry_node in zip(value_node.keys, value_node.values):
+            for key_node, entry_node in zip(value_node.keys, value_node.values, strict=False):
                 if not isinstance(entry_node, ast.Call):
                     continue
                 if get_call_name(entry_node.func) != description_class:
@@ -323,16 +323,19 @@ class ButtonDescriptionExtractor(ast.NodeVisitor):
     """Extract ButtonEntityDescription calls tied to button classes."""
 
     def __init__(self, values: dict[str, Any]) -> None:
+        """Initialize with resolved constant values."""
         self._values = values
         self._class_stack: list[ast.ClassDef] = []
         self.results: list[dict[str, Any]] = []
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """Track class scope for nested description extraction."""
         self._class_stack.append(node)
         self.generic_visit(node)
         self._class_stack.pop()
 
     def visit_Assign(self, node: ast.Assign) -> None:
+        """Extract ButtonEntityDescription from plain assignments."""
         if self._class_stack and isinstance(node.value, ast.Call):
             if get_call_name(node.value.func) == "ButtonEntityDescription":
                 class_node = self._class_stack[-1]
@@ -345,6 +348,7 @@ class ButtonDescriptionExtractor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        """Extract ButtonEntityDescription from annotated assignments."""
         if self._class_stack and isinstance(node.value, ast.Call):
             if get_call_name(node.value.func) == "ButtonEntityDescription":
                 class_node = self._class_stack[-1]
