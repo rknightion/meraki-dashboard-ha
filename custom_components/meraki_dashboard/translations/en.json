@@ -11,8 +11,8 @@
         },
         "data_description": {
           "api_key": "Your Meraki Dashboard API key. Generate one from: Dashboard > Organization > Settings > Dashboard API access. The API key should have full read access to your organization.",
-          "organization_id": "Your Meraki Organization ID. You can find this in your Dashboard URL (e.g., https://dashboard.meraki.com/o/XXXXX) or in the API settings page.",
-          "base_url": "Optional: Custom Meraki API base URL. Leave blank to use the default (https://api.meraki.com/api/v1). Only change this if using a special Meraki instance or testing environment."
+          "organization_id": "Your Meraki Organization ID. You can find this in your Dashboard URL (e.g., {dashboard_url}) or in the API settings page.",
+          "base_url": "Optional: Custom Meraki API base URL. Leave blank to use the default ({default_api_url}). Only change this if using a special Meraki instance or testing environment."
         }
       },
       "organization": {

@@ -11,8 +11,8 @@
         },
         "data_description": {
           "api_key": "Dein Meraki Dashboard-API-Schlüssel. Erstelle ihn unter: Dashboard > Organization > Settings > Dashboard API access. Der API-Schlüssel sollte vollständigen Lesezugriff auf deine Organisation haben.",
-          "organization_id": "Deine Meraki-Organisations-ID. Du findest sie in der Dashboard-URL (z. B. https://dashboard.meraki.com/o/XXXXX) oder auf der Seite mit den API-Einstellungen.",
-          "base_url": "Optional: Benutzerdefinierte Basis-URL der Meraki-API. Lasse dieses Feld leer, um die Standard-URL (https://api.meraki.com/api/v1) zu verwenden. Ändere sie nur, wenn du eine spezielle Meraki-Instanz oder eine Testumgebung nutzt."
+          "organization_id": "Deine Meraki-Organisations-ID. Du findest sie in der Dashboard-URL (z. B. {dashboard_url}) oder auf der Seite mit den API-Einstellungen.",
+          "base_url": "Optional: Benutzerdefinierte Basis-URL der Meraki-API. Lasse dieses Feld leer, um die Standard-URL ({default_api_url}) zu verwenden. Ändere sie nur, wenn du eine spezielle Meraki-Instanz oder eine Testumgebung nutzt."
         }
       },
       "organization": {

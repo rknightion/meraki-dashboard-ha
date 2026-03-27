@@ -11,8 +11,8 @@
         },
         "data_description": {
           "api_key": "Votre clé API Meraki Dashboard. Générez-en une depuis : Dashboard > Organization > Settings > Dashboard API access. La clé API doit disposer d'un accès en lecture complet à votre organisation.",
-          "organization_id": "Votre ID d'organisation Meraki. Vous pouvez le trouver dans l'URL du Dashboard (par ex. https://dashboard.meraki.com/o/XXXXX) ou sur la page des paramètres de l'API.",
-          "base_url": "Facultatif : URL de base personnalisée de l'API Meraki. Laissez vide pour utiliser l'URL par défaut (https://api.meraki.com/api/v1). Ne la modifiez que si vous utilisez une instance Meraki spécifique ou un environnement de test."
+          "organization_id": "Votre ID d'organisation Meraki. Vous pouvez le trouver dans l'URL du Dashboard (par ex. {dashboard_url}) ou sur la page des paramètres de l'API.",
+          "base_url": "Facultatif : URL de base personnalisée de l'API Meraki. Laissez vide pour utiliser l'URL par défaut ({default_api_url}). Ne la modifiez que si vous utilisez une instance Meraki spécifique ou un environnement de test."
         }
       },
       "organization": {

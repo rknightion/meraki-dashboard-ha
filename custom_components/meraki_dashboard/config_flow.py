@@ -268,6 +268,10 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+            description_placeholders={
+                "dashboard_url": "https://dashboard.meraki.com/o/XXXXX",
+                "default_api_url": DEFAULT_BASE_URL,
+            },
         )
 
     async def async_step_organization(
