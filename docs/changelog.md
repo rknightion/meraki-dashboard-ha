@@ -11,6 +11,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.3](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.2...v0.37.3) (2026-03-27)
+
+
+### Bug Fixes
+
+* vendor meraki SDK to bypass broken setuptools constraint ([6cfaaab](https://github.com/rknightion/meraki-dashboard-ha/commit/6cfaaab1b5c159950adcd5bc4c84c0dcda2b2a1c))
+
+
+### Miscellaneous Chores
+
+* **deps:** update github actions ([#260](https://github.com/rknightion/meraki-dashboard-ha/issues/260)) ([6c45995](https://github.com/rknightion/meraki-dashboard-ha/commit/6c45995e61e6319b1732c6b9dd3efea04e027598))
+
 ## [0.37.2](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.1...v0.37.2) (2026-03-27)
 
 
