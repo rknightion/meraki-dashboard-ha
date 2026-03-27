@@ -3,7 +3,7 @@
 import asyncio
 
 import pytest
-from meraki.exceptions import APIError
+from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
 from custom_components.meraki_dashboard.utils.error_handling import (
     handle_api_errors,

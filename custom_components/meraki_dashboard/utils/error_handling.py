@@ -12,12 +12,12 @@ from aiohttp import ClientError, ClientResponseError, ClientTimeout
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 try:
-    from meraki.exceptions import AsyncAPIError as MerakiAsyncAPIError
+    from ..meraki_vendor.exceptions import AsyncAPIError as MerakiAsyncAPIError
 except Exception:  # pragma: no cover - optional import
     MerakiAsyncAPIError = None
 
 try:
-    from meraki.exceptions import APIError as MerakiSdkApiError
+    from ..meraki_vendor.exceptions import APIError as MerakiSdkApiError
 except Exception:  # pragma: no cover - optional import
     MerakiSdkApiError = None
 

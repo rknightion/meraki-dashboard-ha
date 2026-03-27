@@ -465,7 +465,7 @@ class TestConfigFlowErrorHandling:
         self, hass: HomeAssistant, load_json_fixture
     ):
         """Test error when fetching network devices fails."""
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         orgs = load_json_fixture("organizations.json")
         networks = load_json_fixture("networks.json")

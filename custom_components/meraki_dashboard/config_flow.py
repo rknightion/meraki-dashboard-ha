@@ -6,8 +6,6 @@ import logging
 import re
 from typing import Any
 
-import meraki
-import meraki.aio
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
@@ -16,7 +14,9 @@ from homeassistant.core import callback
 from homeassistant.exceptions import ConfigValidationError
 from homeassistant.helpers import selector
 from homeassistant.helpers.selector import Selector
-from meraki.exceptions import APIError, AsyncAPIError
+
+from . import meraki_vendor as meraki
+from .meraki_vendor.exceptions import APIError, AsyncAPIError
 
 from .config.schemas import (
     APIKeyConfig,

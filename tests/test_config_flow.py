@@ -113,7 +113,7 @@ class TestMerakiDashboardConfigFlow:
         """Test user flow with invalid authentication."""
 
         # Mock API to raise authentication error
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         # Create a custom APIError that behaves correctly
         class MockAPIError(APIError):
@@ -289,7 +289,7 @@ class TestMerakiDashboardConfigFlow:
         mock_config_flow.hass = hass
         hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         # Create a custom APIError that behaves correctly
         class MockAPIError(APIError):
@@ -330,7 +330,7 @@ class TestMerakiDashboardConfigFlow:
         hass.config_entries._entries[mock_config_entry.entry_id] = mock_config_entry
 
         # Simulate forbidden access
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         # Create a custom APIError that behaves correctly
         class MockAPIError(APIError):

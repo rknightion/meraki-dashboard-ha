@@ -73,8 +73,8 @@ def _setup_logging():
         "requests.packages.urllib3",
         "httpcore",
         "httpx",
-        "meraki.api",
-        "meraki.rest_session",
+        "custom_components.meraki_dashboard.meraki_vendor.api",
+        "custom_components.meraki_dashboard.meraki_vendor.rest_session",
     ]
 
     # Only suppress if we're not in debug mode

@@ -101,7 +101,7 @@ class IntegrationTestHelper:
         async_api_mock.__aenter__.return_value = self._mock_api
         async_api_mock.__aexit__.return_value = None
 
-        with patch("meraki.aio.AsyncDashboardAPI", return_value=async_api_mock):
+        with patch("custom_components.meraki_dashboard.meraki_vendor.aio.AsyncDashboardAPI", return_value=async_api_mock):
             # Mock the platform setup functions
             with patch(
                 "custom_components.meraki_dashboard.sensor.async_setup_entry",

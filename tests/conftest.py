@@ -177,7 +177,7 @@ def mock_empty_sensor_data():
 @pytest.fixture(name="api_error_401")
 def api_error_401():
     """Mock 401 API error."""
-    from meraki.exceptions import APIError
+    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 401
@@ -190,7 +190,7 @@ def api_error_401():
 @pytest.fixture(name="api_error_403")
 def api_error_403():
     """Mock 403 API error."""
-    from meraki.exceptions import APIError
+    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 403
@@ -203,7 +203,7 @@ def api_error_403():
 @pytest.fixture(name="api_error_500")
 def api_error_500():
     """Mock 500 API error."""
-    from meraki.exceptions import APIError
+    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 500
@@ -216,7 +216,7 @@ def api_error_500():
 @pytest.fixture(name="api_error_429")
 def api_error_429():
     """Mock 429 Rate Limit API error."""
-    from meraki.exceptions import APIError
+    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 429

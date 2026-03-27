@@ -10,7 +10,10 @@ import pytest
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from meraki.exceptions import APIError, AsyncAPIError
+from custom_components.meraki_dashboard.meraki_vendor.exceptions import (
+    APIError,
+    AsyncAPIError,
+)
 
 from custom_components.meraki_dashboard.const import (
     CONF_BASE_URL,

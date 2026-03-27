@@ -350,7 +350,7 @@ class TestMerakiNetworkHub:
 
     async def test_async_discover_devices_api_error(self, network_hub):
         """Test device discovery with API error."""
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         # Mock the async API call to raise APIError
         async def mock_api_error(*args, **kwargs):
@@ -422,7 +422,7 @@ class TestMerakiNetworkHub:
         self, mock_organization_hub, mock_config_entry
     ):
         """Test wireless data setup with API error."""
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         from custom_components.meraki_dashboard.utils.cache import clear_api_cache
 
@@ -542,7 +542,7 @@ class TestMerakiNetworkHub:
         self, mock_organization_hub, mock_config_entry
     ):
         """Test switch data setup with API error."""
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         from custom_components.meraki_dashboard.utils.cache import clear_api_cache
 
@@ -633,7 +633,7 @@ class TestMerakiNetworkHub:
 
     async def test_async_get_sensor_data_api_error(self, network_hub):
         """Test sensor data retrieval with API error."""
-        from meraki.exceptions import APIError
+        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
 
         network_hub.devices = [{"serial": "device1", "name": "MT Device 1"}]
 
