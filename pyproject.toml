@@ -17,13 +17,13 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 dependencies = [
-    "meraki==2.2.0",
+    "meraki==3.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "homeassistant>=2025.12.2",
-    "homeassistant-stubs>=2025.12.2",
+    "homeassistant>=2026.6.4",
+    "homeassistant-stubs>=2026.6.4",
     "ruff>=0.12.5",
     "mypy",
     "bandit",
@@ -40,13 +40,6 @@ Homepage = "https://github.com/rknightion/meraki-dashboard-ha"
 Documentation = "https://m7kni.io/meraki-dashboard-ha"
 Repository = "https://github.com/rknightion/meraki-dashboard-ha"
 "Bug Tracker" = "https://github.com/rknightion/meraki-dashboard-ha/issues"
-
-# Temporary override: meraki 2.0.3 incorrectly constrains pytest<9.0.0
-# Remove once https://github.com/meraki/dashboard-api-python/pull/309 is merged
-[tool.uv]
-override-dependencies = [
-    "pytest>=9.0.0",
-]
 
 [tool.mypy]
 python_version = "3.14"
@@ -123,7 +116,6 @@ skips = ["B101", "B601"]
 [tool.ruff]
 target-version = "py314"
 line-length = 88
-exclude = ["custom_components/meraki_dashboard/meraki_vendor"]
 
 [tool.ruff.lint]
 select = [
@@ -150,6 +142,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D100", "D101", "D102", "D103", "D104"]
+"tools/apidrift/tests/*" = ["D100", "D101", "D102", "D103", "D104"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -20,6 +20,8 @@
     "httpx"
   ],
   "quality_scale": "silver",
-  "requirements": [],
+  "requirements": [
+    "meraki==3.2.0"
+  ],
   "version": "0.37.4"
 }

@@ -10,6 +10,10 @@ import pytest
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from meraki.exceptions import (
+    APIError,
+    AsyncAPIError,
+)
 
 from custom_components.meraki_dashboard.const import (
     CONF_BASE_URL,
@@ -22,10 +26,6 @@ from custom_components.meraki_dashboard.const import (
 from custom_components.meraki_dashboard.hubs.organization import (
     MerakiOrganizationHub,
     _configure_third_party_logging,
-)
-from custom_components.meraki_dashboard.meraki_vendor.exceptions import (
-    APIError,
-    AsyncAPIError,
 )
 
 
@@ -121,14 +121,18 @@ def mock_dashboard_api():
 
 
 @pytest.fixture
-def organization_hub(hass: HomeAssistant, mock_config_entry):
+async def organization_hub(hass: HomeAssistant, mock_config_entry):
     """Create organization hub fixture."""
-    return MerakiOrganizationHub(
+    hub = MerakiOrganizationHub(
         hass=hass,
         api_key="test_api_key",
         organization_id="test_org_id",
         config_entry=mock_config_entry,
     )
+    yield hub
+    # Tear down: stop the rate-limiter worker and any scheduled timers so the
+    # Home Assistant test harness does not flag lingering tasks/timers.
+    await hub.async_unload()
 
 
 class TestMerakiOrganizationHub:
@@ -334,6 +338,7 @@ class TestMerakiOrganizationHub:
 
         mock_network_hub = Mock()
         mock_network_hub.async_setup = AsyncMock(return_value=True)
+        mock_network_hub.async_unload = AsyncMock()
         mock_network_hub.hub_name = "Network 1_MR"
         mock_network_hub.devices = []  # Add devices list for len() check
         mock_network_hub_class.return_value = mock_network_hub

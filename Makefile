@@ -1,6 +1,6 @@
 # Makefile for Meraki Dashboard Home Assistant Integration
 
-.PHONY: help install test lint format clean pre-commit hassfest docs docs-generate check-all coverage test-file test-watch validate
+.PHONY: help install test test-tools lint format clean pre-commit hassfest docs docs-generate check-all coverage test-file test-watch validate
 
 # Default target
 help:
@@ -226,3 +226,26 @@ install-hooks:
 	uv run pre-commit install
 	uv run pre-commit install --hook-type commit-msg
 	@echo "Git hooks installed!"
+
+# API drift detection (vendored Meraki OpenAPI spec vs live)
+MERAKI_SPEC_URL := https://raw.githubusercontent.com/meraki/openapi/master/openapi/spec3.json
+
+.PHONY: refresh-meraki-spec
+refresh-meraki-spec: ## Re-vendor the Meraki OpenAPI baseline spec
+	@echo "Fetching live Meraki OpenAPI spec..."
+	curl -fsSL "$(MERAKI_SPEC_URL)" -o /tmp/meraki-spec3.json
+	@python3 -c "import json; print('info.version =', json.load(open('/tmp/meraki-spec3.json'))['info']['version'])"
+	gzip -9 -c /tmp/meraki-spec3.json > spec/meraki-openapi.json.gz
+	@echo "Vendored spec/meraki-openapi.json.gz — update the version note in spec/README.md"
+
+.PHONY: api-drift
+api-drift: ## Run the drift tool locally against the live Meraki spec
+	PYTHONPATH=tools uv run python -m apidrift \
+		--baseline spec/meraki-openapi.json.gz \
+		--live-url "$(MERAKI_SPEC_URL)" \
+		--src custom_components/meraki_dashboard \
+		--format md
+
+.PHONY: test-tools
+test-tools: ## Run the apidrift tool's own unit tests (coverage disabled)
+	PYTHONPATH=tools uv run python -m pytest tools/apidrift/tests/ --no-cov --tb=short

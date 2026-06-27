@@ -95,6 +95,10 @@ class TestMTRefreshService:
             assert service._refresh_interval == MT_REFRESH_COMMAND_INTERVAL
             mock_refresh.assert_called_once()
 
+        # Cancel the scheduled interval timer so the HA harness does not flag a
+        # lingering timer at teardown.
+        await service.async_stop()
+
     async def test_async_start_custom_interval(
         self, hass: HomeAssistant, mock_network_hub
     ):
@@ -109,6 +113,10 @@ class TestMTRefreshService:
             assert service._running is True
             assert service._refresh_interval == 10
             mock_refresh.assert_called_once()
+
+        # Cancel the scheduled interval timer so the HA harness does not flag a
+        # lingering timer at teardown.
+        await service.async_stop()
 
     async def test_async_start_already_running(
         self, hass: HomeAssistant, mock_network_hub

@@ -10,12 +10,13 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
+import meraki.aio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.event import async_track_time_interval
+from meraki.exceptions import APIError, AsyncAPIError
 
-from .. import meraki_vendor as meraki
 from ..const import (
     API_PRIORITY_HIGH,
     API_PRIORITY_LOW,
@@ -34,7 +35,6 @@ from ..const import (
     STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
 )
-from ..meraki_vendor.exceptions import APIError, AsyncAPIError
 from ..types import (
     DeviceStatus,
     MemoryUsageData,

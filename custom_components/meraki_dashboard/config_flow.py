@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Any
 
+import meraki.aio
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
@@ -14,8 +15,8 @@ from homeassistant.core import callback
 from homeassistant.exceptions import ConfigValidationError
 from homeassistant.helpers import selector
 from homeassistant.helpers.selector import Selector
+from meraki.exceptions import APIError, AsyncAPIError
 
-from . import meraki_vendor as meraki
 from .config.schemas import (
     APIKeyConfig,
     BaseURLConfig,
@@ -74,7 +75,6 @@ from .const import (
     SENSOR_TYPE_MV,
     USER_AGENT,
 )
-from .meraki_vendor.exceptions import APIError, AsyncAPIError
 from .utils import sanitize_device_name
 from .utils.device_info import determine_device_type, get_device_display_name
 

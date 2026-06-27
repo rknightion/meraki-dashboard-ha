@@ -1,0 +1,186 @@
+name: SDK version
+
+on:
+  schedule:
+    - cron: "37 6 * * *" # daily at 06:37 UTC (offset from api-drift at 06:17)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  # ── Job 1: check whether the pinned Meraki SDK is behind the latest final PyPI release ──
+  version-watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          python-version: "3.14"
+          activate-environment: true
+          enable-cache: true
+
+      - name: Install project
+        run: uv sync
+
+      - name: Determine version status
+        id: versions
+        run: |
+          set -euo pipefail
+
+          # Read the pinned version from pyproject.toml using tomllib (stdlib since Python 3.11)
+          PINNED=$(python3 -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          deps = data['project']['dependencies']
+          for d in deps:
+              if d.startswith('meraki=='):
+                  print(d.split('==', 1)[1].strip())
+                  break
+          ")
+
+          # Fetch the latest FINAL release from PyPI.
+          # Pre-releases (a/b/rc) are excluded by matching only pure numeric version strings.
+          LATEST=$(curl -fsSL https://pypi.org/pypi/meraki/json | python3 -c "
+          import json, sys, re
+          data = json.load(sys.stdin)
+          # Only accept versions whose string is purely digits-and-dots (no a/b/rc suffixes)
+          finals = [v for v in data['releases'] if re.fullmatch(r'[0-9]+(?:\.[0-9]+)*', v)]
+          best = max(finals, key=lambda v: tuple(int(x) for x in v.split('.')))
+          print(best)
+          ")
+
+          echo "pinned=$PINNED" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+
+          if [ "$PINNED" != "$LATEST" ]; then
+            echo "behind=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "# Meraki Python SDK version drift"
+              echo ""
+              echo "Pinned version in \`pyproject.toml\`: \`$PINNED\`"
+              echo "Latest final release on PyPI: \`$LATEST\`"
+              echo ""
+              echo "Update the \`meraki==\` constraint in \`pyproject.toml\` and run \`uv lock\`."
+              echo "Check the [Meraki Python SDK changelog](https://github.com/meraki/dashboard-api-python/releases) for breaking changes before upgrading."
+            } > /tmp/sdk.md
+          else
+            echo "behind=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report SDK version drift
+        if: steps.versions.outputs.behind == 'true'
+        uses: ./.github/actions/report-drift
+        with:
+          lane-label: sdk-drift
+          title: "Meraki Python SDK is behind latest release"
+          report-path: /tmp/sdk.md
+          # Provide EITHER: ANTHROPIC_API_KEY (pay-per-use) or CLAUDE_CODE_OAUTH_TOKEN
+          # (Claude Pro/Max subscription, via `claude setup-token`). Both empty => skip.
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Resolve SDK drift issue on clean run
+        if: steps.versions.outputs.behind == 'false'
+        uses: ./.github/actions/resolve-drift
+        with:
+          lane-label: sdk-drift
+
+  # ── Job 2: run the test suite against the latest final Meraki SDK release ──
+  smoke-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          python-version: "3.14"
+          activate-environment: true
+          enable-cache: true
+
+      - name: Install project
+        run: uv sync
+
+      - name: Determine latest final Meraki SDK version
+        id: sdk-latest
+        run: |
+          set -euo pipefail
+          # Only accept pure numeric version strings (no a/b/rc pre-release suffixes)
+          LATEST=$(curl -fsSL https://pypi.org/pypi/meraki/json | python3 -c "
+          import json, sys, re
+          data = json.load(sys.stdin)
+          finals = [v for v in data['releases'] if re.fullmatch(r'[0-9]+(?:\.[0-9]+)*', v)]
+          best = max(finals, key=lambda v: tuple(int(x) for x in v.split('.')))
+          print(best)
+          ")
+          echo "version=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Run test suite with latest SDK overlay
+        id: smoke
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          PYTHONIOENCODING: utf-8
+          TZ: UTC
+          HA_DISABLE_ANALYTICS: true
+          HOMEASSISTANT_CONFIG_DIR: /tmp/homeassistant
+          LC_ALL: C.UTF-8
+          LANG: C.UTF-8
+        run: |
+          mkdir -p /tmp/homeassistant
+          set +e
+          # uv run --with overlays the specified meraki version on top of the synced env
+          # for this single invocation, without modifying pyproject.toml or uv.lock.
+          # This lets us smoke-test the latest SDK release against the pinned test suite.
+          uv run --with "meraki==${{ steps.sdk-latest.outputs.version }}" \
+            python -m pytest tests/ > /tmp/sdk-smoke.log 2>&1
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Write SDK smoke report
+        if: steps.smoke.outputs.code != '0'
+        run: |
+          {
+            echo "# SDK smoke test failure"
+            echo ""
+            echo "The test suite failed when run against Meraki Python SDK \`${{ steps.sdk-latest.outputs.version }}\` (latest final release)."
+            echo "The pinned version in \`pyproject.toml\` may need updating, or the integration code needs fixes for the new SDK."
+            echo ""
+            echo "## Pytest output"
+            echo '```'
+            cat /tmp/sdk-smoke.log
+            echo '```'
+          } > /tmp/sdk-smoke.md
+
+      - name: Report SDK smoke failure
+        if: steps.smoke.outputs.code != '0'
+        uses: ./.github/actions/report-drift
+        with:
+          lane-label: sdk-smoke
+          title: "Test suite fails against latest Meraki SDK"
+          report-path: /tmp/sdk-smoke.md
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Resolve SDK smoke issue on passing run
+        if: steps.smoke.outputs.code == '0'
+        uses: ./.github/actions/resolve-drift
+        with:
+          lane-label: sdk-smoke

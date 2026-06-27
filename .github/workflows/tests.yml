@@ -131,6 +131,13 @@ jobs:
             --tb=short \
             -v
 
+      - name: Run apidrift tool tests
+        env:
+          # The apidrift drift-detection tool lives under tools/; its tests do not
+          # cover custom_components, so run them with coverage disabled.
+          PYTHONPATH: tools
+        run: uv run python -m pytest tools/apidrift/tests/ --no-cov --tb=short
+
       # Coverage reports are generated locally (see htmlcov/ directory)
       # Uncomment below to upload to Codecov (requires CODECOV_TOKEN secret)
       - name: Upload coverage reports to Codecov

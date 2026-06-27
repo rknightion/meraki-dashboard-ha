@@ -214,3 +214,6 @@ config/*
 .claude/settings.local.json
 
 config/
+
+# Scratch plans/specs (never committed)
+docs/superpowers/

@@ -1,0 +1,96 @@
+name: API drift
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # daily at 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  spec-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          python-version: "3.14"
+          activate-environment: true
+          enable-cache: true
+
+      - name: Install project (incl. dev extras)
+        run: uv sync
+
+      - name: Fetch live Meraki OpenAPI spec
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/meraki/openapi/master/openapi/spec3.json" -o /tmp/live.json
+
+      - name: Run apidrift (findings + reduced specs)
+        id: drift
+        env:
+          PYTHONPATH: tools
+        run: |
+          set +e
+          uv run python -m apidrift \
+            --baseline spec/meraki-openapi.json.gz \
+            --live /tmp/live.json \
+            --src custom_components/meraki_dashboard \
+            --emit-reduced /tmp/reduced \
+            --format md > /tmp/drift.md
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Fail on tool error (apidrift exit not 0/3)
+        if: steps.drift.outputs.code != '0' && steps.drift.outputs.code != '3'
+        run: |
+          echo "apidrift errored (exit ${CODE})"; cat /tmp/drift.md || true; exit 1
+        env:
+          CODE: ${{ steps.drift.outputs.code }}
+
+      - name: oasdiff breaking on reduced specs
+        id: oasdiff
+        run: |
+          set +e
+          {
+            echo ''
+            echo '## oasdiff breaking changes (consumed surface)'
+            echo '```'
+          } >> /tmp/drift.md
+          docker run --rm -v /tmp/reduced:/specs -v "$PWD/spec:/cfg" tufin/oasdiff breaking \
+            /specs/baseline.json /specs/live.json \
+            --fail-on WARN \
+            --err-ignore /cfg/oasdiff-ignore.txt \
+            --warn-ignore /cfg/oasdiff-ignore.txt >> /tmp/drift.md 2>&1
+          code=$?
+          echo '```' >> /tmp/drift.md
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Report + fail on drift
+        if: steps.drift.outputs.code == '3' || steps.oasdiff.outputs.code != '0'
+        uses: ./.github/actions/report-drift
+        with:
+          lane-label: api-drift
+          title: "Meraki OpenAPI drift on consumed operations"
+          report-path: /tmp/drift.md
+          # Provide EITHER: ANTHROPIC_API_KEY (pay-per-use) or CLAUDE_CODE_OAUTH_TOKEN
+          # (Claude Pro/Max subscription, via `claude setup-token`). Both empty => skip.
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Resolve tracking issue on clean run
+        if: steps.drift.outputs.code == '0' && steps.oasdiff.outputs.code == '0'
+        uses: ./.github/actions/resolve-drift
+        with:
+          lane-label: api-drift

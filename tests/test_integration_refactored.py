@@ -95,7 +95,7 @@ class TestIntegrationSetupWithBuilders:
         """Test setup with API error."""
         from unittest.mock import MagicMock, patch
 
-        from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
+        from meraki.exceptions import APIError
 
         helper = IntegrationTestHelper(hass)
 

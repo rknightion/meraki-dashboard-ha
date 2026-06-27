@@ -1,8 +1,9 @@
 """Global test fixtures for Meraki Dashboard integration."""
 
+import asyncio
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -34,6 +35,50 @@ def clear_cache():
     yield
     # Optionally clear after test as well
     clear_api_cache()
+
+
+@pytest.fixture(autouse=True)
+def block_mt_action_batch():
+    """Stop the MT refresh service from making a real action-batch HTTP call.
+
+    ``MTRefreshService._send_action_batch`` posts directly via ``aiohttp`` (it does
+    not go through the mocked Meraki SDK), so any test that fully sets up the
+    integration with MT15/MT40 devices would otherwise open a real socket — which
+    the Home Assistant test harness blocks. No test exercises the real method (the
+    dedicated tests patch it per-instance, which still overrides this), so a no-op
+    default keeps integration-setup tests hermetic.
+    """
+    with patch(
+        "custom_components.meraki_dashboard.services.mt_refresh_service."
+        "MTRefreshService._send_action_batch",
+        new_callable=AsyncMock,
+    ):
+        yield
+
+
+@pytest.fixture(autouse=True)
+async def stop_lingering_rate_limiters():
+    """Cancel any rate-limiter worker tasks a test left running.
+
+    ``MerakiRateLimiter`` lazily starts a background ``_worker`` task on first use
+    and stops it in ``MerakiOrganizationHub.async_unload``. Tests that exercise hub
+    API paths without a full unload — or where setup fails before the hub is tracked
+    in ``hass.data`` and can be unloaded — would otherwise leak that task and trip
+    Home Assistant's lingering-task check at teardown. This is a safety net; tests
+    that own a hub should still unload it explicitly.
+    """
+    yield
+    workers = [
+        task
+        for task in asyncio.all_tasks()
+        if not task.done()
+        and "MerakiRateLimiter._worker"
+        in getattr(getattr(task.get_coro(), "cr_code", None), "co_qualname", "")
+    ]
+    for task in workers:
+        task.cancel()
+    if workers:
+        await asyncio.gather(*workers, return_exceptions=True)
 
 
 @pytest.fixture(name="bypass_setup_fixture")
@@ -177,7 +222,7 @@ def mock_empty_sensor_data():
 @pytest.fixture(name="api_error_401")
 def api_error_401():
     """Mock 401 API error."""
-    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
+    from meraki.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 401
@@ -190,7 +235,7 @@ def api_error_401():
 @pytest.fixture(name="api_error_403")
 def api_error_403():
     """Mock 403 API error."""
-    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
+    from meraki.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 403
@@ -203,7 +248,7 @@ def api_error_403():
 @pytest.fixture(name="api_error_500")
 def api_error_500():
     """Mock 500 API error."""
-    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
+    from meraki.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 500
@@ -216,7 +261,7 @@ def api_error_500():
 @pytest.fixture(name="api_error_429")
 def api_error_429():
     """Mock 429 Rate Limit API error."""
-    from custom_components.meraki_dashboard.meraki_vendor.exceptions import APIError
+    from meraki.exceptions import APIError
 
     response_mock = MagicMock()
     response_mock.status_code = 429
