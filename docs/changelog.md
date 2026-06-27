@@ -11,6 +11,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.4...v0.38.0) (2026-06-27)
+
+
+### Features
+
+* **ci:** add Meraki API + SDK drift early-warning; un-vendor SDK to upstream v3 ([1ad9b00](https://github.com/rknightion/meraki-dashboard-ha/commit/1ad9b00ed8778134b8491e9855f38fab5c85d68f))
+
+
+### Bug Fixes
+
+* **docs:** remove glightbox slide_effect option (rejected by zensical 0.0.44) ([283babb](https://github.com/rknightion/meraki-dashboard-ha/commit/283babb2e1a5b4a9985695c1cff353b5673acdc0))
+
+
+### Miscellaneous Chores
+
+* automerge Renovate vulnerability-fix PRs ([8bb46fb](https://github.com/rknightion/meraki-dashboard-ha/commit/8bb46fb070ec382a5074fee79bbc70a19450c543))
+* **deps:** lock file maintenance ([#267](https://github.com/rknightion/meraki-dashboard-ha/issues/267)) ([62a1731](https://github.com/rknightion/meraki-dashboard-ha/commit/62a17315bd13b493909d3000326d4ba64f0c41db))
+* **deps:** lock file maintenance ([#270](https://github.com/rknightion/meraki-dashboard-ha/issues/270)) ([e0caa6c](https://github.com/rknightion/meraki-dashboard-ha/commit/e0caa6c0ec16487a30bf5d46f02abf3a2d6c04fd))
+* **deps:** lock file maintenance ([#274](https://github.com/rknightion/meraki-dashboard-ha/issues/274)) ([ca97736](https://github.com/rknightion/meraki-dashboard-ha/commit/ca97736e2b05a5e8220b0192e7b32d8e22513aaa))
+* **deps:** lock file maintenance ([#275](https://github.com/rknightion/meraki-dashboard-ha/issues/275)) ([228788f](https://github.com/rknightion/meraki-dashboard-ha/commit/228788f6699ac6137e21dc44b0fee3a2c307c4bb))
+* **deps:** lock file maintenance ([#276](https://github.com/rknightion/meraki-dashboard-ha/issues/276)) ([9bb3fb2](https://github.com/rknightion/meraki-dashboard-ha/commit/9bb3fb26ffdceccc0cb3f516f4503f726db34bd1))
+* **deps:** lock file maintenance ([#278](https://github.com/rknightion/meraki-dashboard-ha/issues/278)) ([078b373](https://github.com/rknightion/meraki-dashboard-ha/commit/078b37331b54b6e75df3e563460924a00b846b5e))
+* **deps:** lock file maintenance ([#280](https://github.com/rknightion/meraki-dashboard-ha/issues/280)) ([689eeeb](https://github.com/rknightion/meraki-dashboard-ha/commit/689eeeb08fe958a280c07e96a0711b7a1253825d))
+* **deps:** lock file maintenance ([#281](https://github.com/rknightion/meraki-dashboard-ha/issues/281)) ([f76fde2](https://github.com/rknightion/meraki-dashboard-ha/commit/f76fde2312b7d62973549ee3814af029d8a258ad))
+* **deps:** update anthropics/claude-code-action action to v1.0.159 ([#284](https://github.com/rknightion/meraki-dashboard-ha/issues/284)) ([9a49850](https://github.com/rknightion/meraki-dashboard-ha/commit/9a498501039de7ebe8a0751e205263f8cabb6768))
+* **deps:** update anthropics/claude-code-action digest to 6e2bd52 ([#271](https://github.com/rknightion/meraki-dashboard-ha/issues/271)) ([7738554](https://github.com/rknightion/meraki-dashboard-ha/commit/7738554e8c4e6d4275aeebb525905605c4e9fe2a))
+* **deps:** update anthropics/claude-code-action digest to 88c168b ([#268](https://github.com/rknightion/meraki-dashboard-ha/issues/268)) ([77070be](https://github.com/rknightion/meraki-dashboard-ha/commit/77070be5d72b6eb08e60e16cc16d3eea85feac2f))
+* **deps:** update anthropics/claude-code-action digest to e7b588b ([#265](https://github.com/rknightion/meraki-dashboard-ha/issues/265)) ([2e6d6d7](https://github.com/rknightion/meraki-dashboard-ha/commit/2e6d6d723a9629f98cab0cb775822b6947cb54c0))
+* **deps:** update astral-sh/setup-uv action to v8 ([#266](https://github.com/rknightion/meraki-dashboard-ha/issues/266)) ([e257b32](https://github.com/rknightion/meraki-dashboard-ha/commit/e257b32ba5eb94f5e4e6d8b13a776b520acaefe9))
+* **deps:** update codecov/codecov-action action to v6 ([#261](https://github.com/rknightion/meraki-dashboard-ha/issues/261)) ([b1fbace](https://github.com/rknightion/meraki-dashboard-ha/commit/b1fbace1a04a1f9dfb644132d9c8710894752e8e))
+* **deps:** update github actions ([#269](https://github.com/rknightion/meraki-dashboard-ha/issues/269)) ([53569f4](https://github.com/rknightion/meraki-dashboard-ha/commit/53569f440812dcf7e9fc2ab2c47ccb24f8ffe5b5))
+* **deps:** update github actions ([#272](https://github.com/rknightion/meraki-dashboard-ha/issues/272)) ([ff88650](https://github.com/rknightion/meraki-dashboard-ha/commit/ff88650fc7ae4216ec0e31fc927b2c3ca5792174))
+* **deps:** update github actions ([#273](https://github.com/rknightion/meraki-dashboard-ha/issues/273)) ([70a0536](https://github.com/rknightion/meraki-dashboard-ha/commit/70a05360de0a6f31e5f19d136168afedf8f698c5))
+* **deps:** update github actions ([#282](https://github.com/rknightion/meraki-dashboard-ha/issues/282)) ([3f98a79](https://github.com/rknightion/meraki-dashboard-ha/commit/3f98a796ab83e24eb34b418249e378da6401fc80))
+* **deps:** update github actions ([#283](https://github.com/rknightion/meraki-dashboard-ha/issues/283)) ([0e9de46](https://github.com/rknightion/meraki-dashboard-ha/commit/0e9de4638bb383970564114a34e41305445ca948))
+* **deps:** update googleapis/release-please-action action to v5 ([#277](https://github.com/rknightion/meraki-dashboard-ha/issues/277)) ([5fb277f](https://github.com/rknightion/meraki-dashboard-ha/commit/5fb277ff6a683b9f038f439d1816ac36834dd0b1))
+
+
+### Build System
+
+* require Python 3.14 to match Home Assistant ([0f89f1b](https://github.com/rknightion/meraki-dashboard-ha/commit/0f89f1b66b66bf86a1e1173e409ccb84544cebb1))
+
 ## [0.37.4](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.3...v0.37.4) (2026-03-27)
 
 
