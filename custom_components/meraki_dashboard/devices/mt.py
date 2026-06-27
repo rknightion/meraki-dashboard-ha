@@ -313,7 +313,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
                         self._device_serial,
                         self._energy_value,
                     )
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     _LOGGER.warning(
                         "Could not restore energy value for %s: %s",
                         self._device_serial,
@@ -370,7 +370,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
                         current_timestamp = datetime.datetime.fromisoformat(
                             timestamp_str.replace("Z", "+00:00")
                         )
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         current_timestamp = None
                 break
 

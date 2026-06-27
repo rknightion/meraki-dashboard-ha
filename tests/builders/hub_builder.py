@@ -25,45 +25,43 @@ class HubBuilder:
         }
         self._mock_api = None
 
-    def with_api_key(self, api_key: str) -> "HubBuilder":
+    def with_api_key(self, api_key: str) -> HubBuilder:
         """Set the API key."""
         self._hub_data["api_key"] = api_key
         return self
 
-    def with_organization(
-        self, org_id: str, org_name: str = "Test Org"
-    ) -> "HubBuilder":
+    def with_organization(self, org_id: str, org_name: str = "Test Org") -> HubBuilder:
         """Set the organization details."""
         self._hub_data["organization_id"] = org_id
         self._hub_data["organization_name"] = org_name
         return self
 
-    def with_base_url(self, base_url: str) -> "HubBuilder":
+    def with_base_url(self, base_url: str) -> HubBuilder:
         """Set the base URL."""
         self._hub_data["base_url"] = base_url
         return self
 
-    def with_networks(self, networks: list[dict[str, Any]]) -> "HubBuilder":
+    def with_networks(self, networks: list[dict[str, Any]]) -> HubBuilder:
         """Set the networks."""
         self._hub_data["networks"] = networks
         return self
 
-    def with_selected_networks(self, network_ids: list[str]) -> "HubBuilder":
+    def with_selected_networks(self, network_ids: list[str]) -> HubBuilder:
         """Set the selected networks."""
         self._hub_data["selected_networks"] = network_ids
         return self
 
-    def with_selected_device_types(self, device_types: list[str]) -> "HubBuilder":
+    def with_selected_device_types(self, device_types: list[str]) -> HubBuilder:
         """Set the selected device types."""
         self._hub_data["selected_device_types"] = device_types
         return self
 
-    def with_scan_interval(self, seconds: int) -> "HubBuilder":
+    def with_scan_interval(self, seconds: int) -> HubBuilder:
         """Set the scan interval in seconds."""
         self._hub_data["scan_interval"] = seconds
         return self
 
-    def with_discovery_interval(self, seconds: int) -> "HubBuilder":
+    def with_discovery_interval(self, seconds: int) -> HubBuilder:
         """Set the discovery interval in seconds."""
         self._hub_data["discovery_interval"] = seconds
         return self
@@ -73,7 +71,7 @@ class HubBuilder:
         network_id: str,
         name: str = "Test Network",
         product_types: list[str] = None,
-    ) -> "HubBuilder":
+    ) -> HubBuilder:
         """Add a network to the hub."""
         network = {
             "id": network_id,
@@ -172,10 +170,13 @@ class HubBuilder:
             AsyncMock(return_value={"items": []})
         )
         mock_api.organizations.getOrganizationClientsOverview = AsyncMock(
-            return_value={"counts": {"total": 0}, "usage": {"overall": {}, "average": 0}}
+            return_value={
+                "counts": {"total": 0},
+                "usage": {"overall": {}, "average": 0},
+            }
         )
-        mock_api.organizations.getOrganizationDevicesSystemMemoryUsageHistoryByInterval = (
-            AsyncMock(return_value=[])
+        mock_api.organizations.getOrganizationDevicesSystemMemoryUsageHistoryByInterval = AsyncMock(
+            return_value=[]
         )
 
         # Mock networks API
@@ -222,12 +223,8 @@ class HubBuilder:
         )
         mock_api.switch.getDeviceSwitchPortsStatuses = AsyncMock(return_value=[])
         mock_api.switch.getDeviceSwitchPorts = AsyncMock(return_value=[])
-        mock_api.switch.getDeviceSwitchPowerModulesStatuses = AsyncMock(
-            return_value={}
-        )
-        mock_api.switch.getDeviceSwitchPortsStatusesPackets = AsyncMock(
-            return_value={}
-        )
+        mock_api.switch.getDeviceSwitchPowerModulesStatuses = AsyncMock(return_value={})
+        mock_api.switch.getDeviceSwitchPortsStatusesPackets = AsyncMock(return_value={})
         mock_api.switch.getNetworkSwitchSettings = AsyncMock(return_value={})
 
         # Store for later access

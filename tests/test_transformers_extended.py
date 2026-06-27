@@ -467,7 +467,7 @@ class TestTransformerRegistry:
         try:
             result = transformer_registry.transform_device_data("UNKNOWN", device_data)
             assert isinstance(result, dict)
-        except (KeyError, ValueError):
+        except KeyError, ValueError:
             # May raise exception for unknown types
             pass
 
@@ -504,7 +504,7 @@ class TestTransformerEdgeCases:
                 result = transformer.transform(None)
                 # If it doesn't raise, should return dict
                 assert isinstance(result, dict)
-            except (TypeError, AttributeError):
+            except TypeError, AttributeError:
                 # May raise for None input
                 pass
 
@@ -631,4 +631,3 @@ class TestTransformerUnitConversions:
         # Percentage should be between 0-100
         if MT_SENSOR_HUMIDITY in result:
             assert 0 <= result[MT_SENSOR_HUMIDITY] <= 100
-

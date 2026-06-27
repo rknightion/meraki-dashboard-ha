@@ -243,7 +243,7 @@ def _handle_client_response_error(
         if err.headers and "Retry-After" in err.headers:
             try:
                 retry_after = int(err.headers["Retry-After"])
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         if log_errors:

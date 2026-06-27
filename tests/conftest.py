@@ -279,9 +279,9 @@ def mock_meraki_api_responses(load_json_fixture):
     """
     return {
         "organizations": load_json_fixture("organizations.json")
-        if Path(__file__).parent.joinpath(
-            "fixtures/api_responses/organizations.json"
-        ).exists()
+        if Path(__file__)
+        .parent.joinpath("fixtures/api_responses/organizations.json")
+        .exists()
         else [
             {
                 "id": "test_org_123",
@@ -290,9 +290,9 @@ def mock_meraki_api_responses(load_json_fixture):
             }
         ],
         "networks": load_json_fixture("networks.json")
-        if Path(__file__).parent.joinpath(
-            "fixtures/api_responses/networks.json"
-        ).exists()
+        if Path(__file__)
+        .parent.joinpath("fixtures/api_responses/networks.json")
+        .exists()
         else [
             {
                 "id": "test_network_1",

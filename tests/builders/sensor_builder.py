@@ -18,7 +18,7 @@ class SensorDataBuilder:
             "networkName": "Test Network",
         }
 
-    def with_timestamp(self, timestamp=None) -> "SensorDataBuilder":
+    def with_timestamp(self, timestamp=None) -> SensorDataBuilder:
         """Set the sensor reading timestamp."""
         if timestamp is None:
             self._data["ts"] = datetime.now(UTC).isoformat()
@@ -28,129 +28,129 @@ class SensorDataBuilder:
             self._data["ts"] = timestamp
         return self
 
-    def with_current_timestamp(self) -> "SensorDataBuilder":
+    def with_current_timestamp(self) -> SensorDataBuilder:
         """Set the timestamp to current time."""
         self._data["ts"] = datetime.now(UTC).isoformat()
         return self
 
-    def with_metric(self, metric: str) -> "SensorDataBuilder":
+    def with_metric(self, metric: str) -> SensorDataBuilder:
         """Set the sensor metric type."""
         self._data["metric"] = metric
         return self
 
-    def with_value(self, value: float) -> "SensorDataBuilder":
+    def with_value(self, value: float) -> SensorDataBuilder:
         """Set the sensor value."""
         self._data["value"] = value
         return self
 
-    def with_serial(self, serial: str) -> "SensorDataBuilder":
+    def with_serial(self, serial: str) -> SensorDataBuilder:
         """Set the device serial number."""
         self._data["serial"] = serial
         return self
 
     def with_network(
         self, network_id: str, network_name: str = "Test Network"
-    ) -> "SensorDataBuilder":
+    ) -> SensorDataBuilder:
         """Set the network information."""
         self._data["networkId"] = network_id
         self._data["networkName"] = network_name
         return self
 
-    def as_temperature(self, celsius: float = 22.5) -> "SensorDataBuilder":
+    def as_temperature(self, celsius: float = 22.5) -> SensorDataBuilder:
         """Configure as a temperature reading."""
         self._data["metric"] = "temperature"
         self._data["value"] = celsius
         return self
 
-    def as_humidity(self, percent: float = 45.0) -> "SensorDataBuilder":
+    def as_humidity(self, percent: float = 45.0) -> SensorDataBuilder:
         """Configure as a humidity reading."""
         self._data["metric"] = "humidity"
         self._data["value"] = percent
         return self
 
-    def as_co2(self, ppm: float = 400.0) -> "SensorDataBuilder":
+    def as_co2(self, ppm: float = 400.0) -> SensorDataBuilder:
         """Configure as a CO2 reading."""
         self._data["metric"] = "co2"
         self._data["value"] = ppm
         return self
 
-    def as_tvoc(self, ppb: float = 100.0) -> "SensorDataBuilder":
+    def as_tvoc(self, ppb: float = 100.0) -> SensorDataBuilder:
         """Configure as a TVOC reading."""
         self._data["metric"] = "tvoc"
         self._data["value"] = ppb
         return self
 
-    def as_pm25(self, value: float = 10.0) -> "SensorDataBuilder":
+    def as_pm25(self, value: float = 10.0) -> SensorDataBuilder:
         """Configure as a PM2.5 reading."""
         self._data["metric"] = "pm25"
         self._data["value"] = value
         return self
 
-    def as_noise(self, level: float = 45.0) -> "SensorDataBuilder":
+    def as_noise(self, level: float = 45.0) -> SensorDataBuilder:
         """Configure as a noise level reading."""
         self._data["metric"] = "noise.ambient.level"
         self._data["value"] = level
         return self
 
-    def as_water_detection(self, detected: bool = False) -> "SensorDataBuilder":
+    def as_water_detection(self, detected: bool = False) -> SensorDataBuilder:
         """Configure as a water detection reading."""
         self._data["metric"] = "water"
         self._data["value"] = 1 if detected else 0
         return self
 
-    def as_door(self, open: bool = False) -> "SensorDataBuilder":
+    def as_door(self, open: bool = False) -> SensorDataBuilder:
         """Configure as a door sensor reading."""
         self._data["metric"] = "door"
         self._data["value"] = 1 if open else 0
         return self
 
-    def as_button_press(self) -> "SensorDataBuilder":
+    def as_button_press(self) -> SensorDataBuilder:
         """Configure as a button press event."""
         self._data["metric"] = "button"
         self._data["value"] = 1
         return self
 
-    def as_battery(self, percentage: float = 85.0) -> "SensorDataBuilder":
+    def as_battery(self, percentage: float = 85.0) -> SensorDataBuilder:
         """Configure as a battery level reading."""
         self._data["metric"] = "battery"
         self._data["value"] = percentage
         return self
 
-    def as_battery_level(self, percentage: float = 85.0) -> "SensorDataBuilder":
+    def as_battery_level(self, percentage: float = 85.0) -> SensorDataBuilder:
         """Configure as a battery level reading (alias for as_battery)."""
         return self.as_battery(percentage)
 
-    def as_indoor_air_quality(self, score: int = 80) -> "SensorDataBuilder":
+    def as_indoor_air_quality(self, score: int = 80) -> SensorDataBuilder:
         """Configure as an indoor air quality reading."""
         self._data["metric"] = "indoorAirQuality"
         self._data["value"] = score
         return self
 
-    def as_power_current(self, amps: float = 5.0) -> "SensorDataBuilder":
+    def as_power_current(self, amps: float = 5.0) -> SensorDataBuilder:
         """Configure as a current reading."""
         self._data["metric"] = "current"
         self._data["value"] = amps
         return self
 
-    def as_power_frequency(self, hz: float = 60.0) -> "SensorDataBuilder":
+    def as_power_frequency(self, hz: float = 60.0) -> SensorDataBuilder:
         """Configure as a frequency reading."""
         self._data["metric"] = "frequency"
         self._data["value"] = hz
         return self
 
-    def as_power_voltage(self, volts: float = 120.0) -> "SensorDataBuilder":
+    def as_power_voltage(self, volts: float = 120.0) -> SensorDataBuilder:
         """Configure as a voltage reading."""
         self._data["metric"] = "voltage"
         self._data["value"] = volts
         return self
 
-    def as_power_factor(self, factor: float = 0.95) -> "SensorDataBuilder":
+    def as_power_factor(self, factor: float = 0.95) -> SensorDataBuilder:
         """Configure as a power factor reading."""
         self._data["metric"] = "powerFactor"
         self._data["value"] = factor
         return self
 
-    def as_real_power(self, watts: float = 100.0) -> "SensorDataBuilder":
+    def as_real_power(self, watts: float = 100.0) -> SensorDataBuilder:
         """Configure as a real power reading."""
         self._data["metric"] = "realPower"
         self._data["value"] = watts

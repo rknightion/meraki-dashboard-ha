@@ -131,7 +131,6 @@ class TestMerakiDashboardConfigFlow:
             "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
             return_value=_async_api_context(api_instance),
         ):
-
             result = await mock_config_flow.async_step_user(
                 {
                     CONF_API_KEY: "9999999999999999999999999999999999999999",
@@ -348,7 +347,6 @@ class TestMerakiDashboardConfigFlow:
             "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
             return_value=_async_api_context(api_instance),
         ):
-
             result = await mock_config_flow.async_step_reauth(
                 {CONF_API_KEY: "8888888888888888888888888888888888888888"}
             )
@@ -462,9 +460,7 @@ class TestConfigFlowEdgeCases:
             return_value={},
         ):
             # Step 1: Initialize options flow
-            result = await hass.config_entries.options.async_init(
-                config_entry.entry_id
-            )
+            result = await hass.config_entries.options.async_init(config_entry.entry_id)
             assert result["type"] == FlowResultType.FORM
             assert result["step_id"] == "init"
 
@@ -538,9 +534,7 @@ class TestConfigFlowEdgeCases:
             return_value={},
         ):
             # Step 1: Initialize options flow
-            result = await hass.config_entries.options.async_init(
-                config_entry.entry_id
-            )
+            result = await hass.config_entries.options.async_init(config_entry.entry_id)
             assert result["type"] == FlowResultType.FORM
             assert result["step_id"] == "init"
 

@@ -175,7 +175,9 @@ class TestWithStandardRetries:
 
         result = await api_call()
         assert result == {"result": "success"}
-        assert call_count == 3  # Should have been called 3 times (2 failures + 1 success)
+        assert (
+            call_count == 3
+        )  # Should have been called 3 times (2 failures + 1 success)
 
     async def test_no_retry_on_401_error(self, api_error_401):
         """Test no retry on 401 error."""
@@ -265,7 +267,9 @@ class TestTimeoutHandling:
     async def test_timeout_error(self):
         """Test handling of timeout errors."""
 
-        @handle_api_errors(convert_connection_errors=False, reraise_on=(asyncio.TimeoutError,))
+        @handle_api_errors(
+            convert_connection_errors=False, reraise_on=(asyncio.TimeoutError,)
+        )
         async def api_call():
             raise TimeoutError("Request timed out")
 
@@ -296,7 +300,9 @@ class TestConnectionErrors:
     async def test_connection_error(self):
         """Test handling of connection errors."""
 
-        @handle_api_errors(convert_connection_errors=False, reraise_on=(ConnectionError,))
+        @handle_api_errors(
+            convert_connection_errors=False, reraise_on=(ConnectionError,)
+        )
         async def api_call():
             raise ConnectionError("Cannot connect to server")
 
@@ -377,9 +383,7 @@ class TestConcurrentRequests:
         # Each should have been called twice (1 failure + 1 success)
         assert all(count == 2 for count in call_counts)
 
-    async def test_concurrent_mixed_errors(
-        self, api_error_401, api_error_500
-    ):
+    async def test_concurrent_mixed_errors(self, api_error_401, api_error_500):
         """Test concurrent requests with mixed error types."""
 
         @with_standard_retries(operation_type="test")

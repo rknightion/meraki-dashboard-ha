@@ -108,8 +108,8 @@ def mock_dashboard_api():
             }
         }
     )
-    dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork = (
-        AsyncMock(return_value={"items": []})
+    dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork = AsyncMock(
+        return_value={"items": []}
     )
     dashboard.organizations.getOrganizationAssuranceAlertsOverview = AsyncMock(
         return_value={"counts": {"total": 0}}
@@ -626,8 +626,8 @@ class TestMerakiOrganizationHub:
     ):
         """Test device statuses fetching with API error."""
         organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationDevicesAvailabilities.side_effect = (
-            create_mock_api_error("Device status API error", 500)
+        mock_dashboard_api.organizations.getOrganizationDevicesAvailabilities.side_effect = create_mock_api_error(
+            "Device status API error", 500
         )
 
         await organization_hub._fetch_device_statuses()

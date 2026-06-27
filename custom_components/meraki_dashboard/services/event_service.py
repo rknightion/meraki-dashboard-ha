@@ -166,7 +166,7 @@ class MerakiEventService(EventPublisher):
                 self._subscribers[event_type].remove((subscriber, event_filter))
                 if not self._subscribers[event_type]:
                     del self._subscribers[event_type]
-            except (KeyError, ValueError):
+            except KeyError, ValueError:
                 pass
 
         return unsubscribe

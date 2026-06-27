@@ -127,9 +127,7 @@ class TestMerakiMVCameraRtspSwitch:
         coordinator = MagicMock()
         coordinator.network_hub = network_hub
         coordinator.last_update_success = True
-        coordinator.data = {
-            "devices_info": [{"serial": "Q2MV-TEST-0001"}]
-        }
+        coordinator.data = {"devices_info": [{"serial": "Q2MV-TEST-0001"}]}
         coordinator.async_request_refresh = AsyncMock()
 
         switch = MerakiMVCameraRtspSwitch(
@@ -403,7 +401,7 @@ class TestSwitchSetup:
                     "enabled": True,
                     "poeEnabled": True,
                     "profile": {"enabled": False, "id": ""},
-                }
+                },
             ],
             "ports_status": [
                 {
@@ -448,12 +446,10 @@ class TestSwitchSetup:
             if isinstance(entity, MerakiMSSwitchPortPoeSwitch)
         ]
         assert any(
-            entity.unique_id.endswith("_port_poe_enabled_2")
-            for entity in poe_entities
+            entity.unique_id.endswith("_port_poe_enabled_2") for entity in poe_entities
         )
         assert not any(
-            entity.unique_id.endswith("_port_poe_enabled_1")
-            for entity in poe_entities
+            entity.unique_id.endswith("_port_poe_enabled_1") for entity in poe_entities
         )
 
 

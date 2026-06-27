@@ -337,7 +337,9 @@ class TestHubIntervalConfig:
         """Test that non-MT hubs require 60 second minimum."""
         # MR hub should require 60 seconds minimum
         with pytest.raises(ConfigurationError, match="at least 60 seconds"):
-            HubIntervalConfig(hub_id="network_123_MR", scan_interval=30, min_scan_seconds=60)
+            HubIntervalConfig(
+                hub_id="network_123_MR", scan_interval=30, min_scan_seconds=60
+            )
 
     def test_invalid_discovery_interval(self):
         """Test invalid discovery interval."""

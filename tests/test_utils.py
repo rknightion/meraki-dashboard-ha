@@ -371,7 +371,9 @@ class TestSanitizeDeviceAttributes:
         assert "serial" not in result
         assert result["model"] == "MT11"
         assert result["tags"] == "office, conference, sensors"  # String preserved
-        assert result["notes"] == "Primary sensorfor conference room"  # Control chars stripped
+        assert (
+            result["notes"] == "Primary sensorfor conference room"
+        )  # Control chars stripped
         assert result["address"] == "123 Main St, Floor 2"
         assert result["lan_ip"] == "192.168.1.100"  # camelCase converted to snake_case
         assert result["firmware"] == "wireless-25-14"

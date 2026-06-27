@@ -70,11 +70,7 @@ class TestConfigFlowDeviceSelection:
 
             async def get_org_devices(_org_id, network_ids=None, **_kwargs):
                 network_ids = network_ids or _kwargs.get("networkIds") or []
-                return [
-                    d
-                    for d in all_devices
-                    if d.get("networkId") in network_ids
-                ]
+                return [d for d in all_devices if d.get("networkId") in network_ids]
 
             api_instance.organizations.getOrganizationDevices = AsyncMock(
                 side_effect=get_org_devices
@@ -294,9 +290,7 @@ class TestConfigFlowOptionsFlow:
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
 
-    async def test_options_flow_configure_hub_intervals(
-        self, hass: HomeAssistant
-    ):
+    async def test_options_flow_configure_hub_intervals(self, hass: HomeAssistant):
         """Test configuring per-hub scan intervals."""
         config_entry = MockConfigEntry(
             domain=DOMAIN,
@@ -390,7 +384,6 @@ class TestConfigFlowErrorHandling:
         with patch(
             "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
         ) as mock_api:
-
             mock_api.side_effect = TimeoutError("Connection timeout")
 
             result = await hass.config_entries.flow.async_init(
@@ -408,9 +401,7 @@ class TestConfigFlowErrorHandling:
             assert result["type"] == FlowResultType.FORM
             assert result["errors"] == {"base": "unknown"}
 
-    async def test_rate_limit_error(
-        self, hass: HomeAssistant, api_error_429
-    ):
+    async def test_rate_limit_error(self, hass: HomeAssistant, api_error_429):
         """Test handling of rate limit (429) error."""
         with patch(
             "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
@@ -433,9 +424,7 @@ class TestConfigFlowErrorHandling:
             # Should show unknown error (rate limit is handled as generic error)
             assert "base" in result.get("errors", {})
 
-    async def test_malformed_api_response(
-        self, hass: HomeAssistant
-    ):
+    async def test_malformed_api_response(self, hass: HomeAssistant):
         """Test handling of malformed API responses."""
         with patch(
             "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI"
@@ -525,9 +514,7 @@ class TestConfigFlowErrorHandling:
 class TestConfigFlowReauth:
     """Test reauth flow scenarios."""
 
-    async def test_reauth_success(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_reauth_success(self, hass: HomeAssistant, load_json_fixture):
         """Test successful reauth flow."""
         orgs = load_json_fixture("organizations.json")
 
@@ -574,9 +561,7 @@ class TestConfigFlowReauth:
             # Verify API key was updated
             assert config_entry.data[CONF_API_KEY] == new_api_key
 
-    async def test_reauth_with_same_key(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_reauth_with_same_key(self, hass: HomeAssistant, load_json_fixture):
         """Test reauth with same API key."""
         orgs = load_json_fixture("organizations.json")
 

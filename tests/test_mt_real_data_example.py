@@ -71,9 +71,7 @@ async def test_mt_sensor_readings_real_data():
     assert "battery" in mt20_metrics
 
     # Verify door reading structure
-    door_reading = next(
-        r for r in mt20_reading["readings"] if r["metric"] == "door"
-    )
+    door_reading = next(r for r in mt20_reading["readings"] if r["metric"] == "door")
     assert "door" in door_reading
     assert "open" in door_reading["door"]
     assert isinstance(door_reading["door"]["open"], bool)
@@ -131,17 +129,13 @@ async def test_mt40_power_monitoring_real_data():
     assert current_reading["current"]["draw"] == 0.08  # Real value from API
 
     # Verify power factor is a percentage
-    pf_reading = next(
-        r for r in mt40_data["readings"] if r["metric"] == "powerFactor"
-    )
+    pf_reading = next(r for r in mt40_data["readings"] if r["metric"] == "powerFactor")
     assert "powerFactor" in pf_reading
     assert "percentage" in pf_reading["powerFactor"]
     assert 0 <= pf_reading["powerFactor"]["percentage"] <= 100
 
     # Verify frequency (should be 50Hz for UK/Europe)
-    freq_reading = next(
-        r for r in mt40_data["readings"] if r["metric"] == "frequency"
-    )
+    freq_reading = next(r for r in mt40_data["readings"] if r["metric"] == "frequency")
     assert "frequency" in freq_reading
     assert "level" in freq_reading["frequency"]
     assert freq_reading["frequency"]["level"] == 50.0  # 50Hz in Europe

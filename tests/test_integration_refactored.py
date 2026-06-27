@@ -236,9 +236,7 @@ class TestEntityCreationWithBuilders:
         )
 
     @pytest.mark.asyncio
-    async def test_entity_registry_cleanup_on_device_removal(
-        self, hass: HomeAssistant
-    ):
+    async def test_entity_registry_cleanup_on_device_removal(self, hass: HomeAssistant):
         """Test entity registry cleanup when a device is removed."""
         helper = IntegrationTestHelper(hass)
 
@@ -278,9 +276,12 @@ class TestEntityCreationWithBuilders:
             config_entry_id=entry_id, **device_info
         )
         if device_entry.via_device_id != hub_device_entry.id:
-            device_entry = device_registry.async_update_device(
-                device_entry.id, via_device_id=hub_device_entry.id
-            ) or device_entry
+            device_entry = (
+                device_registry.async_update_device(
+                    device_entry.id, via_device_id=hub_device_entry.id
+                )
+                or device_entry
+            )
         entity_registry.async_get_or_create(
             "sensor",
             DOMAIN,
@@ -300,9 +301,7 @@ class TestEntityCreationWithBuilders:
 
         hub.devices = []
 
-        coordinator = next(
-            iter(hass.data[DOMAIN][entry_id]["coordinators"].values())
-        )
+        coordinator = next(iter(hass.data[DOMAIN][entry_id]["coordinators"].values()))
         base_time = (hub._last_discovery_time or datetime.now(UTC)) + timedelta(
             seconds=1
         )

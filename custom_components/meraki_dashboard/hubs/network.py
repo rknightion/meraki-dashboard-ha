@@ -2306,7 +2306,7 @@ class MerakiNetworkHub:
             current_time = datetime.now(UTC)
             return (current_time - timestamp).total_seconds() <= (minutes * 60)
 
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return False
 
     @performance_monitor("network_events_fetch")
@@ -2490,7 +2490,7 @@ class MerakiNetworkHub:
                             duration_str = f"{duration_sec / 60:.1f} minutes"
                         else:
                             duration_str = f"{duration_sec:.1f} seconds"
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         duration_str = duration
                 else:
                     duration_str = "unknown duration"

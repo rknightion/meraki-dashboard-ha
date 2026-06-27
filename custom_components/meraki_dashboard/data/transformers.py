@@ -158,7 +158,7 @@ class SafeExtractor:
             return default
         try:
             return float(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return default
 
     @staticmethod
@@ -182,14 +182,14 @@ class SafeExtractor:
                         total += int(item)
                     elif isinstance(item, str):
                         total += int(item)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     continue  # Skip invalid values
             return total
 
         # Handle single values
         try:
             return int(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return default
 
     @staticmethod
@@ -875,7 +875,7 @@ class MVCameraDataTransformer(DataTransformer):
 
         try:
             percent = float(value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
         if 0 <= percent <= 1:

@@ -213,9 +213,7 @@ class TestSensorPlatformSetup:
 
         assert len(added_entities) > 0
 
-    async def test_async_setup_entry_no_integration_data(
-        self, hass: HomeAssistant
-    ):
+    async def test_async_setup_entry_no_integration_data(self, hass: HomeAssistant):
         """Test sensor setup when integration data doesn't exist."""
         config_entry = MockConfigEntry(
             domain=DOMAIN,
@@ -281,14 +279,10 @@ class TestSensorPlatformSetup:
 
         # Create coordinators
         mt_coordinator = MagicMock()
-        mt_coordinator.data = {
-            mt_devices[0]["serial"]: {MT_SENSOR_TEMPERATURE: 22.5}
-        }
+        mt_coordinator.data = {mt_devices[0]["serial"]: {MT_SENSOR_TEMPERATURE: 22.5}}
 
         mr_coordinator = MagicMock()
-        mr_coordinator.data = {
-            mr_devices[0]["serial"]: {MR_SENSOR_CLIENT_COUNT: 10}
-        }
+        mr_coordinator.data = {mr_devices[0]["serial"]: {MR_SENSOR_CLIENT_COUNT: 10}}
 
         ms_coordinator = MagicMock()
         ms_coordinator.data = {
@@ -342,7 +336,9 @@ class TestSensorEntityStates:
         coordinator.data = {
             device["serial"]: {
                 MT_SENSOR_TEMPERATURE: 22.5,
-                "readings": [{"metric": "temperature", "temperature": {"celsius": 22.5}}],
+                "readings": [
+                    {"metric": "temperature", "temperature": {"celsius": 22.5}}
+                ],
             }
         }
         coordinator.last_update_success = True
@@ -365,14 +361,14 @@ class TestSensorEntityStates:
 
         # Update coordinator data
         coordinator.data[device["serial"]][MT_SENSOR_TEMPERATURE] = 23.0
-        coordinator.data[device["serial"]]["readings"] = [{"metric": "temperature", "temperature": {"celsius": 23.0}}]
+        coordinator.data[device["serial"]]["readings"] = [
+            {"metric": "temperature", "temperature": {"celsius": 23.0}}
+        ]
 
         # Verify state updated
         assert sensor.native_value == 23.0
 
-    async def test_sensor_availability(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_sensor_availability(self, hass: HomeAssistant, load_json_fixture):
         """Test sensor availability based on coordinator data."""
         from custom_components.meraki_dashboard.devices.mt import (
             MT_SENSOR_DESCRIPTIONS,
@@ -386,7 +382,9 @@ class TestSensorEntityStates:
         coordinator.data = {
             device["serial"]: {
                 MT_SENSOR_TEMPERATURE: 22.5,
-                "readings": [{"metric": "temperature", "temperature": {"celsius": 22.5}}],
+                "readings": [
+                    {"metric": "temperature", "temperature": {"celsius": 22.5}}
+                ],
             }
         }
         coordinator.last_update_success = True
@@ -414,9 +412,7 @@ class TestSensorEntityStates:
 class TestSensorEntityAttributes:
     """Test sensor entity attributes."""
 
-    async def test_mt_sensor_device_info(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_mt_sensor_device_info(self, hass: HomeAssistant, load_json_fixture):
         """Test MT sensor device info."""
         from custom_components.meraki_dashboard.devices.mt import (
             MT_SENSOR_DESCRIPTIONS,
@@ -446,9 +442,7 @@ class TestSensorEntityAttributes:
         assert "name" in device_info
         assert "manufacturer" in device_info
 
-    async def test_sensor_unique_id(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_sensor_unique_id(self, hass: HomeAssistant, load_json_fixture):
         """Test sensor unique ID generation."""
         from custom_components.meraki_dashboard.devices.mt import (
             MT_SENSOR_DESCRIPTIONS,
@@ -537,9 +531,7 @@ class TestSensorEdgeCases:
         # Should handle missing data gracefully
         assert sensor.native_value is None
 
-    async def test_sensor_with_null_value(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_sensor_with_null_value(self, hass: HomeAssistant, load_json_fixture):
         """Test sensor when metric value is None."""
         from custom_components.meraki_dashboard.devices.mt import (
             MT_SENSOR_DESCRIPTIONS,

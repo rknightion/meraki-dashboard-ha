@@ -572,9 +572,7 @@ class TestBinarySensorValueInterpretation:
         # Note: This test may need adjustment based on actual transformer behavior
         # The is_on property calls the transformer
 
-    async def test_numeric_value_positive(
-        self, hass: HomeAssistant, load_json_fixture
-    ):
+    async def test_numeric_value_positive(self, hass: HomeAssistant, load_json_fixture):
         """Test interpreting positive numeric values as True."""
         mt_devices = load_json_fixture("mt_devices.json")
         device = mt_devices[0]

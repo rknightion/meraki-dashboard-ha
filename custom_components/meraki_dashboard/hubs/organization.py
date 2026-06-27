@@ -833,7 +833,7 @@ class MerakiOrganizationHub:
                                             "days_remaining": days_until_expiry,
                                         }
                                     )
-                            except (ValueError, TypeError):
+                            except ValueError, TypeError:
                                 continue
 
                     self.licenses_expiring_count = len(expiring_soon)

@@ -1070,23 +1070,19 @@ def _register_organization_entities():
     Note: These don't follow the device type pattern as they're hub-level entities.
     """
     # Organization entities use the old pattern since they're not device-based
-    EntityFactory._registry["api_calls"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubApiCallsSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["api_calls"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubApiCallsSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["failed_api_calls"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubFailedApiCallsSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["failed_api_calls"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubFailedApiCallsSensor", hub, description, entry_id)
     )
     EntityFactory._registry["api_calls_per_minute"] = (
         lambda hub, description, entry_id: _create_org_entity(
             "MerakiHubApiCallsPerMinuteSensor", hub, description, entry_id
         )
     )
-    EntityFactory._registry["api_throttle_events"] = (
-        lambda hub, description, entry_id: _create_org_entity(
+    EntityFactory._registry["api_throttle_events"] = lambda hub, description, entry_id: (
+        _create_org_entity(
             "MerakiHubApiThrottleEventsSensor", hub, description, entry_id
         )
     )
@@ -1103,48 +1099,32 @@ def _register_organization_entities():
             entry_id,
         )
     )
-    EntityFactory._registry["device_count"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubDeviceCountSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["device_count"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubDeviceCountSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["network_count"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubNetworkCountSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["network_count"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubNetworkCountSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["offline_devices"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubOfflineDevicesSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["offline_devices"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubOfflineDevicesSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["online_devices"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubOnlineDevicesSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["online_devices"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubOnlineDevicesSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["alerting_devices"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubAlertingDevicesSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["alerting_devices"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubAlertingDevicesSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["dormant_devices"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubDormantDevicesSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["dormant_devices"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubDormantDevicesSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["alerts_count"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubAlertsCountSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["alerts_count"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubAlertsCountSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["license_expiring"] = (
-        lambda hub, description, entry_id: _create_org_entity(
-            "MerakiHubLicenseExpiringSensor", hub, description, entry_id
-        )
+    EntityFactory._registry["license_expiring"] = lambda hub, description, entry_id: (
+        _create_org_entity("MerakiHubLicenseExpiringSensor", hub, description, entry_id)
     )
-    EntityFactory._registry["clients_total_count"] = (
-        lambda hub, description, entry_id: _create_org_entity(
+    EntityFactory._registry["clients_total_count"] = lambda hub, description, entry_id: (
+        _create_org_entity(
             "MerakiHubClientsTotalCountSensor", hub, description, entry_id
         )
     )
@@ -1181,60 +1161,52 @@ def _register_organization_entities():
 
     # Also register the legacy entity types for backward compatibility
     EntityFactory._registry["mt_sensor"] = (
-        lambda coordinator,
-        device,
-        description,
-        entry_id,
-        network_hub: _create_device_entity(
-            "MerakiMTSensor", coordinator, device, description, entry_id, network_hub
+        lambda coordinator, device, description, entry_id, network_hub: (
+            _create_device_entity(
+                "MerakiMTSensor",
+                coordinator,
+                device,
+                description,
+                entry_id,
+                network_hub,
+            )
         )
     )
     EntityFactory._registry["mt_energy_sensor"] = (
-        lambda coordinator,
-        device,
-        description,
-        entry_id,
-        network_hub,
-        power_sensor_key: _create_device_entity(
-            "MerakiMTEnergySensor",
-            coordinator,
-            device,
-            description,
-            entry_id,
-            network_hub,
-            power_sensor_key,
+        lambda coordinator, device, description, entry_id, network_hub, power_sensor_key: (
+            _create_device_entity(
+                "MerakiMTEnergySensor",
+                coordinator,
+                device,
+                description,
+                entry_id,
+                network_hub,
+                power_sensor_key,
+            )
         )
     )
     EntityFactory._registry["mr_sensor"] = (
-        lambda coordinator,
-        device,
-        description,
-        entry_id,
-        network_hub: _create_mr_sensor(coordinator, description, entry_id)
+        lambda coordinator, device, description, entry_id, network_hub: (
+            _create_mr_sensor(coordinator, description, entry_id)
+        )
     )
     EntityFactory._registry["mr_device_sensor"] = (
-        lambda coordinator,
-        device,
-        description,
-        entry_id,
-        network_hub: _create_mr_device_sensor(
-            device, coordinator, description, entry_id, network_hub
+        lambda coordinator, device, description, entry_id, network_hub: (
+            _create_mr_device_sensor(
+                device, coordinator, description, entry_id, network_hub
+            )
         )
     )
     EntityFactory._registry["ms_sensor"] = (
-        lambda coordinator,
-        device,
-        description,
-        entry_id,
-        network_hub: _create_ms_sensor(coordinator, description, entry_id)
+        lambda coordinator, device, description, entry_id, network_hub: (
+            _create_ms_sensor(coordinator, description, entry_id)
+        )
     )
     EntityFactory._registry["ms_device_sensor"] = (
-        lambda coordinator,
-        device,
-        description,
-        entry_id,
-        network_hub: _create_ms_device_sensor(
-            device, coordinator, description, entry_id, network_hub
+        lambda coordinator, device, description, entry_id, network_hub: (
+            _create_ms_device_sensor(
+                device, coordinator, description, entry_id, network_hub
+            )
         )
     )
 
