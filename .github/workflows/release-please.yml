@@ -70,10 +70,8 @@ jobs:
       - name: Upload zip to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEEDS_RELEASE_PLEASE_OUTPUTS_VERSION: ${{ needs.release-please.outputs.version }}
           NEEDS_RELEASE_PLEASE_OUTPUTS_TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
         run: |
-          VERSION="${NEEDS_RELEASE_PLEASE_OUTPUTS_VERSION}"
           TAG_NAME="${NEEDS_RELEASE_PLEASE_OUTPUTS_TAG_NAME}"
           ZIP_FILE="meraki_dashboard.zip"
 
@@ -85,10 +83,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEEDS_RELEASE_PLEASE_OUTPUTS_TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
-          NEEDS_RELEASE_PLEASE_OUTPUTS_VERSION: ${{ needs.release-please.outputs.version }}
         run: |
           TAG_NAME="${NEEDS_RELEASE_PLEASE_OUTPUTS_TAG_NAME}"
-          VERSION="${NEEDS_RELEASE_PLEASE_OUTPUTS_VERSION}"
 
           gh release view "${TAG_NAME}" --json body -q '.body' > release_body.txt
 

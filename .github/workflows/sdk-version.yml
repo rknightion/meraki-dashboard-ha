@@ -7,12 +7,14 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   # ── Job 1: check whether the pinned Meraki SDK is behind the latest final PyPI release ──
   version-watch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -100,6 +102,9 @@ jobs:
   # ── Job 2: run the test suite against the latest final Meraki SDK release ──
   smoke-latest:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -144,23 +149,26 @@ jobs:
           HOMEASSISTANT_CONFIG_DIR: /tmp/homeassistant
           LC_ALL: C.UTF-8
           LANG: C.UTF-8
+          SDK_LATEST_VERSION: ${{ steps.sdk-latest.outputs.version }}
         run: |
           mkdir -p /tmp/homeassistant
           set +e
           # uv run --with overlays the specified meraki version on top of the synced env
           # for this single invocation, without modifying pyproject.toml or uv.lock.
           # This lets us smoke-test the latest SDK release against the pinned test suite.
-          uv run --with "meraki==${{ steps.sdk-latest.outputs.version }}" \
+          uv run --with "meraki==$SDK_LATEST_VERSION" \
             python -m pytest tests/ > /tmp/sdk-smoke.log 2>&1
           echo "code=$?" >> "$GITHUB_OUTPUT"
 
       - name: Write SDK smoke report
         if: steps.smoke.outputs.code != '0'
+        env:
+          SDK_LATEST_VERSION: ${{ steps.sdk-latest.outputs.version }}
         run: |
           {
             echo "# SDK smoke test failure"
             echo ""
-            echo "The test suite failed when run against Meraki Python SDK \`${{ steps.sdk-latest.outputs.version }}\` (latest final release)."
+            echo "The test suite failed when run against Meraki Python SDK \`$SDK_LATEST_VERSION\` (latest final release)."
             echo "The pinned version in \`pyproject.toml\` may need updating, or the integration code needs fixes for the new SDK."
             echo ""
             echo "## Pytest output"
