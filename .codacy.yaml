@@ -1,0 +1,13 @@
+---
+# Repo-local Codacy configuration. Tool/pattern selection is governed by the
+# org coding standard "rknightion-standard"; this file only tunes which paths
+# Codacy Cloud analyses, to cut noise from docs, tests, vendored and generated code.
+# Codacy Cloud reads this file from the default branch. Globs use Java glob syntax.
+exclude_paths:
+  - "docs/**"
+  - "tests/**"
+  - "**/tests/**"
+  - "test/**"
+  - "**/*_test.go"
+  - "vendor/**"
+  - "**/generated/**"

@@ -147,6 +147,15 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+
+      # Upload the same coverage.xml to Codacy. Non-blocking so a transient
+      # upload failure cannot fail the required pytest gate.
+      - name: Upload coverage to Codacy
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
+        continue-on-error: true
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
   # Single required status check from this workflow (the branch ruleset requires this + validate.yml's
   # validate-success). if: always() + explicit failure check so a failed/cancelled leg fails the gate.
   # Renovate automerge waits for this to go green.
