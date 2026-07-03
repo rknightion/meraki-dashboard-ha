@@ -8,6 +8,8 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigValidationError
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 
 from ..const import (
     CONF_DISCOVERY_INTERVAL,
@@ -21,12 +23,10 @@ from ..const import (
     CONF_STATIC_DATA_INTERVAL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
     DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES,
     SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
     STATIC_DATA_REFRESH_INTERVAL_MINUTES,
 )
 from .schemas import MerakiConfigSchema, validate_config_migration
@@ -120,14 +120,12 @@ class ConfigMigration:
                 DEFAULT_DISCOVERY_INTERVAL,
             )
 
-        # Ensure enabled device types exists with default values
+        # Ensure enabled device types exists with default values.
+        # MT is the only supported family (MT-only major version), so the
+        # schema-level default is MT-only. The 2 -> 3 migration also enforces
+        # this on any pre-existing entry.
         if CONF_ENABLED_DEVICE_TYPES not in options:
-            options[CONF_ENABLED_DEVICE_TYPES] = [
-                SENSOR_TYPE_MT,
-                SENSOR_TYPE_MR,
-                SENSOR_TYPE_MS,
-                SENSOR_TYPE_MV,
-            ]
+            options[CONF_ENABLED_DEVICE_TYPES] = [SENSOR_TYPE_MT]
             _LOGGER.debug(
                 "Added default enabled device types: %s",
                 options[CONF_ENABLED_DEVICE_TYPES],
@@ -256,6 +254,86 @@ class ConfigMigration:
         return True
 
 
+async def async_migrate_to_version_3(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+) -> bool:
+    """Migrate a version 2 entry to version 3 (MT-only major version).
+
+    Version 3 changes (breaking major version - MT-only):
+    - Force ``CONF_ENABLED_DEVICE_TYPES`` to ``[SENSOR_TYPE_MT]`` (MR/MS/MV
+      support removed).
+    - Remove stale non-MT hardware devices from the device registry using a
+      **positive** model-prefix predicate: only devices whose Meraki ``model``
+      starts with ``MR``/``MS``/``MV`` are removed. Devices with no model (the
+      organization + per-network hub plumbing devices) and MT devices are left
+      untouched.
+    - Raise a persistent HA repair issue ``mt_only_migration`` explaining the
+      change, but only if at least one device was actually removed (idempotent -
+      re-running on an already-MT-only entry creates no issue).
+
+    Args:
+        hass: Home Assistant instance
+        config_entry: Configuration entry to migrate
+
+    Returns:
+        True if migration successful
+    """
+    _LOGGER.info("Migrating configuration from version 2 to version 3 (MT-only)")
+
+    # 1. Force enabled device types to MT only (in both data and options,
+    #    wherever the key currently lives).
+    new_data = dict(config_entry.data)
+    new_data[CONF_ENABLED_DEVICE_TYPES] = [SENSOR_TYPE_MT]
+
+    new_options = dict(config_entry.options or {})
+    if CONF_ENABLED_DEVICE_TYPES in new_options:
+        new_options[CONF_ENABLED_DEVICE_TYPES] = [SENSOR_TYPE_MT]
+
+    # 2. Remove stale non-MT hardware devices via a positive model-prefix
+    #    predicate. Hub devices (model=None / "Organization" / "MT Network Hub")
+    #    and MT devices ("MT14", ...) are deliberately left untouched.
+    device_registry = dr.async_get(hass)
+    removed_count = 0
+    for device in dr.async_entries_for_config_entry(
+        device_registry, config_entry.entry_id
+    ):
+        model = device.model
+        if isinstance(model, str) and model.startswith(("MR", "MS", "MV")):
+            _LOGGER.debug(
+                "Removing non-MT device %s (model=%s) during MT-only migration",
+                device.id,
+                model,
+            )
+            device_registry.async_remove_device(device.id)
+            removed_count += 1
+
+    # 3. Raise the repair issue only if we actually removed something.
+    if removed_count > 0:
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            "mt_only_migration",
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="mt_only_migration",
+        )
+        _LOGGER.info(
+            "Removed %d non-MT device(s) during MT-only migration", removed_count
+        )
+
+    # 4. Finalize the migration by bumping the entry to version 3.
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data=new_data,
+        options=new_options,
+        version=3,
+    )
+
+    _LOGGER.info("Configuration migration to version 3 completed successfully")
+    return True
+
+
 async def async_migrate_config_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -282,8 +360,15 @@ async def async_migrate_config_entry(
         )
         current_version = 1
 
+    # Chain migrations: an old (v1) entry is first brought to v2, then to v3, so
+    # a single call fully upgrades regardless of the starting version.
     if current_version < 2:
         migration = ConfigMigration(hass, config_entry)
-        return await migration.async_migrate()
+        if not await migration.async_migrate():
+            return False
+        current_version = config_entry.version
+
+    if current_version == 2:
+        return await async_migrate_to_version_3(hass, config_entry)
 
     return True

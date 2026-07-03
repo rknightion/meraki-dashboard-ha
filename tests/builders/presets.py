@@ -79,67 +79,17 @@ class DevicePresets:
             .build()
         )
 
-    @staticmethod
-    def mr_access_point() -> dict[str, Any]:
-        """MR wireless access point with standard configuration.
-
-        Returns:
-            Device data for wireless access point
-        """
-        return (
-            MerakiDeviceBuilder()
-            .as_mr_device()
-            .with_serial("Q2XX-MR46-0001")
-            .with_name("Office WiFi AP")
-            .with_model("MR46")
-            .build()
-        )
-
-    @staticmethod
-    def ms_switch() -> dict[str, Any]:
-        """MS switch with standard port configuration.
-
-        Returns:
-            Device data for network switch
-        """
-        return (
-            MerakiDeviceBuilder()
-            .as_ms_device()
-            .with_serial("Q2XX-MS225-0001")
-            .with_name("Main Network Switch")
-            .with_model("MS225-24")
-            .build()
-        )
-
-    @staticmethod
-    def mv_camera() -> dict[str, Any]:
-        """MV security camera with standard configuration.
-
-        Returns:
-            Device data for security camera
-        """
-        return (
-            MerakiDeviceBuilder()
-            .as_mv_device()
-            .with_serial("Q2XX-MV72-0001")
-            .with_name("Lobby Security Camera")
-            .with_model("MV72")
-            .build()
-        )
-
 
 class ScenarioPresets:
     """Presets for complete environment and use case scenarios."""
 
     @staticmethod
     def office_environment() -> list[dict[str, Any]]:
-        """Complete office setup with environmental monitoring and network infrastructure.
+        """Complete office setup with environmental monitoring.
 
         Creates a typical office environment with:
         - Environmental sensors (temperature, humidity, CO2)
         - Water leak detection
-        - WiFi access points
-        - Network switches
 
         Returns:
             List of device configurations for office scenario
@@ -162,34 +112,15 @@ class ScenarioPresets:
                 .with_model("MT15")
                 .build()
             ),
-            # Network infrastructure
-            (
-                MerakiDeviceBuilder()
-                .as_mr_device()
-                .with_serial("Q2XX-MR46-OFF1")
-                .with_name("Main Office WiFi")
-                .with_model("MR46")
-                .build()
-            ),
-            (
-                MerakiDeviceBuilder()
-                .as_ms_device()
-                .with_serial("Q2XX-MS225-OFF1")
-                .with_name("Office Network Switch")
-                .with_model("MS225-24")
-                .build()
-            ),
         ]
 
     @staticmethod
     def retail_store() -> list[dict[str, Any]]:
-        """Retail store setup with occupancy sensing and security monitoring.
+        """Retail store setup with occupancy sensing.
 
         Creates a retail environment with:
         - Door/window sensors for entrances
         - Occupancy monitoring
-        - Security cameras
-        - Customer WiFi access points
 
         Returns:
             List of device configurations for retail scenario
@@ -221,35 +152,14 @@ class ScenarioPresets:
                 .with_model("MT20")
                 .build()
             ),
-            # Customer WiFi
-            (
-                MerakiDeviceBuilder()
-                .as_mr_device()
-                .with_serial("Q2XX-MR36-RET1")
-                .with_name("Customer WiFi AP")
-                .with_model("MR36")
-                .build()
-            ),
-            # Security
-            (
-                MerakiDeviceBuilder()
-                .as_mv_device()
-                .with_serial("Q2XX-MV12W-RET1")
-                .with_name("Store Security Camera")
-                .with_model("MV12W")
-                .build()
-            ),
         ]
 
     @staticmethod
     def campus_network() -> list[dict[str, Any]]:
-        """Multi-building campus with comprehensive monitoring.
+        """Multi-building campus with environmental monitoring.
 
         Creates a campus environment with:
         - Multiple buildings with environmental sensors
-        - Distributed WiFi infrastructure
-        - Network backbone switches
-        - Security monitoring
 
         Returns:
             List of device configurations for campus scenario
@@ -268,15 +178,6 @@ class ScenarioPresets:
                     .with_network_id("N_BUILDING_A")
                     .build()
                 ),
-                (
-                    MerakiDeviceBuilder()
-                    .as_mr_device()
-                    .with_serial("Q2XX-MR46-BA01")
-                    .with_name("Building A WiFi AP Floor 1")
-                    .with_model("MR46")
-                    .with_network_id("N_BUILDING_A")
-                    .build()
-                ),
             ]
         )
 
@@ -292,52 +193,23 @@ class ScenarioPresets:
                     .with_network_id("N_BUILDING_B")
                     .build()
                 ),
-                (
-                    MerakiDeviceBuilder()
-                    .as_ms_device()
-                    .with_serial("Q2XX-MS425-BB01")
-                    .with_name("Building B Core Switch")
-                    .with_model("MS425-16")
-                    .with_network_id("N_BUILDING_B")
-                    .build()
-                ),
             ]
-        )
-
-        # Campus backbone
-        devices.append(
-            MerakiDeviceBuilder()
-            .as_ms_device()
-            .with_serial("Q2XX-MS450-CORE")
-            .with_name("Campus Core Switch")
-            .with_model("MS450-12")
-            .with_network_id("N_CAMPUS_CORE")
-            .build()
         )
 
         return devices
 
     @staticmethod
     def network_with_mixed_devices() -> list[dict[str, Any]]:
-        """Network with various device types for comprehensive testing.
-
-        Creates a mixed environment for testing device type handling:
-        - All supported MT sensor models
-        - Various MR access point models
-        - Different MS switch configurations
-        - MV camera variants
+        """Network with all supported MT sensor models for comprehensive testing.
 
         Returns:
-            List of device configurations covering all device types
+            List of device configurations covering all MT device models
         """
         return [
             DevicePresets.mt_sensor_full(),
             DevicePresets.mt_sensor_basic(),
             DevicePresets.mt_water_sensor(),
             DevicePresets.mt_door_sensor(),
-            DevicePresets.mr_access_point(),
-            DevicePresets.ms_switch(),
-            DevicePresets.mv_camera(),
         ]
 
 

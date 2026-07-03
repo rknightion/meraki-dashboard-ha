@@ -2,8 +2,6 @@
 
 from .transformers import (
     DataTransformer,
-    MRWirelessDataTransformer,
-    MSSwitchDataTransformer,
     MTSensorDataTransformer,
     OrganizationDataTransformer,
     TransformerRegistry,
@@ -12,8 +10,6 @@ from .transformers import (
 __all__ = [
     "DataTransformer",
     "MTSensorDataTransformer",
-    "MRWirelessDataTransformer",
-    "MSSwitchDataTransformer",
     "OrganizationDataTransformer",
     "TransformerRegistry",
 ]

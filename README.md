@@ -10,7 +10,31 @@
 
 ![Meraki Logo](docs/images/icon.png)
 
-This custom integration allows you to monitor your Cisco Meraki devices through Home Assistant. Supports MT environmental sensors, MR wireless access points, MS switches, and MV cameras.
+> ## ⚠️ Breaking change — v1.0.0 is MT-only
+>
+> **Version 1.0.0 is a major, breaking release.** This integration now supports **only Meraki MT
+> environmental sensors**. Support for **MR wireless access points, MS switches, and MV cameras has
+> been removed entirely** — those platforms, entities, services, and configuration options no
+> longer exist in this integration.
+>
+> **Upgrading automatically migrates your configuration.** On first start after upgrading, the
+> integration rewrites your config entry to MT-only and removes any non-MT (MR/MS/MV) devices and
+> their entities from the Home Assistant device/entity registries. A **repair notice** ("Meraki
+> Dashboard is now MT-only") is raised in Settings → Repairs to explain what happened. Your MT
+> sensors and their history are not affected.
+>
+> If you rely on MR/MS/MV monitoring today, **do not upgrade** until you have an alternative in
+> place — those integrations are gone, not deprecated, and there is no supported way to keep using
+> this integration for anything other than MT sensors going forward.
+>
+> **MT20/MT30 button-press caveat:** MT20 (door) and MT30 (button) events are surfaced by **polling**
+> the Meraki API on your configured interval, not by a push/webhook mechanism. This means a fast
+> button press or door open/close can be missed or reported late if it happens between polls.
+> Meraki webhooks would be more reliable for these event-driven devices, but wiring up a webhook
+> receiver is out of scope for this integration today.
+
+This custom integration allows you to monitor your Cisco Meraki **MT environmental sensors**
+through Home Assistant.
 
 ## Features
 
@@ -19,7 +43,7 @@ This custom integration allows you to monitor your Cisco Meraki devices through 
   - Humidity
   - Water detection
   - Door sensors
-  - Button press detection
+  - Button press detection (polled — see the caveat above)
   - CO2 levels
   - TVOC (Total Volatile Organic Compounds)
   - PM2.5 air quality
@@ -27,20 +51,20 @@ This custom integration allows you to monitor your Cisco Meraki devices through 
   - Indoor air quality index
   - Battery level
   - Electrical measurements (voltage, current, power)
+  - Signal strength (RSSI) and last-seen connectivity metrics
   - And more!
 
-- 📶 **MR Wireless Support** - SSID counts, client counts, channel utilization, and performance metrics
-- 🔌 **MS Switch Support** - Port status, PoE, traffic, and switch health metrics
-- 🎥 **MV Camera Support** - Camera settings plus detection history, snapshots, and optional RTSP streaming
-- 🔄 **Automatic Device Discovery** - Automatically discovers Meraki devices in your organization
+- 🔄 **Automatic Device Discovery** - Automatically discovers MT sensors in your organization
 - ⚙️ **Flexible Configuration**
   - Select specific devices to monitor or monitor all
-  - Configurable update interval (default: 20 minutes to match Meraki MT sensor update frequency)
+  - Configurable update interval
   - Auto-discovery can be enabled/disabled
   - Configurable discovery interval for new devices
 - 📊 **Real-time Updates** - Fetches latest sensor data at your configured interval
-- 🏢 **Multi-Network Support** - Monitors devices across all networks in your organization
+- 🏢 **Multi-Network Support** - Monitors MT sensors across all networks in your organization
 - 📱 **Device-Centric Design** - Each Meraki device is registered as a device with its metrics as entities
+- 🩺 **Minimal Health Diagnostics** - A small set of organization/network health sensors (API call
+  status, device counts) is kept for visibility into the integration itself
 
 ## Device and Entity Structure
 
@@ -57,7 +81,7 @@ This integration follows Home Assistant best practices:
 
 - Home Assistant 2024.1.0 or newer
 - Cisco Meraki Dashboard account with API access
-- At least one Meraki network with supported devices (MT/MR/MS/MV)
+- At least one Meraki network with MT environmental sensors
 
 ## Installation
 
@@ -96,15 +120,16 @@ This integration is available in the **default** HACS repository (no custom repo
 3. Search for "Meraki Dashboard"
 4. Enter your API key when prompted
 5. Select your organization from the dropdown
-6. (Optional) Select specific devices to monitor or leave empty to monitor all
+6. (Optional) Select specific MT devices to monitor or leave empty to monitor all
 7. Configure update interval and auto-discovery settings
 
 ### Configuration Options
 
 After setup, you can modify options by clicking "Configure" on the integration:
-- **Update Interval**: How often to fetch sensor data (minimum 60 seconds, default 1200 seconds/20 minutes)
+- **Update Interval**: How often to fetch sensor data
 - **Enable Auto-Discovery**: Automatically discover and add new MT devices
 - **Device Discovery Interval**: How often to scan for new devices when auto-discovery is enabled
+- **MT15/MT40 Fast Refresh**: Optionally poll MT15/MT40 devices more frequently than Meraki's default interval
 
 ## Documentation
 
@@ -115,12 +140,11 @@ After setup, you can modify options by clicking "Configure" on the integration:
 ### Currently Supported
 - **MT Series Environmental Sensors**
   - MT10, MT12, MT14, MT15, MT20, MT30, MT40
-- **MR Series Wireless Access Points**
-  - All MR models with SSID, client, and performance metrics
-- **MS Series Switches**
-  - All MS models with port status, PoE, and traffic metrics
-- **MV Series Cameras**
-  - Camera settings, detections history, snapshots, and optional RTSP streaming
+
+### No Longer Supported (removed in v1.0.0)
+- MR Series Wireless Access Points
+- MS Series Switches
+- MV Series Cameras
 
 ## Entity Naming
 
@@ -214,10 +238,17 @@ This will show detailed information about:
 - Verify the device has been reporting data recently
 - Enable debug logging to see what metrics are being received
 
-#### Slow updates
+#### Slow updates / missed button or door events
 - Meraki MT sensors only update every 20 minutes by default
+- MT20/MT30 button and door events are polled, not pushed — a brief press or state change between
+  polls can be missed or reported late; enable MT15/MT40 fast refresh or lower your update interval
+  to reduce (but not eliminate) this window
 - Check your configured update interval in the integration options
 - Note that more frequent polling won't get newer data if the sensors haven't updated
+
+#### My MR/MS/MV devices and entities disappeared after upgrading
+- This is expected in v1.0.0 — see the breaking-change notice at the top of this README. MR/MS/MV
+  support has been removed; a repair notice in Settings → Repairs explains the migration.
 
 ### Testing Locally
 

@@ -18,8 +18,6 @@ from meraki.exceptions import (
 from custom_components.meraki_dashboard.const import (
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
     USER_AGENT,
 )
@@ -215,7 +213,10 @@ class TestMerakiOrganizationHub:
         assert len(organization_hub.networks) == 1
         assert organization_hub.total_api_calls >= 2
 
-        # Verify API client was configured correctly
+        # Verify API client was configured correctly. wait_on_rate_limit and
+        # retry_4xx_error are both False - the hub owns rate limiting and a
+        # single bounded 429 retry itself (see _api_call_with_retry) so the
+        # SDK must never block the event loop internally.
         mock_dashboard_class.assert_called_once_with(
             "test_api_key",
             base_url=DEFAULT_BASE_URL,
@@ -225,7 +226,8 @@ class TestMerakiOrganizationHub:
             output_log=False,
             suppress_logging=True,
             maximum_concurrent_requests=5,
-            wait_on_rate_limit=True,
+            wait_on_rate_limit=False,
+            retry_4xx_error=False,
         )
 
         # Clean up timer to avoid lingering tasks
@@ -286,7 +288,12 @@ class TestMerakiOrganizationHub:
     async def test_async_create_network_hubs(
         self, mock_network_hub_class, organization_hub, mock_dashboard_api
     ):
-        """Test network hub creation."""
+        """Test network hub creation.
+
+        MT-only: ``async_create_network_hubs`` iterates only ``SENSOR_TYPE_MT``
+        per network, so a network with only non-MT devices yields no hub and a
+        network with an MT device yields exactly one.
+        """
         organization_hub.dashboard = mock_dashboard_api
         organization_hub.networks = [
             {
@@ -306,6 +313,7 @@ class TestMerakiOrganizationHub:
             network_ids = network_ids or _kwargs.get("networkIds") or []
             devices = []
             if "network1" in network_ids:
+                # Non-MT devices only - no hub should be created for network1.
                 devices.extend(
                     [
                         {
@@ -339,34 +347,18 @@ class TestMerakiOrganizationHub:
         mock_network_hub = Mock()
         mock_network_hub.async_setup = AsyncMock(return_value=True)
         mock_network_hub.async_unload = AsyncMock()
-        mock_network_hub.hub_name = "Network 1_MR"
+        mock_network_hub.hub_name = "Network 2_MT"
         mock_network_hub.devices = []  # Add devices list for len() check
         mock_network_hub_class.return_value = mock_network_hub
 
         result = await organization_hub.async_create_network_hubs()
 
-        # Should create 3 hubs: MR, MS for network1, MT for network2
-        assert len(result) == 3
-        assert mock_network_hub_class.call_count == 3
+        # Only network2's MT device yields a hub - network1 has no MT devices.
+        assert len(result) == 1
+        assert mock_network_hub_class.call_count == 1
 
-        # Verify the hubs were created with correct parameters
-        # Order should be: network1 MR, network1 MS, network2 MT
         calls = mock_network_hub_class.call_args_list
         assert calls[0][0] == (
-            organization_hub,
-            "network1",
-            "Network 1",
-            SENSOR_TYPE_MR,
-            organization_hub.config_entry,
-        )
-        assert calls[1][0] == (
-            organization_hub,
-            "network1",
-            "Network 1",
-            SENSOR_TYPE_MS,
-            organization_hub.config_entry,
-        )
-        assert calls[2][0] == (
             organization_hub,
             "network2",
             "Network 2",
@@ -384,18 +376,18 @@ class TestMerakiOrganizationHub:
             {
                 "id": "network1",
                 "name": "Network 1",
-                "productTypes": ["wireless"],
+                "productTypes": ["sensor"],
             }
         ]
 
         # Mock getOrganizationDevices to return devices
         mock_dashboard_api.organizations.getOrganizationDevices.return_value = [
-            {"serial": "device1", "model": "MR36", "productType": "wireless"},
+            {"serial": "device1", "model": "MT40", "productType": "sensor"},
         ]
 
         mock_network_hub = Mock()
         mock_network_hub.async_setup = AsyncMock(return_value=False)  # Setup fails
-        mock_network_hub.hub_name = "Network 1_MR"
+        mock_network_hub.hub_name = "Network 1_MT"
         mock_network_hub_class.return_value = mock_network_hub
 
         result = await organization_hub.async_create_network_hubs()
@@ -406,244 +398,41 @@ class TestMerakiOrganizationHub:
     async def test_async_update_organization_data(
         self, organization_hub, mock_dashboard_api
     ):
-        """Test organization data update."""
+        """Test organization data update.
+
+        Under the MT-only minimal-health set, ``async_update_organization_data``
+        is a stable no-op that just returns org identity metadata - there is no
+        license/alert/clients/memory/device-status data left to refresh (those
+        fetchers were removed with the MR/MS/MV device families).
+        """
         organization_hub.dashboard = mock_dashboard_api
+        organization_hub.organization_name = "Test Organization"
 
-        # Mock the private methods
-        organization_hub._fetch_license_data = AsyncMock()
-        organization_hub._fetch_alerts_data = AsyncMock()
-        organization_hub._fetch_device_statuses = AsyncMock()
-        organization_hub._fetch_clients_overview = AsyncMock()
-        organization_hub._fetch_bluetooth_clients_overview = AsyncMock()
-        organization_hub._fetch_memory_usage = AsyncMock()
+        result = await organization_hub.async_update_organization_data()
 
-        await organization_hub.async_update_organization_data()
+        assert result == {"id": "test_org_id", "name": "Test Organization"}
 
-        # Verify all data fetching methods were called
-        organization_hub._fetch_license_data.assert_called_once()
-        organization_hub._fetch_alerts_data.assert_called_once()
-        organization_hub._fetch_device_statuses.assert_called_once()
-        organization_hub._fetch_clients_overview.assert_called_once()
-        organization_hub._fetch_bluetooth_clients_overview.assert_called_once()
-        organization_hub._fetch_memory_usage.assert_called_once()
-
-    async def test_fetch_license_data_success(
+    async def test_async_update_organization_data_unknown_name(
         self, organization_hub, mock_dashboard_api
     ):
-        """Test successful license data fetching with co-term licensing."""
+        """Test organization data update falls back to 'Unknown' name."""
         organization_hub.dashboard = mock_dashboard_api
+        organization_hub.organization_name = None
 
-        # Mock successful co-term licensing call
-        mock_dashboard_api.organizations.getOrganizationLicensesOverview.return_value = {
-            "status": "OK",
-            "expirationDate": "Mar 16, 2025 UTC",
-            "licensedDeviceCounts": {
-                "MS120-24P": 6,
-                "MX65": 8,
-                "wireless": 12,
-            },
-        }
+        result = await organization_hub.async_update_organization_data()
 
-        await organization_hub._fetch_license_data()
-
-        assert len(organization_hub.licenses_info) > 0
-        assert organization_hub.licenses_info["licensing_model"] == "co-term"
-        assert organization_hub.licenses_info["total_licenses"] == 26  # 6 + 8 + 12
-        assert organization_hub.licenses_info["status"] == "OK"
-
-    async def test_fetch_license_data_per_device_fallback(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test license data fetching falls back to per-device licensing."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock co-term API failure (organization doesn't support per-device licensing)
-        mock_dashboard_api.organizations.getOrganizationLicensesOverview.side_effect = (
-            create_mock_api_error(
-                "Organization with ID 1019781 does not support per-device licensing",
-                400,
-            )
-        )
-
-        # Mock successful per-device licensing call
-        mock_dashboard_api.organizations.getOrganizationLicenses.return_value = [
-            {
-                "key": "license1",
-                "status": "OK",
-                "expirationDate": "2024-12-31T23:59:59Z",
-                "claimedAt": "2023-01-01T00:00:00Z",
-                "licenseType": "Enterprise",
-            },
-            {
-                "key": "license2",
-                "status": "EXPIRED",
-                "expirationDate": "2023-12-31T23:59:59Z",
-                "claimedAt": "2022-01-01T00:00:00Z",
-                "licenseType": "Enterprise",
-            },
-        ]
-
-        await organization_hub._fetch_license_data()
-
-        assert len(organization_hub.licenses_info) > 0
-        assert organization_hub.licenses_info["licensing_model"] == "per-device"
-        assert organization_hub.licenses_info["total_licenses"] == 2
-
-    async def test_fetch_license_data_api_error(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test license data fetching with API error on both endpoints."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock both APIs failing
-        mock_dashboard_api.organizations.getOrganizationLicensesOverview.side_effect = (
-            create_mock_api_error("Co-term License API error", 403)
-        )
-        mock_dashboard_api.organizations.getOrganizationLicenses.side_effect = (
-            create_mock_api_error("PDL License API error", 403)
-        )
-
-        await organization_hub._fetch_license_data()
-
-        # Should handle error gracefully and set unavailable licensing model
-        assert organization_hub.licenses_info["licensing_model"] == "unavailable"
-        assert organization_hub.licenses_expiring_count == 0
-
-    async def test_fetch_alerts_data_success(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test successful alerts overview data fetching."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock the new alerts overview by network API call
-        mock_alerts_overview = {
-            "items": [
-                {
-                    "networkId": "L_123456789",
-                    "networkName": "Main Office",
-                    "alertCount": 5,
-                    "severityCounts": [
-                        {"type": "warning", "count": 3},
-                        {"type": "critical", "count": 2},
-                    ],
-                },
-                {
-                    "networkId": "L_987654321",
-                    "networkName": "Branch Office",
-                    "alertCount": 2,
-                    "severityCounts": [{"type": "informational", "count": 2}],
-                },
-            ],
-            "meta": {"counts": {"items": 2}},
-        }
-        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.return_value = mock_alerts_overview
-
-        await organization_hub._fetch_alerts_data()
-
-        # Verify the new implementation correctly processes alerts overview
-        assert organization_hub.active_alerts_count == 7  # 5 + 2 = 7 total alerts
-        assert len(organization_hub.recent_alerts) == 2  # 2 networks with alerts
-
-        # Check the structure of recent_alerts (now network summaries)
-        network_alert = organization_hub.recent_alerts[0]
-        assert network_alert["network_id"] == "L_123456789"
-        assert network_alert["network_name"] == "Main Office"
-        assert network_alert["alert_count"] == 5
-        assert len(network_alert["severity_counts"]) == 2
-
-    async def test_fetch_alerts_data_api_error(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test alerts overview data fetching with API error."""
-        organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.side_effect = create_mock_api_error(
-            "Alerts overview API error", 403
-        )
-
-        await organization_hub._fetch_alerts_data()
-
-        # Should handle error gracefully and increment failed API calls
-        assert organization_hub.recent_alerts == []
-        assert organization_hub.active_alerts_count == 0
-        assert organization_hub.failed_api_calls == 1
-        assert organization_hub.last_api_call_error is not None
-
-    async def test_fetch_alerts_data_fallback_success(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test alerts overview fallback when by-network endpoint fails."""
-        organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.side_effect = create_mock_async_api_error(
-            "Alerts overview by network API error", 429
-        )
-        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverview.return_value = {
-            "counts": {"total": 4}
-        }
-
-        await organization_hub._fetch_alerts_data()
-
-        assert organization_hub.active_alerts_count == 4
-        assert organization_hub.recent_alerts == []
-
-    async def test_fetch_alerts_data_no_alerts(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test alerts overview data fetching with no active alerts."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock empty alerts overview response
-        mock_alerts_overview = {"items": [], "meta": {"counts": {"items": 0}}}
-        mock_dashboard_api.organizations.getOrganizationAssuranceAlertsOverviewByNetwork.return_value = mock_alerts_overview
-
-        await organization_hub._fetch_alerts_data()
-
-        # Should handle empty response correctly
-        assert organization_hub.active_alerts_count == 0
-        assert organization_hub.recent_alerts == []
-
-    async def test_fetch_device_statuses_success(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test successful device statuses fetching."""
-        organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationDevicesAvailabilities.return_value = [
-            {
-                "serial": "device1",
-                "name": "Device 1",
-                "status": "online",
-                "lastReportedAt": "2023-01-01T12:00:00Z",
-            },
-            {
-                "serial": "device2",
-                "name": "Device 2",
-                "status": "offline",
-                "lastReportedAt": "2023-01-01T11:00:00Z",
-            },
-        ]
-
-        await organization_hub._fetch_device_statuses()
-
-        assert len(organization_hub.device_statuses) == 2
-        assert organization_hub.device_statuses[0]["serial"] == "device1"
-
-    async def test_fetch_device_statuses_api_error(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test device statuses fetching with API error."""
-        organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationDevicesAvailabilities.side_effect = create_mock_api_error(
-            "Device status API error", 500
-        )
-
-        await organization_hub._fetch_device_statuses()
-
-        # Should handle error gracefully
-        assert organization_hub.device_statuses == []
+        assert result == {"id": "test_org_id", "name": "Unknown"}
 
     async def test_network_has_device_type_success(
         self, organization_hub, mock_dashboard_api
     ):
-        """Test checking if network has device type."""
+        """Test checking if network has device type.
+
+        MT-only: ``device_matches_type`` now only recognises ``SENSOR_TYPE_MT``
+        (via the ``MT`` model prefix or the ``sensor`` productType), so a
+        formerly-wireless device like the CW9172I AP no longer resolves to any
+        device type.
+        """
         organization_hub.dashboard = mock_dashboard_api
         mock_dashboard_api.organizations.getOrganizationDevices.return_value = [
             {"serial": "device1", "model": "MT40", "productType": "sensor"},
@@ -656,12 +445,7 @@ class TestMerakiOrganizationHub:
         assert result is True
 
         result = await organization_hub._network_has_device_type(
-            "network1", SENSOR_TYPE_MR
-        )
-        assert result is True
-
-        result = await organization_hub._network_has_device_type(
-            "network1", SENSOR_TYPE_MS
+            "network1", "MR"
         )
         assert result is False
 
@@ -712,49 +496,6 @@ class TestMerakiOrganizationHub:
         # Should not raise exception
         await organization_hub.async_unload()
 
-    async def test_tiered_refresh_system(self, organization_hub, mock_dashboard_api):
-        """Test that tiered refresh system tracks update times correctly."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock the private methods
-        organization_hub._fetch_license_data = AsyncMock()
-        organization_hub._fetch_alerts_data = AsyncMock()
-        organization_hub._fetch_device_statuses = AsyncMock()
-        organization_hub._fetch_clients_overview = AsyncMock()
-
-        # Perform manual update
-        await organization_hub.async_update_organization_data()
-
-        # Verify all data fetching methods were called
-        organization_hub._fetch_license_data.assert_called_once()
-        organization_hub._fetch_alerts_data.assert_called_once()
-        organization_hub._fetch_device_statuses.assert_called_once()
-        organization_hub._fetch_clients_overview.assert_called_once()
-
-        # Verify last update times are set
-        assert organization_hub._last_license_update is not None
-        assert organization_hub._last_device_status_update is not None
-        assert organization_hub._last_alerts_update is not None
-        assert organization_hub._last_clients_update is not None
-        assert organization_hub._last_bluetooth_clients_update is not None
-        assert organization_hub._last_memory_usage_update is not None
-
-        # Verify diagnostic properties work
-        assert organization_hub.last_license_update_age_minutes is not None
-        assert organization_hub.last_device_status_update_age_minutes is not None
-        assert organization_hub.last_alerts_update_age_minutes is not None
-        assert organization_hub.last_clients_update_age_minutes is not None
-        assert organization_hub.last_bluetooth_clients_update_age_minutes is not None
-        assert organization_hub.last_memory_usage_update_age_minutes is not None
-
-        # All should be very recent (0 minutes)
-        assert organization_hub.last_license_update_age_minutes == 0
-        assert organization_hub.last_device_status_update_age_minutes == 0
-        assert organization_hub.last_alerts_update_age_minutes == 0
-        assert organization_hub.last_clients_update_age_minutes == 0
-        assert organization_hub.last_bluetooth_clients_update_age_minutes == 0
-        assert organization_hub.last_memory_usage_update_age_minutes == 0
-
     async def test_tiered_refresh_diagnostic_properties_none(self, organization_hub):
         """Test diagnostic properties when no updates have occurred."""
         # Should return None when no updates have occurred
@@ -764,114 +505,6 @@ class TestMerakiOrganizationHub:
         assert organization_hub.last_clients_update_age_minutes is None
         assert organization_hub.last_bluetooth_clients_update_age_minutes is None
         assert organization_hub.last_memory_usage_update_age_minutes is None
-
-    async def test_fetch_clients_overview_success(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test successful clients overview data fetching."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock clients overview response
-        mock_clients_overview = {
-            "counts": {"total": 25},
-            "usage": {
-                "overall": {
-                    "total": 1024000.5,
-                    "downstream": 800000.2,
-                    "upstream": 224000.3,
-                },
-                "average": 40960.02,  # API returns single float value
-            },
-        }
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
-            mock_clients_overview
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Verify API call was made with correct parameters
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.assert_called_once_with(
-            organization_hub.organization_id
-            # No timespan parameter - using default (1 day)
-        )
-
-        # Verify data was processed correctly
-        assert organization_hub.clients_total_count == 25
-        assert organization_hub.clients_usage_overall_total == 1024000.5
-        assert organization_hub.clients_usage_overall_downstream == 800000.2
-        assert organization_hub.clients_usage_overall_upstream == 224000.3
-        assert organization_hub.clients_usage_average_total == 40960.02
-
-    async def test_fetch_clients_overview_api_error(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test clients overview data fetching with API error."""
-        organization_hub.dashboard = mock_dashboard_api
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.side_effect = (
-            create_mock_api_error("Clients overview API error", 403)
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Should handle error gracefully and set fallback values
-        assert organization_hub.clients_total_count == 0
-        assert organization_hub.clients_usage_overall_total == 0.0
-        assert organization_hub.clients_usage_overall_downstream == 0.0
-        assert organization_hub.clients_usage_overall_upstream == 0.0
-        assert organization_hub.clients_usage_average_total == 0.0
-        assert organization_hub.failed_api_calls == 1
-        assert organization_hub.last_api_call_error is not None
-
-    async def test_fetch_clients_overview_no_data(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test clients overview data fetching with no data returned."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock empty clients overview response
-        mock_clients_overview = {}
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
-            mock_clients_overview
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Should handle empty response correctly
-        assert organization_hub.clients_total_count == 0
-        assert organization_hub.clients_usage_overall_total == 0.0
-        assert organization_hub.clients_usage_overall_downstream == 0.0
-        assert organization_hub.clients_usage_overall_upstream == 0.0
-        assert organization_hub.clients_usage_average_total == 0.0
-
-    async def test_fetch_clients_overview_partial_data(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test clients overview data fetching with partial data."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock partial clients overview response (missing some fields)
-        mock_clients_overview = {
-            "counts": {"total": 10},
-            "usage": {
-                "overall": {
-                    "total": 500000.0
-                    # Missing downstream and upstream
-                },
-                "average": 15000.0,  # API returns single float value
-            },
-        }
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
-            mock_clients_overview
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Should handle partial data correctly with defaults for missing fields
-        assert organization_hub.clients_total_count == 10
-        assert organization_hub.clients_usage_overall_total == 500000.0
-        assert organization_hub.clients_usage_overall_downstream == 0.0  # Default
-        assert organization_hub.clients_usage_overall_upstream == 0.0  # Default
-        assert organization_hub.clients_usage_average_total == 15000.0
 
     async def test_clients_overview_update_age_tracking(self, organization_hub):
         """Test that clients overview update age is tracked correctly."""
@@ -886,96 +519,6 @@ class TestMerakiOrganizationHub:
         age = organization_hub.last_clients_update_age_minutes
         assert age is not None
         assert 4 <= age <= 6  # Allow for small timing variations
-
-    async def test_fetch_clients_overview_float_usage_data(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test clients overview data fetching when API returns usage as float values."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock clients overview response with float values instead of dicts
-        mock_clients_overview = {
-            "counts": {"total": 15},
-            "usage": {
-                "overall": 750000.0,  # Float instead of dict
-                "average": 50000.0,  # Float instead of dict
-            },
-        }
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
-            mock_clients_overview
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Should handle float values correctly
-        assert organization_hub.clients_total_count == 15
-        assert organization_hub.clients_usage_overall_total == 750000.0
-        assert (
-            organization_hub.clients_usage_overall_downstream == 0.0
-        )  # Should default to 0
-        assert (
-            organization_hub.clients_usage_overall_upstream == 0.0
-        )  # Should default to 0
-        assert organization_hub.clients_usage_average_total == 50000.0
-
-    async def test_fetch_clients_overview_mixed_usage_data(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test clients overview data fetching with mixed data types."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock clients overview response with mixed data types
-        mock_clients_overview = {
-            "counts": {"total": 20},
-            "usage": {
-                "overall": {
-                    "total": 1000000.0,
-                    "downstream": 600000.0,
-                    "upstream": 400000.0,
-                },
-                "average": 50000.0,  # Float for average, dict for overall
-            },
-        }
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
-            mock_clients_overview
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Should handle mixed types correctly
-        assert organization_hub.clients_total_count == 20
-        assert organization_hub.clients_usage_overall_total == 1000000.0
-        assert organization_hub.clients_usage_overall_downstream == 600000.0
-        assert organization_hub.clients_usage_overall_upstream == 400000.0
-        assert organization_hub.clients_usage_average_total == 50000.0
-
-    async def test_fetch_clients_overview_invalid_usage_types(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test clients overview data fetching with invalid usage data types."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock clients overview response with invalid data types
-        mock_clients_overview = {
-            "counts": {"total": 5},
-            "usage": {
-                "overall": "invalid_string",  # Invalid type
-                "average": None,  # Invalid type
-            },
-        }
-        mock_dashboard_api.organizations.getOrganizationClientsOverview.return_value = (
-            mock_clients_overview
-        )
-
-        await organization_hub._fetch_clients_overview()
-
-        # Should handle invalid types gracefully with fallback values
-        assert organization_hub.clients_total_count == 5
-        assert organization_hub.clients_usage_overall_total == 0.0
-        assert organization_hub.clients_usage_overall_downstream == 0.0
-        assert organization_hub.clients_usage_overall_upstream == 0.0
-        assert organization_hub.clients_usage_average_total == 0.0
-
 
 class TestLoggingConfiguration:
     """Test logging configuration functionality."""
@@ -1078,132 +621,3 @@ class TestOrganizationHubEdgeCases:
         # Clean up timer to avoid lingering tasks
         await organization_hub.async_unload()
 
-    async def test_license_data_expiration_edge_cases(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test license data with various expiration scenarios."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Test with licenses expiring in different timeframes
-        licenses_data = [
-            {
-                "key": "license1",
-                "status": "OK",
-                "expirationDate": (datetime.now(UTC) + timedelta(days=29)).isoformat(),
-                "claimedAt": "2023-01-01T00:00:00Z",
-            },
-            {
-                "key": "license2",
-                "status": "OK",
-                "expirationDate": (datetime.now(UTC) + timedelta(days=92)).isoformat(),
-                "claimedAt": "2023-01-01T00:00:00Z",
-            },
-            {
-                "key": "license3",
-                "status": "EXPIRED",
-                "expirationDate": (datetime.now(UTC) - timedelta(days=1)).isoformat(),
-                "claimedAt": "2023-01-01T00:00:00Z",
-            },
-        ]
-        mock_dashboard_api.organizations.getOrganizationLicenses.return_value = (
-            licenses_data
-        )
-
-        await organization_hub._fetch_license_data()
-
-        # Should count licenses expiring within 90 days (license1 only, since license2 expires in 92 days and license3 is already expired)
-        assert organization_hub.licenses_expiring_count == 1
-        assert organization_hub.licenses_info["total_licenses"] == 3
-
-    async def test_fetch_wireless_ethernet_statuses(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test fetching wireless ethernet statuses."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        # Mock wireless ethernet statuses data
-        ethernet_statuses = [
-            {
-                "serial": "Q3AB-TEST-0001",
-                "name": "TestAP1",
-                "network": {"id": "N_12345"},
-                "power": {
-                    "mode": "full",
-                    "ac": {"isConnected": False},
-                    "poe": {"isConnected": True},
-                },
-                "aggregation": {"enabled": False, "speed": 0},
-                "ports": [],
-            },
-            {
-                "serial": "Q3AB-TEST-0002",
-                "name": "TestAP2",
-                "network": {"id": "N_12345"},
-                "power": {
-                    "mode": "full",
-                    "ac": {"isConnected": True},
-                    "poe": {"isConnected": False},
-                },
-                "aggregation": {"enabled": True, "speed": 2000},
-                "ports": [],
-            },
-        ]
-
-        mock_dashboard_api.wireless = Mock()
-        mock_dashboard_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = (
-            Mock(return_value=ethernet_statuses)
-        )
-
-        await organization_hub._fetch_wireless_ethernet_statuses()
-
-        # Verify data was processed correctly
-        assert len(organization_hub.device_ethernet_status) == 2
-        assert "Q3AB-TEST-0001" in organization_hub.device_ethernet_status
-        assert "Q3AB-TEST-0002" in organization_hub.device_ethernet_status
-
-        # Check device 1 data
-        device1 = organization_hub.device_ethernet_status["Q3AB-TEST-0001"]
-        assert device1["power_ac_connected"] is False
-        assert device1["power_poe_connected"] is True
-        assert device1["aggregation_enabled"] is False
-        assert device1["aggregation_speed"] == 0
-
-        # Check device 2 data
-        device2 = organization_hub.device_ethernet_status["Q3AB-TEST-0002"]
-        assert device2["power_ac_connected"] is True
-        assert device2["power_poe_connected"] is False
-        assert device2["aggregation_enabled"] is True
-        assert device2["aggregation_speed"] == 2000
-
-    async def test_fetch_wireless_ethernet_statuses_no_data(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test fetching wireless ethernet statuses with no data."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        mock_dashboard_api.wireless = Mock()
-        mock_dashboard_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = (
-            Mock(return_value=[])
-        )
-
-        await organization_hub._fetch_wireless_ethernet_statuses()
-
-        # Should have empty dict but not fail
-        assert organization_hub.device_ethernet_status == {}
-
-    async def test_fetch_wireless_ethernet_statuses_api_error(
-        self, organization_hub, mock_dashboard_api
-    ):
-        """Test fetching wireless ethernet statuses with API error."""
-        organization_hub.dashboard = mock_dashboard_api
-
-        mock_dashboard_api.wireless = Mock()
-        mock_dashboard_api.wireless.getOrganizationWirelessDevicesEthernetStatuses = (
-            Mock(side_effect=Exception("API Error"))
-        )
-
-        await organization_hub._fetch_wireless_ethernet_statuses()
-
-        # Should handle error gracefully
-        assert organization_hub.device_ethernet_status == {}
-        assert organization_hub.failed_api_calls == 1

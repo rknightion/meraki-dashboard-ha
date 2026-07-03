@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
@@ -16,8 +15,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import (
     DOMAIN,
     ENTITY_REMOVAL_MIN_DISCOVERY_PASSES,
-    EVENT_FETCH_TIMEOUT_SECONDS,
-    SENSOR_TYPE_MV,
 )
 from .types import CoordinatorData, MerakiDeviceData
 from .utils import performance_monitor
@@ -31,10 +28,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
-    """Coordinator to manage fetching Meraki device data.
+    """Coordinator to manage fetching Meraki MT sensor data.
 
-    This coordinator handles periodic updates of device data for all device types (MT, MR, MS, MV),
-    making efficient batch API calls to minimize API usage.
+    One coordinator per network hub drives periodic MT readings updates,
+    consuming the org hub's short-TTL-cached org-wide readings fetch.
     """
 
     def __init__(
@@ -101,11 +98,8 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
     async def _async_update_data(self) -> CoordinatorData:
         """Fetch data from Meraki Dashboard API.
 
-        Returns device data appropriate for the hub's device type:
-        - For MT devices: Dictionary with device serial numbers as keys and sensor data as values
-        - For MR devices: Dictionary with wireless network data
-        - For MS devices: Dictionary with switch network data
-        - For MV devices: Dictionary with camera network data
+        Returns MT device data: a dictionary keyed by device serial with each
+        sensor's latest readings (plus merged gateway RSSI / last-seen).
         """
         update_start_time = self.hass.loop.time()
         self._update_count += 1
@@ -119,65 +113,15 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
         )
 
         try:
-            # Get data from the hub based on device type
+            # MT is the only supported device family: fetch environmental
+            # sensor readings from the hub (which delegates to the org-wide
+            # cached fetch).
             if self.hub.device_type == "MT":
                 _LOGGER.debug("Fetching MT sensor data from hub %s", self.hub.hub_name)
                 data = await self.hub.async_get_sensor_data()
                 _LOGGER.debug(
                     "Retrieved MT data for %d devices", len(data) if data else 0
                 )
-            elif self.hub.device_type == "MR":
-                _LOGGER.debug(
-                    "Fetching MR wireless data from hub %s", self.hub.hub_name
-                )
-                # Update wireless data and return it
-                await self.hub._async_setup_wireless_data()
-                data = self.hub.wireless_data or {}
-                _LOGGER.debug("Retrieved MR wireless data with %d entries", len(data))
-
-                # Also fetch network events for wireless devices
-                try:
-                    await asyncio.wait_for(
-                        self.hub.async_fetch_network_events(),
-                        timeout=EVENT_FETCH_TIMEOUT_SECONDS,
-                    )
-                except TimeoutError:
-                    _LOGGER.debug(
-                        "Timed out fetching wireless network events for %s",
-                        self.hub.hub_name,
-                    )
-                except Exception as event_err:
-                    _LOGGER.debug(
-                        "Failed to fetch wireless network events: %s", event_err
-                    )
-
-            elif self.hub.device_type == "MS":
-                _LOGGER.debug("Fetching MS switch data from hub %s", self.hub.hub_name)
-                # Update switch data and return it
-                await self.hub._async_setup_switch_data()
-                data = self.hub.switch_data or {}
-                _LOGGER.debug("Retrieved MS switch data with %d entries", len(data))
-
-                # Also fetch network events for switch devices
-                try:
-                    await asyncio.wait_for(
-                        self.hub.async_fetch_network_events(),
-                        timeout=EVENT_FETCH_TIMEOUT_SECONDS,
-                    )
-                except TimeoutError:
-                    _LOGGER.debug(
-                        "Timed out fetching switch network events for %s",
-                        self.hub.hub_name,
-                    )
-                except Exception as event_err:
-                    _LOGGER.debug(
-                        "Failed to fetch switch network events: %s", event_err
-                    )
-            elif self.hub.device_type == SENSOR_TYPE_MV:
-                _LOGGER.debug("Fetching MV camera data from hub %s", self.hub.hub_name)
-                await self.hub._async_setup_camera_data()
-                data = self.hub.camera_data or {}
-                _LOGGER.debug("Retrieved MV camera data with %d entries", len(data))
             else:
                 _LOGGER.warning("Unknown device type: %s", self.hub.device_type)
                 data = {}

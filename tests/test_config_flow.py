@@ -17,7 +17,6 @@ from custom_components.meraki_dashboard.const import (
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
-    CONF_ENABLED_DEVICE_TYPES,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
     DEFAULT_BASE_URL,
@@ -469,7 +468,6 @@ class TestConfigFlowEdgeCases:
                 result["flow_id"],
                 user_input={
                     "update_api_key": True,
-                    CONF_ENABLED_DEVICE_TYPES: ["MT"],
                 },
             )
 
@@ -543,7 +541,6 @@ class TestConfigFlowEdgeCases:
                 result["flow_id"],
                 user_input={
                     "update_api_key": True,
-                    CONF_ENABLED_DEVICE_TYPES: ["MT"],
                 },
             )
 

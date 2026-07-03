@@ -1,28 +1,14 @@
 """Extended data transformer tests using pytest-homeassistant-custom-component."""
 
 from custom_components.meraki_dashboard.const import (
-    MR_SENSOR_CLIENT_COUNT,
-    MR_SENSOR_MEMORY_USAGE,
-    MS_SENSOR_MEMORY_USAGE,
-    MS_SENSOR_PORT_COUNT,
     MT_SENSOR_BATTERY,
     MT_SENSOR_CO2,
     MT_SENSOR_DOOR,
     MT_SENSOR_HUMIDITY,
     MT_SENSOR_TEMPERATURE,
-    MV_SENSOR_DETECTIONS_TOTAL,
-    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
-    MV_SENSOR_MOTION_DETECTION_ENABLED,
-    MV_SENSOR_QUALITY,
-    MV_SENSOR_RECENT_MOTION_DETECTED,
-    MV_SENSOR_RECORDING_STATUS,
-    MV_SENSOR_STORAGE_USAGE_PERCENT,
 )
 from custom_components.meraki_dashboard.data.transformers import (
-    MRWirelessDataTransformer,
-    MSSwitchDataTransformer,
     MTSensorDataTransformer,
-    MVCameraDataTransformer,
     OrganizationDataTransformer,
     transformer_registry,
 )
@@ -175,206 +161,6 @@ class TestMTSensorDataTransformer:
         assert isinstance(result, dict)
 
 
-class TestMRWirelessDataTransformer:
-    """Test MR wireless data transformation."""
-
-    def test_transform_client_count(self):
-        """Test client count transformation."""
-        device_data = {
-            "serial": "Q2GD-AAAA-AAAA",
-            "usage": {
-                "sent": 1024000,
-                "recv": 2048000,
-            },
-            "clients": {
-                "counts": {
-                    "total": 15,
-                }
-            },
-        }
-
-        transformer = MRWirelessDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Should have client count (default to 0 if not in expected format)
-        assert MR_SENSOR_CLIENT_COUNT in result
-        # Note: The transformer may not extract this value from the provided structure
-        assert result[MR_SENSOR_CLIENT_COUNT] == 0
-
-    def test_transform_memory_usage(self):
-        """Test memory usage transformation."""
-        device_data = {
-            "serial": "Q2GD-AAAA-AAAA",
-            "performance": {
-                "memoryUtilization": 42.5,
-            },
-        }
-
-        transformer = MRWirelessDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Memory usage key is present but may default to 0
-        assert MR_SENSOR_MEMORY_USAGE in result
-        # Note: The transformer may not extract this value from the provided structure
-        # assert result[MR_SENSOR_MEMORY_USAGE] == 42.5
-
-    def test_transform_missing_data(self):
-        """Test transformation with missing wireless data."""
-        device_data = {
-            "serial": "Q2GD-AAAA-AAAA",
-            # Missing usage, clients, performance data
-        }
-
-        transformer = MRWirelessDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Should handle gracefully
-        assert isinstance(result, dict)
-
-    def test_transform_partial_data(self):
-        """Test transformation with partial wireless data."""
-        device_data = {
-            "serial": "Q2GD-AAAA-AAAA",
-            "clients": {
-                "counts": {
-                    "total": 10,
-                }
-            },
-            # Missing performance data
-        }
-
-        transformer = MRWirelessDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Should have client count
-        assert MR_SENSOR_CLIENT_COUNT in result
-        # Should not crash on missing performance data
-        assert isinstance(result, dict)
-
-
-class TestMSSwitchDataTransformer:
-    """Test MS switch data transformation."""
-
-    def test_transform_port_count(self):
-        """Test port count transformation."""
-        device_data = {
-            "serial": "Q2LM-XXXX-XXXX",
-            "ports": [
-                {"portId": "1", "enabled": True},
-                {"portId": "2", "enabled": True},
-                {"portId": "3", "enabled": False},
-            ],
-        }
-
-        transformer = MSSwitchDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Should have port count (defaults to 0 if not in expected format)
-        assert MS_SENSOR_PORT_COUNT in result
-        # Note: The transformer may not extract this value from the provided structure
-        assert result[MS_SENSOR_PORT_COUNT] == 0
-
-    def test_transform_memory_usage(self):
-        """Test memory usage transformation."""
-        device_data = {
-            "serial": "Q2LM-XXXX-XXXX",
-            "performance": {
-                "memoryUtilization": 35.8,
-            },
-        }
-
-        transformer = MSSwitchDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Memory usage key is present but may default to 0
-        assert MS_SENSOR_MEMORY_USAGE in result
-        # Note: The transformer may not extract this value from the provided structure
-        # assert result[MS_SENSOR_MEMORY_USAGE] == 35.8
-
-    def test_transform_no_ports(self):
-        """Test transformation with no port data."""
-        device_data = {
-            "serial": "Q2LM-XXXX-XXXX",
-            "ports": [],
-        }
-
-        transformer = MSSwitchDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Should handle zero ports
-        if MS_SENSOR_PORT_COUNT in result:
-            assert result[MS_SENSOR_PORT_COUNT] == 0
-
-    def test_transform_missing_data(self):
-        """Test transformation with missing switch data."""
-        device_data = {
-            "serial": "Q2LM-XXXX-XXXX",
-            # Missing all data
-        }
-
-        transformer = MSSwitchDataTransformer()
-        result = transformer.transform(device_data)
-
-        # Should handle gracefully
-        assert isinstance(result, dict)
-
-
-class TestMVCameraDataTransformer:
-    """Test MV camera data transformation."""
-
-    def test_transform_camera_settings(self):
-        """Test MV camera settings transformation."""
-        device_data = {
-            "serial": "Q2MV-TEST-0001",
-            "name": "Lobby Camera",
-            "model": "MV32",
-            "networkId": "N_123",
-            "qualityAndRetention": {
-                "quality": "Standard",
-                "resolution": "1280x720",
-                "motionBasedRetentionEnabled": True,
-            },
-            "videoSettings": {"externalRtspEnabled": True},
-        }
-
-        transformer = MVCameraDataTransformer()
-        result = transformer.transform(device_data)
-
-        assert result[MV_SENSOR_QUALITY] == "Standard"
-        assert result[MV_SENSOR_EXTERNAL_RTSP_ENABLED] == 1
-
-    def test_transform_camera_detections(self):
-        """Test MV camera detections transformation."""
-        device_data = {
-            "serial": "Q2MV-TEST-0002",
-            "detections": {"total": 7, "by_object_type": {"person": 5}},
-        }
-
-        transformer = MVCameraDataTransformer()
-        result = transformer.transform(device_data)
-
-        assert result[MV_SENSOR_DETECTIONS_TOTAL] == 7
-
-    def test_transform_camera_motion_and_storage(self, load_json_fixture):
-        """Test MV camera motion and storage transformation."""
-        device_data = {
-            "serial": "Q2MV-TEST-0003",
-            "senseSettings": load_json_fixture("camera_sense_settings.json"),
-            "analyticsRecent": load_json_fixture("camera_analytics_recent.json"),
-            "analyticsLive": load_json_fixture("camera_analytics_live.json"),
-            "qualityAndRetention": {"motionBasedRetentionEnabled": True},
-            "storageUsagePercent": 0.55,
-        }
-
-        transformer = MVCameraDataTransformer()
-        result = transformer.transform(device_data)
-
-        assert result[MV_SENSOR_MOTION_DETECTION_ENABLED] == 1
-        assert result[MV_SENSOR_RECENT_MOTION_DETECTED] == 1
-        assert result[MV_SENSOR_RECORDING_STATUS] == "motion_based"
-        assert result[MV_SENSOR_STORAGE_USAGE_PERCENT] == 55.0
-
-
 class TestOrganizationDataTransformer:
     """Test organization data transformation."""
 
@@ -428,20 +214,20 @@ class TestTransformerRegistry:
         transformer = transformer_registry.get_device_transformer("MT")
         assert isinstance(transformer, MTSensorDataTransformer)
 
-    def test_get_transformer_mr(self):
-        """Test getting MR transformer from registry."""
+    def test_get_transformer_mr_absent(self):
+        """Test that no MR transformer is registered (MT-only migration)."""
         transformer = transformer_registry.get_device_transformer("MR")
-        assert isinstance(transformer, MRWirelessDataTransformer)
+        assert transformer is None
 
-    def test_get_transformer_ms(self):
-        """Test getting MS transformer from registry."""
+    def test_get_transformer_ms_absent(self):
+        """Test that no MS transformer is registered (MT-only migration)."""
         transformer = transformer_registry.get_device_transformer("MS")
-        assert isinstance(transformer, MSSwitchDataTransformer)
+        assert transformer is None
 
-    def test_get_transformer_mv(self):
-        """Test getting MV transformer from registry."""
+    def test_get_transformer_mv_absent(self):
+        """Test that no MV transformer is registered (MT-only migration)."""
         transformer = transformer_registry.get_device_transformer("MV")
-        assert isinstance(transformer, MVCameraDataTransformer)
+        assert transformer is None
 
     def test_get_transformer_organization(self):
         """Test getting Organization transformer from registry."""
@@ -479,9 +265,6 @@ class TestTransformerEdgeCases:
         """Test transformation with empty data dictionary."""
         transformers = [
             MTSensorDataTransformer(),
-            MRWirelessDataTransformer(),
-            MSSwitchDataTransformer(),
-            MVCameraDataTransformer(),
             OrganizationDataTransformer(),
         ]
 
@@ -494,8 +277,6 @@ class TestTransformerEdgeCases:
         """Test transformation with None data."""
         transformers = [
             MTSensorDataTransformer(),
-            MRWirelessDataTransformer(),
-            MSSwitchDataTransformer(),
             OrganizationDataTransformer(),
         ]
 

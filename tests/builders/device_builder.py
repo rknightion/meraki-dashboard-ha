@@ -87,24 +87,6 @@ class MerakiDeviceBuilder:
         self._data["productType"] = "sensor"
         return self
 
-    def as_mr_device(self) -> MerakiDeviceBuilder:
-        """Configure the device as an MR (wireless access point) device."""
-        self._data["model"] = "MR46"
-        self._data["productType"] = "wireless"
-        return self
-
-    def as_ms_device(self) -> MerakiDeviceBuilder:
-        """Configure the device as an MS (switch) device."""
-        self._data["model"] = "MS120-8"
-        self._data["productType"] = "switch"
-        return self
-
-    def as_mv_device(self) -> MerakiDeviceBuilder:
-        """Configure the device as an MV (camera) device."""
-        self._data["model"] = "MV12"
-        self._data["productType"] = "camera"
-        return self
-
     def with_status(self, status: str) -> MerakiDeviceBuilder:
         """Set the device status (online, offline, alerting)."""
         self._data["status"] = status

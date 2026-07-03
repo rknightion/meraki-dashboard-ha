@@ -17,9 +17,22 @@ class MerakiRateLimiter:
         max_calls_per_second: int,
         max_concurrent: int,
         throttle_window_minutes: int = 60,
+        budget_fraction: float = 0.8,
     ) -> None:
-        """Initialize the rate limiter."""
-        self._max_calls_per_second = max_calls_per_second
+        """Initialize the rate limiter.
+
+        Args:
+            max_calls_per_second: Meraki's per-second call ceiling for the org.
+            max_concurrent: Maximum concurrent worker tasks.
+            throttle_window_minutes: Window for throttle-event metrics.
+            budget_fraction: Fraction (0-1) of the org budget to actually use,
+                leaving headroom so bursts don't trip Meraki's 429. Applied as
+                ``max(1, int(max_calls_per_second * budget_fraction))`` - the
+                sliding-window comparison expects an int and we never drop below
+                one call per second.
+        """
+        # Apply the budget fraction, flooring at one call per second.
+        self._max_calls_per_second = max(1, int(max_calls_per_second * budget_fraction))
         self._max_concurrent = max_concurrent
         self._throttle_window_seconds = throttle_window_minutes * 60
 

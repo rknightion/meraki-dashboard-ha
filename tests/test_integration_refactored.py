@@ -48,19 +48,18 @@ class TestIntegrationSetupWithBuilders:
 
     @pytest.mark.asyncio
     async def test_full_setup_flow(self, hass: HomeAssistant):
-        """Test complete setup flow with multiple device types."""
+        """Test complete setup flow with MT devices (the only supported family)."""
         helper = IntegrationTestHelper(hass)
 
-        # Create devices of different types
+        # Create multiple MT devices
         devices = [
             MerakiDeviceBuilder().as_mt_device().with_serial("MT-001").build(),
-            MerakiDeviceBuilder().as_mr_device().with_serial("MR-001").build(),
-            MerakiDeviceBuilder().as_ms_device().with_serial("MS-001").build(),
+            MerakiDeviceBuilder().as_mt_device().with_serial("MT-002").build(),
         ]
 
         # Set up integration
         config_entry = await helper.setup_meraki_integration(
-            devices=devices, selected_device_types=["MT", "MR", "MS"]
+            devices=devices, selected_device_types=["MT"]
         )
 
         # Verify integration is set up correctly
@@ -168,7 +167,7 @@ class TestIntegrationSetupWithBuilders:
             hass.data[DOMAIN].pop(first_entry_id, None)
 
         # Reload with different configuration
-        device2 = MerakiDeviceBuilder().as_mr_device().build()
+        device2 = MerakiDeviceBuilder().as_mt_device().with_serial("MT-002").build()
         await helper.setup_meraki_integration(devices=[device2])
 
         # Verify new configuration is active

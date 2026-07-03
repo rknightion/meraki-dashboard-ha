@@ -48,15 +48,14 @@ class TestPresetUsageExamples:
         # Create devices using simple presets
         office_sensor = DevicePresets.mt_sensor_full()
         water_sensor = DevicePresets.mt_water_sensor()
-        wifi_ap = DevicePresets.mr_access_point()
-        network_switch = DevicePresets.ms_switch()
+        door_sensor = DevicePresets.mt_door_sensor()
 
         # Verify basic device properties
         assert office_sensor["model"] == "MT20"
         assert office_sensor["productType"] == "sensor"
         assert water_sensor["model"] == "MT15"
-        assert wifi_ap["productType"] == "wireless"
-        assert network_switch["productType"] == "switch"
+        assert door_sensor["model"] == "MT12"
+        assert door_sensor["productType"] == "sensor"
 
     def test_scenario_presets(self):
         """Test complete scenario presets."""
@@ -65,16 +64,15 @@ class TestPresetUsageExamples:
         retail_devices = ScenarioPresets.retail_store()
         campus_devices = ScenarioPresets.campus_network()
 
-        # Verify we get expected device counts and types
-        assert len(office_devices) == 4  # MT, MT, MR, MS
-        assert len(retail_devices) == 5  # MT, MT, MT, MR, MV
-        assert len(campus_devices) >= 5  # Multiple buildings
+        # Verify we get expected device counts and types (MT-only integration)
+        assert len(office_devices) == 2  # MT, MT
+        assert len(retail_devices) == 3  # MT, MT, MT
+        assert len(campus_devices) >= 2  # Multiple buildings
 
         # Verify device types are included
         device_types = [d["productType"] for d in office_devices]
         assert "sensor" in device_types
-        assert "wireless" in device_types
-        assert "switch" in device_types
+        assert all(t == "sensor" for t in device_types)
 
     def test_sensor_data_presets(self):
         """Test realistic sensor data patterns."""
@@ -169,11 +167,11 @@ class TestPresetFlexibility:
 
         # Add additional devices from device presets
         office_devices.extend(
-            [DevicePresets.mt_door_sensor(), DevicePresets.mv_camera()]
+            [DevicePresets.mt_door_sensor(), DevicePresets.mt_sensor_basic()]
         )
 
         # Verify combined setup
-        assert len(office_devices) == 6  # 4 original + 2 added
+        assert len(office_devices) == 4  # 2 original + 2 added
 
         # Create sensor data for each MT device
         mt_devices = [d for d in office_devices if d["productType"] == "sensor"]
@@ -221,7 +219,7 @@ class TestPresetFlexibility:
         extreme_data = ErrorScenarioPresets.extreme_sensor_values()
 
         # Verify mixed scenario
-        assert len(all_devices) == 7  # 4 normal + 3 offline
+        assert len(all_devices) == 5  # 2 normal + 3 offline
         assert len(normal_data) == 2
         assert len(extreme_data) >= 3
 
@@ -266,7 +264,7 @@ class TestPresetDocumentation:
         extreme_readings = ErrorScenarioPresets.extreme_sensor_values()
 
         # Verify comprehensive test setup
-        assert len(devices) >= 8  # Multiple buildings + offline devices
+        assert len(devices) >= 5  # Multiple buildings + offline devices
         assert len(sensor_readings) >= 24  # Time series data
         assert len(extreme_readings) >= 3  # Edge cases
 

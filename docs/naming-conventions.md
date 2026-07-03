@@ -24,10 +24,7 @@ MerakiHubSensorEntity           # Base for hub-level sensors
 
 # Device-specific entities
 Meraki{DeviceType}DeviceSensor  # Device-level sensors
-  Example: MerakiMTDeviceSensor, MerakiMRDeviceSensor
-
-Meraki{DeviceType}NetworkSensor # Network-level sensors
-  Example: MerakiMRNetworkSensor
+  Example: MerakiMTDeviceSensor
 
 Meraki{DeviceType}BinarySensor  # Binary sensors
   Example: MerakiMTBinarySensor
@@ -192,9 +189,6 @@ organization_{attribute}        # Organization attributes
 # API/Coordinator data
 {type}_data                     # Data by type
   sensor_data
-  wireless_data
-  switch_data
-  camera_data
 
 # Sensor readings
 {metric}_reading                # Individual readings
@@ -220,13 +214,12 @@ DEFAULT_{VALUE}                 # Default values
 # Sensor/entity constants
 {DEVICE}_{TYPE}_{METRIC}        # Entity keys
   MT_SENSOR_TEMPERATURE
-  MR_SENSOR_CLIENT_COUNT
-  MS_BINARY_SENSOR_PORT
+  MT_SENSOR_SIGNAL_STRENGTH
 
 # Description dictionaries
 {DEVICE}_{TYPE}_DESCRIPTIONS    # Description mappings
   MT_SENSOR_DESCRIPTIONS
-  MR_SENSOR_DESCRIPTIONS
+  ORG_HUB_SENSOR_DESCRIPTIONS
 ```
 
 ## File and Module Names
@@ -260,9 +253,6 @@ custom_components/meraki_dashboard/
 # Device files use abbreviations
 {device_abbreviation}.py        # Device modules
   mt.py                         # MT sensors
-  mr.py                         # MR access points
-  ms.py                         # MS switches
-  mv.py                         # MV cameras
 ```
 
 ## Enum Usage

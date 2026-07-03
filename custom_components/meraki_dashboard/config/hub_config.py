@@ -32,9 +32,6 @@ DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES = 10  # 10 minutes
 # Device type scan intervals (in seconds)
 DEVICE_TYPE_SCAN_INTERVALS = {
     "MT": 60,  # 1 minute for environmental sensors
-    "MR": 60,  # 1 minute for wireless access points
-    "MS": 60,  # 1 minute for switches
-    "MV": 600,  # 10 minutes for cameras
 }
 
 

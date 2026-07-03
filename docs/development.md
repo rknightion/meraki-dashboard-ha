@@ -308,24 +308,6 @@ logger:
 }
 ```
 
-**MR Access Point Data**
-```python
-{
-    "serial": "Q2XX-YYYY-YYYY",
-    "model": "MR46",
-    "networkId": "N_123456789",
-    "productType": "wireless",
-    "ssids": [
-        {
-            "number": 0,
-            "name": "Corporate WiFi",
-            "enabled": True,
-            "authMode": "psk"
-        }
-    ]
-}
-```
-
 ### Sensor mappings
 
 **Environmental sensors**

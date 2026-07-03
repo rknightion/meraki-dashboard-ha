@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Meraki Dashboard Integration",
-        "description": "Connect your Cisco Meraki Dashboard to Home Assistant to monitor your Meraki devices.\n\n**You will need:**\n• A Meraki Dashboard API key (generate one at: Organization > Settings > Dashboard API access)\n• Your Meraki Organization ID (found in the Dashboard URL or API settings)\n\nThe integration supports MT (Environmental Sensors), MR (Wireless Access Points), MS (Switches), and MV (Cameras).",
+        "description": "Connect your Cisco Meraki Dashboard to Home Assistant to monitor your Meraki MT environmental sensors.\n\n**You will need:**\n• A Meraki Dashboard API key (generate one at: Organization > Settings > Dashboard API access)\n• Your Meraki Organization ID (found in the Dashboard URL or API settings)\n\nThis integration supports MT (Environmental Sensors) only.",
         "data": {
           "api_key": "API Key",
           "organization_id": "Organization ID",
@@ -29,10 +29,9 @@
       },
       "device_selection": {
         "title": "Configure Devices and Options",
-        "description": "Configure which Meraki devices to monitor and how often to update their data.\n\nFound {device_count} device(s) in your organization.",
+        "description": "Configure which Meraki MT sensors to monitor and how often to update their data.\n\nFound {device_count} device(s) in your organization.",
         "data": {
           "name": "Integration Name",
-          "enabled_device_types": "Device Types to Monitor",
           "selected_devices": "Select Specific Devices",
           "scan_interval": "Update Interval",
           "mt_refresh_enabled": "Enable MT15/MT40 Fast Refresh",
@@ -41,9 +40,8 @@
         },
         "data_description": {
           "name": "Optional: Custom name for this integration instance. If not provided, will use your organization name.",
-          "enabled_device_types": "Choose which types of Meraki devices you want to monitor. You can select multiple types: MT (Environmental Sensors), MR (Wireless Access Points), MS (Switches), and MV (Cameras).",
-          "selected_devices": "Optional: Select specific devices to monitor. Leave empty to automatically monitor all devices of the selected types and discover new ones as they're added.",
-          "scan_interval": "How often to fetch updated data from your devices (in minutes). MT sensors default to 0.5 minutes (30 seconds) to support the MT15/MT40 fast refresh feature. Other device types default to 5-10 minutes.",
+          "selected_devices": "Optional: Select specific MT sensors to monitor. Leave empty to automatically monitor all MT sensors and discover new ones as they're added.",
+          "scan_interval": "How often to fetch updated data from your devices (in minutes). MT sensors default to 0.5 minutes (30 seconds) to support the MT15/MT40 fast refresh feature.",
           "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending batched refresh commands. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Uses Meraki's Action Batches API to minimize API usage. Recommended: enabled (default).",
           "auto_discovery": "When enabled, the integration will automatically discover and add new devices as they're added to your Meraki networks. Recommended: enabled.",
           "discovery_interval": "How often to scan for new devices when auto-discovery is enabled (in minutes). Default is 60 minutes. Lower values find new devices faster but increase API usage."
@@ -78,16 +76,11 @@
         "title": "Meraki Dashboard Options",
         "description": "Configure your Meraki Dashboard integration settings.\n\n**MT15/MT40 Fast Refresh:**\nThis feature sends refresh commands to MT15 and MT40 sensors to get data more frequently than Meraki's default 20-minute interval. Note: This may occasionally trigger rate limit warnings from the Meraki API.\n\n**Configured Networks:**\n{hub_list}\n\n{hub_settings_explanation}",
         "data": {
-          "enabled_device_types": "Device Types to Monitor",
           "mt_refresh_enabled": "Enable MT15/MT40 Fast Refresh",
           "mt_refresh_interval": "MT Refresh Interval",
           "standard_cache_ttl": "Standard Cache TTL",
           "extended_cache_ttl": "Extended Cache TTL",
           "long_cache_ttl": "Long Cache TTL",
-          "mr_enable_latency_stats": "Enable MR Latency/Packet Loss Stats",
-          "ms_enable_packet_stats": "Enable MS Packet Statistics",
-          "ms_port_exclusions": "Excluded Switch Ports",
-          "bluetooth_clients_enabled": "Enable Bluetooth Client Tracking",
           "update_api_key": "Update API Key",
           "scan_interval": "Update Interval",
           "discovery_interval": "Discovery Interval",
@@ -98,24 +91,19 @@
           "dynamic_data_interval": "Device Metrics Interval"
         },
         "data_description": {
-          "enabled_device_types": "Choose which types of Meraki devices to monitor in your networks. You can select MT (Environmental Sensors), MR (Wireless Access Points), MS (Switches), and/or MV (Cameras). Only selected device types will appear in Home Assistant.",
           "mt_refresh_enabled": "Enables fast sensor updates for MT15 and MT40 environmental sensors by sending batched refresh commands. This allows near-real-time data updates instead of waiting for Meraki's default 20-minute interval. Uses Meraki's Action Batches API to minimize API usage. Recommended: enabled (default).",
           "mt_refresh_interval": "How often to send refresh commands to MT15/MT40 devices (1-60 seconds). Default is 30 seconds. Lower intervals provide faster updates but increase API usage and may trigger rate limits. Only applies when MT15/MT40 fast refresh is enabled above.",
-          "standard_cache_ttl": "Cache duration for frequently changing data like port status and client counts (in minutes). Default: 15 minutes. Lower values = fresher data but more API calls.",
-          "extended_cache_ttl": "Cache duration for slower-changing data like connection stats and latency metrics (in minutes). Default: 30 minutes. These metrics are aggregated over time, so caching has minimal impact on accuracy.",
-          "long_cache_ttl": "Cache duration for rarely-changing data like port configs and STP priorities (in minutes). Default: 60 minutes. Configuration changes are infrequent, so longer caching is recommended.",
-          "mr_enable_latency_stats": "Fetch latency and packet loss statistics for MR wireless access points. Disable to reduce API calls if you don't need these metrics.",
-          "ms_enable_packet_stats": "Fetch packet statistics (broadcast, multicast, errors) for MS switch ports. Disable to reduce API calls if you don't need detailed packet metrics.",
-          "ms_port_exclusions": "Ports to exclude from PoE and port enable/disable control. Enter one per line in SERIAL:PORT_ID format (example: Q2XX-XXXX-XXXX:1).",
-          "bluetooth_clients_enabled": "Track Bluetooth clients connected to your networks. Disable to reduce API calls if you don't use Bluetooth tracking.",
+          "standard_cache_ttl": "Cache duration for frequently changing data (in minutes). Default: 15 minutes. Lower values = fresher data but more API calls.",
+          "extended_cache_ttl": "Cache duration for slower-changing data (in minutes). Default: 30 minutes. These metrics are aggregated over time, so caching has minimal impact on accuracy.",
+          "long_cache_ttl": "Cache duration for rarely-changing data (in minutes). Default: 60 minutes. Configuration changes are infrequent, so longer caching is recommended.",
           "update_api_key": "Check this box to update your Meraki Dashboard API key. You will be prompted to enter the new key in the next step.",
-          "scan_interval": "How often to update sensor data (in seconds). Examples: 30 = 30s, 60 = 1 min, 300 = 5 min, 600 = 10 min. MT sensors can go as low as 1 second with fast refresh enabled. Other device types minimum is 60 seconds (1 minute).",
+          "scan_interval": "How often to update sensor data (in seconds). Examples: 30 = 30s, 60 = 1 min, 300 = 5 min, 600 = 10 min. MT sensors can go as low as 1 second with fast refresh enabled.",
           "discovery_interval": "How often to scan for new devices in your networks (in minutes). Default is 60 minutes. Lower values find new devices faster but increase API usage.",
           "auto_discovery": "When enabled, automatically discover and add new devices as they appear in your Meraki networks. Recommended: enabled.",
-          "selected_devices": "Optional: Select specific devices to monitor. Leave empty to monitor all devices of the enabled types.",
-          "static_data_interval": "How often to update organization-level information like licenses and admin details (in minutes). This data changes infrequently, so longer intervals are recommended. Default: 240 minutes (4 hours).",
+          "selected_devices": "Optional: Select specific MT sensors to monitor. Leave empty to monitor all MT sensors.",
+          "static_data_interval": "How often to update organization-level information (in minutes). This data changes infrequently, so longer intervals are recommended. Default: 240 minutes (4 hours).",
           "semi_static_data_interval": "How often to update network configuration and device inventory (in minutes). This includes network settings and device models. Default: 60 minutes (1 hour).",
-          "dynamic_data_interval": "How often to update real-time sensor readings and device metrics (in minutes). This includes temperature, humidity, client counts, etc. Default: 5-10 minutes depending on device type."
+          "dynamic_data_interval": "How often to update real-time sensor readings and device metrics (in minutes). This includes temperature, humidity, and other MT metrics. Default: 5-10 minutes."
         }
       },
       "api_key": {
@@ -176,6 +164,10 @@
     "device_discovery_failed": {
       "title": "Device Discovery Failed",
       "description": "Failed to discover devices in hub \"{hub_name}\" for \"{config_entry_title}\". This may be due to API rate limits or temporary network issues. Device discovery will be retried automatically."
+    },
+    "mt_only_migration": {
+      "title": "Meraki Dashboard is now MT-only",
+      "description": "This major update supports only Meraki MT environmental sensors. Support for MR, MS, and MV devices has been removed and their entities have been deleted. Only your MT sensors remain."
     }
   },
   "services": {
@@ -194,14 +186,6 @@
     "discover_all_devices": {
       "name": "Discover All Devices",
       "description": "Scan for new devices across all networks"
-    },
-    "cycle_switch_port_poe": {
-      "name": "Cycle Switch Port PoE",
-      "description": "Cycle PoE power for one or more switch ports (off then on)"
-    },
-    "set_camera_rtsp": {
-      "name": "Set Camera RTSP",
-      "description": "Enable or disable the external RTSP stream for a camera"
     }
   }
 }

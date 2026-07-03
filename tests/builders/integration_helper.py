@@ -60,7 +60,7 @@ class IntegrationTestHelper:
         if selected_device_types:
             hub_builder.with_selected_device_types(selected_device_types)
         else:
-            hub_builder.with_selected_device_types(["MT", "MR", "MS", "MV"])
+            hub_builder.with_selected_device_types(["MT"])
 
         # Create config entry and add to hass using internal registry
         self._config_entry = hub_builder.build_config_entry(self.hass)
@@ -244,85 +244,6 @@ class IntegrationTestHelper:
 
         # Add to mock API
         self.add_sensor_data(serial, readings)
-
-        return device
-
-    async def create_mr_device_with_data(
-        self, serial: str = "Q2XX-XXXX-0001", network_id: str = "N_123456789"
-    ) -> dict[str, Any]:
-        """Create an MR device with wireless data."""
-        # Build device
-        device_builder = MerakiDeviceBuilder()
-        device = (
-            device_builder.with_serial(serial)
-            .with_network_id(network_id)
-            .as_mr_device()
-            .with_name(f"MR Access Point {serial[-4:]}")
-            .build()
-        )
-
-        # Mock wireless data
-        if hasattr(self._mock_api.wireless, "getNetworkWirelessUsageHistory"):
-            self._mock_api.wireless.getNetworkWirelessUsageHistory.return_value = [
-                {
-                    "startTs": "2024-01-01T00:00:00Z",
-                    "endTs": "2024-01-01T01:00:00Z",
-                    "totalKbps": 5000,
-                    "sentKbps": 3000,
-                    "receivedKbps": 2000,
-                }
-            ]
-
-        return device
-
-    async def create_ms_device_with_data(
-        self,
-        serial: str = "Q2XX-XXXX-0001",
-        network_id: str = "N_123456789",
-        port_count: int = 8,
-    ) -> dict[str, Any]:
-        """Create an MS device with switch port data."""
-        # Build device
-        device_builder = MerakiDeviceBuilder()
-        device = (
-            device_builder.with_serial(serial)
-            .with_network_id(network_id)
-            .as_ms_device()
-            .with_name(f"MS Switch {serial[-4:]}")
-            .build()
-        )
-
-        # Mock switch port data
-        if hasattr(self._mock_api.switch, "getOrganizationSwitchPortsStatusesBySwitch"):
-            ports = []
-            for i in range(1, port_count + 1):
-                ports.append(
-                    {
-                        "portId": str(i),
-                        "enabled": True,
-                        "status": "Connected",
-                        "isUplink": i == port_count,  # Last port is uplink
-                        "errors": [],
-                        "warnings": [],
-                        "speed": "1 Gbps",
-                        "duplex": "full",
-                        "usageInKb": {"sent": 1000 * i, "recv": 2000 * i},
-                        "powerUsageInWh": 5.0 * i
-                        if i <= 4
-                        else 0,  # First 4 ports have PoE
-                    }
-                )
-
-            self._mock_api.switch.getOrganizationSwitchPortsStatusesBySwitch.return_value = {
-                serial: {
-                    "name": device["name"],
-                    "serial": serial,
-                    "mac": device["mac"],
-                    "network": {"id": network_id, "name": f"Network {network_id}"},
-                    "model": device["model"],
-                    "ports": ports,
-                }
-            }
 
         return device
 

@@ -1,6 +1,11 @@
 # Architecture
 
-The Meraki Dashboard Home Assistant integration is built on a hub-based architecture that discovers Meraki organizations, networks, and devices, then exposes them as Home Assistant entities through a layered set of coordinators and factories.
+The Meraki Dashboard Home Assistant integration is built on a hub-based architecture that discovers Meraki organizations, networks, and MT environmental sensors, then exposes them as Home Assistant entities through a layered set of coordinators and factories.
+
+!!! note "MT-only as of v1.0.0"
+    The integration used to also support MR/MS/MV device types with their own network hubs. As of
+    v1.0.0 those have been removed; only MT network hubs (plus organization-level minimal-health
+    diagnostics) remain.
 
 ## Overview
 
@@ -11,55 +16,39 @@ graph TD
     A[Home Assistant] --> B[Integration Setup]
     B --> C[Organization Hub]
     C --> D[Network Hub MT]
-    C --> E[Network Hub MR]
-    C --> F[Network Hub MS]
     D --> G[MT Devices]
-    E --> H[MR Devices]
-    F --> I[MS Devices]
     G --> J[Sensor Entities]
-    H --> J
-    I --> J
 ```
 
-## Multi-Hub Architecture Details
+## Hub Architecture Details
 
-The integration automatically creates multiple specialized hubs for optimal organization and performance:
+The integration automatically creates hubs for organization and performance:
 
 ```mermaid
 graph TB
     A["Organization Hub<br/>Acme Corp - Organisation"] --> B["Network Hub<br/>Main Office - MT"]
-    A --> C["Network Hub<br/>Main Office - MR"]
     A --> D["Network Hub<br/>Branch Office - MT"]
-    A --> E["Network Hub<br/>Remote Site - MR"]
 
     B --> F["MT20 Temperature Sensor"]
     B --> G["MT15 Water Sensor"]
     B --> H["MT30 Air Quality Monitor"]
 
-    C --> I["SSID Count"]
-    C --> J["Enabled Networks"]
-    C --> K["Security Status"]
-
     D --> L["MT40 Environmental Monitor"]
-
-    E --> M["Wireless Metrics"]
 
     classDef orgHub fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
     classDef networkHub fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef device fill:#e8f5e8,stroke:#388e3c,stroke-width:1px
-    classDef sensor fill:#fff3e0,stroke:#f57c00,stroke-width:1px
 
     class A orgHub
-    class B,C,D,E networkHub
+    class B,D networkHub
     class F,G,H,L device
-    class I,J,K,M sensor
 ```
 
 **Key Benefits:**
-- **Automatic Organization**: Creates hubs only when devices exist
-- **Per-Hub Intervals**: Optimize update frequency for each device type
-- **Scalable Performance**: Distribute API load across multiple hubs
-- **Device-Specific Features**: Tailored functionality per device type
+- **Automatic Organization**: Creates a network hub only where MT devices exist
+- **Per-Hub Intervals**: Optimize update frequency per network
+- **Scalable Performance**: A single org-wide sensor-readings call is shared across all MT network hubs
+- **Minimal-Health Visibility**: Organization/network diagnostic sensors (API status, device counts) survive independently of any specific device family
 
 ## Core Components
 
@@ -72,17 +61,17 @@ graph TB
 - Manages API client lifecycle
 
 **NetworkHub**
-- Device-type specific hubs (one per network/device type)
-- Handles device discovery
-- Manages device-specific API calls
+- One hub per network with MT devices
+- Handles MT device discovery
+- Delegates sensor reads to the organization hub's cached org-wide result
 - Implements caching strategies
 
 ### Data Flow
 
 1. **Configuration Entry** → Integration setup
-2. **Organization Hub** → Discovers networks and devices
-3. **Network Hubs** → Created for each device type
-4. **Update Coordinator** → Manages polling and updates
+2. **Organization Hub** → Discovers networks and MT devices; makes a single org-wide sensor-readings call (and a single org-wide gateway-connections call) per refresh, cached with a short TTL
+3. **Network Hubs** → Created for networks with MT devices; filter the org-wide result to their own devices
+4. **Update Coordinator** → Manages polling and updates (one per network hub)
 5. **Data Transformer** → Normalizes API responses
 6. **Entity Factory** → Creates Home Assistant entities
 
@@ -140,17 +129,15 @@ Comprehensive error handling with decorators:
 1. **Static Data** (4 hours)
    - Device information
    - Network configuration
-   - License data
 
 2. **Semi-Static Data** (1 hour)
    - Device status
    - Configuration changes
    - Network topology
 
-3. **Dynamic Data** (5-10 minutes)
-   - Sensor readings
-   - Traffic statistics
-   - Client counts
+3. **Dynamic Data** (5-10 minutes, short-TTL for org-wide reads)
+   - MT sensor readings
+   - Gateway-connection (RSSI, last-seen) data
 
 ## Entity Management
 

@@ -14,8 +14,6 @@ from custom_components.meraki_dashboard.const import (
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_SELECTED_DEVICES,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
 )
 from custom_components.meraki_dashboard.hubs.network import MerakiNetworkHub
@@ -34,6 +32,8 @@ def mock_organization_hub():
     org_hub.failed_api_calls = 0
     org_hub._track_api_call_duration = Mock()
     org_hub.async_api_call = AsyncMock()
+    org_hub.async_get_all_sensor_readings = AsyncMock(return_value={})
+    org_hub.async_get_all_gateway_connections = AsyncMock(return_value={})
     org_hub.networks = []
     org_hub.device_statuses = []
     return org_hub
@@ -110,12 +110,19 @@ class TestMerakiNetworkHub:
     def test_initialization_non_mt_device_no_event_handler(
         self, mock_organization_hub, mock_config_entry
     ):
-        """Test non-MT device types don't create event handler."""
+        """Test non-MT device types don't create event handler.
+
+        The integration is MT-only now (no MR/MS hubs are ever created by
+        ``MerakiOrganizationHub.async_create_network_hubs``), but
+        ``MerakiNetworkHub`` itself still only special-cases
+        ``device_type == SENSOR_TYPE_MT`` in its constructor, so a
+        non-MT literal still exercises that branch.
+        """
         hub = MerakiNetworkHub(
             organization_hub=mock_organization_hub,
             network_id="test_network_id",
             network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,
+            device_type="MR",
             config_entry=mock_config_entry,
         )
         assert not hasattr(hub, "event_service")
@@ -162,62 +169,6 @@ class TestMerakiNetworkHub:
         mock_discover.assert_called_once()
         # Timer is not set up during tests (pytest check in code)
         assert network_hub._selected_devices == {"device1", "device2"}
-
-    @patch("custom_components.meraki_dashboard.hubs.network.async_track_time_interval")
-    async def test_async_setup_mr_success(
-        self, mock_track_time, mock_organization_hub, mock_config_entry
-    ):
-        """Test successful MR hub setup."""
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,
-            config_entry=mock_config_entry,
-        )
-
-        with patch.object(
-            hub, "_async_setup_wireless_data", new_callable=AsyncMock
-        ) as mock_setup_wireless:
-            with patch.object(
-                hub, "_async_discover_devices", new_callable=AsyncMock
-            ) as mock_discover:
-                mock_setup_wireless.return_value = None
-                mock_discover.return_value = None
-
-                result = await hub.async_setup()
-
-        assert result is True
-        mock_setup_wireless.assert_called_once()
-        mock_discover.assert_called_once()
-
-    @patch("custom_components.meraki_dashboard.hubs.network.async_track_time_interval")
-    async def test_async_setup_ms_success(
-        self, mock_track_time, mock_organization_hub, mock_config_entry
-    ):
-        """Test successful MS hub setup."""
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MS,
-            config_entry=mock_config_entry,
-        )
-
-        with patch.object(
-            hub, "_async_setup_switch_data", new_callable=AsyncMock
-        ) as mock_setup_switch:
-            with patch.object(
-                hub, "_async_discover_devices", new_callable=AsyncMock
-            ) as mock_discover:
-                mock_setup_switch.return_value = None
-                mock_discover.return_value = None
-
-                result = await hub.async_setup()
-
-        assert result is True
-        mock_setup_switch.assert_called_once()
-        mock_discover.assert_called_once()
 
     async def test_async_setup_discovery_disabled(self, network_hub):
         """Test setup with auto-discovery disabled."""
@@ -369,228 +320,21 @@ class TestMerakiNetworkHub:
         assert network_hub.devices == []
         assert network_hub._discovery_in_progress is False
 
-    async def test_async_setup_wireless_data_success(
-        self, mock_organization_hub, mock_config_entry
-    ):
-        """Test successful wireless data setup."""
-        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
-
-        clear_api_cache()
-
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,
-            config_entry=mock_config_entry,
-        )
-
-        hub.devices = [
-            {
-                "serial": "MR-123",
-                "name": "Test MR Device",
-                "model": "MR36",
-                "networkId": "test_network_id",
-                "productType": "wireless",
-            }
-        ]
-
-        async def mock_api_call(api_call, *args, **kwargs):
-            if "getNetworkWirelessSsids" in str(api_call):
-                return [
-                    {
-                        "number": 0,
-                        "name": "Test SSID",
-                        "enabled": True,
-                        "authMode": "psk",
-                    }
-                ]
-            if "getDeviceClients" in str(api_call):
-                return []
-            if "getNetworkNetworkHealthChannelUtilization" in str(api_call):
-                return []
-            return {}
-
-        hub.organization_hub.async_api_call.side_effect = mock_api_call
-
-        await hub._async_setup_wireless_data()
-
-        assert "ssids" in hub.wireless_data
-        assert "devices_info" in hub.wireless_data
-
-    async def test_async_setup_wireless_data_api_error(
-        self, mock_organization_hub, mock_config_entry
-    ):
-        """Test wireless data setup with API error."""
-        from meraki.exceptions import APIError
-
-        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
-
-        # Clear cache to ensure clean test state
-        clear_api_cache()
-
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,
-            config_entry=mock_config_entry,
-        )
-
-        async def mock_api_error(*args):
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.text = '{"message": "Wireless not available"}'
-            raise APIError(
-                {
-                    "message": "Wireless not available",
-                    "status": 400,
-                    "tags": ["wireless"],
-                },
-                mock_response,
-            )
-
-        hub.organization_hub.async_api_call.side_effect = mock_api_error
-
-        await hub._async_setup_wireless_data()
-
-        assert hub.wireless_data == {}
-
-    async def test_async_setup_switch_data_success(
-        self, mock_organization_hub, mock_config_entry
-    ):
-        """Test successful switch data setup."""
-        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
-
-        clear_api_cache()
-
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MS,
-            config_entry=mock_config_entry,
-        )
-
-        hub.devices = [
-            {
-                "serial": "MS-123",
-                "name": "Test MS Device",
-                "model": "MS120",
-                "productType": "switch",
-            }
-        ]
-        hub.organization_hub.async_api_call.return_value = []
-
-        await hub._async_setup_switch_data()
-
-        # Switch data should still be populated without raising errors
-        assert isinstance(hub.switch_data, dict)
-
-    async def test_switch_port_profile_name_mapping(
-        self, mock_organization_hub, mock_config_entry
-    ):
-        """Test switch port profile names are mapped onto port configs."""
-        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
-
-        clear_api_cache()
-
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MS,
-            config_entry=mock_config_entry,
-        )
-
-        hub.devices = [
-            {
-                "serial": "MS-123",
-                "name": "Test MS Device",
-                "model": "MS120",
-                "productType": "switch",
-            }
-        ]
-
-        hub._async_get_packet_statistics = AsyncMock(return_value={})
-        hub._async_get_stp_priorities = AsyncMock(return_value={})
-
-        async def mock_api_call(api_call, *args, **kwargs):
-            if "getDeviceSwitchPortsStatuses" in str(api_call):
-                return []
-            if "getDeviceSwitchPorts" in str(api_call):
-                return [
-                    {
-                        "portId": "1",
-                        "profile": {"enabled": True, "id": "profile1"},
-                    }
-                ]
-            if "getNetworkSwitchPortsProfiles" in str(api_call):
-                return [{"profileId": "profile1", "name": "AP Profile"}]
-            return []
-
-        hub.organization_hub.async_api_call.side_effect = mock_api_call
-
-        await hub._async_setup_switch_data()
-
-        port_configs = hub.switch_data.get("port_configs", [])
-        assert port_configs
-        profile = port_configs[0].get("profile", {})
-        assert profile.get("name") == "AP Profile"
-
-    async def test_async_setup_switch_data_api_error(
-        self, mock_organization_hub, mock_config_entry
-    ):
-        """Test switch data setup with API error."""
-        from meraki.exceptions import APIError
-
-        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
-
-        # Clear cache to ensure clean test state
-        clear_api_cache()
-
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MS,
-            config_entry=mock_config_entry,
-        )
-
-        async def mock_api_error(*args):
-            mock_response = Mock()
-            mock_response.status_code = 400
-            mock_response.text = '{"message": "Switch not available"}'
-            raise APIError(
-                {"message": "Switch not available", "status": 400, "tags": ["switch"]},
-                mock_response,
-            )
-
-        hub.devices = [
-            {
-                "serial": "MS-123",
-                "name": "Test MS Device",
-                "model": "MS120",
-                "productType": "switch",
-            }
-        ]
-        hub.organization_hub.async_api_call.side_effect = mock_api_error
-
-        await hub._async_setup_switch_data()
-
-        assert isinstance(hub.switch_data, dict)
-        assert hub.switch_data.get("ports_status") == []
-
     async def test_async_get_sensor_data_mt_success(self, network_hub):
-        """Test successful MT sensor data retrieval."""
+        """Test successful MT sensor data retrieval.
+
+        ``async_get_sensor_data`` now delegates to the org hub's org-wide
+        ``async_get_all_sensor_readings`` (no per-hub ``serials=`` filter) and
+        filters the result to this hub's own devices client-side.
+        """
         network_hub.devices = [
             {"serial": "device1", "name": "MT Device 1"},
             {"serial": "device2", "name": "MT Device 2"},
         ]
 
-        def mock_sensor_readings(org_id, device_serials):
-            return [
-                {
+        network_hub.organization_hub.async_get_all_sensor_readings = AsyncMock(
+            return_value={
+                "device1": {
                     "serial": "device1",
                     "readings": [
                         {
@@ -600,7 +344,7 @@ class TestMerakiNetworkHub:
                         }
                     ],
                 },
-                {
+                "device2": {
                     "serial": "device2",
                     "readings": [
                         {
@@ -610,18 +354,41 @@ class TestMerakiNetworkHub:
                         }
                     ],
                 },
-            ]
+                # Belongs to a different hub - must be filtered out.
+                "device3": {"serial": "device3", "readings": []},
+            }
+        )
+        network_hub.organization_hub.async_get_all_gateway_connections = AsyncMock(
+            return_value={}
+        )
 
-        def mock_api_call(_api_call, org_id, *args, **kwargs):
-            return mock_sensor_readings(org_id, kwargs.get("serials", []))
-
-        network_hub.organization_hub.async_api_call.side_effect = mock_api_call
         result = await network_hub.async_get_sensor_data()
 
         assert len(result) == 2
         assert "device1" in result
         assert "device2" in result
+        assert "device3" not in result
         assert result["device1"]["readings"][0]["metric"] == "temperature"
+
+    async def test_async_get_sensor_data_merges_gateway_connection(
+        self, network_hub
+    ):
+        """Test gateway RSSI/last-seen are merged into the MT reading."""
+        network_hub.devices = [{"serial": "device1", "name": "MT Device 1"}]
+
+        network_hub.organization_hub.async_get_all_sensor_readings = AsyncMock(
+            return_value={"device1": {"serial": "device1", "readings": []}}
+        )
+        network_hub.organization_hub.async_get_all_gateway_connections = AsyncMock(
+            return_value={
+                "device1": {"rssi": -55, "last_connected_at": "2023-01-01T12:00:00Z"}
+            }
+        )
+
+        result = await network_hub.async_get_sensor_data()
+
+        assert result["device1"]["rssi"] == -55
+        assert result["device1"]["last_connected_at"] == "2023-01-01T12:00:00Z"
 
     async def test_async_get_sensor_data_no_devices(self, network_hub):
         """Test sensor data retrieval with no devices."""
@@ -632,12 +399,19 @@ class TestMerakiNetworkHub:
         assert result == {}
 
     async def test_async_get_sensor_data_api_error(self, network_hub):
-        """Test sensor data retrieval with API error."""
+        """Test sensor data retrieval when the org hub's org-wide fetch raises.
+
+        ``async_get_sensor_data`` now delegates entirely to
+        ``organization_hub.async_get_all_sensor_readings()`` - it no longer
+        calls the Meraki API directly - so the error path is exercised by
+        having that delegate raise, which ``@handle_api_errors`` on
+        ``async_get_sensor_data`` still converts to the default ``{}``.
+        """
         from meraki.exceptions import APIError
 
         network_hub.devices = [{"serial": "device1", "name": "MT Device 1"}]
 
-        def mock_api_error(*args):
+        def mock_api_error(*args, **kwargs):
             mock_response = Mock()
             mock_response.status_code = 500
             mock_response.text = '{"message": "Sensor data not available"}'
@@ -650,7 +424,9 @@ class TestMerakiNetworkHub:
                 mock_response,
             )
 
-        network_hub.organization_hub.async_api_call.side_effect = mock_api_error
+        network_hub.organization_hub.async_get_all_sensor_readings = AsyncMock(
+            side_effect=mock_api_error
+        )
         result = await network_hub.async_get_sensor_data()
 
         assert result == {}
@@ -735,43 +511,13 @@ class TestNetworkHubEdgeCases:
         assert len(network_hub.devices) == 1
         assert network_hub.devices[0]["serial"] == "device1"
 
-    async def test_discover_devices_cw_wireless_model(
-        self, mock_organization_hub, mock_config_entry
-    ):
-        """Test MR discovery includes CW wireless models."""
-        from custom_components.meraki_dashboard.utils.cache import clear_api_cache
-
-        clear_api_cache()
-
-        hub = MerakiNetworkHub(
-            organization_hub=mock_organization_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,
-            config_entry=mock_config_entry,
-        )
-
-        hub.organization_hub.async_api_call.return_value = [
-            {
-                "serial": "device1",
-                "name": "CW AP",
-                "model": "CW9172I",
-                "productType": "wireless",
-            }
-        ]
-
-        await hub._async_discover_devices()
-
-        assert len(hub.devices) == 1
-        assert hub.devices[0]["serial"] == "device1"
-
     async def test_sensor_data_with_event_handler(self, network_hub):
         """Test sensor data retrieval with event handler processing."""
         network_hub.devices = [{"serial": "device1", "name": "MT Device 1"}]
 
-        def mock_sensor_readings(org_id, device_serials):
-            return [
-                {
+        network_hub.organization_hub.async_get_all_sensor_readings = AsyncMock(
+            return_value={
+                "device1": {
                     "serial": "device1",
                     "readings": [
                         {
@@ -781,16 +527,16 @@ class TestNetworkHubEdgeCases:
                         }
                     ],
                 }
-            ]
+            }
+        )
+        network_hub.organization_hub.async_get_all_gateway_connections = AsyncMock(
+            return_value={}
+        )
 
         # Mock event service
         network_hub.event_service = Mock()
         network_hub.event_service.track_sensor_changes = AsyncMock()
 
-        def mock_api_call(_api_call, org_id, *args, **kwargs):
-            return mock_sensor_readings(org_id, kwargs.get("serials", []))
-
-        network_hub.organization_hub.async_api_call.side_effect = mock_api_call
         await network_hub.async_get_sensor_data()
 
         # Should call event service

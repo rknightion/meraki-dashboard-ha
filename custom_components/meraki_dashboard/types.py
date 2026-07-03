@@ -198,174 +198,11 @@ class UplinkStatus(TypedDict, total=False):
     uplinks: list[dict[str, Any]]
 
 
-class WirelessStats(TypedDict, total=False):
-    """Type definition for wireless statistics."""
+class GatewayConnectionData(TypedDict):
+    """Type definition for MT gateway connection data (RSSI + last-seen)."""
 
-    serial: str
-    model: str
-    clientCount: int | None
-
-
-class MVCameraQualityRetention(TypedDict, total=False):
-    """Type definition for MV camera quality and retention settings."""
-
-    profileId: str | None
-    quality: str | None
-    resolution: str | None
-    motionBasedRetentionEnabled: bool | None
-    audioRecordingEnabled: bool | None
-    restrictedBandwidthModeEnabled: bool | None
-    motionDetectorVersion: int | None
-
-
-class MVCameraVideoSettings(TypedDict, total=False):
-    """Type definition for MV camera video settings."""
-
-    externalRtspEnabled: bool | None
-    rtspUrl: str | None
-
-
-class MVCameraCustomAnalytics(TypedDict, total=False):
-    """Type definition for MV camera custom analytics settings."""
-
-    enabled: bool | None
-    artifactId: str | None
-    parameters: list[dict[str, Any]] | None
-
-
-class MVCameraSenseSettings(TypedDict, total=False):
-    """Type definition for MV camera sense settings."""
-
-    senseEnabled: bool | None
-    audioDetection: dict[str, Any] | None
-    detectionModelId: str | None
-    mqttBrokerId: str | None
-    senseVersion: int | None
-
-
-class MVCameraDetections(TypedDict, total=False):
-    """Type definition for MV camera detection summary."""
-
-    total: int | None
-    by_object_type: dict[str, int] | None
-    by_boundary: dict[str, dict[str, Any]] | None
-
-
-class MVCameraStats(TypedDict, total=False):
-    """Type definition for MV camera stats and settings."""
-
-    serial: str
-    name: str | None
-    model: str | None
-    networkId: str | None
-    qualityAndRetention: MVCameraQualityRetention | None
-    videoSettings: MVCameraVideoSettings | None
-    customAnalytics: MVCameraCustomAnalytics | None
-    senseSettings: MVCameraSenseSettings | None
-    analyticsLive: dict[str, Any] | None
-    analyticsRecent: list[dict[str, Any]] | dict[str, Any] | None
-    detections: MVCameraDetections | None
-    recordingStatus: str | None
-    storageUsagePercent: float | None
-
-
-class SwitchPortStatus(TypedDict, total=False):
-    """Type definition for switch port status."""
-
-    portId: str
-    enabled: bool
-    status: str
-    errors: list[str]
-    warnings: list[str]
-    speed: str | None
-    duplex: str | None
-    usageInKb: dict[str, float] | None
-    powerUsageInWh: float | None
-    linkNegotiation: dict[str, Any] | None
-    clientCount: int | None
-    poeEnabled: bool | None
-    rstpRole: str | None
-    rstpState: str | None
-    spanningTreePortState: str | None
-    device_serial: str | None  # Added for aggregation
-
-
-class SwitchPortConfig(TypedDict, total=False):
-    """Type definition for switch port configuration."""
-
-    portId: str
-    name: str | None
-    tags: list[str] | None
-    enabled: bool | None
-    poeEnabled: bool | None
-    type: str | None
-    vlan: int | None
-    voiceVlan: int | None
-    allowedVlans: str | None
-    isolationEnabled: bool | None
-    rstpEnabled: bool | None
-    stpGuard: str | None
-    linkNegotiation: str | None
-    portScheduleId: str | None
-    udld: str | None
-    accessPolicyType: str | None
-    stormControlEnabled: bool | None
-    profile: SwitchPortProfileBinding | None
-    device_serial: str | None
-    device_name: str | None
-
-
-class SwitchPortProfileBinding(TypedDict, total=False):
-    """Type definition for switch port profile binding."""
-
-    enabled: bool
-    id: str
-    name: str | None
-    iname: str | None
-
-
-class SwitchPortProfile(TypedDict, total=False):
-    """Type definition for switch port profile."""
-
-    profileId: str
-    name: str | None
-
-
-class SwitchStats(TypedDict, total=False):
-    """Type definition for switch statistics."""
-
-    serial: str
-    model: str
-    ports: list[SwitchPortStatus]
-    portsStatus: list[SwitchPortStatus] | None  # Alternative format
-    powerModules: list[dict[str, Any]] | None
-    port_count: int | None
-    connected_ports: int | None
-    poe_ports: int | None
-    connected_clients: int | None
-    poe_power_draw: float | None
-    port_utilization: float | None
-    port_errors: int | None
-    port_discards: int | None
-    port_link_count: int | None
-
-
-class MemoryUsageData(TypedDict, total=False):
-    """Type definition for memory usage data."""
-
-    serial: str
-    freeInKb: float | None
-    usedInKb: float | None
-    memory_usage_percent: float | None
-    model: str
-    name: str
-    network: dict[str, Any]
-    memory_used_kb: float
-    memory_free_kb: float
-    memory_total_kb: float
-    last_interval_start: str | None
-    last_interval_end: str | None
-    raw_data: dict[str, Any]
+    rssi: int | None
+    last_connected_at: str | None
 
 
 # Coordinator Data Types - Device-specific structures
@@ -378,31 +215,6 @@ class MTCoordinatorData(TypedDict):
     # Dynamic keys - each key is a device serial number
     # Value is the device's sensor data
     __root__: dict[DeviceSerial, MTDeviceData]
-
-
-class MRCoordinatorData(TypedDict, total=False):
-    """Coordinator data structure for MR (Wireless) devices."""
-
-    devices_info: list[WirelessStats]
-    ssids: list[dict[str, Any]]
-    memory_usage: list[MemoryUsageData]
-
-
-class MSCoordinatorData(TypedDict, total=False):
-    """Coordinator data structure for MS (Switch) devices."""
-
-    devices_info: list[SwitchStats]
-    ports_status: list[SwitchPortStatus]
-    port_configs: list[SwitchPortConfig]
-    port_profiles: list[SwitchPortProfile]
-    power_modules: list[dict[str, Any]]
-    memory_usage: list[MemoryUsageData]
-
-
-class MVCoordinatorData(TypedDict, total=False):
-    """Coordinator data structure for MV (Camera) devices."""
-
-    devices_info: list[MVCameraStats]
 
 
 class OrganizationCoordinatorData(TypedDict, total=False):
@@ -423,9 +235,6 @@ DeviceSerial = str
 # Union type for all coordinator data types
 CoordinatorData = (
     dict[DeviceSerial, MTDeviceData]  # MT devices use serial as key
-    | MRCoordinatorData
-    | MSCoordinatorData
-    | MVCoordinatorData
     | OrganizationCoordinatorData
     | dict[str, Any]  # Fallback for legacy code
 )
@@ -455,21 +264,6 @@ class MerakiApiClient(Protocol):
     @property
     def sensor(self) -> Any:
         """Get sensor API endpoints."""
-        ...
-
-    @property
-    def camera(self) -> Any:
-        """Get camera API endpoints."""
-        ...
-
-    @property
-    def wireless(self) -> Any:
-        """Get wireless API endpoints."""
-        ...
-
-    @property
-    def switch(self) -> Any:
-        """Get switch API endpoints."""
         ...
 
 
@@ -513,34 +307,6 @@ class OrganizationApi(Protocol):
         ...
 
 
-class NetworkApi(Protocol):
-    """Protocol for network API endpoints."""
-
-    async def getNetworkWirelessDevicesConnectionStats(
-        self, networkId: str, **kwargs
-    ) -> list[WirelessStats]:
-        """Get wireless connection stats."""
-        ...
-
-    async def getNetworkSwitchPortsStatuses(
-        self, networkId: str, **kwargs
-    ) -> list[SwitchPortStatus]:
-        """Get switch port statuses."""
-        ...
-
-    async def getNetworkWirelessSsids(self, networkId: str) -> list[dict[str, Any]]:
-        """Get wireless SSIDs."""
-        ...
-
-
-class DeviceApi(Protocol):
-    """Protocol for device API endpoints."""
-
-    async def getDeviceSwitchPortsStatuses(self, serial: str) -> list[SwitchPortStatus]:
-        """Get device switch port statuses."""
-        ...
-
-
 class SensorApi(Protocol):
     """Protocol for sensor API endpoints."""
 
@@ -558,8 +324,8 @@ class NetworkHubProtocol(Protocol):
     device_type: str
     devices: list[MerakiDeviceData]
 
-    async def async_update_devices_info(self) -> list[WirelessStats | SwitchStats]:
-        """Update devices info."""
+    async def async_get_sensor_data(self) -> dict[str, MTDeviceData]:
+        """Get MT sensor data for this network hub."""
         ...
 
 
@@ -570,7 +336,6 @@ class OrganizationHubProtocol(Protocol):
     organization_name: str
     device_statuses: list[DeviceStatus]
     license_data: dict[str, Any]
-    device_memory_usage: dict[str, MemoryUsageData]
 
     async def async_update_organization_data(self) -> dict[str, Any]:
         """Update organization data."""
@@ -608,7 +373,7 @@ class ApiErrorResponse(TypedDict, total=False):
 
 
 # Union types for common use cases
-DeviceDataUnion = MerakiDeviceData | WirelessStats | SwitchStats
+DeviceDataUnion = MerakiDeviceData | MTDeviceData
 ApiResponseUnion = list[Any] | dict[str, Any]
 SensorDataUnion = SensorReading | MTDeviceData
 

@@ -1,6 +1,9 @@
 # Device Support
 
-The Meraki Dashboard integration supports various Meraki device types, each providing different metrics and capabilities.
+!!! warning "Breaking change in v1.0.0"
+    This integration now supports **only Meraki MT environmental sensors**. MR wireless access
+    point, MS switch, and MV camera support has been **removed entirely** as of v1.0.0. Upgrading
+    auto-migrates your configuration and removes any non-MT devices/entities.
 
 ## Supported Device Types
 
@@ -15,8 +18,9 @@ Environmental monitoring sensors providing real-time data about physical spaces.
 - Noise levels (dB)
 - Water detection
 - Door status
-- Motion detection
+- Button press events
 - Power metrics (voltage, current, power factor)
+- Signal strength (RSSI) and last-seen connectivity
 
 **Common Models:** MT10, MT12, MT14, MT15, MT20, MT30, MT40
 
@@ -32,6 +36,13 @@ Environmental monitoring sensors providing real-time data about physical spaces.
 | MT20  | Door/Open-Close Sensor | Door Status (Open/Closed), Battery |
 | MT30  | Smart Automation Button | Button Press Events, Battery |
 | MT40  | Smart Power Controller | Real Power, Apparent Power, Voltage, Current, Frequency, Power Factor, Downstream Power, Remote Lockout Switch |
+
+!!! note "MT20/MT30 event timing"
+    Door (MT20) and button (MT30) events are surfaced by **polling** the Meraki API on your
+    configured interval, not by a push/webhook mechanism. A brief press or state change between
+    polls can be missed or reported late. Meraki webhooks would be more reliable for these
+    event-driven devices, but wiring up a webhook receiver is out of scope for this integration
+    today.
 
 #### MT Fast Refresh Mode (MT15 & MT40 Only)
 
@@ -64,47 +75,16 @@ MT15 and MT40 devices support ultra-fast sensor updates through a special refres
 | MT20  | ❌ Not supported | 10 minutes |
 | MT30  | ❌ Not supported | 10 minutes |
 
-### MR - Wireless Access Points
+## Minimal Health Diagnostics
 
-Enterprise-grade wireless access points with comprehensive network metrics.
+Alongside MT sensors, the integration keeps a small set of organization/network health entities
+for visibility into the integration itself:
 
-**Supported Metrics:**
-- SSID status and configuration
-- Client count and connections
-- Channel utilization (2.4GHz/5GHz)
-- Connection statistics (auth, DHCP, DNS)
-- Power status (AC/PoE)
-- Packet loss metrics
-- CPU load
-- Memory usage
+- Organization API-call status (total/failed API calls, rate-limit state)
+- Per-network device count
 
-**Common Models:** MR33, MR42, MR46, MR52, MR84
-
-### MS - Switches
-
-Managed switches with port-level monitoring and PoE capabilities.
-
-**Supported Metrics:**
-- Port status and connectivity
-- Traffic statistics (sent/received)
-- PoE power consumption
-- Client count per port
-- Packet statistics (broadcast, multicast, errors)
-- STP priority
-- Memory usage
-
-**Common Models:** MS120, MS210, MS225, MS350, MS425
-
-### MV - Cameras (Coming Soon)
-
-Security cameras with video analytics and motion detection.
-
-**Planned Metrics:**
-- Camera status
-- Recording status
-- Motion detection events
-- Analytics zones
-- Video quality metrics
+These are not tied to any specific removed device family - they reflect the health of the
+integration's own connection to the Meraki Dashboard API.
 
 ## Entity Creation
 
@@ -112,24 +92,23 @@ Entities are created based on device capabilities:
 
 - Only available metrics create entities
 - Entities follow consistent naming patterns
-- Network-level aggregation available for some metrics
 
 ## Metric Availability
 
-Not all devices support all metrics:
+Not all MT models support all metrics:
 
-- Check device documentation for specific capabilities
+- Check the model specification table above for specific capabilities
 - Entities only appear if the device supports the metric
 - Some metrics require specific firmware versions
 
 ## Binary Sensors
 
-Certain metrics create binary sensors:
+Certain MT metrics create binary sensors:
 
-- Door open/closed (MT)
-- Water detected/not detected (MT)
-- Button pressed/not pressed (MT)
-- Motion detected/not detected (MV)
+- Door open/closed
+- Water detected/not detected
+- Button pressed/not pressed
+- Downstream power / remote lockout switch (MT40)
 
 ## Device Attributes
 
@@ -141,30 +120,21 @@ Each device entity includes attributes:
 - Last reported timestamp
 - Additional device-specific metadata
 
-## Network Aggregation
-
-Some metrics are aggregated at the network level:
-
-- Total connected clients
-- Total PoE power usage
-- Network-wide port utilization
-- Combined SSID statistics
-
 ## Limitations
 
 - Real-time data subject to API polling intervals
 - Historical data not available through integration
-- Some advanced metrics require higher-tier licenses
 - API rate limits may affect update frequency
+- MT20/MT30 button and door events are polled, not pushed (see the note above)
 
-## Future Support
+## No Longer Supported (removed in v1.0.0)
 
-Planned device support:
+- MR Series Wireless Access Points
+- MS Series Switches
+- MV Series Cameras
 
-- MX Security Appliances
-- MG Cellular Gateways
-- Enhanced MV camera integration
-- Additional sensor types
+If you rely on MR/MS/MV monitoring, do not upgrade to v1.0.0 until you have an alternative in
+place - these platforms are gone, not deprecated.
 
 ## Troubleshooting Device Support
 

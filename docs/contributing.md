@@ -70,29 +70,30 @@ make coverage
 
 ## Architecture Guidelines
 
-### Adding New Device Support
+### Adding New Sensor Support
 
-1. **Create device module** in `devices/`
-2. **Define sensor descriptions**
-3. **Update data transformer**
-4. **Add to entity factory**
-5. **Write comprehensive tests**
+!!! note "Scope as of v1.0.0"
+    This integration supports only Meraki MT environmental sensors as of v1.0.0. The steps below
+    describe how to add a *new MT metric*, not a new device family (MR/MS/MV support was removed
+    and is out of scope).
+
+1. **Define the sensor description** in `devices/mt.py`
+2. **Update the data transformer** in `data/transformers.py`
+3. **Add to the entity factory** in `entities/factory.py`
+4. **Write comprehensive tests**
 
 Example structure:
 ```python
-# devices/mv.py
-from dataclasses import dataclass
+# devices/mt.py
 from homeassistant.components.sensor import SensorEntityDescription
 
-@dataclass
-class MVSensorDescriptions:
-    """MV camera sensor descriptions."""
-
-    camera_status = SensorEntityDescription(
-        key="camera_status",
-        name="Camera Status",
-        icon="mdi:camera"
-    )
+MT_SENSOR_DESCRIPTIONS = {
+    "temperature": SensorEntityDescription(
+        key="temperature",
+        name="Temperature",
+        icon="mdi:thermometer",
+    ),
+}
 ```
 
 ### API Integration
@@ -146,8 +147,8 @@ Use builders for consistency:
 ```python
 device = (MerakiDeviceBuilder()
     .with_serial("Q2QN-9J8L-SLPD")
-    .with_type("MS")
-    .with_model("MS120-8")
+    .with_type("MT")
+    .with_model("MT15")
     .build())
 ```
 

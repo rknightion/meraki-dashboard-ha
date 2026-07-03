@@ -286,17 +286,12 @@ class MerakiConfigSchema:
     semi_static_data_interval: int = SEMI_STATIC_DATA_REFRESH_INTERVAL_MINUTES * 60
     dynamic_data_interval: int = DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
 
-    # Device type enablement (all device types enabled by default)
-    enabled_device_types: list[str] = field(
-        default_factory=lambda: ["MT", "MR", "MS", "MV"]
-    )
+    # Device type enablement (MT is the only supported device type)
+    enabled_device_types: list[str] = field(default_factory=lambda: ["MT"])
 
     # MT refresh service configuration
     mt_refresh_enabled: bool = True
     mt_refresh_interval: int = MT_REFRESH_COMMAND_INTERVAL
-
-    # MS port control safety configuration
-    ms_port_exclusions: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         """Validate complete configuration after initialization."""
@@ -348,7 +343,7 @@ class MerakiConfigSchema:
         if not isinstance(self.enabled_device_types, list):
             raise ConfigurationError("Enabled device types must be a list")
 
-        valid_device_types = ["MT", "MR", "MS", "MV"]
+        valid_device_types = ["MT"]
         for device_type in self.enabled_device_types:
             if device_type not in valid_device_types:
                 raise ConfigurationError(
@@ -381,26 +376,6 @@ class MerakiConfigSchema:
             raise ConfigurationError(
                 f"MT refresh interval must be at most {MT_REFRESH_MAX_INTERVAL} seconds, got {self.mt_refresh_interval}"
             )
-
-        # Validate MS port control safety configuration
-        if not isinstance(self.ms_port_exclusions, list):
-            raise ConfigurationError("MS port exclusions must be a list")
-
-        for entry in self.ms_port_exclusions:
-            if not isinstance(entry, str) or not entry.strip():
-                raise ConfigurationError(
-                    "MS port exclusions must contain non-empty strings"
-                )
-            if ":" not in entry:
-                raise ConfigurationError(
-                    "MS port exclusions must be in the format SERIAL:PORT_ID"
-                )
-            serial, port_id = entry.split(":", 1)
-            DeviceSerialConfig(serial.strip())
-            if not port_id.strip():
-                raise ConfigurationError(
-                    "MS port exclusions must include a port ID after the ':'"
-                )
 
     @classmethod
     def from_config_entry(
@@ -445,16 +420,12 @@ class MerakiConfigSchema:
                 "dynamic_data_interval", DYNAMIC_DATA_REFRESH_INTERVAL_MINUTES * 60
             ),
             # Device type enablement
-            enabled_device_types=options.get(
-                "enabled_device_types", ["MT", "MR", "MS", "MV"]
-            ),
+            enabled_device_types=options.get("enabled_device_types", ["MT"]),
             # MT refresh service configuration
             mt_refresh_enabled=options.get("mt_refresh_enabled", True),
             mt_refresh_interval=options.get(
                 "mt_refresh_interval", MT_REFRESH_COMMAND_INTERVAL
             ),
-            # MS port control safety configuration
-            ms_port_exclusions=options.get("ms_port_exclusions", []),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -480,7 +451,6 @@ class MerakiConfigSchema:
             "enabled_device_types": self.enabled_device_types,
             "mt_refresh_enabled": self.mt_refresh_enabled,
             "mt_refresh_interval": self.mt_refresh_interval,
-            "ms_port_exclusions": self.ms_port_exclusions,
         }
 
 

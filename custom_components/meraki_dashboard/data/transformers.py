@@ -7,22 +7,9 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
+from homeassistant.util import dt as dt_util
+
 from ..const import (
-    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5,
-    MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24,
-    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5,
-    MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24,
-    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5,
-    MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24,
-    MR_SENSOR_CLIENT_COUNT,
-    MR_SENSOR_MEMORY_USAGE,
-    MS_SENSOR_CONNECTED_PORTS,
-    MS_SENSOR_POE_LIMIT,
-    MS_SENSOR_POE_PORTS,
-    MS_SENSOR_POE_POWER,
-    MS_SENSOR_PORT_COUNT,
-    MS_SENSOR_PORT_TRAFFIC_RECV,
-    MS_SENSOR_PORT_TRAFFIC_SENT,
     MT_SENSOR_APPARENT_POWER,
     MT_SENSOR_BATTERY,
     MT_SENSOR_BUTTON,
@@ -42,23 +29,6 @@ from ..const import (
     MT_SENSOR_TVOC,
     MT_SENSOR_VOLTAGE,
     MT_SENSOR_WATER,
-    MV_SENSOR_AUDIO_RECORDING_ENABLED,
-    MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
-    MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
-    MV_SENSOR_DETECTIONS_PERSON,
-    MV_SENSOR_DETECTIONS_TOTAL,
-    MV_SENSOR_DETECTIONS_VEHICLE,
-    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
-    MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
-    MV_SENSOR_MOTION_DETECTION_ENABLED,
-    MV_SENSOR_MOTION_DETECTOR_VERSION,
-    MV_SENSOR_QUALITY,
-    MV_SENSOR_RECENT_MOTION_DETECTED,
-    MV_SENSOR_RECORDING_STATUS,
-    MV_SENSOR_RESOLUTION,
-    MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
-    MV_SENSOR_RETENTION_PROFILE_ID,
-    MV_SENSOR_STORAGE_USAGE_PERCENT,
     ORG_SENSOR_ALERTS_COUNT,
     ORG_SENSOR_API_CALLS,
     ORG_SENSOR_API_CALLS_PER_MINUTE,
@@ -158,7 +128,7 @@ class SafeExtractor:
             return default
         try:
             return float(value)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return default
 
     @staticmethod
@@ -182,14 +152,14 @@ class SafeExtractor:
                         total += int(item)
                     elif isinstance(item, str):
                         total += int(item)
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     continue  # Skip invalid values
             return total
 
         # Handle single values
         try:
             return int(value)
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             return default
 
     @staticmethod
@@ -288,6 +258,18 @@ class MTSensorDataTransformer(DataTransformer):
             ]:
                 # Binary sensors
                 transformed[metric] = self._extract_binary_value(reading, metric)
+
+        # Surface gateway-connection values that the network hub merged onto the
+        # raw reading (RSSI + last-seen). Kept as literals here to mirror
+        # MT_SENSOR_SIGNAL_STRENGTH / MT_SENSOR_LAST_SEEN without a const import
+        # dependency in this module. Absent values are dropped (never 0).
+        if raw_data.get("rssi") is not None:
+            transformed["signalStrength"] = raw_data["rssi"]
+        if raw_data.get("last_connected_at") is not None:
+            # TIMESTAMP sensors need a tz-aware datetime, not the raw ISO string.
+            last_seen = dt_util.parse_datetime(str(raw_data["last_connected_at"]))
+            if last_seen is not None:
+                transformed["lastSeen"] = last_seen
 
         # Add metadata
         transformed["_timestamp"] = raw_data.get("ts")
@@ -410,519 +392,6 @@ class MTSensorDataTransformer(DataTransformer):
 
         return False
 
-
-class MRWirelessDataTransformer(DataTransformer):
-    """Transformer for MR (Wireless) device data."""
-
-    def transform(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Transform MR wireless data to standardized format."""
-        transformed = {}
-
-        # Extract basic device info
-        transformed["serial"] = raw_data.get("serial")
-        transformed["name"] = raw_data.get("name")
-        transformed["model"] = raw_data.get("model")
-        transformed["networkId"] = raw_data.get("networkId")
-
-        # Extract client count
-        transformed["client_count"] = SafeExtractor.safe_int(
-            raw_data.get("clientCount", 0)
-        )
-
-        # Connection stats
-        connection_stats = raw_data.get("connectionStats", {})
-        transformed["connection_stats_assoc"] = SafeExtractor.safe_int(
-            connection_stats.get("assoc", 0)
-        )
-        transformed["connection_stats_auth"] = SafeExtractor.safe_int(
-            connection_stats.get("auth", 0)
-        )
-        transformed["connection_stats_dhcp"] = SafeExtractor.safe_int(
-            connection_stats.get("dhcp", 0)
-        )
-        transformed["connection_stats_dns"] = SafeExtractor.safe_int(
-            connection_stats.get("dns", 0)
-        )
-        transformed["connection_stats_success"] = SafeExtractor.safe_int(
-            connection_stats.get("success", 0)
-        )
-
-        # Power metrics
-        power_info = raw_data.get("power", {})
-        ac_info = power_info.get("ac", {})
-        poe_info = power_info.get("poe", {})
-        transformed["power_ac_connected"] = (
-            1 if ac_info.get("isConnected", False) else 0
-        )
-        transformed["power_poe_connected"] = (
-            1 if poe_info.get("isConnected", False) else 0
-        )
-
-        # Aggregation info
-        aggregation_info = raw_data.get("aggregation", {})
-        transformed["aggregation_enabled"] = (
-            1 if aggregation_info.get("enabled", False) else 0
-        )
-        transformed["aggregation_speed"] = SafeExtractor.safe_float(
-            aggregation_info.get("speed", 0)
-        )
-
-        # Packet loss metrics
-        downstream = raw_data.get("downstream", {})
-        upstream = raw_data.get("upstream", {})
-        transformed["packet_loss_downstream"] = SafeExtractor.safe_float(
-            downstream.get("lossPercentage", 0)
-        )
-        transformed["packet_loss_upstream"] = SafeExtractor.safe_float(
-            upstream.get("lossPercentage", 0)
-        )
-        # Calculate total packet loss
-        downstream_total = downstream.get("total", 0)
-        downstream_lost = downstream.get("lost", 0)
-        upstream_total = upstream.get("total", 0)
-        upstream_lost = upstream.get("lost", 0)
-        total_packets = downstream_total + upstream_total
-        total_lost = downstream_lost + upstream_lost
-        transformed["packet_loss_total"] = (
-            (total_lost / total_packets * 100) if total_packets > 0 else 0
-        )
-
-        # CPU load (API returns in hundredths of percent)
-        cpu_data = raw_data.get("cpu", {})
-        cpu_load_raw = cpu_data.get("cpuLoad5", 0)
-        transformed["cpu_load_5min"] = cpu_load_raw / 100.0
-
-        # Memory usage
-        performance_data = raw_data.get("performance", {})
-        transformed["memory_usage"] = SafeExtractor.safe_float(
-            performance_data.get("memoryUtilization", 0)
-        )
-
-        return transformed
-
-
-class MSSwitchDataTransformer(DataTransformer):
-    """Transformer for MS (Switch) device data."""
-
-    def transform(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Transform MS switch data to standardized format."""
-        transformed = {}
-
-        # Extract basic device info
-        transformed["serial"] = raw_data.get("serial")
-        transformed["name"] = raw_data.get("name")
-        transformed["model"] = raw_data.get("model")
-        transformed["networkId"] = raw_data.get("networkId")
-
-        # Handle both single device data and aggregated device data
-        if "portsStatus" in raw_data:
-            # Single device data with portsStatus
-            ports_status = raw_data.get("portsStatus", [])
-        elif "ports_status" in raw_data:
-            # Aggregated data format
-            ports_status = raw_data.get("ports_status", [])
-        else:
-            # Check if this is already aggregated device_info data
-            if any(
-                key in raw_data
-                for key in ["port_count", "connected_ports", "poe_ports"]
-            ):
-                # Standardize key names for already aggregated data
-                transformed.update(raw_data)
-                # Standardize PoE power key name
-                if "poe_power_draw" in raw_data:
-                    transformed["poe_power"] = raw_data["poe_power_draw"]
-                return transformed
-            ports_status = []
-
-        if not isinstance(ports_status, list):
-            ports_status = []
-
-        # Initialize aggregation lists
-        client_counts = []
-        power_values = []
-        utilization_sent = []
-        utilization_recv = []
-        error_counts = []
-        discard_counts = []
-        traffic_sent_kbps = []
-        traffic_recv_kbps = []
-
-        connected_ports = 0
-        poe_ports = 0
-        total_ports = len(ports_status)
-
-        for port in ports_status:
-            if not isinstance(port, dict):
-                continue
-
-            # Count connected ports (case-insensitive)
-            if port.get("enabled") and port.get("status", "").lower() == "connected":
-                connected_ports += 1
-
-            # Count PoE ports
-            if port.get("powerUsageInWh") is not None:
-                poe_ports += 1
-                power_usage = SafeExtractor.safe_float(port.get("powerUsageInWh"))
-                if power_usage > 0:
-                    # Convert from deciwatt-hours to watts
-                    power_values.append(UnitConverter.deciwatts_to_watts(power_usage))
-
-            # Aggregate client counts
-            client_count = SafeExtractor.safe_int(port.get("clientCount", 0))
-            if client_count > 0:
-                client_counts.append(client_count)
-
-            # Process port traffic rate (when timespan is provided)
-            traffic = port.get("trafficInKbps", {})
-            if isinstance(traffic, dict):
-                # Traffic is in kbps - store for traffic sensors
-                sent_kbps = SafeExtractor.safe_float(traffic.get("sent", 0))
-                recv_kbps = SafeExtractor.safe_float(traffic.get("recv", 0))
-
-                # Aggregate traffic data
-                if sent_kbps > 0:
-                    traffic_sent_kbps.append(sent_kbps)
-                if recv_kbps > 0:
-                    traffic_recv_kbps.append(recv_kbps)
-
-            # Process port utilization (total usage in KB over timespan)
-            usage = port.get("usageInKb", {})
-            if isinstance(usage, dict):
-                sent = SafeExtractor.safe_float(usage.get("sent", 0))
-                recv = SafeExtractor.safe_float(usage.get("recv", 0))
-
-                if sent > 0:
-                    utilization_sent.append(UnitConverter.kb_to_percentage(sent))
-                if recv > 0:
-                    utilization_recv.append(UnitConverter.kb_to_percentage(recv))
-
-            # Aggregate error and discard counts
-            error_counts.append(SafeExtractor.safe_int(port.get("errors", 0)))
-            discard_counts.append(SafeExtractor.safe_int(port.get("discards", 0)))
-
-        # Set aggregated values using constant names
-        transformed["port_count"] = total_ports
-        transformed["connected_ports"] = connected_ports
-        transformed["poe_ports"] = poe_ports
-        transformed["connected_clients"] = SafeExtractor.safe_aggregate(client_counts)
-        transformed["poe_power"] = SafeExtractor.safe_aggregate(power_values)
-        transformed["port_utilization_sent"] = SafeExtractor.safe_aggregate(
-            utilization_sent, "avg"
-        )
-        transformed["port_utilization_recv"] = SafeExtractor.safe_aggregate(
-            utilization_recv, "avg"
-        )
-        transformed["port_traffic_sent"] = SafeExtractor.safe_aggregate(
-            traffic_sent_kbps, "avg"
-        )
-        transformed["port_traffic_recv"] = SafeExtractor.safe_aggregate(
-            traffic_recv_kbps, "avg"
-        )
-        transformed["port_errors"] = SafeExtractor.safe_aggregate(error_counts)
-        transformed["port_discards"] = SafeExtractor.safe_aggregate(discard_counts)
-
-        # Calculate overall port utilization
-        all_utilization = utilization_sent + utilization_recv
-        transformed["port_utilization"] = SafeExtractor.safe_aggregate(
-            all_utilization, "avg"
-        )
-
-        # Extract power module status
-        power_modules = raw_data.get("powerModules", [])
-        if power_modules:
-            # Count operational power modules
-            operational_modules = sum(
-                1
-                for module in power_modules
-                if isinstance(module, dict) and module.get("status") == "operational"
-            )
-            transformed["power_module_status"] = operational_modules
-        else:
-            transformed["power_module_status"] = 0
-
-        # Handle packet statistics if present
-        if "packetCounters" in raw_data:
-            self._transform_packet_statistics(raw_data["packetCounters"], transformed)
-
-        # Handle STP priority
-        if "stp_priority" in raw_data:
-            transformed["stp_priority"] = SafeExtractor.safe_int(
-                raw_data.get("stp_priority", 32768)
-            )
-
-        # Memory usage
-        performance_data = raw_data.get("performance", {})
-        transformed["memory_usage"] = SafeExtractor.safe_float(
-            performance_data.get("memoryUtilization", 0)
-        )
-
-        return transformed
-
-    def _transform_packet_statistics(
-        self, packet_data: list[dict[str, Any]], transformed: dict[str, Any]
-    ) -> None:
-        """Transform packet statistics data."""
-        # Initialize packet counters
-        total_packets = 0
-        broadcast_packets = 0
-        multicast_packets = 0
-        crc_errors = 0
-        fragments = 0
-        collisions = 0
-        topology_changes = 0
-
-        # Process each port's packet data
-        for port_data in packet_data:
-            if not isinstance(port_data, dict):
-                continue
-
-            packets = port_data.get("packets", [])
-            for packet_type in packets:
-                if not isinstance(packet_type, dict):
-                    continue
-
-                desc = packet_type.get("desc", "")
-                total = SafeExtractor.safe_int(packet_type.get("total", 0))
-                rate = SafeExtractor.safe_float(
-                    packet_type.get("ratePerSec", {}).get("total", 0)
-                )
-
-                # Aggregate packet counts and rates
-                if desc == "Total":
-                    total_packets += total
-                    transformed["port_packets_rate_total"] = rate
-                elif desc == "Broadcast":
-                    broadcast_packets += total
-                    transformed["port_packets_rate_broadcast"] = rate
-                elif desc == "Multicast":
-                    multicast_packets += total
-                    transformed["port_packets_rate_multicast"] = rate
-                elif desc == "CRC align errors":
-                    crc_errors += total
-                    transformed["port_packets_rate_crcerrors"] = rate
-                elif desc == "Fragments":
-                    fragments += total
-                    transformed["port_packets_rate_fragments"] = rate
-                elif desc == "Collisions":
-                    collisions += total
-                    transformed["port_packets_rate_collisions"] = rate
-                elif desc == "Topology changes":
-                    topology_changes += total
-                    transformed["port_packets_rate_topologychanges"] = rate
-
-        # Set totals
-        transformed["port_packets_total"] = total_packets
-        transformed["port_packets_broadcast"] = broadcast_packets
-        transformed["port_packets_multicast"] = multicast_packets
-        transformed["port_packets_crcerrors"] = crc_errors
-        transformed["port_packets_fragments"] = fragments
-        transformed["port_packets_collisions"] = collisions
-        transformed["port_packets_topologychanges"] = topology_changes
-
-
-class MVCameraDataTransformer(DataTransformer):
-    """Transformer for MV (Camera) device data."""
-
-    def transform(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        """Transform MV camera data to standardized format."""
-        transformed: dict[str, Any] = {}
-
-        # Extract basic device info
-        transformed["serial"] = raw_data.get("serial")
-        transformed["name"] = raw_data.get("name")
-        transformed["model"] = raw_data.get("model")
-        transformed["networkId"] = raw_data.get("networkId")
-
-        quality_data = raw_data.get("qualityAndRetention", {}) or {}
-        if isinstance(quality_data, dict):
-            if "quality" in quality_data:
-                transformed[MV_SENSOR_QUALITY] = quality_data.get("quality")
-            if "resolution" in quality_data:
-                transformed[MV_SENSOR_RESOLUTION] = quality_data.get("resolution")
-            if "profileId" in quality_data:
-                transformed[MV_SENSOR_RETENTION_PROFILE_ID] = quality_data.get(
-                    "profileId"
-                )
-            if "motionBasedRetentionEnabled" in quality_data:
-                transformed[MV_SENSOR_MOTION_BASED_RETENTION_ENABLED] = (
-                    1 if quality_data.get("motionBasedRetentionEnabled") else 0
-                )
-                if MV_SENSOR_MOTION_DETECTION_ENABLED not in transformed:
-                    transformed[MV_SENSOR_MOTION_DETECTION_ENABLED] = (
-                        1 if quality_data.get("motionBasedRetentionEnabled") else 0
-                    )
-            if "audioRecordingEnabled" in quality_data:
-                transformed[MV_SENSOR_AUDIO_RECORDING_ENABLED] = (
-                    1 if quality_data.get("audioRecordingEnabled") else 0
-                )
-            if "restrictedBandwidthModeEnabled" in quality_data:
-                transformed[MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED] = (
-                    1 if quality_data.get("restrictedBandwidthModeEnabled") else 0
-                )
-            if "motionDetectorVersion" in quality_data:
-                motion_version = quality_data.get("motionDetectorVersion")
-                if motion_version is not None:
-                    transformed[MV_SENSOR_MOTION_DETECTOR_VERSION] = (
-                        SafeExtractor.safe_int(motion_version)
-                    )
-
-        video_settings = raw_data.get("videoSettings", {}) or {}
-        if isinstance(video_settings, dict):
-            if "externalRtspEnabled" in video_settings:
-                transformed[MV_SENSOR_EXTERNAL_RTSP_ENABLED] = (
-                    1 if video_settings.get("externalRtspEnabled") else 0
-                )
-
-        custom_analytics = raw_data.get("customAnalytics", {}) or {}
-        if isinstance(custom_analytics, dict):
-            if "enabled" in custom_analytics:
-                transformed[MV_SENSOR_CUSTOM_ANALYTICS_ENABLED] = (
-                    1 if custom_analytics.get("enabled") else 0
-                )
-            if "artifactId" in custom_analytics:
-                transformed[MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID] = (
-                    custom_analytics.get("artifactId")
-                )
-
-        sense_settings = raw_data.get("senseSettings", {}) or {}
-        if isinstance(sense_settings, dict):
-            if "senseEnabled" in sense_settings:
-                transformed[MV_SENSOR_MOTION_DETECTION_ENABLED] = (
-                    1 if sense_settings.get("senseEnabled") else 0
-                )
-
-        recording_status = self._extract_recording_status(raw_data)
-        if recording_status is not None:
-            transformed[MV_SENSOR_RECORDING_STATUS] = recording_status
-
-        storage_usage = self._extract_storage_usage_percent(raw_data)
-        if storage_usage is not None:
-            transformed[MV_SENSOR_STORAGE_USAGE_PERCENT] = storage_usage
-
-        detections = raw_data.get("detections", {}) or {}
-        if isinstance(detections, dict):
-            transformed[MV_SENSOR_DETECTIONS_TOTAL] = SafeExtractor.safe_int(
-                detections.get("total", 0)
-            )
-            by_object_type = detections.get("by_object_type", {}) or {}
-            if isinstance(by_object_type, dict):
-                transformed[MV_SENSOR_DETECTIONS_PERSON] = SafeExtractor.safe_int(
-                    by_object_type.get("person", 0)
-                )
-                transformed[MV_SENSOR_DETECTIONS_VEHICLE] = SafeExtractor.safe_int(
-                    by_object_type.get("vehicle", 0)
-                )
-
-        recent_motion = self._extract_recent_motion(raw_data, transformed)
-        if recent_motion is not None:
-            transformed[MV_SENSOR_RECENT_MOTION_DETECTED] = 1 if recent_motion else 0
-
-        return transformed
-
-    def _extract_recording_status(self, raw_data: dict[str, Any]) -> str | None:
-        """Extract recording status from known fields."""
-        for key in ("recordingStatus", "recording_status", "recordingMode"):
-            value = raw_data.get(key)
-            if isinstance(value, str) and value:
-                return value
-
-        recording = raw_data.get("recording")
-        if isinstance(recording, dict):
-            if "status" in recording and isinstance(recording.get("status"), str):
-                return recording.get("status")
-            if "enabled" in recording:
-                return "enabled" if recording.get("enabled") else "disabled"
-
-        quality_data = raw_data.get("qualityAndRetention", {}) or {}
-        if isinstance(quality_data, dict):
-            schedule_name = quality_data.get("recordingScheduleName")
-            if isinstance(schedule_name, str) and schedule_name:
-                return schedule_name
-            schedule_id = quality_data.get("recordingScheduleId") or quality_data.get(
-                "scheduleId"
-            )
-            if schedule_id:
-                return "scheduled"
-            if "motionBasedRetentionEnabled" in quality_data:
-                return (
-                    "motion_based"
-                    if quality_data.get("motionBasedRetentionEnabled")
-                    else "continuous"
-                )
-
-        return None
-
-    def _extract_storage_usage_percent(self, raw_data: dict[str, Any]) -> float | None:
-        """Extract storage usage percent from known fields."""
-        candidate_values = [
-            raw_data.get("storageUsagePercent"),
-            SafeExtractor.get_nested_value(raw_data, "storage", "usagePercent"),
-            SafeExtractor.get_nested_value(raw_data, "storage", "usedPercent"),
-            SafeExtractor.get_nested_value(raw_data, "storage", "percentUsed"),
-            SafeExtractor.get_nested_value(raw_data, "storage", "percentFull"),
-            SafeExtractor.get_nested_value(raw_data, "storageUsage", "percent"),
-            SafeExtractor.get_nested_value(
-                raw_data, "qualityAndRetention", "storageUsagePercent"
-            ),
-        ]
-
-        value = next(
-            (candidate for candidate in candidate_values if candidate is not None), None
-        )
-        if value is None:
-            return None
-
-        try:
-            percent = float(value)
-        except TypeError, ValueError:
-            return None
-
-        if 0 <= percent <= 1:
-            percent *= 100
-
-        return round(percent, 1)
-
-    def _extract_recent_motion(
-        self, raw_data: dict[str, Any], transformed: dict[str, Any]
-    ) -> bool | None:
-        """Derive recent motion state from analytics or detections."""
-        analytics_live = raw_data.get("analyticsLive")
-        if isinstance(analytics_live, dict):
-            zones = analytics_live.get("zones", {})
-            if isinstance(zones, dict):
-                for zone_data in zones.values():
-                    if isinstance(zone_data, dict):
-                        if any(
-                            SafeExtractor.safe_int(count) > 0
-                            for count in zone_data.values()
-                        ):
-                            return True
-
-        analytics_recent = raw_data.get("analyticsRecent")
-        if isinstance(analytics_recent, list):
-            for record in analytics_recent:
-                if not isinstance(record, dict):
-                    continue
-                entrances = SafeExtractor.safe_int(record.get("entrances", 0))
-                average_count = SafeExtractor.safe_float(
-                    record.get("averageCount", 0.0)
-                )
-                if entrances > 0 or average_count > 0:
-                    return True
-        elif isinstance(analytics_recent, dict):
-            entrances = SafeExtractor.safe_int(analytics_recent.get("entrances", 0))
-            average_count = SafeExtractor.safe_float(
-                analytics_recent.get("averageCount", 0.0)
-            )
-            if entrances > 0 or average_count > 0:
-                return True
-
-        detections_total = transformed.get(MV_SENSOR_DETECTIONS_TOTAL)
-        if isinstance(detections_total, int | float):
-            return detections_total > 0
-
-        return None
 
 
 class OrganizationDataTransformer(DataTransformer):
@@ -1073,9 +542,6 @@ class TransformerRegistry:
     def _register_default_transformers(self) -> None:
         """Register default transformers for each device type."""
         self._device_transformers["MT"] = MTSensorDataTransformer()
-        self._device_transformers["MR"] = MRWirelessDataTransformer()
-        self._device_transformers["MS"] = MSSwitchDataTransformer()
-        self._device_transformers["MV"] = MVCameraDataTransformer()
         self._device_transformers["organization"] = OrganizationDataTransformer()
 
     @classmethod
@@ -1393,110 +859,6 @@ def transform_downstream_power(value: Any) -> bool:
     if isinstance(value, dict):
         return value.get("enabled", False) or value.get("active", False)
     return bool(value)
-
-
-# MR/MS specific transformers
-@TransformerRegistry.register(MR_SENSOR_MEMORY_USAGE)
-def transform_memory_usage(value: Any) -> float | None:
-    """Transform memory usage percentage."""
-    if value is None:
-        return None
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MR_SENSOR_CLIENT_COUNT)
-def transform_client_count(value: Any) -> int:
-    """Transform client count value."""
-    return SafeExtractor.safe_int(value)
-
-
-# Channel utilization transformers
-@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_24)
-def transform_channel_utilization_total_24(value: Any) -> float | None:
-    """Transform 2.4GHz total channel utilization percentage."""
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_WIFI_24)
-def transform_channel_utilization_wifi_24(value: Any) -> float | None:
-    """Transform 2.4GHz WiFi channel utilization percentage."""
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_24)
-def transform_channel_utilization_non_wifi_24(value: Any) -> float | None:
-    """Transform 2.4GHz non-WiFi channel utilization percentage."""
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_TOTAL_5)
-def transform_channel_utilization_total_5(value: Any) -> float | None:
-    """Transform 5GHz total channel utilization percentage."""
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_WIFI_5)
-def transform_channel_utilization_wifi_5(value: Any) -> float | None:
-    """Transform 5GHz WiFi channel utilization percentage."""
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MR_SENSOR_CHANNEL_UTILIZATION_NON_WIFI_5)
-def transform_channel_utilization_non_wifi_5(value: Any) -> float | None:
-    """Transform 5GHz non-WiFi channel utilization percentage."""
-    return SafeExtractor.safe_float(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_PORT_COUNT)
-def transform_port_count(value: Any) -> int:
-    """Transform port count value."""
-    return SafeExtractor.safe_int(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_CONNECTED_PORTS)
-def transform_connected_ports(value: Any) -> int:
-    """Transform connected ports count."""
-    return SafeExtractor.safe_int(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_POE_PORTS)
-def transform_poe_ports(value: Any) -> int:
-    """Transform PoE ports count."""
-    return SafeExtractor.safe_int(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_POE_POWER)
-def transform_poe_power(value: Any) -> float | None:
-    """Transform PoE power value to watts."""
-    if value is None:
-        return None
-    # Often in deciwatts
-    return UnitConverter.deciwatts_to_watts(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_POE_LIMIT)
-def transform_poe_limit(value: Any) -> float | None:
-    """Transform PoE power limit to watts."""
-    if value is None:
-        return None
-    # Often in deciwatts
-    return UnitConverter.deciwatts_to_watts(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_PORT_TRAFFIC_SENT)
-def transform_port_traffic_sent(value: Any) -> float | None:
-    """Transform port traffic sent to Mbps."""
-    if value is None:
-        return None
-    return UnitConverter.bytes_to_mbps(value)
-
-
-@TransformerRegistry.register(MS_SENSOR_PORT_TRAFFIC_RECV)
-def transform_port_traffic_recv(value: Any) -> float | None:
-    """Transform port traffic received to Mbps."""
-    if value is None:
-        return None
-    return UnitConverter.bytes_to_mbps(value)
 
 
 # Organization level transformers

@@ -69,24 +69,6 @@ async def async_get_config_entry_diagnostics(
             "has_coordinator": hub_id in coordinators,
         }
 
-        # Add wireless data info for MR hubs
-        if hub.device_type == "MR" and hub.wireless_data:
-            ssids = hub.wireless_data.get("ssids", [])
-            hub_info["wireless_data"] = {
-                "ssids_count": len(ssids),
-                "enabled_ssids_count": len(
-                    [s for s in ssids if s.get("enabled", False)]
-                ),
-                "open_ssids_count": len(
-                    [
-                        s
-                        for s in ssids
-                        if s.get("authMode") in ["open", "8021x-radius"]
-                        and not s.get("encryptionMode", "").startswith("wpa")
-                    ]
-                ),
-            }
-
         diagnostics["network_hubs"][hub_id] = hub_info
 
     # Coordinators diagnostics

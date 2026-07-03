@@ -1,12 +1,12 @@
 ---
 layout: default
 title: FAQ
-description: Frequently asked questions about the Meraki Dashboard Home Assistant integration including setup, configuration, and device support
+description: Frequently asked questions about the Meraki Dashboard Home Assistant integration including setup, configuration, and MT sensor support
 ---
 
 # Frequently Asked Questions
 
-Common questions and answers about the Meraki Dashboard integration's **multi-hub architecture**.
+Common questions and answers about the Meraki Dashboard integration's **MT sensor + hub architecture**.
 
 <div class="alert alert-success" role="alert">
   <i class="bi bi-check-circle me-2"></i>
@@ -17,34 +17,33 @@ Common questions and answers about the Meraki Dashboard integration's **multi-hu
 
 ### What devices are supported?
 
-The integration now supports multiple device types with automatic hub creation:
+As of **v1.0.0**, this integration supports **only Meraki MT environmental sensors**:
 
 **Currently Supported:**
 - **MT Series Environmental Sensors**: MT10, MT12, MT14, MT15, MT20, MT30, MT40
-- **MR Series Wireless Access Points**: All MR models with SSID and client metrics
-- **MS Series Switches**: All MS models with port and PoE monitoring
 
-**Coming Soon**: MV (cameras) series devices - infrastructure is ready.
+**No longer supported (removed in v1.0.0):** MR wireless access points, MS switches, and MV
+cameras. If you rely on those, do not upgrade to v1.0.0 - see
+[Migration & Updates](#migration--updates) below.
 
-### How does the multi-hub architecture work?
+### How does the hub architecture work?
 
-The integration creates **multiple hubs automatically**:
-- **Organization Hub**: `{Organization Name} - Organisation` manages the overall connection
-- **Network Hubs**: `{Network Name} - {Device Type}` (e.g., "Main Office - MT", "Branch - MR")
-- **Individual Devices**: Nested under their respective network hubs
-
-Only hubs for existing device types are created - if you have no MR devices, no MR hubs are created.
+The integration creates hubs automatically:
+- **Organization Hub**: `{Organization Name} - Organisation` manages the overall connection and
+  a small set of minimal-health diagnostic sensors (API call status, device counts)
+- **Network Hubs**: `{Network Name} - MT` per network with MT sensors
+- **Individual Devices**: Your MT sensors, nested under their respective network hubs
 
 ### Do I need a special Meraki license?
 
 No special license is required. You just need:
 - A Meraki organization with API access enabled
-- At least one supported device (MT or MR series)
+- At least one MT environmental sensor
 - A valid Meraki Dashboard API key
 
 ### How much does this cost?
 
-The integration itself is **completely free and open source**. You only need existing Meraki devices and Dashboard access.
+The integration itself is **completely free and open source**. You only need existing Meraki MT devices and Dashboard access.
 
 ### Can I use this with Meraki Go?
 
@@ -73,7 +72,7 @@ Check these common issues:
 ### No hubs are created during setup
 
 This usually means:
-- **No supported devices**: Only MT, MR, and MS series devices are currently supported
+- **No MT devices**: Only MT environmental sensors are supported
 - **Devices offline**: Check device status in Meraki Dashboard
 - **Network access**: Verify devices are in networks accessible by your API key
 - **Recent data**: Ensure devices have reported data recently
@@ -88,24 +87,12 @@ Try these steps:
 
 ## Configuration & Intervals
 
-### What are the new default intervals?
+### What are the default intervals?
 
-The integration now uses **optimized per-hub intervals**:
-- **MT Environmental Sensors**: 
+- **MT Environmental Sensors**:
   - With MT15/MT40 devices: 30 seconds (fast refresh mode)
   - Without MT15/MT40 devices: 10 minutes recommended
-- **MR Wireless Access Points**: 10 minutes (balanced performance and API usage)
 - **Discovery**: 1 hour (how often to scan for new devices)
-- **MS Switches**: 10 minutes (port and PoE monitoring)
-- **MV Cameras (Future)**: 10 minutes (video analytics)
-
-### Why did the intervals change from 20 minutes?
-
-The new system provides better optimization:
-- **MT sensors**: 30 seconds with fast refresh for MT15/MT40, 10 minutes for others
-- **MR/MS devices**: 10 minutes balances monitoring needs with API usage
-- **Per-hub control**: Different device types have different optimal intervals
-- **Better defaults**: Optimized for both performance and API efficiency
 
 ### Can I configure different intervals for each hub?
 
@@ -117,8 +104,6 @@ Yes! You can set **individual hub intervals**:
 Example configuration:
 ```text
 Main Office - MT: 0.5 minutes (30 seconds with MT15/MT40)
-Main Office - MR: 10 minutes
-Data Center - MS: 5 minutes (critical switch monitoring)
 Branch Office - MT: 10 minutes (standard monitoring)
 ```
 
@@ -132,16 +117,6 @@ Branch Office - MT: 10 minutes (standard monitoring)
   - Without MT15/MT40: 10 minutes recommended
 - You can adjust both the sensor reporting interval and integration polling
 
-**MR Devices:**
-- Network changes can happen anytime
-- Integration default: 10 minutes provides balanced monitoring
-- Adjust to 5 minutes for more frequent updates if needed
-
-**MS Switches:**
-- Port and PoE status monitoring
-- Integration default: 10 minutes for standard monitoring
-- Adjust to 5 minutes for critical infrastructure
-
 ### What is MT Fast Refresh Mode?
 
 For MT15 and MT40 devices only, the integration provides ultra-fast sensor updates:
@@ -150,6 +125,15 @@ For MT15 and MT40 devices only, the integration provides ultra-fast sensor updat
 - **Data Polling**: Fetches updated data every 30 seconds
 - **Smart Error Handling**: Tracks errors per device to prevent log flooding
 - **No Manual Configuration**: Works out of the box with supported devices
+
+### Why does MT20/MT30 sometimes miss a quick press or door event?
+
+MT20 (door) and MT30 (button) events are surfaced by **polling** the Meraki API on your configured
+interval, not by a push/webhook mechanism. A brief press or state change between polls can be
+missed or reported late. Lowering your scan interval (or enabling MT15/MT40 fast refresh where
+applicable) narrows this window but cannot fully eliminate it - Meraki webhooks would be more
+reliable for these event-driven devices, but wiring up a webhook receiver is out of scope for this
+integration today.
 
 ### Can I change update intervals after setup?
 
@@ -163,22 +147,22 @@ Yes! Go to Settings → Devices & Services → Meraki Dashboard → Configure to
 ### How do I see my hubs in Home Assistant?
 
 After setup, you'll see your hubs in **Settings → Devices & Services**:
-- **Organization Device**: Shows overall connection status
-- **Network Hub Devices**: One per network per device type
-- **Individual Devices**: Your actual MT sensors, etc., nested under hubs
+- **Organization Device**: Shows overall connection status and minimal-health diagnostics
+- **Network Hub Devices**: One per network with MT sensors
+- **Individual Devices**: Your actual MT sensors, nested under hubs
 
 ### Can I control individual hubs?
 
 Yes! Each hub provides:
 - **Update Hub Data**: Force immediate refresh for that hub
-- **Discover Devices**: Scan for new devices in that hub
+- **Discover Devices**: Scan for new MT devices in that hub
 - **Organization Controls**: Update all hubs or discover across all networks
 
 ### What if I add new devices or networks?
 
 **Auto-Discovery (Enabled by Default):**
-- Automatically discovers new devices at the configured interval
-- Creates new hubs when devices of new types are added
+- Automatically discovers new MT devices at the configured interval
+- Creates new hubs when MT devices appear in a new network
 - Adds devices to appropriate existing hubs
 
 **Manual Discovery:**
@@ -190,7 +174,6 @@ Yes! Each hub provides:
 Currently, you can't disable individual hubs, but you can:
 - Use device selection to monitor only specific devices
 - Increase intervals for less important hubs
-- Disable auto-discovery for specific hubs (planned feature)
 
 ## Device Types & Features
 
@@ -208,27 +191,11 @@ Not all MT models support all sensor types:
 
 Check your device model specifications in the Meraki Dashboard.
 
-### What MR features are currently supported?
-
-**Current MR Support (Proof of Concept):**
-- SSID count (total configured SSIDs)
-- Enabled SSIDs (currently active)
-- Open SSIDs (unsecured networks)
-- Basic network hub diagnostics
-
-**Future MR Features:**
-- Client count and bandwidth usage
-- Signal strength and channel utilization
-- Security status and rogue AP detection
-- Performance metrics and historical data
-
 ### Can I monitor specific devices only?
 
 Yes! You can choose to:
-- **Monitor all devices**: Leave device selection empty (recommended for multi-hub)
+- **Monitor all MT devices**: Leave device selection empty (recommended)
 - **Select specific devices**: Choose only the ones you want to monitor
-
-The hub architecture works well with both approaches.
 
 ## Troubleshooting
 
@@ -266,19 +233,18 @@ Try these steps:
 
 ## Performance & Optimization
 
-### How many API calls does the multi-hub architecture make?
+### How many API calls does the integration make?
 
 The architecture is designed for efficiency:
-- **Initial setup**: ~3-5 calls to discover devices and create hubs
-- **Regular updates**: 1 call per hub per update cycle
+- **Initial setup**: A handful of calls to discover devices and create hubs
+- **Regular updates**: One org-wide sensor-readings call plus one org-wide gateway-connections call
+  per refresh cycle, shared across all network hubs (not one call per hub)
 - **Auto-discovery**: 1 additional call per hub per discovery interval (if enabled)
-- **Hub coordination**: Minimal overhead for managing multiple hubs
 
 ### How do I optimize for a large organization?
 
 **Best Practices:**
 - **Use longer intervals** for less critical locations
-- **Hub-specific intervals**: 5 minutes for critical, 15+ for others
 - **Selective monitoring**: Don't monitor every device if not needed
 - **Stagger discovery**: Different discovery intervals for different hubs
 - **Monitor API usage**: Track usage in Meraki Dashboard
@@ -292,7 +258,7 @@ Each integration instance uses one API key. For multiple organizations:
 
 ### Will this affect my Meraki Dashboard performance?
 
-No, the integration uses read-only API calls that don't affect Dashboard performance or device operation. The multi-hub architecture may actually improve performance by distributing API calls across time.
+No, the integration uses read-only API calls that don't affect Dashboard performance or device operation.
 
 ## Advanced Usage
 
@@ -308,10 +274,9 @@ Yes! You can:
 
 Absolutely! Create automations that:
 - Monitor conditions across multiple locations/hubs
-- Coordinate responses between different device types
 - Provide organization-wide alerting and reporting
 
-Example: Temperature monitoring across all MT hubs with MR network status context.
+Example: Temperature monitoring across all MT hubs in your organization.
 
 ### Can I set up alerts for hub issues?
 
@@ -323,33 +288,39 @@ Yes! Create automations for:
 
 ### Can I use this with Node-RED?
 
-Yes! Node-RED can subscribe to entities from all hubs and create complex automation flows that span multiple networks and device types.
+Yes! Node-RED can subscribe to entities from all hubs and create complex automation flows that span multiple networks.
 
 ## Migration & Updates
 
-### I'm upgrading from the old single-hub version - what changes?
+### I'm upgrading to v1.0.0 - what changes?
+
+**v1.0.0 is a breaking major release.** This integration now supports only MT environmental
+sensors:
 
 **Automatic Migration:**
-- Existing configurations are preserved
-- New hub structure is created automatically
-- Entity names remain the same
-- Automations and dashboards continue to work
+- Your config entry is rewritten to enable only MT devices
+- Any MR/MS/MV devices and their entities are removed from the device/entity registries
+- Your MT sensors, their entity IDs, and history are preserved
+- A repair notice ("Meraki Dashboard is now MT-only") appears in Settings → Repairs explaining
+  what happened
 
-**New Features Available:**
-- Per-hub interval configuration
-- MR device support
-- Better organization and control
-- Improved performance and reliability
+**Removed:**
+- MR wireless access point support
+- MS switch support (including the `cycle_switch_port_poe` service)
+- MV camera support (including the `set_camera_rtsp` service)
+
+If you rely on MR/MS/MV monitoring today, **do not upgrade** until you have an alternative in
+place.
 
 ### Do I need to reconfigure after updating?
 
 **Required:**
-- Nothing - migration is automatic
+- Nothing - migration is automatic. Review the repair notice in Settings → Repairs for a summary
+  of what was removed.
 
 **Recommended:**
-- Review and optimize per-hub intervals
-- Explore new MR device features if you have MR devices
-- Consider using hub-specific controls for better management
+- Review and optimize per-hub intervals for your MT sensors
+- Dismiss the repair notice once you've reviewed it
 
 ---
 

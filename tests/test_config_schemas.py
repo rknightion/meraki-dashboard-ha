@@ -781,7 +781,7 @@ class TestMTRefreshConfig:
             auto_discovery=True,
             discovery_interval=3600,
             selected_devices=["Q2XX-ABCD-1234"],
-            enabled_device_types=["MT", "MR"],
+            enabled_device_types=["MT"],
             mt_refresh_enabled=True,
             mt_refresh_interval=20,
         )

@@ -14,16 +14,19 @@ from custom_components.meraki_dashboard.const import (
     CONF_BASE_URL,
     CONF_DISCOVERY_INTERVAL,
     CONF_ENABLED_DEVICE_TYPES,
+    CONF_EXTENDED_CACHE_TTL,
     CONF_HUB_AUTO_DISCOVERY,
     CONF_HUB_DISCOVERY_INTERVAL,
     CONF_HUB_DISCOVERY_INTERVALS,
     CONF_HUB_SCAN_INTERVAL,
     CONF_HUB_SCAN_INTERVALS,
     CONF_HUB_SELECTION,
+    CONF_LONG_CACHE_TTL,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
     CONF_SCAN_INTERVAL,
+    CONF_STANDARD_CACHE_TTL,
     DEFAULT_BASE_URL,
     DEFAULT_DISCOVERY_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
@@ -226,15 +229,23 @@ class TestConfigFlowOptionsFlow:
 
         assert result["type"] == FlowResultType.FORM
 
-        # Update options
+        # Update cache TTL "intervals" (the top-level options form no longer
+        # exposes scan/discovery intervals directly -- those moved to
+        # per-hub configuration, see test_options_flow_configure_hub_intervals)
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
-                CONF_ENABLED_DEVICE_TYPES: ["MT", "MR"],
+                CONF_STANDARD_CACHE_TTL: 20,
+                CONF_EXTENDED_CACHE_TTL: 45,
+                CONF_LONG_CACHE_TTL: 90,
             },
         )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"][CONF_STANDARD_CACHE_TTL] == 20 * 60
+        assert result["data"][CONF_EXTENDED_CACHE_TTL] == 45 * 60
+        assert result["data"][CONF_LONG_CACHE_TTL] == 90 * 60
+        assert result["data"][CONF_ENABLED_DEVICE_TYPES] == ["MT"]
 
     async def test_options_flow_enable_mt_refresh(self, hass: HomeAssistant):
         """Test enabling MT refresh service through options."""
@@ -273,7 +284,6 @@ class TestConfigFlowOptionsFlow:
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
             user_input={
-                CONF_ENABLED_DEVICE_TYPES: ["MT"],
                 CONF_MT_REFRESH_ENABLED: True,
                 CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
             },
@@ -331,12 +341,10 @@ class TestConfigFlowOptionsFlow:
 
         result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
-        # Configure global options
+        # Configure global options (submit the form with defaults)
         result = await hass.config_entries.options.async_configure(
             result["flow_id"],
-            user_input={
-                CONF_ENABLED_DEVICE_TYPES: ["MT", "MR"],
-            },
+            user_input={},
         )
 
         assert result["type"] == FlowResultType.FORM

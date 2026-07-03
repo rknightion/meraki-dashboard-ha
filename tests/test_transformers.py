@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from custom_components.meraki_dashboard.data.transformers import (
-    MRWirelessDataTransformer,
-    MSSwitchDataTransformer,
     MTSensorDataTransformer,
     SafeExtractor,
     UnitConverter,
@@ -128,101 +126,55 @@ class TestMTSensorDataTransformer:
         assert result["current"] == 0.37
         assert result["powerFactor"] == 53
 
+    def test_transform_merges_gateway_connection(self):
+        """Test signalStrength/lastSeen are surfaced from merged gateway data.
 
-class TestMRWirelessDataTransformer:
-    """Test MR wireless data transformer."""
+        The network hub merges gateway connectivity (RSSI + last-seen) onto
+        the raw reading dict as ``rssi``/``last_connected_at`` before handing
+        it to the transformer (see ``MerakiNetworkHub.async_get_sensor_data``).
+        The transformer surfaces those as ``signalStrength``/``lastSeen``, and
+        only when present (never fabricating 0 when absent). ``lastSeen`` is
+        parsed to a tz-aware ``datetime`` (TIMESTAMP sensors need that, not
+        the raw ISO string).
+        """
+        from datetime import UTC, datetime
 
-    def test_transform_basic_info(self):
-        """Test basic device info transformation."""
-        transformer = MRWirelessDataTransformer()
+        transformer = MTSensorDataTransformer()
         raw_data = {
-            "serial": "Q2XX-XXXX-XXXX",
-            "name": "Test AP",
-            "model": "MR46",
-            "networkId": "N_123456789",
-            "clientCount": 15,
+            "readings": [{"metric": "temperature", "temperature": {"celsius": 21.0}}],
+            "rssi": -55,
+            "last_connected_at": "2026-07-03T00:00:00Z",
         }
 
         result = transformer.transform(raw_data)
-        assert result["serial"] == "Q2XX-XXXX-XXXX"
-        assert result["name"] == "Test AP"
-        assert result["model"] == "MR46"
-        assert result["client_count"] == 15
+        assert result["signalStrength"] == -55
+        assert result["lastSeen"] == datetime(2026, 7, 3, 0, 0, tzinfo=UTC)
 
-
-class TestMSSwitchDataTransformer:
-    """Test MS switch data transformer."""
-
-    def test_transform_aggregated_data(self):
-        """Test transformation of already aggregated data."""
-        transformer = MSSwitchDataTransformer()
+    def test_transform_omits_gateway_connection_when_absent(self):
+        """Test signalStrength/lastSeen are absent (not 0/None) when unmerged."""
+        transformer = MTSensorDataTransformer()
         raw_data = {
-            "port_count": 24,
-            "connected_ports": 18,
-            "poe_ports": 12,
-            "poe_power": 150.5,
+            "readings": [{"metric": "temperature", "temperature": {"celsius": 21.0}}],
         }
 
         result = transformer.transform(raw_data)
-        # Should include the original data plus standardized keys
-        expected = {
-            "serial": None,
-            "name": None,
-            "model": None,
-            "networkId": None,
-            "port_count": 24,
-            "connected_ports": 18,
-            "poe_ports": 12,
-            "poe_power": 150.5,
-        }
-        assert result == expected
-
-    def test_transform_port_data(self):
-        """Test transformation from port-level data."""
-        transformer = MSSwitchDataTransformer()
-        raw_data = {
-            "serial": "Q2XX-XXXX-XXXX",
-            "portsStatus": [
-                {
-                    "enabled": True,
-                    "status": "connected",
-                    "powerUsageInWh": 150,  # 15W in deciwatts
-                    "clientCount": 2,
-                    "usageInKb": {"sent": 1000, "recv": 2000},
-                    "errors": 0,
-                    "discards": 1,
-                },
-                {
-                    "enabled": True,
-                    "status": "connected",
-                    "powerUsageInWh": 300,  # 30W in deciwatts
-                    "clientCount": 1,
-                    "usageInKb": {"sent": 500, "recv": 1500},
-                    "errors": 2,
-                    "discards": 0,
-                },
-            ],
-        }
-
-        result = transformer.transform(raw_data)
-        assert result["port_count"] == 2
-        assert result["connected_ports"] == 2
-        assert result["poe_ports"] == 2
-        assert result["connected_clients"] == 3  # 2 + 1
-        assert result["poe_power"] == 45.0  # (150 + 300) / 10
-        assert result["port_errors"] == 2  # 0 + 2
-        assert result["port_discards"] == 1  # 1 + 0
+        assert "signalStrength" not in result
+        assert "lastSeen" not in result
 
 
 class TestTransformerRegistry:
     """Test transformer registry functionality."""
 
     def test_registry_contains_default_transformers(self):
-        """Test that registry has default transformers."""
+        """Test that registry has default transformers.
+
+        MT-only: the MR/MS device-transformer registrations were removed
+        along with ``MRWirelessDataTransformer``/``MSSwitchDataTransformer``.
+        """
         transformers = transformer_registry.list_device_transformers()
         assert "MT" in transformers
-        assert "MR" in transformers
-        assert "MS" in transformers
+        assert "MR" not in transformers
+        assert "MS" not in transformers
         assert "organization" in transformers
 
     def test_transform_with_registry(self):

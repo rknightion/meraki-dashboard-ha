@@ -12,20 +12,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     DOMAIN,
-    MR_SENSOR_MEMORY_USAGE,
-    MS_SENSOR_MEMORY_USAGE,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
+    MT_SENSOR_LAST_SEEN,
+    MT_SENSOR_SIGNAL_STRENGTH,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
-)
-from .devices.mr import MR_NETWORK_SENSOR_DESCRIPTIONS, MR_SENSOR_DESCRIPTIONS
-from .devices.ms import (
-    MS_DEVICE_SENSOR_DESCRIPTIONS,
-    MS_NETWORK_SENSOR_DESCRIPTIONS,
 )
 from .devices.mt import MT_ENERGY_SENSOR_DESCRIPTIONS, MT_SENSOR_DESCRIPTIONS
-from .devices.mv import MV_SENSOR_DESCRIPTIONS
 from .devices.organization import (
     NETWORK_HUB_SENSOR_DESCRIPTIONS,
     ORG_HUB_SENSOR_DESCRIPTIONS,
@@ -100,18 +91,6 @@ async def async_setup_entry(
         if network_hub.device_type == SENSOR_TYPE_MT:
             await _setup_mt_sensors(hass, network_hub, config_entry, entities)
 
-        # Create MR device sensors
-        elif network_hub.device_type == SENSOR_TYPE_MR and network_hub.wireless_data:
-            await _setup_mr_sensors(hass, network_hub, config_entry, entities)
-
-        # Create MS device sensors
-        elif network_hub.device_type == SENSOR_TYPE_MS and network_hub.switch_data:
-            await _setup_ms_sensors(hass, network_hub, config_entry, entities)
-
-        # Create MV device sensors
-        elif network_hub.device_type == SENSOR_TYPE_MV and network_hub.camera_data:
-            await _setup_mv_sensors(hass, network_hub, config_entry, entities)
-
     _LOGGER.debug("Created %d sensor entities", len(entities))
     async_add_entities(entities, True)
 
@@ -152,10 +131,22 @@ async def _setup_mt_sensors(
             device.get("model", "MISSING"),
         )
 
-        # Create regular sensors for each metric that the device supports
+        # Create regular sensors for each metric that the device supports.
+        # Signal strength (RSSI) and last-seen are always created for MT
+        # devices: they come from the org-wide gateway-connections fetch
+        # (merged onto MTDeviceData), not from the per-metric readings-based
+        # capability discovery that should_create_entity() otherwise uses, so
+        # the entity always exists and reflects "no gateway row" as an
+        # unavailable/None value rather than being absent entirely.
         entities_created_for_device = 0
         for description in MT_SENSOR_DESCRIPTIONS.values():
-            if should_create_entity(device, description.key, coordinator.data):
+            always_create = description.key in (
+                MT_SENSOR_SIGNAL_STRENGTH,
+                MT_SENSOR_LAST_SEEN,
+            )
+            if always_create or should_create_entity(
+                device, description.key, coordinator.data
+            ):
                 try:
                     entity = create_device_entity(
                         "mt_sensor",
@@ -213,231 +204,3 @@ async def _setup_mt_sensors(
             )
 
     _LOGGER.debug("Created MT sensors for %d devices", len(network_hub.devices))
-
-
-async def _setup_mr_sensors(
-    hass: HomeAssistant,
-    network_hub: Any,
-    config_entry: ConfigEntry,
-    entities: list[SensorEntity],
-) -> None:
-    """Set up MR wireless sensor entities."""
-    _LOGGER.debug("Setting up MR sensors for %s", network_hub.hub_name)
-
-    # Get the coordinator for this network from domain data
-    domain_data = hass.data[DOMAIN][config_entry.entry_id]
-    coordinators = domain_data["coordinators"]
-    coordinator = None
-
-    # Find the coordinator for this hub
-    for _hub_id, coord in coordinators.items():
-        if coord.network_hub == network_hub:
-            coordinator = coord
-            break
-
-    if not coordinator:
-        _LOGGER.warning("No coordinator found for MR network %s", network_hub.hub_name)
-        return
-
-    # Create network-level sensors
-    for description in MR_NETWORK_SENSOR_DESCRIPTIONS.values():
-        try:
-            entity = create_device_entity(
-                "mr_sensor",
-                coordinator,
-                {},  # Network-level sensors don't have a specific device
-                description,
-                config_entry.entry_id,
-                network_hub,
-            )
-            entities.append(entity)
-        except ValueError as e:
-            _LOGGER.warning(
-                "Failed to create MR network sensor %s: %s", description.key, e
-            )
-
-    # Create device-specific sensors for each MR device
-    entities_created = 0
-    for device in network_hub.devices:
-        device_serial = device.get("serial")
-        if not device_serial:
-            continue
-
-        _LOGGER.debug("Creating sensors for MR device: %s", device_serial)
-
-        # Create sensors for each wireless metric that the device supports
-        for description in MR_SENSOR_DESCRIPTIONS.values():
-            # Always create memory usage sensors for MR devices (available via organization API)
-            if description.key == MR_SENSOR_MEMORY_USAGE or should_create_entity(
-                device, description.key, coordinator.data
-            ):
-                try:
-                    entity = create_device_entity(
-                        "mr_device_sensor",
-                        coordinator,
-                        device,
-                        description,
-                        config_entry.entry_id,
-                        network_hub,
-                    )
-                    entities.append(entity)
-                    entities_created += 1
-                    _LOGGER.debug(
-                        "Created %s sensor for MR device %s",
-                        description.key,
-                        device_serial,
-                    )
-                except ValueError as e:
-                    _LOGGER.warning(
-                        "Failed to create MR device sensor %s: %s", description.key, e
-                    )
-
-    _LOGGER.debug(
-        "Created MR sensors for %d devices (%d total sensors)",
-        len(network_hub.devices),
-        entities_created,
-    )
-
-
-async def _setup_ms_sensors(
-    hass: HomeAssistant,
-    network_hub: Any,
-    config_entry: ConfigEntry,
-    entities: list[SensorEntity],
-) -> None:
-    """Set up MS switch sensor entities."""
-    _LOGGER.debug("Setting up MS sensors for %s", network_hub.hub_name)
-
-    # Get the coordinator for this network from domain data
-    domain_data = hass.data[DOMAIN][config_entry.entry_id]
-    coordinators = domain_data["coordinators"]
-    coordinator = None
-
-    # Find the coordinator for this hub
-    for _hub_id, coord in coordinators.items():
-        if coord.network_hub == network_hub:
-            coordinator = coord
-            break
-
-    if not coordinator:
-        _LOGGER.warning("No coordinator found for MS network %s", network_hub.hub_name)
-        return
-
-    # Create network-level sensors (aggregated across all switches)
-    for description in MS_NETWORK_SENSOR_DESCRIPTIONS.values():
-        try:
-            entity = create_device_entity(
-                "ms_sensor",
-                coordinator,
-                {},  # Network-level sensors don't have a specific device
-                description,
-                config_entry.entry_id,
-                network_hub,
-            )
-            entities.append(entity)
-        except ValueError as e:
-            _LOGGER.warning(
-                "Failed to create MS network sensor %s: %s", description.key, e
-            )
-
-    # Create device-specific sensors for each MS device
-    for device in network_hub.devices:
-        device_serial = device.get("serial")
-        if not device_serial:
-            continue
-
-        _LOGGER.debug("Creating sensors for MS device: %s", device_serial)
-
-        # Create sensors for each switch metric that the device supports
-        entities_created = 0
-        for description in MS_DEVICE_SENSOR_DESCRIPTIONS.values():
-            # Always create memory usage sensors for MS devices (available via organization API)
-            if description.key == MS_SENSOR_MEMORY_USAGE or should_create_entity(
-                device, description.key, coordinator.data
-            ):
-                try:
-                    entity = create_device_entity(
-                        "ms_device_sensor",
-                        coordinator,
-                        device,
-                        description,
-                        config_entry.entry_id,
-                        network_hub,
-                    )
-                    entities.append(entity)
-                    entities_created += 1
-                    _LOGGER.debug(
-                        "Created %s sensor for MS device %s",
-                        description.key,
-                        device_serial,
-                    )
-                except ValueError as e:
-                    _LOGGER.warning(
-                        "Failed to create MS device sensor %s: %s", description.key, e
-                    )
-
-    _LOGGER.debug(
-        "Created MS sensors for %d devices (%d total sensors)",
-        len(network_hub.devices),
-        entities_created,
-    )
-
-
-async def _setup_mv_sensors(
-    hass: HomeAssistant,
-    network_hub: Any,
-    config_entry: ConfigEntry,
-    entities: list[SensorEntity],
-) -> None:
-    """Set up MV camera sensor entities."""
-    _LOGGER.debug("Setting up MV sensors for %s", network_hub.hub_name)
-
-    domain_data = hass.data[DOMAIN][config_entry.entry_id]
-    coordinators = domain_data["coordinators"]
-    coordinator = None
-
-    for _hub_id, coord in coordinators.items():
-        if coord.network_hub == network_hub:
-            coordinator = coord
-            break
-
-    if not coordinator:
-        _LOGGER.warning("No coordinator found for MV network %s", network_hub.hub_name)
-        return
-
-    entities_created = 0
-    for device in network_hub.devices:
-        device_serial = device.get("serial")
-        if not device_serial:
-            continue
-
-        _LOGGER.debug("Creating sensors for MV device: %s", device_serial)
-
-        for description in MV_SENSOR_DESCRIPTIONS.values():
-            if should_create_entity(device, description.key, coordinator.data):
-                try:
-                    entity = create_device_entity(
-                        "mv_device_sensor",
-                        coordinator,
-                        device,
-                        description,
-                        config_entry.entry_id,
-                        network_hub,
-                    )
-                    entities.append(entity)
-                    entities_created += 1
-                    _LOGGER.debug(
-                        "Created %s sensor for MV device %s",
-                        description.key,
-                        device_serial,
-                    )
-                except ValueError as e:
-                    _LOGGER.warning(
-                        "Failed to create MV device sensor %s: %s", description.key, e
-                    )
-
-    _LOGGER.debug(
-        "Created MV sensors for %d devices (%d total sensors)",
-        len(network_hub.devices),
-        entities_created,
-    )

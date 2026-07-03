@@ -9,30 +9,8 @@ from typing import TYPE_CHECKING, Any
 from ..const import (
     DEVICE_TYPE_MAPPINGS,
     DOMAIN,
-    MR_SENSOR_MEMORY_USAGE,
-    MS_SENSOR_MEMORY_USAGE,
-    MV_SENSOR_AUDIO_RECORDING_ENABLED,
-    MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
-    MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
-    MV_SENSOR_DETECTIONS_PERSON,
-    MV_SENSOR_DETECTIONS_TOTAL,
-    MV_SENSOR_DETECTIONS_VEHICLE,
-    MV_SENSOR_EXTERNAL_RTSP_ENABLED,
-    MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
-    MV_SENSOR_MOTION_DETECTION_ENABLED,
-    MV_SENSOR_MOTION_DETECTOR_VERSION,
-    MV_SENSOR_QUALITY,
-    MV_SENSOR_RECENT_MOTION_DETECTED,
-    MV_SENSOR_RECORDING_STATUS,
-    MV_SENSOR_RESOLUTION,
-    MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
-    MV_SENSOR_RETENTION_PROFILE_ID,
-    MV_SENSOR_STORAGE_USAGE_PERCENT,
     PRODUCT_TYPE_TO_DEVICE_TYPE,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
 )
 from .sanitization import sanitize_attribute_value
 
@@ -432,8 +410,8 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
     """Create device capability filter based on model and type.
 
     Args:
-        device_model: Device model (e.g., "MT11", "MR46")
-        device_type: Device type ("MT", "MR", "MS")
+        device_model: Device model (e.g., "MT11", "MT15")
+        device_type: Device type ("MT")
 
     Returns:
         Set of supported sensor/metric keys for this device
@@ -516,59 +494,6 @@ def create_device_capability_filter(device_model: str, device_type: str) -> set[
                 "downstreamPower",
                 "remoteLockoutSwitch",
             }
-
-    elif device_type == "MR":
-        # MR (Wireless) devices all have similar metrics
-        return {
-            "client_count",
-            "memory_usage",
-            "ssid_count",
-            "enabled_ssids",
-            "open_ssids",
-        }
-
-    elif device_type == "MS":
-        # MS (Switch) devices all have similar metrics
-        return {
-            "port_count",
-            "memory_usage",
-            "connected_ports",
-            "poe_ports",
-            "port_utilization_sent",
-            "port_utilization_recv",
-            "port_traffic_sent",
-            "port_traffic_recv",
-            "poe_power_usage",
-            "connected_clients",
-            "port_errors",
-            "port_discards",
-            "power_module_status",
-            "port_link_count",
-            "poe_power_limit",
-            "port_utilization",
-        }
-
-    elif device_type == "MV":
-        # MV (Camera) devices
-        return {
-            MV_SENSOR_QUALITY,
-            MV_SENSOR_RESOLUTION,
-            MV_SENSOR_RETENTION_PROFILE_ID,
-            MV_SENSOR_MOTION_BASED_RETENTION_ENABLED,
-            MV_SENSOR_MOTION_DETECTION_ENABLED,
-            MV_SENSOR_RECENT_MOTION_DETECTED,
-            MV_SENSOR_AUDIO_RECORDING_ENABLED,
-            MV_SENSOR_RESTRICTED_BANDWIDTH_MODE_ENABLED,
-            MV_SENSOR_MOTION_DETECTOR_VERSION,
-            MV_SENSOR_EXTERNAL_RTSP_ENABLED,
-            MV_SENSOR_CUSTOM_ANALYTICS_ENABLED,
-            MV_SENSOR_CUSTOM_ANALYTICS_ARTIFACT_ID,
-            MV_SENSOR_DETECTIONS_PERSON,
-            MV_SENSOR_DETECTIONS_VEHICLE,
-            MV_SENSOR_DETECTIONS_TOTAL,
-            MV_SENSOR_RECORDING_STATUS,
-            MV_SENSOR_STORAGE_USAGE_PERCENT,
-        }
 
     return set()
 
@@ -687,25 +612,6 @@ def should_create_entity(
 
     device_model = device.get("model", "")
     device_type = determine_device_type(device)
-
-    # Special case: always create memory usage sensors for MR/MS devices
-    if metric_key in [
-        "memory_usage",
-        MR_SENSOR_MEMORY_USAGE,
-        MS_SENSOR_MEMORY_USAGE,
-    ]:
-        if device_type in {SENSOR_TYPE_MR, SENSOR_TYPE_MS}:
-            return True
-
-    if device_type == SENSOR_TYPE_MR:
-        # For MR devices, allow all standard metrics
-        return True  # Allow all MR sensors to be created
-    elif device_type == SENSOR_TYPE_MS:
-        # For MS devices, allow all standard metrics
-        return True  # Allow all MS sensors to be created
-    elif device_type == SENSOR_TYPE_MV:
-        # For MV devices, allow all camera metrics
-        return True
 
     # For MT devices, we need to check capabilities more carefully
     # The metric_key comes from sensor descriptions which use EntityType values

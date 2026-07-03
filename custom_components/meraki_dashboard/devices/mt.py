@@ -15,6 +15,8 @@ from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
@@ -34,10 +36,12 @@ from ..const import (
     MT_SENSOR_FREQUENCY,
     MT_SENSOR_HUMIDITY,
     MT_SENSOR_INDOOR_AIR_QUALITY,
+    MT_SENSOR_LAST_SEEN,
     MT_SENSOR_NOISE,
     MT_SENSOR_PM25,
     MT_SENSOR_POWER_FACTOR,
     MT_SENSOR_REAL_POWER,
+    MT_SENSOR_SIGNAL_STRENGTH,
     MT_SENSOR_TEMPERATURE,
     MT_SENSOR_TVOC,
     MT_SENSOR_VOLTAGE,
@@ -158,6 +162,24 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         suggested_display_precision=1,
+    ),
+    # Gateway-connection metrics (merged in from
+    # getOrganizationSensorGatewaysConnectionsLatest). Diagnostic entities.
+    MT_SENSOR_SIGNAL_STRENGTH: SensorEntityDescription(
+        key=MT_SENSOR_SIGNAL_STRENGTH,
+        name="Signal Strength",
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+    ),
+    MT_SENSOR_LAST_SEEN: SensorEntityDescription(
+        key=MT_SENSOR_LAST_SEEN,
+        name="Last Seen",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
     ),
 }
 
@@ -313,7 +335,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
                         self._device_serial,
                         self._energy_value,
                     )
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     _LOGGER.warning(
                         "Could not restore energy value for %s: %s",
                         self._device_serial,
@@ -370,7 +392,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
                         current_timestamp = datetime.datetime.fromisoformat(
                             timestamp_str.replace("Z", "+00:00")
                         )
-                    except ValueError, TypeError:
+                    except (ValueError, TypeError):
                         current_timestamp = None
                 break
 

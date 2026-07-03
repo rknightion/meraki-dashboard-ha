@@ -19,7 +19,7 @@ class HubBuilder:
             "base_url": "https://api.meraki.com/api/v1",
             "networks": [],
             "selected_networks": None,
-            "selected_device_types": ["MT", "MR", "MS", "MV"],
+            "selected_device_types": ["MT"],
             "scan_interval": 60,
             "discovery_interval": 3600,
         }

@@ -84,12 +84,12 @@ async def test_multiple_devices_with_builders(hass: HomeAssistant):
         )
         devices.append(device)
 
-    # Create 2 MR devices
+    # Create 2 more MT devices (MT is the only supported device family)
     for i in range(2):
         device = (
             device_builder.with_serial(f"Q2YY-TEST-{i:04d}")
-            .with_name(f"Access Point {i + 1}")
-            .as_mr_device()
+            .with_name(f"Sensor {i + 4}")
+            .as_mt_device()
             .build()
         )
         devices.append(device)

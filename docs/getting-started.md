@@ -1,6 +1,12 @@
 # Getting Started
 
-This guide covers installing, configuring, and verifying the Meraki Dashboard Home Assistant integration so you can start monitoring your Cisco Meraki devices.
+This guide covers installing, configuring, and verifying the Meraki Dashboard Home Assistant integration so you can start monitoring your Cisco Meraki MT environmental sensors.
+
+!!! warning "Breaking change in v1.0.0"
+    Version 1.0.0 supports **only MT environmental sensors**. MR/MS/MV support has been removed.
+    If you are upgrading from an earlier version, the integration automatically migrates your
+    config entry to MT-only and removes any non-MT devices/entities, raising a repair notice in
+    Settings → Repairs. See the [README breaking-change notice](https://github.com/rknightion/meraki-dashboard-ha#-breaking-change--v100-is-mt-only) for the full details.
 
 ## Prerequisites
 
@@ -9,7 +15,7 @@ Before you begin, ensure you have:
 - Home Assistant 2024.1.0 or newer
 - A Cisco Meraki Dashboard account with API access
 - Your Meraki API key
-- At least one Meraki organization with devices
+- At least one Meraki organization with MT environmental sensors
 
 ## Installation
 
@@ -72,7 +78,7 @@ After entering your API key:
 
 1. Select the organizations you want to monitor
 2. Choose which networks to include
-3. Select device types (MT, MR, MS, MV)
+3. Optionally select specific MT devices, or monitor all MT sensors in the organization
 
 ### Advanced Configuration Options
 
@@ -83,9 +89,6 @@ Configure how often the integration polls for updates:
 | Device Type | Default Scan Interval |
 |---|---|
 | MT (Environmental Sensors) | 10 minutes |
-| MR (Access Points) | 5 minutes |
-| MS (Switches) | 5 minutes |
-| MV (Cameras) | 10 minutes |
 
 #### Regional API Endpoints
 

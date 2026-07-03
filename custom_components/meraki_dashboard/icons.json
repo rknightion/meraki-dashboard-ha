@@ -55,32 +55,11 @@
       "network_count": {
         "default": "mdi:network"
       },
-      "poe_ports": {
-        "default": "mdi:ethernet-cable-electric"
-      },
-      "poe_power": {
-        "default": "mdi:power-plug"
-      },
-      "poe_limit": {
-        "default": "mdi:power-plug-outline"
-      },
-      "port_errors": {
-        "default": "mdi:alert-circle"
-      },
-      "port_discards": {
-        "default": "mdi:trash-can"
-      },
       "total_api_calls": {
         "default": "mdi:api"
       },
       "failed_api_calls": {
         "default": "mdi:api-off"
-      },
-      "bluetooth_clients_total_count": {
-        "default": "mdi:bluetooth"
-      },
-      "memory_usage": {
-        "default": "mdi:memory"
       }
     },
     "binary_sensor": {

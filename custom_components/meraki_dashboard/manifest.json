@@ -1,6 +1,6 @@
 {
   "domain": "meraki_dashboard",
-  "name": "Meraki Dashboard",
+  "name": "Meraki MT Sensors",
   "after_dependencies": [
     "recorder"
   ],

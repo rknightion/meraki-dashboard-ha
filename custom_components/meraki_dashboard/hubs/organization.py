@@ -7,50 +7,49 @@ import logging
 import threading
 from collections import deque
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, cast
 
 import meraki.aio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.event import async_track_time_interval
 from meraki.exceptions import APIError, AsyncAPIError
 
 from ..const import (
     API_PRIORITY_HIGH,
     API_PRIORITY_LOW,
-    API_PRIORITY_NORMAL,
     API_RATE_LIMIT_MAX_CONCURRENT,
     API_RATE_LIMIT_PER_SECOND,
     API_THROTTLE_WINDOW_MINUTES,
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
-    DYNAMIC_DATA_REFRESH_INTERVAL,
-    SEMI_STATIC_DATA_REFRESH_INTERVAL,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
+    DEVICE_TYPE_SCAN_INTERVALS,
+    MIN_SCAN_INTERVAL,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
-    STATIC_DATA_REFRESH_INTERVAL,
     USER_AGENT,
 )
+from ..exceptions import MerakiApiError
 from ..types import (
-    DeviceStatus,
-    MemoryUsageData,
     MerakiApiClient,
     NetworkData,
     OrganizationData,
 )
-from ..utils.device_info import determine_device_type, device_matches_type
+from ..utils.device_info import device_matches_type
 from ..utils.error_handling import handle_api_errors
 from ..utils.rate_limiter import MerakiRateLimiter
-from ..utils.retry import RetryStrategies, retry_on_api_error, with_standard_retries
+from ..utils.retry import with_standard_retries
 
 if TYPE_CHECKING:
+    from ..types import GatewayConnectionData, MTDeviceData
     from .network import MerakiNetworkHub
 
 _LOGGER = logging.getLogger(__name__)
+
+# Bounded, cancellable 429 retry: one retry, honouring a *capped* Retry-After so
+# a hostile/huge header can't stall the coordinator (see Task C2).
+_MAX_429_RETRIES = 1
+_RETRY_AFTER_CAP_SECONDS = 30
 
 # Thread-safe cache for logging configuration
 _LOGGING_LOCK = threading.Lock()
@@ -152,13 +151,27 @@ class MerakiOrganizationHub:
         self._api_call_durations: deque[float] = deque(maxlen=100)
         self._last_setup_time: datetime | None = None
 
-        # Shared rate limiter for Meraki API calls
+        # Shared rate limiter for Meraki API calls. budget_fraction defaults to
+        # 0.8, deliberately leaving ~20% headroom under the org's per-second
+        # ceiling so bursts don't trip Meraki's 429.
         self._rate_limiter = MerakiRateLimiter(
             max_calls_per_second=API_RATE_LIMIT_PER_SECOND,
             max_concurrent=API_RATE_LIMIT_MAX_CONCURRENT,
             throttle_window_minutes=API_THROTTLE_WINDOW_MINUTES,
         )
         self._initial_refresh_task: asyncio.Task | None = None
+
+        # Short-TTL caches for the org-wide MT reads. There is one coordinator
+        # per network hub on an independent timer (no shared refresh tick), so
+        # N back-to-back consumer calls within the TTL must coalesce to ONE API
+        # call via the TTL rather than a per-tick flag. TTL floors at 30s.
+        self._org_cache_ttl: float = float(
+            max(MIN_SCAN_INTERVAL, DEVICE_TYPE_SCAN_INTERVALS.get(SENSOR_TYPE_MT, 30))
+        )
+        self._sensor_readings_cache: tuple[float, dict[str, MTDeviceData]] | None = None
+        self._gateway_connections_cache: (
+            tuple[float, dict[str, GatewayConnectionData]] | None
+        ) = None
 
         # Network hubs managed by this organization hub
         self.network_hubs: dict[str, MerakiNetworkHub] = {}
@@ -168,7 +181,7 @@ class MerakiOrganizationHub:
         self.licenses_expiring_count = 0
         self.recent_alerts: list[dict[str, str]] = []
         self.active_alerts_count = 0
-        self.device_statuses: list[DeviceStatus] = []
+        self.device_statuses: list[dict[str, Any]] = []
         self.device_status_overview: dict[str, Any] = {}
 
         # Clients overview data (1-hour timespan)
@@ -181,8 +194,9 @@ class MerakiOrganizationHub:
         # Bluetooth clients data - total count across all networks
         self.bluetooth_clients_total_count = 0
 
-        # Device memory usage data
-        self.device_memory_usage: dict[str, MemoryUsageData] = {}
+        # Device memory usage data (retained as an empty default for readers;
+        # no fetcher populates it under the MT-only minimal-health set).
+        self.device_memory_usage: dict[str, Any] = {}
 
         # Device ethernet status data (for MR devices)
         self.device_ethernet_status: dict[str, dict[str, Any]] = {}
@@ -304,6 +318,77 @@ class MerakiOrganizationHub:
         """Track API call duration for performance monitoring."""
         self._api_call_durations.append(duration)
 
+    def _cache_now(self) -> float:
+        """Monotonic clock used for the short-TTL org-wide read caches.
+
+        Separated from ``async_api_call``'s duration timing so the cache TTL is
+        driven by a single, easily-stubbed source in tests.
+        """
+        return self.hass.loop.time()
+
+    @staticmethod
+    def _extract_status(err: Exception) -> int | None:
+        """Best-effort HTTP status extraction from a Meraki SDK error."""
+        for attr in ("status", "status_code", "statusCode"):
+            value = getattr(err, attr, None)
+            if isinstance(value, int):
+                return value
+        return None
+
+    @staticmethod
+    def _extract_retry_after(err: Exception, cap_seconds: float) -> float:
+        """Parse a capped Retry-After wait from a 429 error's response headers."""
+        response = getattr(err, "response", None)
+        headers = getattr(response, "headers", None)
+        retry_after: float | None = None
+        if isinstance(headers, dict):
+            raw = headers.get("Retry-After") or headers.get("retry-after")
+            if raw is not None:
+                try:
+                    retry_after = float(raw)
+                except (ValueError, TypeError):
+                    retry_after = None
+        if retry_after is None or retry_after < 0:
+            retry_after = float(cap_seconds)
+        # Cap so a hostile/huge header can never stall the coordinator.
+        return min(retry_after, float(cap_seconds))
+
+    async def _api_call_with_retry(
+        self,
+        api_call: Callable[..., Any],
+        *args: Any,
+        max_retries: int = _MAX_429_RETRIES,
+        cap_seconds: float = _RETRY_AFTER_CAP_SECONDS,
+        **kwargs: Any,
+    ) -> Any:
+        """Invoke an API call with ONE bounded, cancellable 429 retry.
+
+        The Meraki SDK client is built with ``wait_on_rate_limit=False`` and
+        ``retry_4xx_error=False`` so it never blocks internally; we own the
+        retry here. Non-429 errors propagate immediately. The ``asyncio.sleep``
+        is cancellable, so a coordinator shutdown mid-wait unwinds cleanly.
+        """
+        attempt = 0
+        while True:
+            try:
+                result = api_call(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                return result
+            except (APIError, AsyncAPIError) as err:
+                status = self._extract_status(err)
+                if status != 429 or attempt >= max_retries:
+                    raise
+                wait_seconds = self._extract_retry_after(err, cap_seconds)
+                _LOGGER.debug(
+                    "429 from Meraki API; retrying once after %.1fs (attempt %d/%d)",
+                    wait_seconds,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(wait_seconds)
+                attempt += 1
+
     async def async_api_call(
         self,
         api_call: Callable[..., Any],
@@ -311,14 +396,11 @@ class MerakiOrganizationHub:
         priority: int,
         **kwargs: Any,
     ) -> Any:
-        """Execute an API call via the shared rate limiter."""
+        """Execute an API call via the shared rate limiter + bounded 429 retry."""
         start_time = self.hass.loop.time()
 
         async def _invoke() -> Any:
-            result = api_call(*args, **kwargs)
-            if asyncio.iscoroutine(result):
-                return await result
-            return result
+            return await self._api_call_with_retry(api_call, *args, **kwargs)
 
         try:
             result = await self._rate_limiter.submit(_invoke, priority=priority)
@@ -330,6 +412,102 @@ class MerakiOrganizationHub:
             self.failed_api_calls += 1
             self.last_api_call_error = str(err)
             raise
+
+    async def async_get_all_sensor_readings(self) -> dict[str, MTDeviceData]:
+        """Fetch latest MT readings for the WHOLE org in one call (no serials filter).
+
+        Fixes SCALE-13: one org-wide
+        ``getOrganizationSensorReadingsLatest(org_id, total_pages="all",
+        perPage=1000)`` call, returning ``{serial: reading}`` for every sensor
+        serial in the org (callers filter to their devices client-side). Result
+        is served from a short-TTL cache so N per-hub coordinators coalesce to
+        one API call.
+        """
+        if self.dashboard is None:
+            return {}
+
+        now = self._cache_now()
+        if self._sensor_readings_cache is not None:
+            fetched_at, cached = self._sensor_readings_cache
+            if now - fetched_at < self._org_cache_ttl:
+                return cached
+
+        readings = await self.async_api_call(
+            self.dashboard.sensor.getOrganizationSensorReadingsLatest,
+            self.organization_id,
+            priority=API_PRIORITY_HIGH,
+            total_pages="all",
+            perPage=1000,
+        )
+        # Guard the SDK's exhausted-retry error dict ({"errors": [...]}). Raising
+        # here (rather than returning {}) keeps prior entity state instead of
+        # fabricating "no data" (see Task C2/#437/#429).
+        if not isinstance(readings, list):
+            raise MerakiApiError(
+                f"Unexpected sensor readings response: {type(readings)!r}"
+            )
+
+        self.last_api_call_error = None
+        result: dict[str, MTDeviceData] = {
+            r["serial"]: cast("MTDeviceData", r)
+            for r in readings
+            if isinstance(r, dict) and r.get("serial")
+        }
+        self._sensor_readings_cache = (now, result)
+        return result
+
+    async def async_get_all_gateway_connections(
+        self,
+    ) -> dict[str, GatewayConnectionData]:
+        """Fetch per-sensor gateway connectivity (RSSI + last-seen) for the org.
+
+        One org-wide ``getOrganizationSensorGatewaysConnectionsLatest(org_id,
+        total_pages="all")`` call, returning
+        ``{serial: {"rssi": int | None, "last_connected_at": str | None}}``.
+        Short-TTL cached like the readings call.
+        """
+        if self.dashboard is None:
+            return {}
+
+        now = self._cache_now()
+        if self._gateway_connections_cache is not None:
+            fetched_at, cached = self._gateway_connections_cache
+            if now - fetched_at < self._org_cache_ttl:
+                return cached
+
+        rows = await self.async_api_call(
+            self.dashboard.sensor.getOrganizationSensorGatewaysConnectionsLatest,
+            self.organization_id,
+            priority=API_PRIORITY_LOW,
+            total_pages="all",
+        )
+        if not isinstance(rows, list):
+            raise MerakiApiError(
+                f"Unexpected gateway connections response: {type(rows)!r}"
+            )
+
+        self.last_api_call_error = None
+        result: dict[str, GatewayConnectionData] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            serial = row.get("serial")
+            if not serial:
+                continue
+            # Shape is treated as best-effort; RSSI may sit at top level or nest
+            # under a connection object. Absent values stay None (never 0).
+            rssi = row.get("rssi")
+            if rssi is None:
+                connection = row.get("connection")
+                if isinstance(connection, dict):
+                    rssi = connection.get("rssi")
+            last_connected_at = row.get("lastConnectedAt") or row.get("connectedAt")
+            result[serial] = cast(
+                "GatewayConnectionData",
+                {"rssi": rssi, "last_connected_at": last_connected_at},
+            )
+        self._gateway_connections_cache = (now, result)
+        return result
 
     @with_standard_retries("setup")
     @handle_api_errors(
@@ -364,7 +542,11 @@ class MerakiOrganizationHub:
                 output_log=False,  # Disable SDK output logging
                 suppress_logging=True,  # Suppress verbose SDK logging
                 maximum_concurrent_requests=API_RATE_LIMIT_MAX_CONCURRENT,
-                wait_on_rate_limit=True,
+                # We own rate limiting + a single bounded 429 retry ourselves
+                # (see _api_call_with_retry), so disable the SDK's blocking
+                # wait-and-retry which would stall the event loop unboundedly.
+                wait_on_rate_limit=False,
+                retry_4xx_error=False,
             )
             self._dashboard_context = dashboard
             enter = getattr(dashboard, "__aenter__", None)
@@ -404,91 +586,12 @@ class MerakiOrganizationHub:
             _LOGGER.debug("Found %d networks in organization", len(self.networks))
             self.last_api_call_error = None
 
-            # Set up tiered refresh timers instead of single organization data update
-            # Get configured intervals from config entry options, with fallback to defaults
-            from types import MappingProxyType
-
-            options: MappingProxyType[str, Any] | dict[str, Any] = (
-                self.config_entry.options or {}
-            )
-            static_interval = options.get(
-                "static_data_interval", STATIC_DATA_REFRESH_INTERVAL
-            )
-            semi_static_interval = options.get(
-                "semi_static_data_interval", SEMI_STATIC_DATA_REFRESH_INTERVAL
-            )
-            dynamic_interval = options.get(
-                "dynamic_data_interval", DYNAMIC_DATA_REFRESH_INTERVAL
-            )
-
-            # Only set up interval timers in production (not in tests)
-            import sys
-
-            if "pytest" not in sys.modules:
-                # Static data (licenses, org info) - configurable interval (default: every hour)
-                async def _update_static_data(_now: datetime | None = None) -> None:
-                    await self._fetch_license_data()
-                    self._last_license_update = datetime.now(UTC)
-                    _LOGGER.debug("Updated static organization data (licenses)")
-
-                self._static_data_unsub = async_track_time_interval(
-                    self.hass,
-                    _update_static_data,
-                    timedelta(seconds=static_interval),
-                )
-
-                # Semi-static data (device statuses, memory usage, ethernet status) - configurable interval (default: every 30 minutes)
-                async def _update_semi_static_data(
-                    _now: datetime | None = None,
-                ) -> None:
-                    await self._fetch_device_statuses()
-                    self._last_device_status_update = datetime.now(UTC)
-
-                    await self._fetch_memory_usage()
-                    self._last_memory_usage_update = datetime.now(UTC)
-
-                    await self._fetch_wireless_ethernet_statuses()
-                    self._last_ethernet_status_update = datetime.now(UTC)
-
-                    _LOGGER.debug(
-                        "Updated semi-static organization data (device statuses, memory usage, ethernet status)"
-                    )
-
-                self._semi_static_data_unsub = async_track_time_interval(
-                    self.hass,
-                    _update_semi_static_data,
-                    timedelta(seconds=semi_static_interval),
-                )
-
-                # Dynamic data (alerts, events, clients overview) - configurable interval (default: every 5 minutes)
-                async def _update_dynamic_data(_now: datetime | None = None) -> None:
-                    """Update dynamic data (clients overview) - refreshes every 5 minutes."""
-                    _LOGGER.debug("Updating dynamic organization data")
-                    await self._fetch_alerts_data()
-                    self._last_alerts_update = datetime.now(UTC)
-
-                    await self._fetch_clients_overview()
-                    self._last_clients_update = datetime.now(UTC)
-
-                    await self._fetch_bluetooth_clients_overview()
-                    self._last_bluetooth_clients_update = datetime.now(UTC)
-
-                    _LOGGER.debug(
-                        "Updated dynamic organization data (alerts/events/clients/bluetooth)"
-                    )
-
-                self._dynamic_data_unsub = async_track_time_interval(
-                    self.hass,
-                    _update_dynamic_data,
-                    timedelta(seconds=dynamic_interval),
-                )
-
-            # Perform initial organization data update in the background to avoid
-            # blocking integration setup on slow API calls.
-            if "pytest" not in sys.modules and self._initial_refresh_task is None:
-                self._initial_refresh_task = self.hass.async_create_task(
-                    self._run_initial_refresh()
-                )
+            # MT-only minimal-health: the org hub no longer runs tiered
+            # license/alert/clients/memory/device-status refresh timers. The
+            # only surviving org diagnostics are the API-status counters
+            # (backed by the rate limiter) and the per-network device count.
+            # MT readings/gateway-connections are pulled on demand by the
+            # coordinators via the short-TTL-cached org-wide fetchers.
 
             # Track setup completion time
             self._last_setup_time = datetime.now(UTC)
@@ -525,46 +628,6 @@ class MerakiOrganizationHub:
             )
             raise ConfigEntryNotReady from err
 
-    async def _run_initial_refresh(self) -> None:
-        """Run initial organization data refresh in the background."""
-        steps = [
-            ("license data", self._fetch_license_data, "_last_license_update"),
-            (
-                "device statuses",
-                self._fetch_device_statuses,
-                "_last_device_status_update",
-            ),
-            ("alerts", self._fetch_alerts_data, "_last_alerts_update"),
-            (
-                "clients overview",
-                self._fetch_clients_overview,
-                "_last_clients_update",
-            ),
-            (
-                "bluetooth clients",
-                self._fetch_bluetooth_clients_overview,
-                "_last_bluetooth_clients_update",
-            ),
-            ("memory usage", self._fetch_memory_usage, "_last_memory_usage_update"),
-            (
-                "wireless ethernet status",
-                self._fetch_wireless_ethernet_statuses,
-                "_last_ethernet_status_update",
-            ),
-        ]
-
-        for label, coro, attr in steps:
-            try:
-                await coro()
-                setattr(self, attr, datetime.now(UTC))
-            except Exception as err:
-                _LOGGER.debug(
-                    "Initial refresh step '%s' failed: %s",
-                    label,
-                    err,
-                    exc_info=True,
-                )
-
     @with_standard_retries("discovery")
     @handle_api_errors(default_return={})
     async def async_create_network_hubs(self) -> dict[str, MerakiNetworkHub]:
@@ -585,10 +648,11 @@ class MerakiOrganizationHub:
             network_id = network["id"]
             network_name = network["name"]
 
-            # Get enabled device types from config
+            # MT-only: this integration supports Meraki MT environmental
+            # sensors exclusively, so the network-hub loop iterates just MT.
             enabled_device_types = self.config_entry.options.get(
                 "enabled_device_types",
-                [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV],
+                [SENSOR_TYPE_MT],
             )
 
             try:
@@ -605,13 +669,8 @@ class MerakiOrganizationHub:
                     total_pages="all",
                 )
 
-                # Check each enabled device type to see if there are devices in this network
-                for device_type in [
-                    SENSOR_TYPE_MT,
-                    SENSOR_TYPE_MR,
-                    SENSOR_TYPE_MS,
-                    SENSOR_TYPE_MV,
-                ]:
+                # Only MT hubs are created (single supported device family).
+                for device_type in [SENSOR_TYPE_MT]:
                     # Skip if this device type is not enabled
                     if device_type not in enabled_device_types:
                         _LOGGER.debug("Skipping disabled device type: %s", device_type)
@@ -667,850 +726,17 @@ class MerakiOrganizationHub:
 
     @handle_api_errors(log_errors=True, convert_connection_errors=False)
     async def async_update_organization_data(self) -> OrganizationData:
-        """Update organization-level monitoring data.
+        """Return organization identity metadata.
 
-        This method can be called manually to force refresh all organization data.
-        In normal operation, data is refreshed on tiered schedules:
-        - License data: every hour
-        - Device statuses: every 30 minutes
-        - Alerts/events: every 5 minutes
+        Under the MT-only minimal-health set there is no license/alert/clients/
+        memory/device-status data to refresh here; the surviving org
+        diagnostics are the API-status counters (updated inline on every API
+        call) and the per-network device count. Retained as a stable no-op so
+        the "update data" button and diagnostics keep a valid entry point.
         """
-        if not self.dashboard:
-            return OrganizationData(
-                id=self.organization_id, name=self.organization_name or "Unknown"
-            )
-
-        try:
-            # Force update all data types
-            await self._fetch_license_data()
-            self._last_license_update = datetime.now(UTC)
-
-            await self._fetch_device_statuses()
-            self._last_device_status_update = datetime.now(UTC)
-
-            await self._fetch_alerts_data()
-            self._last_alerts_update = datetime.now(UTC)
-
-            await self._fetch_clients_overview()
-            self._last_clients_update = datetime.now(UTC)
-
-            await self._fetch_bluetooth_clients_overview()
-            self._last_bluetooth_clients_update = datetime.now(UTC)
-
-            await self._fetch_memory_usage()
-            self._last_memory_usage_update = datetime.now(UTC)
-
-            _LOGGER.debug("Manual organization data update completed")
-
-            return OrganizationData(
-                id=self.organization_id, name=self.organization_name or "Unknown"
-            )
-
-        except Exception as err:
-            self.last_api_call_error = str(err)
-            _LOGGER.error("Error fetching organization data: %s", err)
-            return OrganizationData(
-                id=self.organization_id, name=self.organization_name or "Unknown"
-            )
-
-    @retry_on_api_error(RetryStrategies.STATIC_DATA)
-    @handle_api_errors(log_errors=True, convert_connection_errors=False)
-    async def _fetch_license_data(self) -> None:
-        """Fetch license information for the organization."""
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        try:
-            # First, determine the licensing model by checking organization settings
-            # Different organizations use different licensing models:
-            # - Co-termination licensing (co-term): All licenses expire on the same date
-            # - Per-device licensing (PDL): Each device has individual expiration dates
-            # - Subscription licensing: Newer subscription-based model
-
-            # Try to detect licensing model by calling the appropriate API
-            try:
-                # Try co-term licensing overview first (most common)
-                license_overview = await self.async_api_call(
-                    self.dashboard.organizations.getOrganizationLicensesOverview,
-                    self.organization_id,
-                    priority=API_PRIORITY_LOW,
-                )
-
-                # Process co-term license data
-                current_time = datetime.now(UTC)
-                expiring_soon = []
-
-                status = license_overview.get("status", "Unknown")
-                expiration_date = license_overview.get("expirationDate")
-                licensed_device_counts = license_overview.get(
-                    "licensedDeviceCounts", {}
-                )
-
-                # Check if licenses are expiring soon
-                if expiration_date:
-                    try:
-                        # Parse expiry date (format varies between implementations)
-                        if "UTC" in expiration_date:
-                            # Handle "Mar 16, 2023 UTC" format
-                            expiry_dt = datetime.strptime(
-                                expiration_date.replace(" UTC", ""), "%b %d, %Y"
-                            )
-                        else:
-                            # Handle ISO format
-                            expiry_dt = datetime.fromisoformat(
-                                expiration_date.replace("Z", "+00:00")
-                            )
-                        expiry_dt = expiry_dt.replace(tzinfo=UTC)
-                        days_until_expiry = (expiry_dt - current_time).days
-
-                        # Check if expiring within 90 days
-                        if 0 <= days_until_expiry <= 90:
-                            expiring_soon.append(
-                                {
-                                    "organization_status": status,
-                                    "expiry_date": expiration_date,
-                                    "days_remaining": days_until_expiry,
-                                }
-                            )
-                    except (ValueError, TypeError) as parse_err:
-                        _LOGGER.debug(
-                            "Could not parse co-term expiry date %s: %s",
-                            expiration_date,
-                            parse_err,
-                        )
-
-                self.licenses_expiring_count = len(expiring_soon)
-                self.licenses_info = {
-                    "licensing_model": "co-term",
-                    "status": status,
-                    "expiration_date": expiration_date,
-                    "licensed_device_counts": licensed_device_counts,
-                    "expiring_soon": expiring_soon,
-                    "total_licenses": sum(licensed_device_counts.values())
-                    if licensed_device_counts
-                    else 0,
-                }
-
-                _LOGGER.debug(
-                    "Successfully fetched co-term license data for organization %s",
-                    self.organization_id,
-                )
-
-            except Exception as coterm_err:
-                # Co-term failed, try per-device licensing
-                try:
-                    licenses = await self.async_api_call(
-                        self.dashboard.organizations.getOrganizationLicenses,
-                        self.organization_id,
-                        priority=API_PRIORITY_LOW,
-                        total_pages="all",
-                    )
-
-                    # Process per-device license data
-                    current_time = datetime.now(UTC)
-                    expiring_soon = []
-
-                    for license_info in licenses:
-                        expiry_date = license_info.get("expirationDate")
-                        if expiry_date:
-                            try:
-                                # Parse expiry date
-                                expiry_dt = datetime.fromisoformat(
-                                    expiry_date.replace("Z", "+00:00")
-                                )
-                                days_until_expiry = (expiry_dt - current_time).days
-
-                                # Check if expiring within 90 days
-                                if 0 <= days_until_expiry <= 90:
-                                    expiring_soon.append(
-                                        {
-                                            "license_type": license_info.get(
-                                                "deviceSerial", "Unknown"
-                                            ),
-                                            "expiry_date": expiry_date,
-                                            "days_remaining": days_until_expiry,
-                                        }
-                                    )
-                            except ValueError, TypeError:
-                                continue
-
-                    self.licenses_expiring_count = len(expiring_soon)
-                    self.licenses_info = {
-                        "licensing_model": "per-device",
-                        "total_licenses": len(licenses),
-                        "expiring_soon": expiring_soon[:5],  # Limit to 5 for attributes
-                        "licenses_by_type": {},
-                    }
-
-                    # Group licenses by type
-                    for license_info in licenses:
-                        license_type = license_info.get("licenseType", "Unknown")
-                        if license_type not in self.licenses_info["licenses_by_type"]:
-                            self.licenses_info["licenses_by_type"][license_type] = 0
-                        self.licenses_info["licenses_by_type"][license_type] += 1
-
-                    _LOGGER.debug(
-                        "Successfully fetched per-device license data for organization %s",
-                        self.organization_id,
-                    )
-
-                except Exception as pdl_err:
-                    # Both licensing models failed - organization might use subscription licensing
-                    # or have a different configuration
-                    _LOGGER.debug(
-                        "Could not fetch license data using co-term (%s) or per-device (%s) APIs. "
-                        "Organization %s may use subscription licensing or have restricted access",
-                        coterm_err,
-                        pdl_err,
-                        self.organization_id,
-                    )
-
-                    # Set minimal license info to indicate unavailable data
-                    self.licenses_expiring_count = 0
-                    self.licenses_info = {
-                        "licensing_model": "unavailable",
-                        "status": "Unable to determine licensing model",
-                        "error": "Organization may use subscription licensing or access is restricted",
-                    }
-
-        except Exception as err:
-            _LOGGER.warning("Could not fetch license data: %s", err)
-
-    @with_standard_retries("realtime")
-    async def _fetch_alerts_data(self) -> None:
-        """Fetch alerts overview by network for the organization."""
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        by_network_error: Exception | None = None
-
-        try:
-            # Get alerts overview by network using the new API endpoint
-            # This replaces the old alert profiles and events approach
-            alerts_overview = await self.async_api_call(
-                self.dashboard.organizations.getOrganizationAssuranceAlertsOverviewByNetwork,
-                self.organization_id,
-                priority=API_PRIORITY_HIGH,
-                dismissed=False,  # Only get non-dismissed alerts
-                perPage=1000,
-            )
-
-            # Process the alerts overview response
-            if (
-                alerts_overview
-                and isinstance(alerts_overview, dict)
-                and "items" in alerts_overview
-            ):
-                # Calculate total active alerts across all networks
-                total_alerts = 0
-                network_alerts = []
-
-                for network_alert in alerts_overview["items"]:
-                    alert_count = network_alert.get("alertCount", 0)
-                    total_alerts += alert_count
-
-                    if alert_count > 0:
-                        network_alerts.append(
-                            {
-                                "network_id": network_alert.get("networkId"),
-                                "network_name": network_alert.get("networkName"),
-                                "alert_count": alert_count,
-                                "severity_counts": network_alert.get(
-                                    "severityCounts", []
-                                ),
-                            }
-                        )
-
-                self.active_alerts_count = total_alerts
-                self.recent_alerts = (
-                    network_alerts  # Store network-level alert summaries
-                )
-
-                _LOGGER.debug(
-                    "Fetched alerts overview: %d total alerts across %d networks",
-                    total_alerts,
-                    len(network_alerts),
-                )
-
-            else:
-                self.active_alerts_count = 0
-                self.recent_alerts = []
-                _LOGGER.debug("No alerts overview data received")
-
-            return
-
-        except Exception as err:
-            by_network_error = err
-
-        try:
-            alerts_overview = await self.async_api_call(
-                self.dashboard.organizations.getOrganizationAssuranceAlertsOverview,
-                self.organization_id,
-                priority=API_PRIORITY_HIGH,
-                dismissed=False,
-            )
-
-            total_alerts = 0
-            if isinstance(alerts_overview, dict):
-                counts = alerts_overview.get("counts")
-                if isinstance(counts, dict):
-                    for key in ("total", "totalAlerts", "items", "count"):
-                        value = counts.get(key)
-                        if isinstance(value, (int, float)):
-                            total_alerts = int(value)
-                            break
-
-                if total_alerts == 0:
-                    for key in ("total", "totalAlerts", "items", "count"):
-                        value = alerts_overview.get(key)
-                        if isinstance(value, (int, float)):
-                            total_alerts = int(value)
-                            break
-
-                if total_alerts == 0:
-                    items = alerts_overview.get("items")
-                    if isinstance(items, list):
-                        total_alerts = len(items)
-
-            self.active_alerts_count = total_alerts
-            self.recent_alerts = []
-
-            _LOGGER.debug(
-                "Fetched alerts overview using fallback endpoint: %d total alerts",
-                total_alerts,
-            )
-            if by_network_error is not None:
-                _LOGGER.debug(
-                    "Alerts overview by network failed; fallback succeeded: %s",
-                    by_network_error,
-                )
-
-        except Exception as fallback_err:
-            self.last_api_call_error = str(fallback_err)
-            if isinstance(fallback_err, AsyncAPIError) or "Reached retry limit" in str(
-                fallback_err
-            ):
-                _LOGGER.debug("Could not fetch alerts overview data: %s", fallback_err)
-            else:
-                _LOGGER.warning(
-                    "Could not fetch alerts overview data: %s",
-                    fallback_err,
-                    exc_info=True,
-                )
-
-            if by_network_error is not None:
-                _LOGGER.debug(
-                    "Alerts overview by network failure: %s", by_network_error
-                )
-
-            # Set fallback values
-            self.active_alerts_count = 0
-            self.recent_alerts = []
-
-    @with_standard_retries("realtime")
-    async def _fetch_clients_overview(self) -> None:
-        """Fetch clients overview data for the organization using default timespan (1 day)."""
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        try:
-            # Get clients overview with default timespan (1 day)
-            # This provides aggregate client counts and usage data
-            clients_overview = await self.async_api_call(
-                self.dashboard.organizations.getOrganizationClientsOverview,
-                self.organization_id,
-                priority=API_PRIORITY_NORMAL,
-            )
-
-            # Process the clients overview response
-            if clients_overview and isinstance(clients_overview, dict):
-                # Extract counts data
-                counts = clients_overview.get("counts", {})
-                self.clients_total_count = counts.get("total", 0)
-
-                # Extract usage data
-                usage = clients_overview.get("usage", {})
-
-                # Overall usage totals (organization-wide)
-                overall = usage.get("overall", {})
-                if isinstance(overall, dict):
-                    # Standard format with breakdown by direction
-                    self.clients_usage_overall_total = overall.get("total", 0.0)
-                    self.clients_usage_overall_downstream = overall.get(
-                        "downstream", 0.0
-                    )
-                    self.clients_usage_overall_upstream = overall.get("upstream", 0.0)
-                elif isinstance(overall, int | float):
-                    # Some API responses return overall as a single float value
-                    self.clients_usage_overall_total = float(overall)
-                    self.clients_usage_overall_downstream = 0.0
-                    self.clients_usage_overall_upstream = 0.0
-                else:
-                    # Fallback for unexpected types
-                    self.clients_usage_overall_total = 0.0
-                    self.clients_usage_overall_downstream = 0.0
-                    self.clients_usage_overall_upstream = 0.0
-
-                # Average usage per client (API returns single value, not breakdown by direction)
-                average = usage.get("average", 0.0)
-                if isinstance(average, int | float):
-                    # API returns average as a single float value
-                    self.clients_usage_average_total = float(average)
-                else:
-                    # Fallback for unexpected types
-                    self.clients_usage_average_total = 0.0
-
-                _LOGGER.debug(
-                    "Fetched clients overview: %d total clients, %.2f KB total usage (24-hour)",
-                    self.clients_total_count,
-                    self.clients_usage_overall_total,
-                )
-
-            else:
-                # Set fallback values if no data received
-                self.clients_total_count = 0
-                self.clients_usage_overall_total = 0.0
-                self.clients_usage_overall_downstream = 0.0
-                self.clients_usage_overall_upstream = 0.0
-                self.clients_usage_average_total = 0.0
-                _LOGGER.debug("No clients overview data received")
-
-        except Exception as err:
-            self.last_api_call_error = str(err)
-            _LOGGER.warning(
-                "Could not fetch clients overview data: %s", err, exc_info=True
-            )
-
-            # Set fallback values on error
-            self.clients_total_count = 0
-            self.clients_usage_overall_total = 0.0
-            self.clients_usage_overall_downstream = 0.0
-            self.clients_usage_overall_upstream = 0.0
-            self.clients_usage_average_total = 0.0
-
-    @with_standard_retries("realtime")
-    async def _fetch_bluetooth_clients_overview(self) -> None:
-        """Fetch Bluetooth clients data from all networks in the organization.
-
-        This method iterates through all networks and fetches Bluetooth client counts,
-        then aggregates them into a total count for the organization.
-        """
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        try:
-            total_bluetooth_clients = 0
-
-            # Iterate through all networks to get Bluetooth clients
-            for network in self.networks:
-                network_id = network.get("id")
-                if not network_id:
-                    continue
-
-                try:
-                    # Get Bluetooth clients for this network
-                    bluetooth_clients = await self.async_api_call(
-                        self.dashboard.networks.getNetworkBluetoothClients,
-                        network_id,
-                        priority=API_PRIORITY_NORMAL,
-                        perPage=1000,
-                        total_pages="all",
-                    )
-
-                    # Count the Bluetooth clients for this network
-                    if bluetooth_clients and isinstance(bluetooth_clients, list):
-                        network_bluetooth_count = len(bluetooth_clients)
-                        total_bluetooth_clients += network_bluetooth_count
-
-                        _LOGGER.debug(
-                            "Network %s (%s) has %d Bluetooth clients",
-                            network.get("name", "Unknown"),
-                            network_id,
-                            network_bluetooth_count,
-                        )
-                    else:
-                        _LOGGER.debug(
-                            "No Bluetooth clients data for network %s (%s)",
-                            network.get("name", "Unknown"),
-                            network_id,
-                        )
-
-                except Exception as network_err:
-                    # Log network-specific errors but continue with other networks
-                    _LOGGER.debug(
-                        "Could not fetch Bluetooth clients for network %s (%s): %s",
-                        network.get("name", "Unknown"),
-                        network_id,
-                        network_err,
-                    )
-                    continue
-
-            # Update the total count
-            self.bluetooth_clients_total_count = total_bluetooth_clients
-
-            _LOGGER.debug(
-                "Fetched Bluetooth clients overview: %d total clients across %d networks",
-                self.bluetooth_clients_total_count,
-                len(self.networks),
-            )
-
-        except Exception as err:
-            self.last_api_call_error = str(err)
-            _LOGGER.warning(
-                "Could not fetch Bluetooth clients overview data: %s",
-                err,
-                exc_info=True,
-            )
-
-            # Set fallback value on error
-            self.bluetooth_clients_total_count = 0
-
-    @retry_on_api_error(RetryStrategies.STATIC_DATA)
-    @handle_api_errors(log_errors=True, convert_connection_errors=False)
-    async def _fetch_device_statuses(self) -> None:
-        """Fetch device availability information across the organization."""
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        try:
-            # Get organization device statuses overview for aggregated counts
-            device_status_overview = await self.async_api_call(
-                self.dashboard.organizations.getOrganizationDevicesStatusesOverview,
-                self.organization_id,
-                priority=API_PRIORITY_HIGH,
-            )
-            self.device_status_overview = device_status_overview
-            _LOGGER.debug(
-                "Device status overview: online=%s, offline=%s, alerting=%s, dormant=%s",
-                device_status_overview.get("counts", {})
-                .get("byStatus", {})
-                .get("online", 0),
-                device_status_overview.get("counts", {})
-                .get("byStatus", {})
-                .get("offline", 0),
-                device_status_overview.get("counts", {})
-                .get("byStatus", {})
-                .get("alerting", 0),
-                device_status_overview.get("counts", {})
-                .get("byStatus", {})
-                .get("dormant", 0),
-            )
-
-            # Get detailed organization device availabilities (paginated)
-            device_availabilities = await self.async_api_call(
-                self.dashboard.organizations.getOrganizationDevicesAvailabilities,
-                self.organization_id,
-                priority=API_PRIORITY_HIGH,
-                perPage=1000,
-                total_pages="all",
-            )
-
-            self.device_statuses = device_availabilities
-
-        except Exception as err:
-            _LOGGER.warning("Could not fetch device statuses: %s", err)
-
-    @with_standard_retries("realtime")
-    async def _fetch_memory_usage(self) -> None:
-        """Fetch memory usage data for MR and MS devices across the organization.
-
-        Uses the getOrganizationDevicesSystemMemoryUsageHistoryByInterval API endpoint
-        to get the most recent memory usage data for all MR and MS devices.
-        """
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        try:
-            # Get memory usage history by interval for all devices in the organization
-            # The API returns intervals in reverse chronological order (most recent first)
-            # We only need the most recent interval for current state
-            _LOGGER.debug("Fetching memory usage data from API...")
-
-            # Check if the method exists on the dashboard
-            if not hasattr(
-                self.dashboard.organizations,
-                "getOrganizationDevicesSystemMemoryUsageHistoryByInterval",
-            ):
-                _LOGGER.error(
-                    "API method getOrganizationDevicesSystemMemoryUsageHistoryByInterval not found on dashboard.organizations"
-                )
-
-                # List available methods that might be related to memory or system
-                available_methods = [
-                    method
-                    for method in dir(self.dashboard.organizations)
-                    if "memory" in method.lower()
-                    or "system" in method.lower()
-                    or "device" in method.lower()
-                ]
-                _LOGGER.debug(
-                    "Available memory/system/device methods: %s", available_methods
-                )
-
-                self.device_memory_usage = {}
-                return
-
-            try:
-                memory_data = await self.async_api_call(
-                    self.dashboard.organizations.getOrganizationDevicesSystemMemoryUsageHistoryByInterval,
-                    self.organization_id,
-                    priority=API_PRIORITY_LOW,
-                )
-            except Exception as api_err:
-                _LOGGER.error("Error calling memory usage API: %s", api_err)
-                self.device_memory_usage = {}
-                return
-
-            # Log the API response type for debugging (without raw data)
-            if memory_data:
-                _LOGGER.debug("API response type: %s", type(memory_data))
-                if isinstance(memory_data, list):
-                    _LOGGER.debug("API returned %d device records", len(memory_data))
-                elif isinstance(memory_data, dict):
-                    _LOGGER.debug(
-                        "API returned dict with keys: %s", list(memory_data.keys())
-                    )
-            else:
-                _LOGGER.debug("API returned no data or None")
-
-            # Process the memory usage data
-            processed_memory_data: dict[str, MemoryUsageData] = {}
-
-            # Handle different API response structures
-            device_list = []
-            if memory_data:
-                if isinstance(memory_data, list):
-                    device_list = memory_data
-                elif isinstance(memory_data, dict):
-                    # Check if it's a paginated response with data in a sub-key
-                    if "items" in memory_data:
-                        device_list = memory_data["items"]
-                    elif "data" in memory_data:
-                        device_list = memory_data["data"]
-                    elif "devices" in memory_data:
-                        device_list = memory_data["devices"]
-                    else:
-                        # Try to extract any list values from the dict
-                        for value in memory_data.values():
-                            if isinstance(value, list):
-                                device_list = value
-                                break
-
-            _LOGGER.debug("Processing %d device records", len(device_list))
-
-            if device_list:
-                for device_data in device_list:
-                    device_serial = device_data.get("serial")
-                    device_model = device_data.get("model", "")
-
-                    _LOGGER.debug(
-                        "Processing device: serial=%s, model=%s",
-                        device_serial,
-                        device_model,
-                    )
-
-                    # Only process MR and MS devices
-                    if not device_serial:
-                        _LOGGER.debug("Skipping device with no serial")
-                        continue
-
-                    device_type = determine_device_type(device_data)
-                    if device_type not in {SENSOR_TYPE_MR, SENSOR_TYPE_MS}:
-                        _LOGGER.debug(
-                            "Skipping device %s with model %s (not MR/MS)",
-                            device_serial,
-                            device_model,
-                        )
-                        continue
-
-                    intervals = device_data.get("intervals", [])
-                    if not intervals:
-                        _LOGGER.debug("Device %s has no intervals data", device_serial)
-                        continue
-
-                    # Get the most recent interval (first in the list)
-                    latest_interval = intervals[0]
-                    memory_info = latest_interval.get("memory", {})
-
-                    used_info = memory_info.get("used", {})
-                    free_info = memory_info.get("free", {})
-
-                    # Extract memory values (in kB from API)
-                    used_kb = used_info.get("median", 0)
-                    free_kb = free_info.get("median", 0)
-
-                    # Calculate percentage from the used percentages if available
-                    percentages = used_info.get("percentages", {})
-                    usage_percentage = percentages.get("maximum", 0)
-
-                    # If no percentage is provided, calculate it from used/free values
-                    if not usage_percentage and (used_kb > 0 or free_kb > 0):
-                        total_memory = used_kb + free_kb
-                        if total_memory > 0:
-                            usage_percentage = round((used_kb / total_memory) * 100, 1)
-
-                    # Store processed memory data
-                    processed_memory_data[device_serial] = {
-                        "serial": device_serial,
-                        "model": device_model,
-                        "name": device_data.get("name", "Unknown"),
-                        "network": device_data.get("network", {}),
-                        "memory_usage_percent": usage_percentage,
-                        "memory_used_kb": used_kb,
-                        "memory_free_kb": free_kb,
-                        "memory_total_kb": used_kb + free_kb,
-                        "last_interval_start": latest_interval.get("startTs"),
-                        "last_interval_end": latest_interval.get("endTs"),
-                        "raw_data": device_data,  # Store raw data for debugging
-                    }
-
-                    _LOGGER.debug(
-                        "Successfully processed memory data for device %s: %s%% usage",
-                        device_serial,
-                        usage_percentage,
-                    )
-            else:
-                _LOGGER.debug("No memory data returned from API or invalid format")
-
-            self.device_memory_usage = processed_memory_data
-            self._last_memory_usage_update = datetime.now(UTC)
-
-            _LOGGER.debug(
-                "Fetched memory usage data for %d devices",
-                len(processed_memory_data),
-            )
-
-        except Exception as err:
-            self.last_api_call_error = str(err)
-            _LOGGER.warning(
-                "Could not fetch device memory usage data: %s", err, exc_info=True
-            )
-
-            # Set fallback on error
-            self.device_memory_usage = {}
-
-    @with_standard_retries("realtime")
-    async def _fetch_wireless_ethernet_statuses(self) -> None:
-        """Fetch ethernet status data for MR devices across the organization.
-
-        Uses the getOrganizationWirelessDevicesEthernetStatuses API endpoint
-        to get power (AC/PoE) and aggregation data for all wireless devices.
-        """
-        if not self.dashboard:
-            return
-
-        assert self.dashboard is not None  # Type guard  # nosec B101
-
-        try:
-            _LOGGER.debug("Fetching wireless ethernet statuses from API...")
-
-            # Check if the method exists on the dashboard
-            if not hasattr(
-                self.dashboard.wireless,
-                "getOrganizationWirelessDevicesEthernetStatuses",
-            ):
-                _LOGGER.debug(
-                    "API method getOrganizationWirelessDevicesEthernetStatuses not available"
-                )
-                self.device_ethernet_status = {}
-                return
-
-            try:
-                ethernet_data = await self.async_api_call(
-                    self.dashboard.wireless.getOrganizationWirelessDevicesEthernetStatuses,
-                    self.organization_id,
-                    priority=API_PRIORITY_LOW,
-                    perPage=1000,
-                    total_pages="all",
-                )
-            except Exception as api_err:
-                self.last_api_call_error = str(api_err)
-                _LOGGER.debug("Error calling ethernet status API: %s", api_err)
-                self.device_ethernet_status = {}
-                return
-
-            # Process the ethernet status data
-            processed_ethernet_data: dict[str, dict[str, Any]] = {}
-
-            # Handle response structure
-            device_list = []
-            if ethernet_data:
-                if isinstance(ethernet_data, list):
-                    device_list = ethernet_data
-                elif isinstance(ethernet_data, dict):
-                    # Check for paginated response
-                    if "data" in ethernet_data:
-                        device_list = ethernet_data["data"]
-                    elif "devices" in ethernet_data:
-                        device_list = ethernet_data["devices"]
-
-            _LOGGER.debug("Processing %d wireless device records", len(device_list))
-
-            if device_list:
-                for device_data in device_list:
-                    device_serial = device_data.get("serial")
-
-                    if not device_serial:
-                        _LOGGER.debug("Skipping device with no serial")
-                        continue
-
-                    # Extract power status
-                    power_info = device_data.get("power", {})
-                    ac_info = power_info.get("ac", {})
-                    poe_info = power_info.get("poe", {})
-
-                    # Extract aggregation info
-                    aggregation_info = device_data.get("aggregation", {})
-
-                    # Store processed ethernet data
-                    processed_ethernet_data[device_serial] = {
-                        "serial": device_serial,
-                        "name": device_data.get("name", "Unknown"),
-                        "network": device_data.get("network", {}),
-                        "power_ac_connected": ac_info.get("isConnected", False),
-                        "power_poe_connected": poe_info.get("isConnected", False),
-                        "power_mode": power_info.get("mode", "unknown"),
-                        "aggregation_enabled": aggregation_info.get("enabled", False),
-                        "aggregation_speed": aggregation_info.get("speed", 0),
-                        "ports": device_data.get("ports", []),
-                    }
-
-                    _LOGGER.debug(
-                        "Successfully processed ethernet data for device %s: AC=%s, PoE=%s, Aggregation=%s",
-                        device_serial,
-                        ac_info.get("isConnected", False),
-                        poe_info.get("isConnected", False),
-                        aggregation_info.get("enabled", False),
-                    )
-            else:
-                _LOGGER.debug("No ethernet status data returned from API")
-
-            self.device_ethernet_status = processed_ethernet_data
-            self._last_ethernet_status_update = datetime.now(UTC)
-
-            _LOGGER.debug(
-                "Fetched ethernet status data for %d wireless devices",
-                len(processed_ethernet_data),
-            )
-
-        except Exception as err:
-            self.last_api_call_error = str(err)
-            _LOGGER.debug("Could not fetch device ethernet status data: %s", err)
-
-            # Set fallback on error
-            self.device_ethernet_status = {}
+        return OrganizationData(
+            id=self.organization_id, name=self.organization_name or "Unknown"
+        )
 
     @with_standard_retries("discovery")
     async def _network_has_device_type(self, network_id: str, device_type: str) -> bool:

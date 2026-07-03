@@ -11,8 +11,6 @@ from homeassistant.core import HomeAssistant
 from custom_components.meraki_dashboard.const import (
     CONF_BASE_URL,
     DEFAULT_BASE_URL,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
 )
 from custom_components.meraki_dashboard.hubs.network import MerakiNetworkHub
@@ -147,7 +145,14 @@ class TestNetworkHubBasics:
         assert hasattr(hub, "event_service")  # MT devices should have event service
 
     def test_initialization_mr(self, hass: HomeAssistant, mock_config_entry):
-        """Test MR network hub initialization."""
+        """Test non-MT network hub initialization.
+
+        The integration is MT-only now (no MR/MS hubs are ever created by
+        ``MerakiOrganizationHub.async_create_network_hubs``, and the MR/MS
+        sensor-type consts are gone), but ``MerakiNetworkHub`` itself still
+        only special-cases ``device_type == SENSOR_TYPE_MT`` in its
+        constructor, so a non-MT literal still exercises that branch.
+        """
         org_hub = Mock()
         org_hub.hass = hass
         org_hub.dashboard = Mock()
@@ -157,36 +162,15 @@ class TestNetworkHubBasics:
             organization_hub=org_hub,
             network_id="test_network_id",
             network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,
+            device_type="MR",
             config_entry=mock_config_entry,
         )
 
-        assert hub.device_type == SENSOR_TYPE_MR
+        assert hub.device_type == "MR"
         assert hub.hub_name == "Test Network_MR"
         assert not hasattr(
             hub, "event_service"
-        )  # MR devices should not have event service
-
-    def test_initialization_ms(self, hass: HomeAssistant, mock_config_entry):
-        """Test MS network hub initialization."""
-        org_hub = Mock()
-        org_hub.hass = hass
-        org_hub.dashboard = Mock()
-        org_hub.organization_id = "test_org_id"
-
-        hub = MerakiNetworkHub(
-            organization_hub=org_hub,
-            network_id="test_network_id",
-            network_name="Test Network",
-            device_type=SENSOR_TYPE_MS,
-            config_entry=mock_config_entry,
-        )
-
-        assert hub.device_type == SENSOR_TYPE_MS
-        assert hub.hub_name == "Test Network_MS"
-        assert not hasattr(
-            hub, "event_service"
-        )  # MS devices should not have event service
+        )  # Non-MT devices should not have event service
 
     def test_discovery_duration_tracking(self, hass: HomeAssistant, mock_config_entry):
         """Test discovery duration tracking."""
@@ -359,7 +343,7 @@ class TestNetworkHubBasics:
             organization_hub=org_hub,
             network_id="test_network_id",
             network_name="Test Network",
-            device_type=SENSOR_TYPE_MR,  # Non-MT device
+            device_type="MR",  # Non-MT device
             config_entry=mock_config_entry,
         )
 
@@ -448,14 +432,19 @@ class TestHubEdgeCases:
     def test_network_hub_device_type_variations(
         self, hass: HomeAssistant, mock_config_entry
     ):
-        """Test network hub with different device types."""
+        """Test network hub constructor behavior across device types.
+
+        MT is the only device type the integration actually supports end to
+        end; "MR"/"MS" here are just non-MT literals exercising the
+        constructor's ``device_type == SENSOR_TYPE_MT`` branch, not real
+        supported hub types.
+        """
         org_hub = Mock()
         org_hub.hass = hass
         org_hub.dashboard = Mock()
         org_hub.organization_id = "test_org_id"
 
-        # Test all supported device types
-        for device_type in [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS]:
+        for device_type in [SENSOR_TYPE_MT, "MR", "MS"]:
             hub = MerakiNetworkHub(
                 organization_hub=org_hub,
                 network_id="test_network_id",

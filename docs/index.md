@@ -1,32 +1,38 @@
 ---
 layout: default
 title: Home
-description: Connect your Cisco Meraki Dashboard with Home Assistant for comprehensive monitoring of environmental sensors and network infrastructure
+description: Connect your Cisco Meraki Dashboard with Home Assistant for comprehensive monitoring of Meraki MT environmental sensors
 image: assets/social-card.png
 ---
 
 # Meraki Dashboard Home Assistant Integration
 
-Connect your Cisco Meraki Dashboard with Home Assistant to monitor environmental sensors, wireless access points, switches, and more - all from your smart home automation platform.
+Connect your Cisco Meraki Dashboard with Home Assistant to monitor your Meraki MT environmental
+sensors - all from your smart home automation platform.
+
+!!! warning "Breaking change in v1.0.0"
+    Version 1.0.0 is a **major, breaking release**. This integration now supports **only Meraki MT
+    environmental sensors** — MR wireless access point, MS switch, and MV camera support has been
+    **removed entirely**. Upgrading auto-migrates your configuration and removes any non-MT
+    devices/entities, raising a repair notice in Settings → Repairs. See
+    [Getting Started](getting-started.md) for details.
 
 ## What is this integration?
 
-This custom integration provides real-time monitoring of your Cisco Meraki devices directly within Home Assistant. Monitor temperature, humidity, air quality, network status, and device health across your entire Meraki infrastructure.
+This custom integration provides real-time monitoring of your Cisco Meraki MT environmental
+sensors directly within Home Assistant. Monitor temperature, humidity, air quality, and device
+health across your entire Meraki organization.
 
 ## Key Features
 
 - **🌡️ Environmental Monitoring**: Track temperature, humidity, CO2, air quality, and more from MT sensors
 - **⚡ Ultra-Fast Updates**: 7.5-second refresh for MT15/MT40 devices with automatic refresh commands
-- **📡 Network Monitoring**: Monitor wireless access points, SSIDs, and network performance
-- **🔌 Switch Monitoring**: Keep tabs on switch ports, PoE usage, and traffic statistics
 - **🏢 Multi-Site Support**: Automatically organizes devices by network and location
-- **⏱️ Smart Polling**: Device-specific update intervals optimized for each type
+- **⏱️ Smart Polling**: Device-specific update intervals optimized for MT sensors
 
 ## Supported Devices
 
 - **MT Series**: Environmental sensors (MT10, MT12, MT14, MT15, MT20, MT30, MT40)
-- **MR Series**: Wireless access points (all models)
-- **MS Series**: Managed switches (all models)
 
 ## Quick Start
 

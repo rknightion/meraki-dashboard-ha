@@ -44,15 +44,14 @@ from custom_components.meraki_dashboard.const import (
     MT_SENSOR_DOOR,
     MT_SENSOR_DOWNSTREAM_POWER,
     MT_SENSOR_HUMIDITY,
+    MT_SENSOR_LAST_SEEN,
     MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
+    MT_SENSOR_SIGNAL_STRENGTH,
     MT_SENSOR_TEMPERATURE,
     MT_SENSOR_WATER,
     ORG_HUB_SUFFIX,
     REGIONAL_BASE_URLS,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
     USER_AGENT,
 )
 
@@ -145,7 +144,7 @@ class TestSensorTypes:
 
     def test_sensor_type_constants(self):
         """Test sensor type constants are properly defined."""
-        sensor_types = [SENSOR_TYPE_MT, SENSOR_TYPE_MR, SENSOR_TYPE_MS, SENSOR_TYPE_MV]
+        sensor_types = [SENSOR_TYPE_MT]
 
         # Should be 2-letter codes
         for sensor_type in sensor_types:
@@ -157,13 +156,8 @@ class TestSensorTypes:
         """Test device type scan intervals."""
         assert isinstance(DEVICE_TYPE_SCAN_INTERVALS, dict)
 
-        # Should have entries for all sensor types
-        for sensor_type in [
-            SENSOR_TYPE_MT,
-            SENSOR_TYPE_MR,
-            SENSOR_TYPE_MS,
-            SENSOR_TYPE_MV,
-        ]:
+        # Should have an entry for the only supported sensor type (MT)
+        for sensor_type in [SENSOR_TYPE_MT]:
             assert sensor_type in DEVICE_TYPE_SCAN_INTERVALS
             # Allow both int and float for scan intervals (MT uses 7.5 seconds)
             assert isinstance(DEVICE_TYPE_SCAN_INTERVALS[sensor_type], int | float)
@@ -173,13 +167,8 @@ class TestSensorTypes:
         """Test default scan interval minutes."""
         assert isinstance(DEFAULT_SCAN_INTERVAL_MINUTES, dict)
 
-        # Should have entries for all sensor types
-        for sensor_type in [
-            SENSOR_TYPE_MT,
-            SENSOR_TYPE_MR,
-            SENSOR_TYPE_MS,
-            SENSOR_TYPE_MV,
-        ]:
+        # Should have an entry for the only supported sensor type (MT)
+        for sensor_type in [SENSOR_TYPE_MT]:
             assert sensor_type in DEFAULT_SCAN_INTERVAL_MINUTES
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
             # Allow both int and float for minutes (MT uses 0.125 for 7.5 seconds)
@@ -194,12 +183,7 @@ class TestSensorTypes:
         """Test device type mappings structure."""
         assert isinstance(DEVICE_TYPE_MAPPINGS, dict)
 
-        for sensor_type in [
-            SENSOR_TYPE_MT,
-            SENSOR_TYPE_MR,
-            SENSOR_TYPE_MS,
-            SENSOR_TYPE_MV,
-        ]:
+        for sensor_type in [SENSOR_TYPE_MT]:
             assert sensor_type in DEVICE_TYPE_MAPPINGS
             mapping = DEVICE_TYPE_MAPPINGS[sensor_type]
 
@@ -245,11 +229,18 @@ class TestMTSensorConstants:
             MT_SENSOR_WATER,
             MT_SENSOR_DOWNSTREAM_POWER,
             MT_SENSOR_REMOTE_LOCKOUT_SWITCH,
+            MT_SENSOR_SIGNAL_STRENGTH,
+            MT_SENSOR_LAST_SEEN,
         ]
 
         for sensor in mt_sensors:
             assert isinstance(sensor, str)
             assert len(sensor) > 0
+
+    def test_mt_sensor_signal_strength_and_last_seen_values(self):
+        """Test the newer MT diagnostic metric constants have expected values."""
+        assert MT_SENSOR_SIGNAL_STRENGTH == "signalStrength"
+        assert MT_SENSOR_LAST_SEEN == "lastSeen"
 
     def test_mt_power_sensors(self):
         """Test MT power sensor list."""
@@ -335,12 +326,7 @@ class TestConstantConsistency:
     def test_scan_interval_consistency(self):
         """Test scan interval constants are consistent."""
         # Minutes should convert properly to seconds
-        for sensor_type in [
-            SENSOR_TYPE_MT,
-            SENSOR_TYPE_MR,
-            SENSOR_TYPE_MS,
-            SENSOR_TYPE_MV,
-        ]:
+        for sensor_type in [SENSOR_TYPE_MT]:
             minutes = DEFAULT_SCAN_INTERVAL_MINUTES[sensor_type]
             seconds = DEVICE_TYPE_SCAN_INTERVALS[sensor_type]
             # Use approximate comparison for floating point values
@@ -406,7 +392,6 @@ class TestConstantTypes:
             CONF_API_KEY,
             CONF_BASE_URL,
             SENSOR_TYPE_MT,
-            SENSOR_TYPE_MR,
             HUB_TYPE_ORGANIZATION,
             EVENT_TYPE,
         ]

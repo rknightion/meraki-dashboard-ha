@@ -6,12 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.meraki_dashboard.const import (
-    MV_SENSOR_DETECTIONS_TOTAL,
-    MV_SENSOR_QUALITY,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
-)
+from custom_components.meraki_dashboard.const import SENSOR_TYPE_MT
 from custom_components.meraki_dashboard.utils.cache import (
     cache_api_response,
     cleanup_expired_cache,
@@ -657,23 +652,41 @@ class TestBatchApiCalls:
 class TestDeviceTypeResolution:
     """Test device type detection helpers."""
 
-    def test_determine_device_type_cw_wireless_model(self):
-        """CW model prefixes should resolve to MR (wireless)."""
+    def test_determine_device_type_mt_model(self):
+        """MT model prefixes should resolve to MT (environmental)."""
+        device = {"model": "MT14", "productType": "sensor"}
+
+        assert determine_device_type(device) == SENSOR_TYPE_MT
+
+    def test_determine_device_type_sensor_product_type(self):
+        """Devices with a 'sensor' productType and no model should match MT."""
+        device = {"serial": "Q2XX-TEST-0001", "productType": "sensor"}
+
+        assert determine_device_type(device) == SENSOR_TYPE_MT
+
+    def test_determine_device_type_non_mt_returns_none(self):
+        """Non-MT devices (e.g. wireless/switch) no longer resolve to a type."""
         device = {"model": "CW9172I", "productType": "wireless"}
 
-        assert determine_device_type(device) == SENSOR_TYPE_MR
+        assert determine_device_type(device) is None
 
     def test_device_matches_type_uses_product_type(self):
-        """Devices with wireless productType should match MR."""
+        """Devices with sensor productType should match MT."""
+        device = {"serial": "Q2XX-TEST-0001", "productType": "sensor"}
+
+        assert device_matches_type(device, SENSOR_TYPE_MT) is True
+
+    def test_device_matches_type_non_mt_is_false(self):
+        """Devices that can't be resolved to MT should not match MT."""
         device = {"serial": "Q2XX-TEST-0001", "productType": "wireless"}
 
-        assert device_matches_type(device, SENSOR_TYPE_MR) is True
+        assert device_matches_type(device, SENSOR_TYPE_MT) is False
 
     def test_determine_device_type_prefers_model_prefix(self):
         """Model prefixes should win over conflicting productType values."""
-        device = {"model": "MS120", "productType": "wireless"}
+        device = {"model": "MT11", "productType": "wireless"}
 
-        assert determine_device_type(device) == SENSOR_TYPE_MS
+        assert determine_device_type(device) == SENSOR_TYPE_MT
 
 
 class TestDeviceCapabilityFilter:
@@ -775,83 +788,18 @@ class TestDeviceCapabilityFilter:
             "remoteLockoutSwitch",
         }
 
-    def test_create_device_capability_filter_mr_device(self):
-        """Test capability filter for MR devices."""
-        capabilities = create_device_capability_filter("MR33", "MR")
-
-        # MR devices have full wireless capabilities
-        expected_capabilities = {
-            "client_count",
-            "memory_usage",
-            "ssid_count",
-            "enabled_ssids",
-            "open_ssids",
-        }
-        assert capabilities == expected_capabilities
-
-    def test_create_device_capability_filter_ms_device(self):
-        """Test capability filter for MS devices."""
-        capabilities = create_device_capability_filter("MS220-8", "MS")
-
-        # MS devices have full switch capabilities
-        expected_capabilities = {
-            "port_count",
-            "memory_usage",
-            "connected_ports",
-            "poe_ports",
-            "port_utilization_sent",
-            "port_utilization_recv",
-            "port_traffic_sent",
-            "port_traffic_recv",
-            "poe_power_usage",
-            "connected_clients",
-            "port_errors",
-            "port_discards",
-            "power_module_status",
-            "port_link_count",
-            "poe_power_limit",
-            "port_utilization",
-        }
-        assert capabilities == expected_capabilities
-
-    def test_create_device_capability_filter_mv_device(self):
-        """Test capability filter for MV devices."""
-        capabilities = create_device_capability_filter("MV32", "MV")
-
-        assert MV_SENSOR_QUALITY in capabilities
-        assert MV_SENSOR_DETECTIONS_TOTAL in capabilities
-
-    def test_create_device_capability_filter_ms_poe_device(self):
-        """Test capability filter for PoE-enabled MS devices."""
-        capabilities = create_device_capability_filter("MS225-24", "MS")
-
-        # MS devices have same capabilities regardless of PoE
-        expected_capabilities = {
-            "port_count",
-            "memory_usage",
-            "connected_ports",
-            "poe_ports",
-            "port_utilization_sent",
-            "port_utilization_recv",
-            "port_traffic_sent",
-            "port_traffic_recv",
-            "poe_power_usage",
-            "connected_clients",
-            "port_errors",
-            "port_discards",
-            "power_module_status",
-            "port_link_count",
-            "poe_power_limit",
-            "port_utilization",
-        }
-        assert capabilities == expected_capabilities
-
     def test_create_device_capability_filter_unknown_type(self):
         """Test capability filter for unknown device type."""
         capabilities = create_device_capability_filter("MX64", "MX")
 
         # Should return empty set for unknown types
         assert capabilities == set()
+
+    def test_create_device_capability_filter_non_mt_types_removed(self):
+        """MR/MS/MV device types are no longer recognized (MT-only integration)."""
+        assert create_device_capability_filter("MR33", "MR") == set()
+        assert create_device_capability_filter("MS220-8", "MS") == set()
+        assert create_device_capability_filter("MV32", "MV") == set()
 
 
 class TestShouldCreateEntity:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any
 
 import meraki.aio
@@ -28,7 +27,6 @@ from .const import (
     CONF_API_KEY,
     CONF_AUTO_DISCOVERY,
     CONF_BASE_URL,
-    CONF_BLUETOOTH_CLIENTS_ENABLED,
     CONF_DISCOVERY_INTERVAL,
     CONF_DYNAMIC_DATA_INTERVAL,
     CONF_ENABLED_DEVICE_TYPES,
@@ -40,9 +38,6 @@ from .const import (
     CONF_HUB_SCAN_INTERVALS,
     CONF_HUB_SELECTION,
     CONF_LONG_CACHE_TTL,
-    CONF_MR_ENABLE_LATENCY_STATS,
-    CONF_MS_ENABLE_PACKET_STATS,
-    CONF_MS_PORT_EXCLUSIONS,
     CONF_MT_REFRESH_ENABLED,
     CONF_MT_REFRESH_INTERVAL,
     CONF_ORGANIZATION_ID,
@@ -69,10 +64,7 @@ from .const import (
     MT_REFRESH_MAX_INTERVAL,
     MT_REFRESH_MIN_INTERVAL,
     REGIONAL_BASE_URLS,
-    SENSOR_TYPE_MR,
-    SENSOR_TYPE_MS,
     SENSOR_TYPE_MT,
-    SENSOR_TYPE_MV,
     USER_AGENT,
 )
 from .utils import sanitize_device_name
@@ -81,52 +73,6 @@ from .utils.device_info import determine_device_type, get_device_display_name
 _LOGGER = logging.getLogger(__name__)
 
 MERAKI_API_ERRORS = (APIError, AsyncAPIError)
-
-
-def _normalize_port_exclusion_entry(entry: str) -> str | None:
-    """Normalize a port exclusion entry to SERIAL:PORT format."""
-    if not entry:
-        return None
-
-    value = entry.strip()
-    if not value:
-        return None
-
-    parts = re.split(r"[:/]", value, maxsplit=1)
-    if len(parts) != 2:
-        return None
-
-    serial = parts[0].strip().upper()
-    port_id = parts[1].strip()
-    if not serial or not port_id:
-        return None
-
-    return f"{serial}:{port_id}"
-
-
-def _parse_port_exclusions(value: str | list[str]) -> list[str]:
-    """Parse port exclusions from a string or list."""
-    if isinstance(value, list):
-        items = value
-    else:
-        if not value:
-            return []
-        items = re.split(r"[,\\n]+", value)
-
-    parsed: list[str] = []
-    seen: set[str] = set()
-    for item in items:
-        normalized = _normalize_port_exclusion_entry(item)
-        if not normalized or normalized in seen:
-            continue
-        parsed.append(normalized)
-        seen.add(normalized)
-    return parsed
-
-
-def _format_port_exclusions(entries: list[str]) -> str:
-    """Format port exclusions for display in the options UI."""
-    return "\n".join(entries)
 
 
 def _extract_error_status(err: Exception) -> int | None:
@@ -176,7 +122,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     including API key validation, organization selection, and device selection.
     """
 
-    VERSION = 2
+    VERSION = 3
     MINOR_VERSION = 0
     # Explicit class-level attribute for compatibility with older HA versions
     domain = DOMAIN
@@ -339,13 +285,8 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
                         for device in devices:
                             device_type = determine_device_type(device)
-                            # Include all supported device types for selection
-                            if device_type in {
-                                SENSOR_TYPE_MT,
-                                SENSOR_TYPE_MR,
-                                SENSOR_TYPE_MS,
-                                SENSOR_TYPE_MV,
-                            }:
+                            # Only MT (environmental sensor) devices are supported
+                            if device_type == SENSOR_TYPE_MT:
                                 # Store network name for display
                                 device["network_name"] = network_name_map.get(
                                     device.get("networkId"), "Unknown"
@@ -381,12 +322,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_HUB_SCAN_INTERVALS: {},
                         CONF_HUB_DISCOVERY_INTERVALS: {},
                         CONF_HUB_AUTO_DISCOVERY: {},
-                        CONF_ENABLED_DEVICE_TYPES: [
-                            SENSOR_TYPE_MT,
-                            SENSOR_TYPE_MR,
-                            SENSOR_TYPE_MS,
-                            SENSOR_TYPE_MV,
-                        ],
+                        CONF_ENABLED_DEVICE_TYPES: [SENSOR_TYPE_MT],
                         # MT refresh service defaults
                         CONF_MT_REFRESH_ENABLED: True,
                         CONF_MT_REFRESH_INTERVAL: MT_REFRESH_COMMAND_INTERVAL,
@@ -466,15 +402,7 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_HUB_SCAN_INTERVALS: {},
                     CONF_HUB_DISCOVERY_INTERVALS: {},
                     CONF_HUB_AUTO_DISCOVERY: {},
-                    CONF_ENABLED_DEVICE_TYPES: user_input.get(
-                        CONF_ENABLED_DEVICE_TYPES,
-                        [
-                            SENSOR_TYPE_MT,
-                            SENSOR_TYPE_MR,
-                            SENSOR_TYPE_MS,
-                            SENSOR_TYPE_MV,
-                        ],
-                    ),
+                    CONF_ENABLED_DEVICE_TYPES: [SENSOR_TYPE_MT],
                     # MT refresh service defaults
                     CONF_MT_REFRESH_ENABLED: user_input.get(
                         CONF_MT_REFRESH_ENABLED, True
@@ -523,38 +451,6 @@ class MerakiDashboardConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(
                         CONF_NAME, default=getattr(self, "_name", DEFAULT_NAME)
                     ): str,
-                    vol.Optional(
-                        CONF_ENABLED_DEVICE_TYPES,
-                        default=[
-                            SENSOR_TYPE_MT,
-                            SENSOR_TYPE_MR,
-                            SENSOR_TYPE_MS,
-                            SENSOR_TYPE_MV,
-                        ],
-                    ): selector.SelectSelector(
-                        selector.SelectSelectorConfig(
-                            options=[
-                                selector.SelectOptionDict(
-                                    value=SENSOR_TYPE_MT,
-                                    label="MT - Environmental Sensors",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=SENSOR_TYPE_MR,
-                                    label="MR - Wireless Access Points",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=SENSOR_TYPE_MS,
-                                    label="MS - Switches",
-                                ),
-                                selector.SelectOptionDict(
-                                    value=SENSOR_TYPE_MV,
-                                    label="MV - Cameras",
-                                ),
-                            ],
-                            mode=selector.SelectSelectorMode.LIST,
-                            multiple=True,
-                        )
-                    ),
                     vol.Optional(CONF_SELECTED_DEVICES): device_selector,
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
@@ -752,13 +648,12 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 current_options.get(CONF_HUB_AUTO_DISCOVERY, {})
             )
 
+            # MT is the only supported device family; always written as such.
+            options[CONF_ENABLED_DEVICE_TYPES] = [SENSOR_TYPE_MT]
+
             # Apply global option updates
             for key in (
-                CONF_ENABLED_DEVICE_TYPES,
                 CONF_MT_REFRESH_ENABLED,
-                CONF_MR_ENABLE_LATENCY_STATS,
-                CONF_MS_ENABLE_PACKET_STATS,
-                CONF_BLUETOOTH_CLIENTS_ENABLED,
                 CONF_SCAN_INTERVAL,
                 CONF_AUTO_DISCOVERY,
                 CONF_DISCOVERY_INTERVAL,
@@ -769,11 +664,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             ):
                 if key in user_input:
                     options[key] = user_input[key]
-
-            if CONF_MS_PORT_EXCLUSIONS in user_input:
-                options[CONF_MS_PORT_EXCLUSIONS] = _parse_port_exclusions(
-                    user_input[CONF_MS_PORT_EXCLUSIONS]
-                )
 
             if CONF_MT_REFRESH_INTERVAL in user_input:
                 options[CONF_MT_REFRESH_INTERVAL] = int(
@@ -805,52 +695,10 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         # Create an ordered schema dictionary
         schema_dict: dict[vol.Marker, Selector] = {}
 
-        # 1. Add device type options at the very top
-        schema_dict[
-            vol.Optional(
-                CONF_ENABLED_DEVICE_TYPES,
-                default=current_options.get(
-                    CONF_ENABLED_DEVICE_TYPES,
-                    [
-                        SENSOR_TYPE_MT,
-                        SENSOR_TYPE_MR,
-                        SENSOR_TYPE_MS,
-                        SENSOR_TYPE_MV,
-                    ],
-                ),
-            )
-        ] = selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[
-                    selector.SelectOptionDict(
-                        value=SENSOR_TYPE_MT,
-                        label="MT - Environmental Sensors",
-                    ),
-                    selector.SelectOptionDict(
-                        value=SENSOR_TYPE_MR,
-                        label="MR - Wireless Access Points",
-                    ),
-                    selector.SelectOptionDict(
-                        value=SENSOR_TYPE_MS,
-                        label="MS - Switches",
-                    ),
-                    selector.SelectOptionDict(
-                        value=SENSOR_TYPE_MV,
-                        label="MV - Cameras",
-                    ),
-                ],
-                mode=selector.SelectSelectorMode.LIST,
-                multiple=True,
-            )
-        )
-
-        # 1b. Allow selecting specific devices to monitor
+        # 1. Allow selecting specific MT devices to monitor
         available_devices = await self._get_available_devices()
         device_type_labels = {
             SENSOR_TYPE_MT: "Environmental Sensors",
-            SENSOR_TYPE_MR: "Wireless Access Points",
-            SENSOR_TYPE_MS: "Switches",
-            SENSOR_TYPE_MV: "Cameras",
         }
         device_options: list[selector.SelectOptionDict] = []
         for device in available_devices:
@@ -979,41 +827,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
             )
         )
 
-        # Optional metrics toggles
-        schema_dict[
-            vol.Optional(
-                CONF_MR_ENABLE_LATENCY_STATS,
-                default=current_options.get(CONF_MR_ENABLE_LATENCY_STATS, True),
-            )
-        ] = selector.BooleanSelector()
-
-        schema_dict[
-            vol.Optional(
-                CONF_MS_ENABLE_PACKET_STATS,
-                default=current_options.get(CONF_MS_ENABLE_PACKET_STATS, True),
-            )
-        ] = selector.BooleanSelector()
-
-        schema_dict[
-            vol.Optional(
-                CONF_MS_PORT_EXCLUSIONS,
-                default=_format_port_exclusions(
-                    current_options.get(CONF_MS_PORT_EXCLUSIONS, [])
-                ),
-            )
-        ] = selector.TextSelector(
-            selector.TextSelectorConfig(
-                multiline=True,
-            )
-        )
-
-        schema_dict[
-            vol.Optional(
-                CONF_BLUETOOTH_CLIENTS_ENABLED,
-                default=current_options.get(CONF_BLUETOOTH_CLIENTS_ENABLED, True),
-            )
-        ] = selector.BooleanSelector()
-
         # 4. Add update API key checkbox
         schema_dict[vol.Optional("update_api_key", default=False)] = (
             selector.BooleanSelector()
@@ -1034,9 +847,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
                 # Device type label
                 device_type_labels = {
                     SENSOR_TYPE_MT: "MT - Environmental Sensors",
-                    SENSOR_TYPE_MR: "MR - Wireless Access Points",
-                    SENSOR_TYPE_MS: "MS - Switches",
-                    SENSOR_TYPE_MV: "MV - Cameras",
                 }
                 device_label = device_type_labels.get(device_type, device_type)
 
@@ -1087,9 +897,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
 
         device_type_labels = {
             SENSOR_TYPE_MT: "Environmental Sensors",
-            SENSOR_TYPE_MR: "Wireless Access Points",
-            SENSOR_TYPE_MS: "Switches",
-            SENSOR_TYPE_MV: "Cameras",
         }
 
         hub_options = []
@@ -1163,9 +970,6 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         device_type = hub_info["device_type"]
         device_type_labels = {
             SENSOR_TYPE_MT: "Environmental Sensors",
-            SENSOR_TYPE_MR: "Wireless Access Points",
-            SENSOR_TYPE_MS: "Switches",
-            SENSOR_TYPE_MV: "Cameras",
         }
         device_label = device_type_labels.get(device_type, device_type)
 
@@ -1201,7 +1005,7 @@ class MerakiDashboardOptionsFlow(config_entries.OptionsFlow):
         current_auto_discovery = hub_auto_discovery.get(self._selected_hub_id, True)
 
         min_scan_seconds = DEVICE_TYPE_MIN_SCAN_INTERVALS.get(device_type, 60)
-        step_value = 1 if device_type == SENSOR_TYPE_MT else 10
+        step_value = 1
         max_scan_seconds = 3600
 
         schema = vol.Schema(
