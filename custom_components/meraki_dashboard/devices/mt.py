@@ -189,6 +189,9 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
     ),
     # Gateway-connection metrics (merged in from
     # getOrganizationSensorGatewaysConnectionsLatest). Diagnostic entities.
+    # Enabled by default: the DIAGNOSTIC category already tucks these into the
+    # device's Diagnostic section, and sensor-to-gateway RSSI / last-seen is the
+    # data used to spot MT sensors that are out of range of an online gateway.
     MT_SENSOR_SIGNAL_STRENGTH: SensorEntityDescription(
         key=MT_SENSOR_SIGNAL_STRENGTH,
         name="Signal Strength",
@@ -196,14 +199,12 @@ MT_SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
         entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
     ),
     MT_SENSOR_LAST_SEEN: SensorEntityDescription(
         key=MT_SENSOR_LAST_SEEN,
         name="Last Seen",
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
-        entity_registry_enabled_default=False,
     ),
 }
 
