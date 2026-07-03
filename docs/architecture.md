@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture of the Meraki Dashboard Home Assistant integration.
+The Meraki Dashboard Home Assistant integration is built on a hub-based architecture that discovers Meraki organizations, networks, and devices, then exposes them as Home Assistant entities through a layered set of coordinators and factories.
 
 ## Overview
 
@@ -164,7 +164,7 @@ Comprehensive error handling with decorators:
 
 ### Naming Convention
 
-```
+```text
 {domain}_{device_serial}_{metric_type}
 ```
 

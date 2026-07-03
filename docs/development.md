@@ -6,7 +6,7 @@ description: Development guide for contributing to the Meraki Dashboard Home Ass
 
 # Development Guide
 
-This guide will help you set up a development environment for contributing to the Meraki Dashboard Home Assistant integration.
+This guide covers the development environment, tooling, and coding standards for contributing to the Meraki Dashboard Home Assistant integration.
 
 <div class="alert alert-info" role="alert">
   <i class="bi bi-code-slash me-2"></i>
@@ -151,7 +151,7 @@ This project follows [Home Assistant's development standards](https://developers
 
 ## Project Structure
 
-```
+```text
 meraki-dashboard-ha/
 ├── .vscode/                # VS Code configuration
 │   ├── settings.json       # Editor settings

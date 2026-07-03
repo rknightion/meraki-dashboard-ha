@@ -233,7 +233,7 @@ DEFAULT_{VALUE}                 # Default values
 
 ### Directory Structure
 
-```
+```text
 custom_components/meraki_dashboard/
 ├── entities/          # Entity base classes and factory
 ├── devices/           # Device-specific implementations

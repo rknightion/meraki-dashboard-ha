@@ -1,6 +1,6 @@
 # Getting Started
 
-Welcome to the Meraki Dashboard Home Assistant Integration! This comprehensive guide will help you get up and running quickly with monitoring your Cisco Meraki devices in Home Assistant.
+This guide covers installing, configuring, and verifying the Meraki Dashboard Home Assistant integration so you can start monitoring your Cisco Meraki devices.
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ If you prefer to install manually or HACS is not available:
 3. Restart Home Assistant
 
 **Directory Structure:**
-```
+```text
 custom_components/
 └── meraki_dashboard/
     ├── __init__.py
@@ -80,20 +80,24 @@ After entering your API key:
 
 Configure how often the integration polls for updates:
 
-- **MT (Environmental Sensors)**: Default 10 minutes
-- **MR (Access Points)**: Default 5 minutes
-- **MS (Switches)**: Default 5 minutes
-- **MV (Cameras)**: Default 10 minutes
+| Device Type | Default Scan Interval |
+|---|---|
+| MT (Environmental Sensors) | 10 minutes |
+| MR (Access Points) | 5 minutes |
+| MS (Switches) | 5 minutes |
+| MV (Cameras) | 10 minutes |
 
 #### Regional API Endpoints
 
 If you're using a regional Meraki dashboard:
 
-- **Global**: `https://api.meraki.com/api/v1` (default)
-- **Canada**: `https://api.meraki.ca/api/v1`
-- **China**: `https://api.meraki.cn/api/v1`
-- **India**: `https://api.meraki.in/api/v1`
-- **US Government**: `https://api.gov-meraki.com/api/v1`
+| Region | API Endpoint |
+|---|---|
+| Global (default) | `https://api.meraki.com/api/v1` |
+| Canada | `https://api.meraki.ca/api/v1` |
+| China | `https://api.meraki.cn/api/v1` |
+| India | `https://api.meraki.in/api/v1` |
+| US Government | `https://api.gov-meraki.com/api/v1` |
 
 #### Device Discovery
 

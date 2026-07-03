@@ -115,7 +115,7 @@ Yes! You can set **individual hub intervals**:
 3. Set **per-hub discovery intervals** (in minutes)
 
 Example configuration:
-```
+```text
 Main Office - MT: 0.5 minutes (30 seconds with MT15/MT40)
 Main Office - MR: 10 minutes
 Data Center - MS: 5 minutes (critical switch monitoring)
