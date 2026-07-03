@@ -10,9 +10,9 @@
 
 ![Meraki Logo](docs/images/icon.png)
 
-> ## ⚠️ Breaking change — v1.0.0 is MT-only
+> ## ⚠️ Breaking change — v0.38.0  is MT-only
 >
-> **Version 1.0.0 is a major, breaking release.** This integration now supports **only Meraki MT
+> **Version 0.38.0  is a major, breaking release.** This integration now supports **only Meraki MT
 > environmental sensors**. Support for **MR wireless access points, MS switches, and MV cameras has
 > been removed entirely** — those platforms, entities, services, and configuration options no
 > longer exist in this integration.
@@ -141,7 +141,7 @@ After setup, you can modify options by clicking "Configure" on the integration:
 - **MT Series Environmental Sensors**
   - MT10, MT12, MT14, MT15, MT20, MT30, MT40
 
-### No Longer Supported (removed in v1.0.0)
+### No Longer Supported (removed in v0.38.0 )
 - MR Series Wireless Access Points
 - MS Series Switches
 - MV Series Cameras
@@ -247,7 +247,7 @@ This will show detailed information about:
 - Note that more frequent polling won't get newer data if the sensors haven't updated
 
 #### My MR/MS/MV devices and entities disappeared after upgrading
-- This is expected in v1.0.0 — see the breaking-change notice at the top of this README. MR/MS/MV
+- This is expected in v0.38.0  — see the breaking-change notice at the top of this README. MR/MS/MV
   support has been removed; a repair notice in Settings → Repairs explains the migration.
 
 ### Testing Locally
