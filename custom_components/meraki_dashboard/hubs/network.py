@@ -537,9 +537,16 @@ class MerakiNetworkHub:
         # @handle_api_errors decorator turns into the default empty dict while
         # keeping prior entity state (no fabricated 0).
         all_readings = await self.organization_hub.async_get_all_sensor_readings()
-        gateway_connections = (
-            await self.organization_hub.async_get_all_gateway_connections()
-        )
+        # Gateway connectivity (RSSI + last-seen) is diagnostic-only. Never let a
+        # failure here wipe out the primary readings for the whole hub — degrade to
+        # empty gateway data (RSSI/last-seen fall to None) and keep serving readings.
+        try:
+            gateway_connections = (
+                await self.organization_hub.async_get_all_gateway_connections()
+            )
+        except Exception as gw_err:  # noqa: BLE001 - diagnostic extra, must not fail readings
+            _LOGGER.debug("Gateway connections fetch failed: %s", gw_err)
+            gateway_connections = {}
 
         result: dict[str, MTDeviceData] = {}
         for serial, reading in all_readings.items():

@@ -481,6 +481,14 @@ class MerakiOrganizationHub:
             priority=API_PRIORITY_LOW,
             total_pages="all",
         )
+        # Unlike readings/latest (bare list), the gateways/connections/latest
+        # endpoint returns the newer paginated envelope
+        # ``{"items": [...], "meta": {...}}``. The SDK's legacy paginator returns
+        # that dict verbatim, so unwrap ``items`` before validating. A dict WITHOUT
+        # ``items`` is the SDK's exhausted-retry error shape ({"errors": [...]}) —
+        # that must still raise so prior entity state is kept (never fabricate 0).
+        if isinstance(rows, dict) and "items" in rows:
+            rows = rows["items"]
         if not isinstance(rows, list):
             raise MerakiApiError(
                 f"Unexpected gateway connections response: {type(rows)!r}"
