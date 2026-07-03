@@ -24,7 +24,10 @@ from ..const import (
     MT_SENSOR_HUMIDITY,
     MT_SENSOR_INDOOR_AIR_QUALITY,
     MT_SENSOR_LAST_SEEN,
+    MT_SENSOR_NO2,
     MT_SENSOR_NOISE,
+    MT_SENSOR_O3,
+    MT_SENSOR_PM10,
     MT_SENSOR_PM25,
     MT_SENSOR_POWER_FACTOR,
     MT_SENSOR_REAL_POWER,
@@ -304,6 +307,48 @@ def _register_mt_entities():
             coordinator,
             device,
             MT_SENSOR_DESCRIPTIONS["pm25"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # NO2 sensor
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_NO2)
+    def create_mt_no2(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["no2"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # Ozone sensor
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_O3)
+    def create_mt_o3(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["o3"],
+            config_entry_id,
+            network_hub,
+        )
+
+    # PM10 sensor
+    @EntityFactory.register(SENSOR_TYPE_MT, MT_SENSOR_PM10)
+    def create_mt_pm10(coordinator, device, config_entry_id, network_hub=None):
+        from ..devices.mt import MerakiMTSensor
+        from ..sensor import MT_SENSOR_DESCRIPTIONS
+
+        return MerakiMTSensor(
+            coordinator,
+            device,
+            MT_SENSOR_DESCRIPTIONS["pm10"],
             config_entry_id,
             network_hub,
         )

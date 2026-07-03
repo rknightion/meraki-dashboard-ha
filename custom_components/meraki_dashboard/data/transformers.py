@@ -220,7 +220,7 @@ class MTSensorDataTransformer(DataTransformer):
                 if value is not None:
                     transformed[metric] = value
 
-            elif metric in ["pm25", "tvoc"]:
+            elif metric in ["pm25", "tvoc", "no2", "o3", "pm10"]:
                 value = self._extract_concentration_value(reading, metric)
                 if value is not None:
                     transformed[metric] = value
