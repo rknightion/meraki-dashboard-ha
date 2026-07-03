@@ -11,6 +11,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.38.0...v0.38.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* **mt:** stop spamming ERROR every cycle when a sensor has no available gateway ([b29dccd](https://github.com/rknightion/meraki-dashboard-ha/commit/b29dccd41750e2ca2eaa530d85d0a16ca8956ab6))
+* **mt:** survive gateway-connections {items,meta} envelope that stopped all readings ([ac76e8a](https://github.com/rknightion/meraki-dashboard-ha/commit/ac76e8a7df1ff2a17321fde76b5425390b23c297)), closes [#303](https://github.com/rknightion/meraki-dashboard-ha/issues/303)
+
 ## [0.38.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.37.4...v0.38.0) (2026-07-03)
 
 
