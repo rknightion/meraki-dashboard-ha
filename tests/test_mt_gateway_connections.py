@@ -15,17 +15,21 @@ from custom_components.meraki_dashboard.hubs.network import MerakiNetworkHub
 async def test_gateway_connections_parse(org_hub_factory):
     """Org-wide gateway connections -> {serial: {rssi, last_connected_at}}."""
     hub = await org_hub_factory()
+    # Real API shape: serial nested under ``sensor``; rssi + lastConnectedAt
+    # at the top level of each row.
     hub.dashboard.sensor.getOrganizationSensorGatewaysConnectionsLatest = AsyncMock(
         return_value=[
             {
-                "serial": "Q2XX-AAAA-0001",
-                "network": {"id": "N1"},
+                "sensor": {"serial": "Q2XX-AAAA-0001", "name": "One"},
+                "gateway": {"serial": "Q3AB-GGGG-0001", "name": "ap-mt"},
+                "network": {"id": "N1", "name": "Net 1"},
                 "rssi": -55,
                 "lastConnectedAt": "2026-07-03T00:00:00Z",
             },
             {
-                "serial": "Q2XX-AAAA-0002",
-                "network": {"id": "N1"},
+                "sensor": {"serial": "Q2XX-AAAA-0002", "name": "Two"},
+                "gateway": {"serial": "Q3AB-GGGG-0001", "name": "ap-mt"},
+                "network": {"id": "N1", "name": "Net 1"},
                 "rssi": None,
                 "lastConnectedAt": None,
             },
@@ -56,8 +60,9 @@ async def test_gateway_connections_items_envelope(org_hub_factory):
         return_value={
             "items": [
                 {
-                    "serial": "Q2XX-AAAA-0001",
-                    "network": {"id": "N1"},
+                    "sensor": {"serial": "Q2XX-AAAA-0001", "name": "One"},
+                    "gateway": {"serial": "Q3AB-GGGG-0001", "name": "ap-mt"},
+                    "network": {"id": "N1", "name": "Net 1"},
                     "rssi": -55,
                     "lastConnectedAt": "2026-07-03T00:00:00Z",
                 },

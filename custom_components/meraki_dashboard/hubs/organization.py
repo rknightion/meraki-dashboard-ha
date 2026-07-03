@@ -499,20 +499,22 @@ class MerakiOrganizationHub:
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            serial = row.get("serial")
+            # Confirmed shape (getOrganizationSensorGatewaysConnectionsLatest):
+            # {"sensor": {"serial": ...}, "gateway": {"serial": ...},
+            #  "network": {...}, "rssi": int, "lastConnectedAt": ISO8601}.
+            # The MT serial is nested under ``sensor`` — NOT a top-level key.
+            sensor = row.get("sensor")
+            serial = sensor.get("serial") if isinstance(sensor, dict) else None
             if not serial:
                 continue
-            # Shape is treated as best-effort; RSSI may sit at top level or nest
-            # under a connection object. Absent values stay None (never 0).
-            rssi = row.get("rssi")
-            if rssi is None:
-                connection = row.get("connection")
-                if isinstance(connection, dict):
-                    rssi = connection.get("rssi")
-            last_connected_at = row.get("lastConnectedAt") or row.get("connectedAt")
+            # RSSI + last-seen sit at the top level of each row. Absent values
+            # stay None (never 0).
             result[serial] = cast(
                 "GatewayConnectionData",
-                {"rssi": rssi, "last_connected_at": last_connected_at},
+                {
+                    "rssi": row.get("rssi"),
+                    "last_connected_at": row.get("lastConnectedAt"),
+                },
             )
         self._gateway_connections_cache = (now, result)
         return result
