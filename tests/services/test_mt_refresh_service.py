@@ -242,6 +242,72 @@ class TestMTRefreshService:
 
         assert mt_refresh_service.success_rate == 0.0
 
+    def test_gateway_unavailable_logs_debug_not_error(
+        self, mt_refresh_service: MTRefreshService, caplog
+    ):
+        """The benign 'no suitable gateway' 400 must not log ERROR every cycle."""
+        import logging
+
+        devices = [{"serial": "Q2XX-TEST-0001", "model": "MT15"}]
+        body = '{"errors":["A suitable gateway was not available for sending this command."]}'
+
+        with caplog.at_level(logging.DEBUG):
+            mt_refresh_service._handle_batch_response(400, body, devices)
+
+        assert mt_refresh_service._batch_failures == 1
+        assert mt_refresh_service._consecutive_gateway_failures == 1
+        # No ERROR-level record for this benign, self-healing condition.
+        assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+    def test_gateway_unavailable_warns_once_after_threshold(
+        self, mt_refresh_service: MTRefreshService, caplog
+    ):
+        """A sustained gateway outage warns exactly once, then stays quiet."""
+        import logging
+
+        from custom_components.meraki_dashboard.services.mt_refresh_service import (
+            CONSECUTIVE_FAILURE_THRESHOLD,
+        )
+
+        devices = [{"serial": "Q2XX-TEST-0001", "model": "MT15"}]
+        body = '{"errors":["A suitable gateway was not available for sending this command."]}'
+
+        with caplog.at_level(logging.WARNING):
+            for _ in range(CONSECUTIVE_FAILURE_THRESHOLD + 5):
+                mt_refresh_service._handle_batch_response(400, body, devices)
+
+        warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1
+
+    def test_non_gateway_failure_still_logs_error(
+        self, mt_refresh_service: MTRefreshService, caplog
+    ):
+        """Genuine API errors (not the gateway case) still surface as ERROR."""
+        import logging
+
+        devices = [{"serial": "Q2XX-TEST-0001", "model": "MT15"}]
+
+        with caplog.at_level(logging.DEBUG):
+            mt_refresh_service._handle_batch_response(
+                403, '{"errors":["Invalid API key"]}', devices
+            )
+
+        assert [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+    def test_batch_success_resets_gateway_streak(
+        self, mt_refresh_service: MTRefreshService
+    ):
+        """A successful batch clears the consecutive-failure streak."""
+        devices = [{"serial": "Q2XX-TEST-0001", "model": "MT15"}]
+        body = '{"errors":["A suitable gateway was not available for sending this command."]}'
+
+        mt_refresh_service._handle_batch_response(400, body, devices)
+        assert mt_refresh_service._consecutive_gateway_failures == 1
+
+        mt_refresh_service._handle_batch_response(201, '{"id":"batch123"}', devices)
+        assert mt_refresh_service._consecutive_gateway_failures == 0
+        assert mt_refresh_service._batch_successes == 1
+
     def test_is_running_property(self, mt_refresh_service: MTRefreshService):
         """Test is_running property."""
         assert mt_refresh_service.is_running is False

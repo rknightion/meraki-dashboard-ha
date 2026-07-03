@@ -58,6 +58,12 @@ class MTRefreshService:
         # Track consecutive failures per device serial (for logging only)
         self._failure_counts: dict[str, int] = defaultdict(int)
 
+        # Throttle the benign "no suitable gateway" 400 (a sensor momentarily out
+        # of BLE range of any online gateway): per-cycle logs go to debug, with a
+        # single warning once a streak crosses the threshold, reset on recovery.
+        self._consecutive_gateway_failures = 0
+        self._gateway_warning_logged = False
+
         # Timer for refresh commands
         self._refresh_timer: Callable[[], None] | None = None
 
@@ -233,75 +239,107 @@ class MTRefreshService:
                     timeout=aiohttp.ClientTimeout(total=30),
                 ) as response:
                     response_text = await response.text()
-
-                    if response.status == 201:
-                        # Success
-                        self._batch_successes += 1
-
-                        # Reset failure counts for all devices
-                        for device in mt_devices:
-                            serial = device.get("serial")
-                            if serial and serial in self._failure_counts:
-                                self._failure_counts[serial] = 0
-
-                        try:
-                            result = json.loads(response_text)
-                            batch_id = result.get("id", "unknown")
-                            _LOGGER.debug(
-                                "Action batch successful: %d sensor refresh commands queued (batchId=%s)",
-                                len(actions),
-                                batch_id,
-                            )
-                        except json.JSONDecodeError:
-                            _LOGGER.debug(
-                                "Action batch successful: %d sensor refresh commands queued",
-                                len(actions),
-                            )
-                    else:
-                        # Batch failed - log and continue
-                        self._batch_failures += 1
-
-                        # Increment failure counts for all devices
-                        for device in mt_devices:
-                            serial = device.get("serial")
-                            if serial:
-                                self._failure_counts[serial] += 1
-
-                        _LOGGER.error(
-                            "Action batch failed with status %d: %s. Will retry in %d seconds.",
-                            response.status,
-                            response_text[:500],
-                            self._refresh_interval,
-                        )
+                    self._handle_batch_response(
+                        response.status, response_text, mt_devices
+                    )
 
         except TimeoutError:
-            self._batch_failures += 1
-
-            # Increment failure counts for all devices
-            for device in mt_devices:
-                serial = device.get("serial")
-                if serial:
-                    self._failure_counts[serial] += 1
-
+            self._record_batch_failure(mt_devices)
             _LOGGER.error(
                 "Action batch timed out after 30 seconds. Will retry in %d seconds.",
                 self._refresh_interval,
             )
         except Exception as err:
-            self._batch_failures += 1
-
-            # Increment failure counts for all devices
-            for device in mt_devices:
-                serial = device.get("serial")
-                if serial:
-                    self._failure_counts[serial] += 1
-
+            self._record_batch_failure(mt_devices)
             _LOGGER.error(
                 "Action batch failed with exception: %s. Will retry in %d seconds.",
                 err,
                 self._refresh_interval,
                 exc_info=True,
             )
+
+    def _record_batch_failure(self, mt_devices: list[MerakiDeviceData]) -> None:
+        """Bump failure counters for a failed batch (no logging)."""
+        self._batch_failures += 1
+        for device in mt_devices:
+            serial = device.get("serial")
+            if serial:
+                self._failure_counts[serial] += 1
+
+    def _handle_batch_response(
+        self, status: int, response_text: str, mt_devices: list[MerakiDeviceData]
+    ) -> None:
+        """Update counters and log an action-batch response.
+
+        The 400 "a suitable gateway was not available" response is a benign,
+        self-healing condition: the target MT15/MT40 is momentarily out of BLE
+        range of any online gateway. Readings still arrive via the org-wide poll,
+        so only the fast-refresh boost is affected. Log those per-cycle at debug
+        (with one throttled warning per streak) instead of ERROR every interval.
+        """
+        if status == 201:
+            self._batch_successes += 1
+            if self._gateway_warning_logged:
+                _LOGGER.info(
+                    "MT refresh commands recovered on network %s after %d "
+                    "consecutive cycle(s) with no available gateway.",
+                    self.network_hub.network_name,
+                    self._consecutive_gateway_failures,
+                )
+            self._consecutive_gateway_failures = 0
+            self._gateway_warning_logged = False
+            for device in mt_devices:
+                serial = device.get("serial")
+                if serial and serial in self._failure_counts:
+                    self._failure_counts[serial] = 0
+
+            batch_id = "unknown"
+            try:
+                batch_id = json.loads(response_text).get("id", "unknown")
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            _LOGGER.debug(
+                "Action batch successful: sensor refresh commands queued (batchId=%s)",
+                batch_id,
+            )
+            return
+
+        self._record_batch_failure(mt_devices)
+
+        if status == 400 and "suitable gateway" in response_text.lower():
+            self._consecutive_gateway_failures += 1
+            _LOGGER.debug(
+                "MT refresh: no available gateway for one or more sensors on "
+                "network %s (status 400). Will retry in %d seconds.",
+                self.network_hub.network_name,
+                self._refresh_interval,
+            )
+            if (
+                self._consecutive_gateway_failures == CONSECUTIVE_FAILURE_THRESHOLD
+                and not self._gateway_warning_logged
+            ):
+                _LOGGER.warning(
+                    "MT refresh commands have found no available gateway for %d "
+                    "consecutive cycles on network %s; the affected MT15/MT40 "
+                    "sensor(s) are out of range of an online gateway. Readings "
+                    "still arrive at Meraki's standard cadence — only fast "
+                    "refresh is affected. Check sensor-to-gateway RSSI. Further "
+                    "occurrences are logged at debug until it recovers.",
+                    self._consecutive_gateway_failures,
+                    self.network_hub.network_name,
+                )
+                self._gateway_warning_logged = True
+            return
+
+        # Genuine failure (bad key, malformed request, server error, ...) — a
+        # non-gateway streak should not suppress a later gateway warning.
+        self._consecutive_gateway_failures = 0
+        _LOGGER.error(
+            "Action batch failed with status %d: %s. Will retry in %d seconds.",
+            status,
+            response_text[:500],
+            self._refresh_interval,
+        )
 
     @property
     def success_rate(self) -> float:
