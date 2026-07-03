@@ -11,6 +11,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.0](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.38.1...v0.39.0) (2026-07-03)
+
+
+### Features
+
+* **mt:** enable gateway RSSI + last-seen diagnostics by default ([b2f30ec](https://github.com/rknightion/meraki-dashboard-ha/commit/b2f30ec3e37212fd3163d8eb05001042130d1455))
+
 ## [0.38.1](https://github.com/rknightion/meraki-dashboard-ha/compare/v0.38.0...v0.38.1) (2026-07-03)
 
 
