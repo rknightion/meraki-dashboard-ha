@@ -21,7 +21,7 @@
   ],
   "quality_scale": "silver",
   "requirements": [
-    "meraki==3.2.0"
+    "meraki==3.3.0"
   ],
   "version": "0.37.4"
 }
