@@ -17,7 +17,7 @@ classifiers = [
     "Topic :: Home Automation",
 ]
 dependencies = [
-    "meraki==3.3.0",
+    "meraki==4.3.0",
 ]
 
 [dependency-groups]
