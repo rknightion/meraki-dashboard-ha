@@ -24,7 +24,7 @@ As of **v1.0.0**, this integration supports **only Meraki MT environmental senso
 
 **No longer supported (removed in v1.0.0):** MR wireless access points, MS switches, and MV
 cameras. If you rely on those, do not upgrade to v1.0.0 - see
-[Migration & Updates](#migration--updates) below.
+[Migration & Updates](#migration-updates) below.
 
 ### How does the hub architecture work?
 
