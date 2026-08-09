@@ -22,12 +22,14 @@ Home = "index.md"
 "Getting Started" = [
     "getting-started.md",
     { FAQ = "faq.md" },
+    { Troubleshooting = "troubleshooting.md" },
 ]
 
 [[site.nav]]
 Features = [
     { "Device Support" = "device-support.md" },
     { "Supported Entities" = "supported-entities.md" },
+    { Comparison = "comparison.md" },
 ]
 
 [[site.nav]]
@@ -36,6 +38,7 @@ Development = [
     { Architecture = "architecture.md" },
     { "Entity Naming" = "naming-conventions.md" },
     { "API Optimization" = "api-optimization.md" },
+    { Security = "security.md" },
     { Contributing = "contributing.md" },
 ]
 
