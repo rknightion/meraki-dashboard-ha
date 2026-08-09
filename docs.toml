@@ -46,8 +46,6 @@ Development = [
 Changelog = "changelog.md"
 
 [assets]
-favicon = "assets/favicon.png"
-logo_icon = "material/home-assistant"
 social_image = "assets/social-card.png"
 social_image_alt = "Meraki Dashboard Home Assistant social preview card"
 extra_css = [
