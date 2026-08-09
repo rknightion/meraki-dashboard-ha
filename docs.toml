@@ -51,10 +51,6 @@ extra_css = [
     "stylesheets/project.css",
 ]
 extra_javascript = [
-    "javascripts/mathjax.js",
-    "https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6",
-    "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js",
-    "https://unpkg.com/mermaid@10/dist/mermaid.min.js",
     "javascripts/extra.js",
 ]
 
@@ -72,5 +68,3 @@ Monitoring = "monitoring"
 API = "api"
 Troubleshooting = "troubleshooting"
 
-[overrides.plugins.sitemap]
-priority = 0.75
