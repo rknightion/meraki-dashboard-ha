@@ -10,6 +10,9 @@
 
 ![Meraki Logo](docs/images/icon.png)
 
+Home Assistant custom integration for Cisco Meraki MT environmental sensors — temperature,
+humidity, air quality, water leak and door status via the Meraki Dashboard API. Installable through HACS.
+
 > ## ⚠️ Breaking change — v0.38.0  is MT-only
 >
 > **Version 0.38.0  is a major, breaking release.** This integration now supports **only Meraki MT
