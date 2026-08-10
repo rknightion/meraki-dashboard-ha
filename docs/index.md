@@ -23,6 +23,22 @@ This custom integration provides real-time monitoring of your Cisco Meraki MT en
 sensors directly within Home Assistant. Monitor temperature, humidity, air quality, and device
 health across your entire Meraki organization.
 
+## Quickstart
+
+Install through HACS, then add the integration:
+
+1. Open **HACS**, go to **Integrations**, click **+ Explore & Download
+   Repositories**, search for **Meraki Dashboard** and download it. Restart Home
+   Assistant.
+2. Get an API key from the [Meraki Dashboard](https://dashboard.meraki.com) —
+   your profile, then **API access**.
+3. In Home Assistant go to **Settings → Devices & Services → Add Integration**,
+   search for **Meraki Dashboard**, and enter the API key.
+4. Pick your organization, then optionally narrow to specific MT devices.
+
+Requires Home Assistant 2024.1.0 or newer. As of v0.38.0 this integration is
+MT-sensor-only.
+
 ## Key Features
 
 - **🌡️ Environmental Monitoring**: Track temperature, humidity, CO2, air quality, and more from MT sensors
