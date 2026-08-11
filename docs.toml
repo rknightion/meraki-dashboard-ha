@@ -5,7 +5,7 @@
 [site]
 name = "Meraki Dashboard Home Assistant Integration"
 description = "A comprehensive Home Assistant custom integration for monitoring Cisco Meraki Dashboard devices with real-time metrics and hub-based architecture"
-author = "Rob Knighton"
+author = "Rob Knight"
 keywords = [
     "meraki",
     "home assistant",
