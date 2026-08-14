@@ -66,6 +66,18 @@ an escape — that is luck, not a reason to trust the blob sweep next time.
 
 ## Issues that still exist on GitHub
 
-Deletion was scoped to issues authored by the repository owner and its bots. Issues filed by external
-contributors were left in place on GitHub, and the tracker remains open for new reports. Those
-issues appear in this archive as well, so the archive is a superset of what was removed.
+Deletion was scoped to the **ten issues authored by the repository owner** — #293, #295–#303. Those
+now 404.
+
+Six issues were deliberately kept and still exist on GitHub:
+
+| # | Author | Why it stayed |
+| --- | --- | --- |
+| 132, 143, 144 | external contributor | filed by someone else; not ours to delete |
+| 218 | external contributor | filed by someone else; not ours to delete |
+| 50, 256 | Renovate | dependency dashboards, recreated on the next run anyway |
+
+The tracker remains enabled for new external bug reports. It is no longer where this project's own
+work is planned — that is `backlog/`.
+
+This archive contains all **16**, kept and deleted alike, so it is a superset of what was removed.
