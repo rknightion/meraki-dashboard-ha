@@ -1,0 +1,638 @@
+[
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Symptom\n\nAfter the 0.38.0 MT-only release, MT sensors stopped reading entirely. HA logs (via Loki, `service_name=homeassistant`) show this every ~30s:\n\n```\nERROR [custom_components.meraki_dashboard.utils.error_handling] API error in async_get_sensor_data: Unexpected gateway connections response: <class 'dict'>\n```\n\n## Root cause\n\nThe MT-only refactor (a820159) added a `getOrganizationSensorGatewaysConnectionsLatest` call for per-sensor RSSI + last-seen diagnostics. Unlike `getOrganizationSensorReadingsLatest` (which returns a bare **list**), the gateways/connections/latest endpoint returns the newer Meraki paginated envelope `{\"items\": [...], \"meta\": {...}}` — a **dict**. The SDK's legacy paginator (`_get_pages_legacy`, the default) returns that dict verbatim.\n\n`organization.py:async_get_all_gateway_connections` did `if not isinstance(rows, list): raise MerakiApiError(...)`, so it raised every cycle. Because that call was awaited **inline** inside `network.py:async_get_sensor_data` — which is wrapped by `@handle_api_errors` that returns an empty dict on error — the exception wiped out **all** MT readings on every refresh.\n\nThe reference meraki-dashboard-exporter avoided this because it runs gateway-connections as a separate collector with its own try/except (degrades gracefully); the inline HA call did not.\n\nTests missed it because `test_gateway_connections_parse` mocked a bare list, not the real `{items,meta}` envelope.\n\n## Fix\n\n- [x] Unwrap `rows = rows[\"items\"]` when the response is a dict with an `items` key (a dict *without* `items` is the SDK exhausted-retry `{\"errors\":[...]}` shape → still raise, to keep prior entity state)\n- [x] Defense-in-depth: wrap the gateway-connections call in `async_get_sensor_data` in try/except so a diagnostic-only failure can never nuke primary readings again\n- [x] Add regression tests: `{items,meta}` envelope parses; readings survive a gateway-connections failure\n\n## Note (separate, not this bug)\n\nLogs also show `mt_refresh_service ... Action batch failed with status 400: A suitable gateway was not available for sending this command`. That's the MT15/MT40 force-refresh command needing an online gateway; it retries and does not stop readings. Tracked separately if it needs quieting.",
+    "closedAt": "2026-07-03T21:12:01Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABItUV3A",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Fixed in ac76e8a (pushed to main).\n\n- `organization.py` now unwraps the `{items, meta}` envelope before validating; a dict without `items` (the exhausted-retry `{errors:[...]}` shape) still raises so prior entity state is kept.\n- `network.py` wraps the diagnostic gateway-connections fetch in try/except so it can never wipe primary readings again.\n- Regression tests added for both the envelope shape and readings-survive-failure. Full suite green (683 passed), ruff + mypy clean.\n\nWill land in the next release-please cut.",
+        "createdAt": "2026-07-03T21:12:08Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/303#issuecomment-4879357404",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T21:11:44Z",
+    "labels": [],
+    "milestone": null,
+    "number": 303,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "MT sensors stop reading after 0.38.0: gateway-connections envelope wipes all readings",
+    "updatedAt": "2026-07-03T21:12:08Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/303"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Add support for the three MT15 air-quality concentration metrics the integration didn't expose: `no2`, `o3`, `pm10` (µg/m³). Follows the standard add-a-metric path: const + `MT_SENSOR_DESCRIPTIONS` (NITROGEN_DIOXIDE / OZONE / PM10 device classes) + transformer concentration routing + entity-factory registration + tests. Follow-up to the MT-only v1 work (#295, was scoped as optional Task C5).",
+    "closedAt": "2026-07-03T19:45:04Z",
+    "comments": [],
+    "createdAt": "2026-07-03T19:44:53Z",
+    "labels": [],
+    "milestone": null,
+    "number": 302,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Add MT air-quality metrics: NO2, O3, PM10",
+    "updatedAt": "2026-07-03T19:45:04Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/302"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "manifest name → Meraki MT Sensors; README breaking-change banner; prune strings/icons/translations; config_flow VERSION 2→3 + MT-only; diagnostics + device_info MT-only. Part of #295.",
+    "closedAt": "2026-07-03T19:23:10Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4FwQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed and closed via a820159 (part of the MT-only major version, epic #295).",
+        "createdAt": "2026-07-03T19:23:40Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/301#issuecomment-4878894529",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:29:17Z",
+    "labels": [],
+    "milestone": null,
+    "number": 301,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Lane F — docs/branding + config_flow + diagnostics",
+    "updatedAt": "2026-07-03T19:23:40Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/301"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "config/migration.py: strip non-MT (positive MR/MS/MV model-prefix predicate, keep hub devices), raise mt_only_migration repair issue. Part of #295.",
+    "closedAt": "2026-07-03T19:23:09Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4FbA",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed and closed via a820159 (part of the MT-only major version, epic #295).",
+        "createdAt": "2026-07-03T19:23:38Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/300#issuecomment-4878894444",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:29:16Z",
+    "labels": [],
+    "milestone": null,
+    "number": 300,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Lane E — config-entry migration 2→3 + repair",
+    "updatedAt": "2026-07-03T19:23:39Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/300"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Trim entities/factory + base; reduce devices/organization.py to API-status + device_count; MT-only sensor.py/binary_sensor.py; register RSSI/last-seen entities. Part of #295.",
+    "closedAt": "2026-07-03T19:23:09Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4FJg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed and closed via a820159 (part of the MT-only major version, epic #295).",
+        "createdAt": "2026-07-03T19:23:37Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/299#issuecomment-4878894374",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:29:15Z",
+    "labels": [],
+    "milestone": null,
+    "number": 299,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Lane D — entities/factory + minimal-health sensors",
+    "updatedAt": "2026-07-03T19:23:37Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/299"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Org-wide single readings call (no serials=, perPage=1000), gateway-connections endpoint, short-TTL cache, bounded 429 retry + org-keyed 80% budget, parsing reconciliation, delete MR/MS/MV hub methods + transformers. Part of #295.",
+    "closedAt": "2026-07-03T19:23:09Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4EzQ",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed and closed via a820159 (part of the MT-only major version, epic #295).",
+        "createdAt": "2026-07-03T19:23:36Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/298#issuecomment-4878894285",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:29:14Z",
+    "labels": [],
+    "milestone": null,
+    "number": 298,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Lane C — Meraki API overhaul (MT)",
+    "updatedAt": "2026-07-03T19:23:37Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/298"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Delete MR/MS/MV consts + typeddicts from const.py/types.py; add GatewayConnectionData + MT_SENSOR_SIGNAL_STRENGTH/LAST_SEEN; trim config/{schemas,hub_config}.py to MT. Part of #295.",
+    "closedAt": "2026-07-03T19:23:08Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4Egw",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed and closed via a820159 (part of the MT-only major version, epic #295).",
+        "createdAt": "2026-07-03T19:23:35Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/297#issuecomment-4878894211",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:29:13Z",
+    "labels": [],
+    "milestone": null,
+    "number": 297,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Lane B — const/types/config pruning",
+    "updatedAt": "2026-07-03T19:23:36Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/297"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Delete camera.py, switch.py, devices/{mr,ms,mv}.py and their tests; prune tests/builders MR/MS/MV producers; trim services.yaml + devices/__init__.py. Hand off __init__.py PLATFORMS/service edits to the wiring pass. Part of #295.",
+    "closedAt": "2026-07-03T19:23:08Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4ELg",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Completed and closed via a820159 (part of the MT-only major version, epic #295).",
+        "createdAt": "2026-07-03T19:23:34Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/296#issuecomment-4878894126",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:29:12Z",
+    "labels": [],
+    "milestone": null,
+    "number": 296,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Lane A — remove non-MT device files + de-wiring",
+    "updatedAt": "2026-07-03T19:23:35Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/296"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "## Mission\n\nStrip the integration down to **MT (environmental sensor) devices only**, delete all MR/MS/MV support, adopt the Meraki-API-calling learnings from the meraki-dashboard-exporter bugbash, and ship as a **breaking major version (v1.0.0)** with a README/manifest rebrand and an auto-migration + repair notice. MT functionality must not regress.\n\n## Binding decisions (do not re-litigate)\n\n1. **Removal scope = \"MT + minimal health\"**: delete all MR/MS/MV + license/alert/switch/wireless/bluetooth org diagnostics. KEEP a small org-hub health set: API call success / rate-limit status + MT device count. Org hub stays as internal plumbing.\n2. **API refactor = full overhaul**: org-wide single readings call (no per-network `serials=`, `perPage=1000`, `total_pages=all`); gateway-connections endpoint for RSSI/last-seen; org-keyed rate limiting at ~80% budget; disable SDK blocking 429 retry, own one bounded async retry; corrected parsing map; inventory caching; never fabricate 0 on error.\n3. **Migration = auto-migrate + repair notice**: config-entry VERSION 2→3; strip non-MT config + stale non-MT (MR/MS/MV model-prefix) registry devices; raise a persistent HA repair issue. Hub devices (no model) must survive.\n4. **Rebrand = README + manifest display name only; KEEP `domain=meraki_dashboard`** (no forced reconfigure). Target v1.0.0 via `feat!` / `BREAKING CHANGE`.\n5. **Webhooks out of scope.** Keep polling-based MT event tracking; document the button-press limitation only.\n\n## Phases (parallel lanes over disjoint files)\n\n- [ ] Task 0 — seam freeze + shared test fixtures + tracking issues (main thread)\n- [ ] Lane A — pure deletes (camera/switch/mr/ms/mv) + services.yaml + devices/__init__.py\n- [ ] Lane B — const/types/config pruning\n- [ ] Lane C — Meraki API overhaul (org/network hubs, coordinator, MT parsing, rate limiter)\n- [ ] Lane D — entities/factory + minimal-health org sensors + platform trims\n- [ ] Lane E — config-entry migration (2→3) + repair issue\n- [ ] Lane F — docs/branding/strings + config_flow + diagnostics + device_info\n- [ ] Task W — wiring pass (__init__.py) + full lint/test gate + v1.0.0 commit\n- [ ] Task C5 (optional) — no2/o3/pm10 air-quality metrics\n\nPlan + spec live in the gitignored `docs/superpowers/` scratch dir. Progress tracked here per phase.",
+    "closedAt": "2026-07-03T19:23:08Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G88AAAABIs4D8w",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Landed in a820159 (pushed to `main`, closes this epic + #296–#301).\n\n**Delivered:**\n- Stripped all MR/MS/MV device support, the switch + camera platforms, the set_camera_rtsp / cycle_switch_port_poe services, and the license/alert/clients/bluetooth/device-status/memory org diagnostics.\n- **MT API overhaul:** org-wide single `getOrganizationSensorReadingsLatest` call (no per-network `serials=`, `perPage=1000`, `total_pages=all`; SCALE-13 fix) with a short-TTL org cache and client-side filtering; new `getOrganizationSensorGatewaysConnectionsLatest` fetch for per-sensor RSSI + last-seen entities; SDK built with `wait_on_rate_limit=False, retry_4xx_error=False` + one bounded/cancellable 429 retry; rate limiting at 80% of org budget; corrected parsing map; never fabricate 0 on error/429.\n- Kept a minimal org-hub health set (API-call / rate-limit status + MT device count).\n- **Migration:** config entry v2→v3 auto-strips non-MT config + stale MR/MS/MV registry devices (positive model-prefix predicate; hub devices preserved) and raises a persistent `mt_only_migration` repair notice.\n- **Rebrand:** manifest name → \"Meraki MT Sensors\" (domain unchanged, no reconfigure), README breaking-change banner + MT-only docs.\n\n**Gate:** `make lint` clean (ruff + mypy 40 files + bandit), full suite **678 passed** at 82% coverage. release-please will cut **v1.0.0** from the `feat!`/`BREAKING CHANGE` commit.",
+        "createdAt": "2026-07-03T19:23:33Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/295#issuecomment-4878894067",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2026-07-03T18:27:52Z",
+    "labels": [],
+    "milestone": null,
+    "number": 295,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "MT-only major version (v1.0.0) — epic tracker",
+    "updatedAt": "2026-07-03T19:23:34Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/295"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjEyNDg0MTI3",
+      "is_bot": false,
+      "login": "rknightion",
+      "name": "Rob K"
+    },
+    "body": "Part of the fleet-wide docs effort tracked in **rknightion/m7kni-net-site#28** (Phase 2). This repo's doc site is served under the m7kni.io hub at `/meraki-dashboard-ha/`, so its own Zensical build + theme overrides determine what search engines and LLMs see for these pages.\n\nTwo things are bundled here because they touch the same files:\n\n1. **Redesign & rebrand alignment** — adopt the new m7kni.io brand and colour scheme (light-first, the shared wordmark / palette / type tokens) so the whole fleet reads as one product family. **Tune it for documentation, not marketing:** unlike the vibrant hub *landing* page, these are end-user **product documentation** sites — prioritise a clean, professional, highly readable, documentation-friendly presentation (sensible density, strong nav/TOC/search, scannable reference content) while staying on-brand in palette, type, and logo. Brand-consistent, docs-first. The exact spec follows from the hub redesign — treat the visual details as **pending finalization in rknightion/m7kni-net-site#28** and don't front-run them.\n2. **SEO / LLM discoverability** — the metadata improvements below, fully specified now and able to proceed independently of the visual spec.\n\n## Why (SEO/LLM part)\n\nLike the hub, this site's `docs/overrides/main.html` is an empty passthrough, so OpenGraph/Twitter/JSON-LD/robots meta are either absent or (if copied from the hub) injected client-side and invisible to non-JS crawlers and LLMs (GPTBot, ClaudeBot, PerplexityBot, CCBot, social unfurlers). Render them server-side.\n\n## Tasks\n\n- [ ] **Redesign & rebrand alignment** — apply the finalized hub brand/scheme in a professional, documentation-friendly way (spec via rknightion/m7kni-net-site#28). Brand-consistent palette/type/logo; docs-first layout, density, and navigation.\n- [ ] **Server-render head tags** — `main.html` `extrahead` override emitting canonical, `theme-color`, OpenGraph, Twitter (`summary_large_image`), and `robots` meta server-side, reading `config.extra.*` + `page.meta.*`. Mirror the hub's implementation once #29 lands (reuse the same override pattern). ⚠️ MiniJinja — no Python string methods.\n- [ ] **JSON-LD** — per-page `Article` (not `TechArticle`) + a repo-level `SoftwareSourceCode`/`SoftwareApplication` node (name, description, `programmingLanguage`, `codeRepository` → this GitHub repo). `Organization` site-wide.\n- [ ] **Remove any client-side `seo.js`** if this repo carries a copy; server-side supersedes it.\n- [ ] **GEO content-shape pass** on the docs prose (biggest evidence-backed LLM-citation win): definition-first sentences (lead a config option with what it does), self-contained/chunkable `##`/`###` sections (restate the subject, don't rely on \"it\"/\"this\"), config/flag/env reference as **tables** not prose, language-tagged code fences (```yaml/```bash), strict one-H1-per-page hierarchy.\n- [ ] **robots.txt** — ensure this repo's `docs/robots.txt` allows the current AI UAs (`GPTBot`, `ClaudeBot`, `OAI-SearchBot`, `PerplexityBot`, `CCBot`, `Applebot-Extended`, `Meta-ExternalAgent`, plus user-action bots). (Note: the hub regenerates per-site `robots.txt` at merge time — keep the source consistent with the hub's policy.)\n- [ ] **Align zensical version** — match the fleet's pinned zensical version and Renovate handling as decided in Phase 1 (rknightion/m7kni-net-site#29). Depending on that decision this repo may drop zensical from its own CI entirely (if the hub build is the only consumer) or keep it pinned + Renovate-grouped for local/preview builds — follow the fleet approach from #29, don't invent a per-repo variant.\n\n## Acceptance criteria\n\n- [ ] Site is on-brand with the new m7kni.io scheme while reading as a clean, professional product-documentation site.\n- [ ] `curl` of a deployed page under m7kni.io/meraki-dashboard-ha/ (no JS) shows server-rendered OG/Twitter/canonical/JSON-LD/robots meta.\n- [ ] Docs pages follow the GEO content-shape checklist above.\n- [ ] zensical version handling matches the fleet decision in #29.\n- [ ] Site build green; renders correctly under the hub.\n\n## Notes\n\n- llms.txt / llms-full.txt / sitemaps for this site are generated centrally by the hub's scripts over this repo's Markdown — **not** per-repo work here.\n- Do the SEO/LLM + version tasks whenever useful; gate only the visual-redesign task on the hub spec.\n",
+    "closedAt": "2026-07-03T11:55:07Z",
+    "comments": [],
+    "createdAt": "2026-07-03T10:25:20Z",
+    "labels": [],
+    "milestone": null,
+    "number": 293,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Docs site: redesign & rebrand alignment + SEO/LLM discoverability",
+    "updatedAt": "2026-07-03T11:55:07Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/293"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "is_bot": true,
+      "login": "app/rknightion-renovate"
+    },
+    "body": "This issue lists Renovate updates and detected dependencies. Read the [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) docs to learn more.\n\n## Awaiting Schedule\n\nThe following updates are awaiting their schedule. To get an update now, click on a checkbox below.\n\n - [ ] <!-- unschedule-branch=renovate/lock-file-maintenance -->chore(deps): lock file maintenance\n\n## Pending Status Checks\n\nThe following updates await pending status checks. To force their creation now, click on a checkbox below.\n\n - [ ] <!-- approvePr-branch=renovate/astral-sh-setup-uv-10.x -->chore(deps): update astral-sh/setup-uv action to v10.0.1\n\n## Detected Dependencies\n\n<details><summary>devcontainer (1)</summary>\n<blockquote>\n\n<details><summary>.devcontainer.json (2)</summary>\n\n - `mcr.microsoft.com/devcontainers/python 3.14`\n - `ghcr.io/devcontainers-extra/features/apt-packages 1`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>github-actions (13)</summary>\n<blockquote>\n\n<details><summary>.github/actions/report-drift/action.yml (1)</summary>\n\n - `anthropics/claude-code-action v1.0.192@e63208cb983318a44e3f945e959ef894b707dcfa`\n\n</details>\n\n<details><summary>.github/workflows/actionlint.yml</summary>\n\n\n</details>\n\n<details><summary>.github/workflows/api-drift.yml (3)</summary>\n\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `astral-sh/setup-uv v10.0.0@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d` → [Updates: `v10.0.1`]\n\n</details>\n\n<details><summary>.github/workflows/cleanup-draft-releases.yml (1)</summary>\n\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n\n</details>\n\n<details><summary>.github/workflows/codeql.yml</summary>\n\n\n</details>\n\n<details><summary>.github/workflows/dependency-review.yml</summary>\n\n\n</details>\n\n<details><summary>.github/workflows/release-please.yml (4)</summary>\n\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `googleapis/release-please-action v5.0.0@45996ed1f6d02564a971a2fa1b5860e934307cf7`\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n\n</details>\n\n<details><summary>.github/workflows/scorecard.yml</summary>\n\n\n</details>\n\n<details><summary>.github/workflows/sdk-version.yml (6)</summary>\n\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `astral-sh/setup-uv v10.0.0@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d` → [Updates: `v10.0.1`]\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `astral-sh/setup-uv v10.0.0@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d` → [Updates: `v10.0.1`]\n\n</details>\n\n<details><summary>.github/workflows/tests.yml (10)</summary>\n\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/setup-python v7@5fda3b95a4ea91299a34e894583c3862153e4b97`\n - `astral-sh/setup-uv v10.0.0@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d` → [Updates: `v10.0.1`]\n - `step-security/harden-runner v2.20.1@b09bb98e06d4d774595224525879c09bc6e98c40`\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `actions/setup-python v7@5fda3b95a4ea91299a34e894583c3862153e4b97`\n - `astral-sh/setup-uv v10.0.0@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d` → [Updates: `v10.0.1`]\n - `codecov/codecov-action v7.0.0@fb8b3582c8e4def4969c97caa2f19720cb33a72f`\n - `codacy/codacy-coverage-reporter-action v1.3.0@89d6c85cfafaec52c72b6c5e8b2878d33104c699`\n\n</details>\n\n<details><summary>.github/workflows/trigger-docs-sync.yml (1)</summary>\n\n - `peter-evans/repository-dispatch v4@28959ce8df70de7be546dd1250a005dd32156697`\n\n</details>\n\n<details><summary>.github/workflows/validate.yml (2)</summary>\n\n - `actions/checkout v7.0.1@3d3c42e5aac5ba805825da76410c181273ba90b1`\n - `hacs/action 22.5.0@d556e736723344f83838d08488c983a15381059a`\n\n</details>\n\n<details><summary>.github/workflows/zizmor.yml</summary>\n\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>homeassistant-manifest (1)</summary>\n<blockquote>\n\n<details><summary>custom_components/meraki_dashboard/manifest.json (1)</summary>\n\n - `meraki ==4.4.0`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>pep621 (1)</summary>\n<blockquote>\n\n<details><summary>pyproject.toml (5)</summary>\n\n - `meraki ==4.4.0`\n - `homeassistant >=2026.6.4`\n - `homeassistant-stubs >=2026.6.4`\n - `ruff >=0.12.5`\n - `pytest-homeassistant-custom-component >=0.13.300`\n\n</details>\n\n</blockquote>\n</details>\n\n",
+    "closedAt": null,
+    "comments": [],
+    "createdAt": "2026-03-16T16:24:47Z",
+    "labels": [],
+    "milestone": null,
+    "number": 256,
+    "state": "OPEN",
+    "stateReason": "",
+    "title": "Dependency Dashboard",
+    "updatedAt": "2026-08-14T12:05:47Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/256"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjEyNDg0MTI3",
+        "login": "rknightion",
+        "name": "Rob K",
+        "databaseId": 12484127
+      }
+    ],
+    "author": {
+      "id": "MDQ6VXNlcjUzNDQyNTkz",
+      "is_bot": false,
+      "login": "<contributor-2>",
+      "name": "Eduardo Azevedo"
+    },
+    "body": "### System Health details\n\n## System Information\n\nversion | core-2025.12.3\n-- | --\ninstallation_type | Home Assistant OS\ndev | false\nhassio | true\ndocker | true\ncontainer_arch | amd64\nuser | root\nvirtualenv | false\npython_version | 3.13.9\nos_name | Linux\nos_version | 6.12.51-haos\narch | x86_64\ntimezone | <timezone>\nconfig_dir | /config\n\n<details><summary>Home Assistant Community Store</summary>\n\nGitHub API | ok\n-- | --\nGitHub Content | ok\nGitHub Web | ok\nHACS Data | ok\nGitHub API Calls Remaining | 5000\nInstalled Version | 2.0.5\nStage | running\nAvailable Repositories | 2489\nDownloaded Repositories | 28\n\n</details>\n\n<details><summary>Home Assistant Cloud</summary>\n\nlogged_in | true\n-- | --\nsubscription_expiration | <subscription-expiry>\nrelayer_connected | true\nrelayer_region | <cloud-region>\nremote_enabled | true\nremote_connected | true\nalexa_enabled | false\ngoogle_enabled | false\ncloud_ice_servers_enabled | true\nremote_server | <nabucasa-remote-host>\ncertificate_status | ready\ninstance_id | ##redicted\ncan_reach_cert_server | ok\ncan_reach_cloud_auth | ok\ncan_reach_cloud | ok\n\n</details>\n\n<details><summary>Home Assistant Supervisor</summary>\n\nhost_os | Home Assistant OS 16.3\n-- | --\nupdate_channel | stable\nsupervisor_version | supervisor-2025.12.3\nagent_version | 1.7.2\ndocker_version | 28.3.3\ndisk_total | 234.0 GB\ndisk_used | 19.9 GB\nnameservers | 1.1.1.1, 8.8.8.8\nhealthy | true\nsupported | true\nhost_connectivity | true\nsupervisor_connectivity | true\nntp_synchronized | true\nvirtualization | \nboard | generic-x86-64\nsupervisor_api | ok\nversion_api | ok\ninstalled_addons | <installed-addons-list>\n\n</details>\n\n<details><summary>Dashboards</summary>\n\ndashboards | 4\n-- | --\nresources | 24\nviews | 40\nmode | storage\n\n</details>\n\n<details><summary>Network Configuration</summary>\n\nadapters | lo (disabled), eno1 (enabled, default, auto), docker0 (disabled), hassio (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled), <veth-iface> (disabled)\n-- | --\nipv4_addresses | lo ##redicted\n\n</details>\n\n<details><summary>Recorder</summary>\n\noldest_recorder_run | 6 December 2025 at 07:42\n-- | --\ncurrent_recorder_run | 14 December 2025 at 20:12\nestimated_db_size | 580.12 MiB\ndatabase_engine | sqlite\ndatabase_version | 3.49.2\n\n</details>\n\n### Checklist\n\n- [x] I have enabled debug logging for my installation.\n- [x] I have filled out the issue template to the best of my ability.\n- [x] This issue only contains 1 issue (if you have multiple issues, open one issue for each issue).\n- [x] This issue is not a duplicate issue of any [previous issues](https://github.com/rknightion/meraki-dashboard-ha/issues?q=is%3Aissue+label%3A%22Bug%22+).\n\n### Describe the issue\n\nHi there,\n\nI have a new device, that as was too new, was still being mapped on Meraki Dashboard as MR36, and the integration was working and pulling data very well. However, finally Meraki updated Dashboard to show the proper device model (CW9171I) and now the entities were unavailable. \n\nI've reloaded the integration, no change.\nRemoved and re-added, it doesn't seem to read at all the CW9171I. I guess maybe the code expects only devices that start with \"MR*\"?\n\nThank you for looking into, and please let me know if I can share any further data to solve that (if that's something you would like to pursue).\n\nThanks!\n\n### Reproduction steps\n\nInstall integration with a network that contains this model.\n\n\n### Debug logs\n\n```\n```\n\n### Diagnostics dump\n\n_No response_",
+    "closedAt": "2025-12-20T19:22:11Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G87bOqkv",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "@<contributor-2> thanks for the report! - I've added the CW devices now I think (and some better fallback detection) but don't have an org with it in so if you could give the latest release a spin and let me know if there's still an issue as there might be some other quirks with these newer models I'm not aware of yet :) ",
+        "createdAt": "2025-12-20T19:28:26Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [
+          {
+            "content": "HEART",
+            "users": {
+              "totalCount": 1
+            }
+          }
+        ],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/218#issuecomment-3678054703",
+        "viewerDidAuthor": true
+      },
+      {
+        "id": "IC_kwDOO976G87bVIiB",
+        "author": {
+          "login": "<contributor-2>"
+        },
+        "authorAssociation": "NONE",
+        "body": "Hi @rknightion , tks for the quick return.\n\nPlease disregard my original message. After some while, the CW shown up. Then, my MT become unavailable on HA.\nCouple of \"reload integration\", \"Discover devices\" and \"Update sensor data\", no luck. \n\nDid an full HA reboot, and now everything is up and populating statics !\n\nCW9171I and MT14!\n\nThank you very much Rob, I hope you have a great end of year celebrations ahead of you! Cheers!",
+        "createdAt": "2025-12-21T23:59:54Z",
+        "includesCreatedEdit": true,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/218#issuecomment-3679750273",
+        "viewerDidAuthor": false
+      }
+    ],
+    "createdAt": "2025-12-15T00:10:31Z",
+    "labels": [],
+    "milestone": null,
+    "number": 218,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "CW9171I not mapping",
+    "updatedAt": "2025-12-22T01:52:13Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/218"
+  },
+  {
+    "assignees": [
+      {
+        "id": "MDQ6VXNlcjEyNDg0MTI3",
+        "login": "rknightion",
+        "name": "Rob K",
+        "databaseId": 12484127
+      }
+    ],
+    "author": {
+      "id": "MDQ6VXNlcjE4MTE3MjU1",
+      "is_bot": false,
+      "login": "<contributor-1>",
+      "name": "Farmer"
+    },
+    "body": "Need to add door and battery for the MT20 to work. It does not support other items.\n\nhttps://github.com/rknightion/meraki-dashboard-ha/blob/c059a47256bea6e1a1de269763cedefe7485563b/custom_components/meraki_dashboard/utils/device_info.py#L398\n\n\n",
+    "closedAt": "2025-10-18T18:35:10Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G87Lo5Wt",
+        "author": {
+          "login": "github-actions"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "${STEPS_INFERENCE_OUTPUTS_RESPONSE}",
+        "createdAt": "2025-10-17T17:40:01Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/144#issuecomment-3416495533",
+        "viewerDidAuthor": false
+      }
+    ],
+    "createdAt": "2025-10-17T17:39:38Z",
+    "labels": [],
+    "milestone": null,
+    "number": 144,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "MT20 is a door sensor",
+    "updatedAt": "2025-10-18T18:35:10Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/144"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjE4MTE3MjU1",
+      "is_bot": false,
+      "login": "<contributor-1>",
+      "name": "Farmer"
+    },
+    "body": "### System details\n\nHA Operating System\n\n### Checklist\n\n- [x] I have enabled debug logging for my installation.\n- [x] I have filled out the issue template to the best of my ability.\n- [x] This issue only contains 1 issue (if you have multiple issues, open one issue for each issue).\n\n### Describe the issue\n\nI have door sensors that I would like to have in HA, but the integration is not finding them. This is what I see in the logs. What other info can I look at.\n\nd.binary_sensor] Processing MT network hub: <network-name-1>\n2025-10-17 09:56:46.562 DEBUG (MainThread) [custom_components.meraki_dashboard.binary_sensor] Creating binary sensors for MT device: <meraki-serial-1> (model: MT20)\n2025-10-17 09:56:46.562 DEBUG (MainThread) [custom_components.meraki_dashboard.binary_sensor] No binary sensors created for device <meraki-serial-2> (model: MT20) - no supported metrics found\n\n### Reproduction steps\n\n1. Load integration\n2.\n3.\n..\n\n### Debug logs\n\n```text\nd.binary_sensor] Processing MT network hub: <network-name-1>\n2025-10-17 09:56:46.562 DEBUG (MainThread) [custom_components.meraki_dashboard.binary_sensor] Creating binary sensors for MT device: <meraki-serial-1> (model: MT20)\n2025-10-17 09:56:46.562 DEBUG (MainThread) [custom_components.meraki_dashboard.binary_sensor] No binary sensors created for device <meraki-serial-2> (model: MT20) - no supported metrics found\n```",
+    "closedAt": "2025-10-17T17:51:30Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G87Lm0JI",
+        "author": {
+          "login": "github-actions"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "${STEPS_INFERENCE_OUTPUTS_RESPONSE}",
+        "createdAt": "2025-10-17T15:01:26Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/143#issuecomment-3415949896",
+        "viewerDidAuthor": false
+      },
+      {
+        "id": "IC_kwDOO976G87Lm_fp",
+        "author": {
+          "login": "<contributor-1>"
+        },
+        "authorAssociation": "NONE",
+        "body": "2025-10-17 10:10:41.053 WARNING (MainThread) [custom_components.meraki_dashboard.hubs.organization] Could not fetch clients overview data: organizations, getOrganizationClientsOverview - 404 Not Found, please wait a minute if the key or org was just newly created.\nTraceback (most recent call last):\n  File \"/config/custom_components/meraki_dashboard/hubs/organization.py\", line 855, in _fetch_clients_overview\n    clients_overview = await self.hass.async_add_executor_job(\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        get_clients_overview\n        ^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/concurrent/futures/thread.py\", line 59, in run\n    result = self.fn(*self.args, **self.kwargs)\n  File \"/config/custom_components/meraki_dashboard/hubs/organization.py\", line 850, in get_clients_overview\n    return self.dashboard.organizations.getOrganizationClientsOverview(\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^\n        self.organization_id\n        ^^^^^^^^^^^^^^^^^^^^\n        # Using default timespan (1 day) - no timespan parameter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/site-packages/meraki/api/organizations.py\", line 1637, in getOrganizationClientsOverview\n    return self._session.get(metadata, resource, params)\n           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/site-packages/meraki/rest_session.py\", line 352, in get\n    response = self.request(metadata, 'GET', url, params=params)\n  File \"/usr/local/lib/python3.13/site-packages/meraki/rest_session.py\", line 281, in request\n    retries = self.handle_4xx_errors(metadata, operation, reason, response, retries, status, tag)\n  File \"/usr/local/lib/python3.13/site-packages/meraki/rest_session.py\", line 345, in handle_4xx_errors\n    raise APIError(metadata, response)\nmeraki.exceptions.APIError: organizations, getOrganizationClientsOverview - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-17 10:10:41.198 DEBUG (MainThread) [custom_components.meraki_dashboard.hubs.organization] No Bluetooth clients data for network <network-name-3> (<meraki-network-id-1>)\n2025-10-17 10:10:41.435 DEBUG (MainThread) [custom_components.meraki_dashboard.hubs.organization] Network <network-name-4> (<meraki-network-id-2>) has 10 Bluetooth clients\n2025-10-17 10:10:41.435 DEBUG (MainThread) [custom_components.meraki_dashboard.hubs.organization] Fetched Bluetooth clients overview: 10 total clients across 2 networks\n2025-10-17 10:10:41.436 DEBUG (MainThread) [custom_components.meraki_dashboard.hubs.organization] Fetching memory usage data from API...\n2025-10-17 10:10:41.934 DEBUG (MainThread) [custom_components.meraki_dashboard.hubs.organization] API response type: <class 'dict'>\n2025-10-17 10:10:",
+        "createdAt": "2025-10-17T15:14:33Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/143#issuecomment-3415996393",
+        "viewerDidAuthor": false
+      },
+      {
+        "id": "IC_kwDOO976G87LnqyG",
+        "author": {
+          "login": "<contributor-1>"
+        },
+        "authorAssociation": "NONE",
+        "body": "Also not my api key is at the network-level  Org-Level would expose all which is not what i want.",
+        "createdAt": "2025-10-17T16:04:07Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/143#issuecomment-3416173702",
+        "viewerDidAuthor": false
+      },
+      {
+        "id": "IC_kwDOO976G87Lxa-j",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Yeah there's no support for network-level API keys at the moment only org level. But MT20 should be fixed now",
+        "createdAt": "2025-10-18T18:36:23Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/143#issuecomment-3418730403",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2025-10-17T15:01:00Z",
+    "labels": [],
+    "milestone": null,
+    "number": 143,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "MT20 Door Sensors",
+    "updatedAt": "2025-10-18T18:36:23Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/143"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "id": "MDQ6VXNlcjE4MTE3MjU1",
+      "is_bot": false,
+      "login": "<contributor-1>",
+      "name": "Farmer"
+    },
+    "body": "### System details\n\nHA Operating System\n\n### Checklist\n\n- [x] I have enabled debug logging for my installation.\n- [x] I have filled out the issue template to the best of my ability.\n- [x] This issue only contains 1 issue (if you have multiple issues, open one issue for each issue).\n\n### Describe the issue\n\nWhat Permissions are required? I am see the below errors and not seeing my MT Sensors. I am expecting to see MT40 Sensors\n\n\n\n### Reproduction steps\n\n1. New install of v0.28.0\n2.\n3.\n...\n\n\n### Debug logs\n\n```text\n2025-10-06 10:46:09.078 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error calling memory usage API: organizations, getOrganizationDevicesSystemMemoryUsageHistoryByInterval - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-06 10:46:09.217 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error checking devices for network <network-name-3> (MT): networks, getNetworkDevices - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-06 10:46:09.336 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error checking devices for network <network-name-3> (MR): networks, getNetworkDevices - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-06 10:46:09.521 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error checking devices for network <network-name-3> (MS): networks, getNetworkDevices - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-06 10:46:09.634 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error checking devices for network <network-name-2> (MT): networks, getNetworkDevices - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-06 10:46:09.983 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error checking devices for network <network-name-2> (MR): networks, getNetworkDevices - 404 Not Found, please wait a minute if the key or org was just newly created.\n2025-10-06 10:46:10.101 ERROR (MainThread) [custom_components.meraki_dashboard.hubs.organization] Error checking devices for network <network-name-2> (MS): networks, getNetworkDevices - 404 Not Found, please wait a minute if the key or org was just newly created.\n```",
+    "closedAt": "2025-10-12T16:03:58Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G87JA850",
+        "author": {
+          "login": "github-actions"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "${STEPS_INFERENCE_OUTPUTS_RESPONSE}",
+        "createdAt": "2025-10-06T15:59:13Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/132#issuecomment-3372469876",
+        "viewerDidAuthor": false
+      }
+    ],
+    "createdAt": "2025-10-06T15:58:54Z",
+    "labels": [],
+    "milestone": null,
+    "number": 132,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "API Permissions",
+    "updatedAt": "2025-10-12T16:03:58Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/132"
+  },
+  {
+    "assignees": [],
+    "author": {
+      "is_bot": true,
+      "login": "app/renovate"
+    },
+    "body": "This issue lists Renovate updates and detected dependencies. Read the [Dependency Dashboard](https://docs.renovatebot.com/key-concepts/dashboard/) docs to learn more.<br>[View this repository on the Mend.io Web Portal](https://developer.mend.io/github/rknightion/meraki-dashboard-ha).\n\n## Open\n\nThe following updates have all been created. To force a retry/rebase of any, click on a checkbox below.\n\n - [ ] <!-- rebase-branch=renovate/anthropics-claude-code-action-digest -->[chore(deps): update anthropics/claude-code-action digest to cd77b50](../pull/249)\n - [ ] <!-- rebase-branch=renovate/home-assistant-actions-digest -->[chore(deps): update home-assistant/actions digest to dce0e86](../pull/254)\n - [ ] <!-- rebase-branch=renovate/astral-sh-setup-uv-7.x -->[chore(deps): update astral-sh/setup-uv action to v7.5.0](../pull/250)\n - [ ] <!-- rebase-branch=renovate/python-3.x -->[chore(deps): update python to >=3.14.3, <3.15](../pull/157)\n - [ ] <!-- rebase-branch=renovate/step-security-harden-runner-2.x -->[chore(deps): update step-security/harden-runner action to v2.16.0](../pull/252)\n - [ ] <!-- rebase-branch=renovate/lock-file-maintenance -->[chore(deps): lock file maintenance](../pull/251)\n - [ ] <!-- rebase-all-open-prs -->**Click on this checkbox to rebase all open PRs at once**\n\n## Detected Dependencies\n\n<details><summary>devcontainer (1)</summary>\n<blockquote>\n\n<details><summary>.devcontainer.json (2)</summary>\n\n - `mcr.microsoft.com/devcontainers/python 3.14`\n - `ghcr.io/devcontainers-extra/features/apt-packages 1`\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>github-actions (6)</summary>\n<blockquote>\n\n<details><summary>.github/workflows/cleanup-draft-releases.yml (1)</summary>\n\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n\n</details>\n\n<details><summary>.github/workflows/issue-triage.yml (1)</summary>\n\n - `anthropics/claude-code-action v1@2817c54db8f44f3a0485d57292566bf07d428a25` → [Updates: `v1`]\n\n</details>\n\n<details><summary>.github/workflows/release-please.yml (4)</summary>\n\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n - `googleapis/release-please-action v4.4.0@16a9c90856f42705d54a6fda1823352bdc62cf38`\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n - `actions/checkout v6.0.2@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n\n</details>\n\n<details><summary>.github/workflows/tests.yml (10)</summary>\n\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n - `actions/checkout v6.0.2@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `actions/setup-python v6.2.0@a309ff8b426b58ec0e2a45f0f869d46889d02405`\n - `astral-sh/setup-uv v7.2.0@61cb8a9741eeb8a550a1b8544337180c0fc8476b` → [Updates: `v7.5.0`]\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n - `actions/checkout v6.0.2@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `actions/setup-python v6.2.0@a309ff8b426b58ec0e2a45f0f869d46889d02405`\n - `astral-sh/setup-uv v7.2.0@61cb8a9741eeb8a550a1b8544337180c0fc8476b` → [Updates: `v7.5.0`]\n - `codecov/codecov-action v5.5.2@671740ac38dd9b0130fbe1cec585b89eea48d3de`\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n\n</details>\n\n<details><summary>.github/workflows/trigger-docs-sync.yml (1)</summary>\n\n - `peter-evans/repository-dispatch v4@28959ce8df70de7be546dd1250a005dd32156697`\n\n</details>\n\n<details><summary>.github/workflows/validate.yml (4)</summary>\n\n - `actions/checkout v6.0.2@de0fac2e4500dabe0009e67214ff5f5447ce83dd`\n - `home-assistant/actions 55b4a5d23e09d627c2773c2ef82afa98904d65b4` → [Updates: `undefined`]\n - `hacs/action 22.5.0@d556e736723344f83838d08488c983a15381059a`\n - `step-security/harden-runner v2.14.1@e3f713f2d8f53843e71c69a996d56f51aa9adfb9` → [Updates: `v2.16.0`]\n\n</details>\n\n</blockquote>\n</details>\n\n<details><summary>pep621 (1)</summary>\n<blockquote>\n\n<details><summary>pyproject.toml (5)</summary>\n\n - `python >=3.13.2, <3.14` → [Updates: `>=3.14.3, <3.15`]\n - `homeassistant >=2025.12.2`\n - `homeassistant-stubs >=2025.12.2`\n - `ruff >=0.12.5`\n - `pytest-homeassistant-custom-component >=0.13.300`\n\n</details>\n\n</blockquote>\n</details>\n\n---\n\n- [ ] <!-- manual job -->Check this box to trigger a request for Renovate to run again on this repository\n\n",
+    "closedAt": "2026-03-16T16:44:43Z",
+    "comments": [
+      {
+        "id": "IC_kwDOO976G866OGmY",
+        "author": {
+          "login": "github-actions"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "This GitHub issue serves as a Dependency Dashboard for tracking updates managed by Renovate Bot and detected dependencies within the repository. It lists dependencies that are currently rate-limited, offering options to manually trigger updates for each or all at once. Additionally, it highlights dependencies with open pull requests that can be retried or rebased if necessary. The issue also categorizes dependencies across different configuration files, such as `bundler`, `github-actions`, `pep621`, and `poetry`, detailing specific dependency versions and update requirements. For further information, readers are directed to Renovate documentation and the Mend.io Web Portal for managing dependencies visually. Lastly, users can check a box to initiate another scan of the repository by Renovate.",
+        "createdAt": "2025-07-27T09:23:24Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/50#issuecomment-3124259224",
+        "viewerDidAuthor": false
+      },
+      {
+        "id": "IC_kwDOO976G87yiUJ5",
+        "author": {
+          "login": "rknightion"
+        },
+        "authorAssociation": "OWNER",
+        "body": "Closed: replaced by self-hosted Renovate dashboard.",
+        "createdAt": "2026-03-16T16:44:42Z",
+        "includesCreatedEdit": false,
+        "isMinimized": false,
+        "minimizedReason": "",
+        "reactionGroups": [],
+        "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/50#issuecomment-4069081721",
+        "viewerDidAuthor": true
+      }
+    ],
+    "createdAt": "2025-07-27T09:23:03Z",
+    "labels": [],
+    "milestone": null,
+    "number": 50,
+    "state": "CLOSED",
+    "stateReason": "COMPLETED",
+    "title": "Dependency Dashboard",
+    "updatedAt": "2026-03-16T16:44:43Z",
+    "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/50"
+  }
+]
