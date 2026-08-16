@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-16 11:36'
-updated_date: '2026-08-16 11:39'
+updated_date: '2026-08-16 17:57'
 labels: []
 dependencies: []
 references:
@@ -51,6 +51,8 @@ Provision Codex cloud tasks and Claude Code cloud sessions with the repository d
 Added the executable cloud-only setup script with Ubuntu packages, uv-managed locked dependencies, pre-commit, and pinned Backlog.md installation. Kept pre-commit outside pyproject.toml because it is environment bootstrap tooling and changing the lock with the locally available uv release introduced unrelated lockfile churn.
 
 Validation passed: bash -n, executable/content assertions, git diff --check, make lint, and make test (687 passed, 82.84% coverage). The provisioning script itself was intentionally not executed by this non-cloud agent, as required by its local-agent guard comment.
+
+Follow-up fix: replaced the comment-only local-agent guard with a real enforced check (script now exits unless MERAKI_DASHBOARD_HA_CLOUD_SETUP=1 is set), and replaced the unpinned 'curl | sh' uv installer with a pinned release tarball download verified against its published SHA-256 checksum before install.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
