@@ -1,9 +1,9 @@
 ---
 id: doc-0003
-title: Closed GitHub issues — pre-Backlog history index
+title: Closed GitHub issues (pre-Backlog history index)
 type: other
 created_date: '2026-08-14 16:12'
-updated_date: '2026-08-14 16:19'
+updated_date: '2026-08-17 09:03'
 ---
 Every issue that existed on this repository's GitHub tracker before it moved to Backlog.md on
 **2026-08-14**. Kept as one document rather than as `Done` tasks on purpose: importing them as tasks
