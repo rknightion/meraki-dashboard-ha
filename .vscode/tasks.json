@@ -4,13 +4,8 @@
     {
       "label": "Start Home Assistant",
       "type": "shell",
-      "command": "uv run homeassistant --config ${workspaceFolder}/config --debug",
+      "command": "just dev",
       "problemMatcher": [],
-      "options": {
-        "env": {
-          "PYTHONPATH": "${workspaceFolder}"
-        }
-      },
       "presentation": {
         "reveal": "always",
         "panel": "new"
@@ -23,7 +18,7 @@
     {
       "label": "Run Tests",
       "type": "shell",
-      "command": "uv run pytest tests",
+      "command": "just test",
       "group": {
         "kind": "test",
         "isDefault": true
@@ -37,7 +32,7 @@
     {
       "label": "Run Tests with Coverage",
       "type": "shell",
-      "command": "make test",
+      "command": "just coverage",
       "group": "test",
       "presentation": {
         "reveal": "always",
@@ -48,7 +43,7 @@
     {
       "label": "Lint Code",
       "type": "shell",
-      "command": "make lint",
+      "command": "just lint",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -59,7 +54,7 @@
     {
       "label": "Format Code",
       "type": "shell",
-      "command": "make format",
+      "command": "just fmt",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -70,7 +65,7 @@
     {
       "label": "Ruff",
       "type": "shell",
-      "command": "pre-commit run ruff-format --all-files",
+      "command": "just fmt",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -81,7 +76,7 @@
     {
       "label": "Pre-commit",
       "type": "shell",
-      "command": "pre-commit run --all-files",
+      "command": "just pre-commit",
       "group": "test",
       "presentation": {
         "reveal": "always",
@@ -92,7 +87,7 @@
     {
       "label": "Type Check",
       "type": "shell",
-      "command": "uv run mypy custom_components/meraki_dashboard",
+      "command": "just typecheck",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -103,7 +98,7 @@
     {
       "label": "Security Check",
       "type": "shell",
-      "command": "make security",
+      "command": "just audit",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -114,7 +109,7 @@
     {
       "label": "Generate Coverage Report",
       "type": "shell",
-      "command": "make coverage",
+      "command": "just coverage",
       "group": "test",
       "presentation": {
         "reveal": "always",
@@ -123,9 +118,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Build Documentation",
+      "label": "Generate Entity Documentation",
       "type": "shell",
-      "command": "make docs",
+      "command": "just gen",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -136,7 +131,7 @@
     {
       "label": "Install Dependencies",
       "type": "shell",
-      "command": "make install",
+      "command": "just setup",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -147,7 +142,7 @@
     {
       "label": "Validate Integration",
       "type": "shell",
-      "command": "make validate",
+      "command": "just check",
       "group": "test",
       "presentation": {
         "reveal": "always",

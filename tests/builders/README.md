@@ -19,12 +19,14 @@ from tests.builders import MerakiDeviceBuilder
 device = MerakiDeviceBuilder().build()
 
 # Customized device
-device = (MerakiDeviceBuilder()
+device = (
+    MerakiDeviceBuilder()
     .with_serial("Q2XX-CUSTOM-0001")
     .with_name("Conference Room Sensor")
     .as_mt_device()
     .with_location(37.4180, -122.0985, "1600 Pennsylvania Ave")
-    .build())
+    .build()
+)
 
 # Create multiple devices
 devices = MerakiDeviceBuilder().build_many(count=5, serial_prefix="Q2XX-TEST-")
@@ -57,22 +59,25 @@ Creates sensor reading data for MT devices.
 from tests.builders import SensorDataBuilder
 
 # Temperature reading
-temp_reading = (SensorDataBuilder()
+temp_reading = (
+    SensorDataBuilder()
     .as_temperature(22.5)
     .with_serial("Q2XX-0001")
     .with_current_timestamp()
-    .build())
+    .build()
+)
 
 # Multiple metrics
 readings = SensorDataBuilder().build_many(
-    metrics=["temperature", "humidity", "co2"],
-    base_value=20.0
+    metrics=["temperature", "humidity", "co2"], base_value=20.0
 )
 
 # Time series data
-time_series = (SensorDataBuilder()
+time_series = (
+    SensorDataBuilder()
     .as_temperature(20.0)
-    .build_time_series(count=12, interval_minutes=5))
+    .build_time_series(count=12, interval_minutes=5)
+)
 ```
 
 #### Available Methods:
@@ -106,12 +111,14 @@ Creates hub configurations and instances.
 from tests.builders import HubBuilder
 
 # Build hub configuration
-hub_builder = (HubBuilder()
+hub_builder = (
+    HubBuilder()
     .with_api_key("test_key")
     .with_organization("123456", "Test Org")
     .add_network("N_123", "Main Office", ["sensor", "wireless"])
     .with_scan_interval(60)
-    .with_discovery_interval(3600))
+    .with_discovery_interval(3600)
+)
 
 # Create config entry
 config_entry = hub_builder.build_config_entry(hass)
@@ -152,13 +159,12 @@ helper = IntegrationTestHelper(hass)
 await helper.setup_meraki_integration(
     devices=[device1, device2],
     organization_id="test_org",
-    selected_device_types=["MT", "MR"]
+    selected_device_types=["MT", "MR"],
 )
 
 # Create device with sensor data
 device = await helper.create_mt_device_with_sensors(
-    serial="Q2XX-0001",
-    metrics=["temperature", "humidity"]
+    serial="Q2XX-0001", metrics=["temperature", "humidity"]
 )
 
 # Trigger data update
@@ -205,27 +211,25 @@ async def test_single_device(hass):
 ```python
 async def test_multiple_networks_and_devices(hass):
     helper = IntegrationTestHelper(hass)
-    
+
     # Create devices for different networks
-    office_devices = MerakiDeviceBuilder().build_many(
-        count=3, serial_prefix="OFFICE-"
-    )
+    office_devices = MerakiDeviceBuilder().build_many(count=3, serial_prefix="OFFICE-")
     warehouse_devices = MerakiDeviceBuilder().build_many(
         count=2, serial_prefix="WAREHOUSE-"
     )
-    
+
     # Set different network IDs
     for device in office_devices:
         device["networkId"] = "N_OFFICE"
     for device in warehouse_devices:
         device["networkId"] = "N_WAREHOUSE"
-    
+
     # Set up integration
     await helper.setup_meraki_integration(
         devices=office_devices + warehouse_devices,
-        selected_networks=["N_OFFICE", "N_WAREHOUSE"]
+        selected_networks=["N_OFFICE", "N_WAREHOUSE"],
     )
-    
+
     # Verify both networks created
     assert helper.get_network_hub("N_OFFICE") is not None
     assert helper.get_network_hub("N_WAREHOUSE") is not None
@@ -235,22 +239,22 @@ async def test_multiple_networks_and_devices(hass):
 ```python
 async def test_sensor_edge_cases(hass):
     helper = IntegrationTestHelper(hass)
-    
+
     device = MerakiDeviceBuilder().as_mt_device().build()
-    
+
     # Create edge case sensor readings
     readings = [
         SensorDataBuilder().as_temperature(-40.0).build(),  # Extreme cold
-        SensorDataBuilder().as_temperature(80.0).build(),   # Extreme heat
-        SensorDataBuilder().as_humidity(0.0).build(),       # Zero humidity
-        SensorDataBuilder().as_humidity(100.0).build(),     # Max humidity
-        SensorDataBuilder().as_co2(0.0).build(),           # Zero CO2
-        SensorDataBuilder().as_battery(0.0).build(),       # Dead battery
+        SensorDataBuilder().as_temperature(80.0).build(),  # Extreme heat
+        SensorDataBuilder().as_humidity(0.0).build(),  # Zero humidity
+        SensorDataBuilder().as_humidity(100.0).build(),  # Max humidity
+        SensorDataBuilder().as_co2(0.0).build(),  # Zero CO2
+        SensorDataBuilder().as_battery(0.0).build(),  # Dead battery
     ]
-    
+
     helper.add_sensor_data(device["serial"], readings)
     await helper.setup_meraki_integration(devices=[device])
-    
+
     # Test that sensors handle edge cases properly
 ```
 
@@ -285,8 +289,5 @@ device = {
 }
 
 # After
-device = (MerakiDeviceBuilder()
-    .with_serial("Q2XX-XXXX-XXXX")
-    .as_mt_device()
-    .build())
+device = MerakiDeviceBuilder().with_serial("Q2XX-XXXX-XXXX").as_mt_device().build()
 ```

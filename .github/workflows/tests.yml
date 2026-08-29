@@ -56,14 +56,16 @@ jobs:
           activate-environment: true
           enable-cache: true
 
+      - name: Set up just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: '1.58.0'
+
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Run Ruff linting
-        run: uv run ruff check --fix custom_components
-
-      - name: Run Ruff formatting
-        run: uv run ruff format custom_components
+      - name: Format and autofix
+        run: just fmt
 
   # Test the integration
   pytest:
@@ -93,6 +95,11 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           activate-environment: true
           enable-cache: true
+
+      - name: Set up just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: '1.58.0'
 
       - name: Install dependencies
         run: |
@@ -125,23 +132,10 @@ jobs:
           # Ensure proper locale
           LC_ALL: C.UTF-8
           LANG: C.UTF-8
-        run: |
-          # Run tests using uv environment
-          uv run python -m pytest tests/ \
-            --cov=custom_components.meraki_dashboard \
-            --cov-report=term-missing \
-            --cov-report=xml \
-            --cov-report=html \
-            --cov-fail-under=10 \
-            --tb=short \
-            -v
+        run: just test
 
       - name: Run apidrift tool tests
-        env:
-          # The apidrift drift-detection tool lives under tools/; its tests do not
-          # cover custom_components, so run them with coverage disabled.
-          PYTHONPATH: tools
-        run: uv run python -m pytest tools/apidrift/tests/ --no-cov --tb=short
+        run: just test-tools
 
       # Coverage reports are generated locally (see htmlcov/ directory)
       # Uncomment below to upload to Codecov (requires CODECOV_TOKEN secret)

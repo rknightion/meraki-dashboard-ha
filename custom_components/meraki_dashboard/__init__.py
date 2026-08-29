@@ -82,6 +82,7 @@ def _setup_logging():
 # Initialize logging configuration
 _setup_logging()
 
+
 async def async_register_services(hass: HomeAssistant) -> None:
     """Register integration services once.
 

@@ -30,11 +30,14 @@ Always compose fixtures via these builders instead of hardcoding dictionaries; i
 ```python
 from tests.builders import IntegrationTestHelper, MerakiDeviceBuilder
 
+
 async def test_mt_entities(hass):
     helper = IntegrationTestHelper(hass)
     device = await helper.create_mt_device_with_sensors(serial="Q2XX-TEST-0001")
 
-    await helper.setup_meraki_integration(devices=[device], selected_device_types=["MT"])
+    await helper.setup_meraki_integration(
+        devices=[device], selected_device_types=["MT"]
+    )
     await helper.trigger_coordinator_update()
 
     org_hub = helper.get_organization_hub()
@@ -94,12 +97,12 @@ Use presets for complex test arrangements rather than re-encoding fixtures. Erro
 ## Running Tests
 
 ```bash
-uv run pytest -k "meraki" -vv
-uv run pytest tests/test_hubs_network.py -vv --log-cli-level=DEBUG
-make test-match MATCH="integration"
+just test filter="-k meraki"
+just test filter="tests/test_hubs_network.py --log-cli-level=DEBUG"
+just test filter="-k integration"
 ```
 
-Prefer `uv run pytest` for focused suites and `make test` for full coverage. Enable `--log-cli-level=DEBUG` when diagnosing coordinator updates or retry flows.
+Use `just test filter=…` for focused suites and `just test` for full coverage. Enable `--log-cli-level=DEBUG` when diagnosing coordinator updates or retry flows.
 
 ## Guardrails
 

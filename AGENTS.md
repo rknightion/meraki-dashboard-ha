@@ -21,21 +21,23 @@ the two cannot drift apart. Use the subdirectory `CLAUDE.md` files for deep impl
 - `backlog/` – Task tracker, campaign documents, and the closed-issue index.
 - `config/`, `pyproject.toml`, `uv.lock` – Project configuration and dependency management.
 
-## Tooling & Commands
+## Task interface
 
-```bash
-make install       # Sync dependencies and pre-commit hooks
-make lint          # ruff + mypy + bandit
-make test          # Full pytest suite with coverage
-make format        # ruff format + autofix
-make validate      # lint + pre-commit
-make api-drift     # Run the drift tool against the live Meraki spec
-uv run mypy .      # Standalone type checking
-```
+This repo's task surface is a `justfile`. Discover it, don't guess it:
 
-`make lint` and `make test` are the gate, and they are this project's `definition_of_done` — every
-new task inherits them as a checklist. Run them before proposing changes. Prefer `uv` for Python
-tasks and keep `pyproject.toml` as the single source of dependency truth.
+    just --list                        # human-readable
+    just --dump --dump-format json     # machine-readable
+    just --show <recipe>               # what a recipe actually runs
+
+- `just check` is the full gate and is exactly what CI enforces (plus stricter local checks). It
+  must pass before you commit.
+- Prefer `just <recipe>` over the underlying tool. If you are typing `pytest`, you want `just test`.
+- Run `just` with stdin from /dev/null. Recipes marked `[confirm]` are destructive — stop and ask
+  before running one; never pass `--yes` or `JUST_YES=1`.
+- If a task you need does not exist, add a recipe with a `#` doc comment and a `[group(...)]`
+  rather than running a bare command.
+
+Prefer `uv` for Python tasks and keep `pyproject.toml` as the single source of dependency truth.
 
 ## Coding Standards
 

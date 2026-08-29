@@ -1,5 +1,7 @@
 """Sensor data builder for creating test sensor readings."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Any
 

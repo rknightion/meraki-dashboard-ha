@@ -17,8 +17,9 @@ This guide covers the development environment, tooling, and coding standards for
 
 ### Prerequisites
 
-- Python 3.13.2+
-- uv (recommended) or Poetry
+- Python 3.14.2+
+- [uv](https://docs.astral.sh/uv/) - the package manager every recipe uses; there is no Poetry path
+- [Just](https://just.systems/) command runner
 - Git
 
 ### Dev Setup
@@ -31,13 +32,11 @@ This guide covers the development environment, tooling, and coding standards for
 
 2. **Install Dependencies**
    ```bash
-   make setup
+   just setup
    ```
 
 3. **Install Pre-commit Hooks**
-   ```bash
-   pre-commit install
-   ```
+   `just setup` installs both the pre-commit and commit-message hooks.
 
 ### Development Workflow
 
@@ -47,24 +46,24 @@ This guide covers the development environment, tooling, and coding standards for
 
 2. **Run Tests**
    ```bash
-   make test
-   make test-coverage  # With coverage report
+   just test
+   just coverage  # With coverage report
    ```
 
 3. **Lint and Format**
    ```bash
-   make lint      # Run ruff check and other linters
-   make format    # Format code with ruff
+   just lint      # Run Ruff and Bandit
+   just fmt       # Format code with Ruff
    ```
 
 4. **Type Check**
    ```bash
-   make type-check
+   just typecheck
    ```
 
 5. **Security Check**
    ```bash
-   make security
+   just audit
    ```
 
 ## Testing Your Integration
@@ -86,13 +85,13 @@ This guide covers the development environment, tooling, and coding standards for
 
 ```bash
 # Run all tests
-make test
+just test
 
 # Run specific test file
-pytest tests/test_sensor.py -v
+just test filter=tests/test_sensor.py
 
 # Run with coverage
-make test-coverage
+just coverage
 ```
 
 ### Integration Tests
@@ -133,8 +132,8 @@ This project follows [Home Assistant's development standards](https://developers
 2. **Make Changes and Test**
    ```bash
    # Make your changes
-   make test
-   make lint
+   just test
+   just lint
    ```
 
 3. **Commit with Conventional Commits**
@@ -163,7 +162,7 @@ meraki-dashboard-ha/
 ├── tests/                  # Test files
 ├── docs/                   # Documentation
 ├── pyproject.toml          # Python project config
-├── Makefile               # Development commands
+├── justfile               # Development commands
 └── README.md              # Project overview
 ```
 
@@ -216,7 +215,7 @@ meraki-dashboard-ha/
 
 - **Import errors**: Ensure `PYTHONPATH` includes the project root
 - **Test failures**: Check that all dependencies are installed
-- **Linting errors**: Run `make format` to auto-fix formatting issues
+- **Linting errors**: Run `just fmt` to auto-fix formatting issues
 
 ### Home Assistant Issues
 

@@ -155,7 +155,10 @@ async def test_sensor_data_merges_rssi(org_hub_factory):
     )
     org_hub.async_get_all_gateway_connections = AsyncMock(
         return_value={
-            "Q2XX-AAAA-0001": {"rssi": -61, "last_connected_at": "2026-07-03T00:00:00Z"},
+            "Q2XX-AAAA-0001": {
+                "rssi": -61,
+                "last_connected_at": "2026-07-03T00:00:00Z",
+            },
         }
     )
 

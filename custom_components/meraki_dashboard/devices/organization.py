@@ -255,4 +255,3 @@ class MerakiNetworkDeviceCountSensor(MerakiHubSensorEntity):
             attrs["device_models"] = models
 
         return attrs
-

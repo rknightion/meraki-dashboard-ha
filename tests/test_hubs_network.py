@@ -370,9 +370,7 @@ class TestMerakiNetworkHub:
         assert "device3" not in result
         assert result["device1"]["readings"][0]["metric"] == "temperature"
 
-    async def test_async_get_sensor_data_merges_gateway_connection(
-        self, network_hub
-    ):
+    async def test_async_get_sensor_data_merges_gateway_connection(self, network_hub):
         """Test gateway RSSI/last-seen are merged into the MT reading."""
         network_hub.devices = [{"serial": "device1", "name": "MT Device 1"}]
 

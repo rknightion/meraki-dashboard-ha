@@ -444,9 +444,7 @@ class TestMerakiOrganizationHub:
         )
         assert result is True
 
-        result = await organization_hub._network_has_device_type(
-            "network1", "MR"
-        )
+        result = await organization_hub._network_has_device_type("network1", "MR")
         assert result is False
 
     async def test_network_has_device_type_api_error(
@@ -519,6 +517,7 @@ class TestMerakiOrganizationHub:
         age = organization_hub.last_clients_update_age_minutes
         assert age is not None
         assert 4 <= age <= 6  # Allow for small timing variations
+
 
 class TestLoggingConfiguration:
     """Test logging configuration functionality."""
@@ -620,4 +619,3 @@ class TestOrganizationHubEdgeCases:
 
         # Clean up timer to avoid lingering tasks
         await organization_hub.async_unload()
-

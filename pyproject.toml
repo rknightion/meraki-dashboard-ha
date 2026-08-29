@@ -32,6 +32,7 @@ dev = [
     "safety",
     "marshmallow",
     "pytest-homeassistant-custom-component>=0.13.300",
+    "pre-commit>=4.6.2",
 ]
 
 
@@ -114,7 +115,14 @@ exclude_dirs = ["tests", "scripts"]
 skips = ["B101", "B601"]
 
 [tool.ruff]
-target-version = "py314"
+# Pinned to the oldest Python the SUPPORTED Home Assistant floor runs, not to
+# requires-python. requires-python describes this repo's dev/test environment;
+# custom_components/ runs inside Home Assistant's interpreter, and hacs.json
+# advertises 2024.1.0, which ships Python 3.11. Letting this track
+# requires-python lets the formatter emit 3.14-only syntax (PEP 758 bare
+# `except A, B:`) into shipped code that then fails to import for every user
+# below that floor.
+target-version = "py311"
 line-length = 88
 
 [tool.ruff.lint]

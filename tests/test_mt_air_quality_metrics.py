@@ -52,9 +52,7 @@ def test_air_quality_descriptions_have_correct_device_classes() -> None:
         == SensorDeviceClass.NITROGEN_DIOXIDE
     )
     assert MT_SENSOR_DESCRIPTIONS[MT_SENSOR_O3].device_class == SensorDeviceClass.OZONE
-    assert (
-        MT_SENSOR_DESCRIPTIONS[MT_SENSOR_PM10].device_class == SensorDeviceClass.PM10
-    )
+    assert MT_SENSOR_DESCRIPTIONS[MT_SENSOR_PM10].device_class == SensorDeviceClass.PM10
 
 
 def test_air_quality_metrics_registered_in_factory() -> None:

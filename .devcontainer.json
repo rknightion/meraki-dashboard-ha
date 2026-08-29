@@ -1,7 +1,7 @@
 {
     "name": "Meraki Dashboard HA Integration",
     "image": "mcr.microsoft.com/devcontainers/python:3.14",
-    "postCreateCommand": "scripts/setup",
+    "postCreateCommand": "just setup",
     "forwardPorts": [
         8123
     ],
@@ -40,6 +40,7 @@
     "features": {
         "ghcr.io/devcontainers-extra/features/apt-packages:1": {
             "packages": "ffmpeg,libturbojpeg0,libpcap-dev,python3-dev,build-essential"
-        }
+        },
+        "ghcr.io/devcontainers-extra/features/just:1": {}
     }
 }

@@ -1,5 +1,7 @@
 """Device builder for creating test Meraki device data."""
 
+from __future__ import annotations
+
 from typing import Any
 
 

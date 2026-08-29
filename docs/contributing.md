@@ -6,7 +6,9 @@ Thank you for your interest in contributing to the Meraki Dashboard Home Assista
 
 ### Prerequisites
 
-- Python 3.12 or newer
+- Python 3.14.2 or newer
+- [uv](https://docs.astral.sh/uv/) - `just setup`, `just test` and `just lint` all run through it
+- [Just](https://just.systems/) command runner
 - Home Assistant development environment
 - Git for version control
 - A Meraki Dashboard account for testing
@@ -21,7 +23,7 @@ Thank you for your interest in contributing to the Meraki Dashboard Home Assista
 
 2. **Install Dependencies**
    ```bash
-   make install
+   just setup
    ```
 
 3. **Set Up Pre-commit Hooks**
@@ -39,9 +41,10 @@ We use:
 - **mypy** for type checking
 - **isort** for import sorting
 
-Run all checks:
+Run the static checks:
 ```bash
-make lint
+just lint
+just typecheck
 ```
 
 ### Testing
@@ -50,13 +53,13 @@ Write tests for all new functionality:
 
 ```bash
 # Run all tests
-make test
+just test
 
 # Run specific test file
-make test-file FILE=tests/test_sensor.py
+just test filter=tests/test_sensor.py
 
 # Run with coverage
-make coverage
+just coverage
 ```
 
 ### Making Changes
@@ -186,9 +189,9 @@ Update relevant docs when adding features:
 
 ### Before Submitting
 
-- [ ] Tests pass (`make test`)
-- [ ] Linting passes (`make lint`)
-- [ ] Coverage maintained (`make coverage`)
+- [ ] Tests pass (`just test`)
+- [ ] Linting passes (`just lint` and `just typecheck`)
+- [ ] Coverage maintained (`just coverage`)
 - [ ] Documentation updated
 - [ ] CHANGELOG.md entry added
 

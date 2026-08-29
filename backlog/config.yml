@@ -2,8 +2,7 @@ project_name: "Meraki Dashboard HA"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Parked", "Done"]
 definition_of_done:
-  - "make lint"
-  - "make test"
+  - "just check"
 labels: []
 date_format: yyyy-mm-dd
 max_column_width: 20

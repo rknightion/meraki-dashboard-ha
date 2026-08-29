@@ -393,7 +393,6 @@ class MTSensorDataTransformer(DataTransformer):
         return False
 
 
-
 class OrganizationDataTransformer(DataTransformer):
     """Transformer for organization-level data."""
 

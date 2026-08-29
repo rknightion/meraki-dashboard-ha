@@ -61,9 +61,7 @@ async def test_migration_strips_non_mt_keeps_hub_devices(
 
     # Repair issue raised because a device was removed.
     issue_registry = ir.async_get(hass)
-    assert (
-        issue_registry.async_get_issue(DOMAIN, "mt_only_migration") is not None
-    )
+    assert issue_registry.async_get_issue(DOMAIN, "mt_only_migration") is not None
 
 
 @pytest.mark.asyncio
@@ -111,9 +109,7 @@ async def test_migration_idempotent_on_mt_only_entry(hass: HomeAssistant) -> Non
 
     # Nothing removed.
     assert device_registry.async_get_device({(DOMAIN, mt_serial)}) is not None
-    assert (
-        device_registry.async_get_device({(DOMAIN, org_hub_identifier)}) is not None
-    )
+    assert device_registry.async_get_device({(DOMAIN, org_hub_identifier)}) is not None
 
     # No repair issue because no device was removed.
     issue_registry = ir.async_get(hass)

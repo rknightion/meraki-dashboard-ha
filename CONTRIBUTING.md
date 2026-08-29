@@ -33,7 +33,7 @@ The easiest way to get started is using the VS Code Dev Container:
 2. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 3. Open this repository in VS Code
 4. Click "Reopen in Container" when prompted (or use Command Palette: "Dev Containers: Reopen in Container")
-5. The container will automatically install all dependencies via `make install`
+5. The container will automatically install all dependencies via `just setup`
 
 This gives you a fully configured Python 3.13 environment with all the right VS Code extensions, settings, and tools pre-installed.
 
@@ -45,14 +45,12 @@ If you prefer to work locally:
 # Install uv package manager (recommended)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies and pre-commit hooks
-make install
-
-# Or using the setup script
-scripts/setup
+# Install Just using the package instructions at https://just.systems/man/en/packages.html,
+# then install dependencies and pre-commit hooks.
+just setup
 
 # Verify your setup
-make validate
+just check
 ```
 
 ## Development Workflow
@@ -61,19 +59,19 @@ make validate
 
 ```bash
 # Run all tests with coverage
-make test
+just test
 
 # Run specific test file
-make test-file FILE=tests/test_sensor.py
+just test filter=tests/test_sensor.py
 
 # Run tests matching a pattern
-make test-match MATCH=test_sensor
+just test filter="-k test_sensor"
 
 # Watch mode (runs tests on file changes)
-make test-watch
+just test-watch
 
 # Generate HTML coverage report
-make coverage
+just coverage
 ```
 
 ### Code Quality
@@ -82,25 +80,22 @@ This project uses comprehensive code quality tools:
 
 ```bash
 # Format code with Ruff
-make format
+just fmt
 
-# Run all linters (Ruff, MyPy, Bandit)
-make lint
+# Run Ruff and Bandit
+just lint
+
+# Run MyPy
+just typecheck
 
 # Run pre-commit hooks on all files
-make pre-commit
+just pre-commit
 
 # Run full validation suite
-make validate
-
-# Run everything (lint + test + validate)
-make check-all
-
-# Or use the quick script
-scripts/lint
+just check
 ```
 
-**Pre-commit hooks** are automatically installed by `make install`. They will run on every commit to ensure code quality. The hooks include:
+**Pre-commit hooks** are automatically installed by `just setup`. They will run on every commit to ensure code quality. The hooks include:
 
 - Ruff formatting and linting
 - MyPy type checking
@@ -114,22 +109,13 @@ scripts/lint
 
 ```bash
 # Launch local Home Assistant instance for testing
-scripts/develop
-
-# Or manually build and test in Docker
-make docker-build
-make docker-test
+just dev
 ```
 
 ### Building Documentation
 
-```bash
-# Build documentation locally
-make docs
-
-# Generate entity documentation from code
-make docs-generate
-```
+Published documentation is sourced from the repository's Markdown files and the project site. Generate
+the entity reference from code with `just gen`.
 
 ## Code Standards
 
@@ -166,7 +152,7 @@ See `CLAUDE.md` for detailed architecture and coding conventions.
 
 1. **Update documentation**: If you change functionality, update relevant docs
 2. **Write tests**: Ensure your code is tested
-3. **Run validation**: Execute `make check-all` before submitting
+3. **Run validation**: Execute `just check` before submitting
 4. **Commit quality**: Use clear, descriptive commit messages
 5. **Small PRs**: Keep pull requests focused on a single feature/fix
 

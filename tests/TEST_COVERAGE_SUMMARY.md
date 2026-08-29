@@ -135,6 +135,7 @@ New tests added:
        @with_standard_retries(operation_type="test")
        async def api_call():
            raise api_error_500
+
        # Test retry behavior
    ```
 
@@ -195,16 +196,16 @@ New tests added:
 
 ```bash
 # Run all new tests
-uv run pytest tests/test_*_extended.py -v
+just test filter=tests/test_*_extended.py
 
 # Run specific test file
-uv run pytest tests/test_binary_sensor_extended.py -v
+just test filter=tests/test_binary_sensor_extended.py
 
 # Run with coverage
-uv run pytest tests/test_*_extended.py --cov=custom_components.meraki_dashboard
+just test filter=tests/test_*_extended.py
 
 # Run all tests
-make test
+just test
 ```
 
 ## Expected Coverage Improvements
