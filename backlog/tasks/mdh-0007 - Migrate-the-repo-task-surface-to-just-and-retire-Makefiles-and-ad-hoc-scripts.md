@@ -1,10 +1,10 @@
 ---
 id: MDH-0007
 title: Migrate the repo task surface to just and retire Makefiles and ad-hoc scripts
-status: To Do
+status: Parked
 assignee: []
 created_date: '2026-08-28 19:26'
-updated_date: '2026-08-29 10:42'
+updated_date: '2026-08-29 15:57'
 labels:
   - 'wave:2-fleet'
 dependencies: []
@@ -564,6 +564,12 @@ Do not touch, rename, or fold into `just`:
 - [ ] #1 make lint
 - [ ] #2 make test
 <!-- DOD:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Campaign park reconciliation: the shared checkout remains ahead two and behind six, with staged task-surface WIP overlapping upstream workflow drift. Resume only in a clean root-owned integration window: reconcile the duplicate local tracker commits and origin changes; preserve the untracked Codacy artifact; restage named paths; rerun generation/check, pre-commit, CodeRabbit, and exact-SHA CI; then delete the Makefile and thin scripts only after the pre-deletion proof.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
