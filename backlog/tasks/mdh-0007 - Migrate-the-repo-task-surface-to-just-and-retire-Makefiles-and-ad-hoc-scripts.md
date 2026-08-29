@@ -1,10 +1,10 @@
 ---
 id: MDH-0007
 title: Migrate the repo task surface to just and retire Makefiles and ad-hoc scripts
-status: Parked
+status: Done
 assignee: []
 created_date: '2026-08-28 19:26'
-updated_date: '2026-08-29 15:57'
+updated_date: '2026-08-29 18:18'
 labels:
   - 'wave:2-fleet'
 dependencies: []
@@ -569,6 +569,8 @@ Do not touch, rename, or fold into `just`:
 
 <!-- SECTION:NOTES:BEGIN -->
 Campaign park reconciliation: the shared checkout remains ahead two and behind six, with staged task-surface WIP overlapping upstream workflow drift. Resume only in a clean root-owned integration window: reconcile the duplicate local tracker commits and origin changes; preserve the untracked Codacy artifact; restage named paths; rerun generation/check, pre-commit, CodeRabbit, and exact-SHA CI; then delete the Makefile and thin scripts only after the pre-deletion proof.
+
+Unparked and completed 2026-08-29. Branch reconciled against origin (two duplicate local commits dropped by rebase, .codacy/ preserved). CodeRabbit found a Python 3.14-only `except A, B:`; ruff target-version tracked requires-python rather than the advertised Home Assistant floor and had rewritten 11 such sites across 7 files, two of them shipped code. Migration at 7b233f9; exact-head CI green.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
