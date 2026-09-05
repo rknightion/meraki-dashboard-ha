@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Product-specific additions to the central CodeRabbit defaults.
+# Keep inheritance enabled; shared review policy lives in the owner/coderabbit repository.
+inheritance: true
+reviews:
+  path_instructions:
+  - path: custom_components/meraki_dashboard/**
+    instructions: >-
+      Review this as a Home Assistant integration whose supported product scope is MT sensors only. Flag
+      reintroduction of MR, MS or MV behaviour unless the repository scope changes explicitly. Preserve
+      setup/unload cleanup, route SDK construction and API access through the organisation/network hubs,
+      normalise raw API data through TransformerRegistry, register entities through EntityFactory, reuse
+      the standard retry/cache helpers, and keep manifest.json and pyproject.toml requirements synchronized.
+      Check entity unique IDs, config-entry migrations, coordinator failure semantics, and cleanup of
+      timers or background tasks.
