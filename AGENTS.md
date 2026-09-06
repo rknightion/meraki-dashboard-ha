@@ -17,6 +17,8 @@ signal than a green `just check`.
 - Run `just` with stdin from `/dev/null`.
 - If a task you need has no recipe, add one with a `#` doc comment and a `[group(...)]` rather than
   running the bare command.
+- `uv` runs every Python tool here. `pyproject.toml` plus `uv.lock` are the single source of
+  dependency truth; never `pip install` into the environment.
 
 ## Python floor
 
@@ -72,6 +74,8 @@ Traps:
 - Do not build on decisions or MCP. Decisions are half-built upstream (no `edit`, `view` or
   `update`, no supersede mechanism), and MCP costs 10-50k tokens of context against 1-2k for the
   CLI. Durable reference goes in docs; tasks are the unit of work.
+- A guard hook in the agent config denies the bare section flags and direct writes to
+  `backlog/tasks/`. A denial there is the guard working, not a permissions fault.
 
 `auto_commit` is false in `backlog/config.yml`, so tracker changes need an explicit commit. In a
 shared checkout stage explicit pathspecs; never `git add -A` or `git commit -a`.
