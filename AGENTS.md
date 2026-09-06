@@ -1,139 +1,90 @@
 # Meraki Dashboard HA
 
-Repo-wide guidance for contributors and LLM agents working on this Home Assistant custom
-integration. Claude Code and Codex both read this file; `CLAUDE.md` is a one-line import of it, so
-the two cannot drift apart. Use the subdirectory `CLAUDE.md` files for deep implementation details.
+Home Assistant custom integration for Cisco Meraki MT environmental sensors.
 
-> This file previously described the *Meraki Dashboard Exporter* — a different repository. Every
-> path in it (`src/meraki_dashboard_exporter/`, `dashboards/`) was wrong, and Codex reads only
-> `AGENTS.md`, so Codex had been working from another project's instructions. Corrected 2026-08-14
-> during the Backlog.md migration.
+## Scope
 
-## Repository Topology
-
-- `custom_components/meraki_dashboard/` – Home Assistant integration source (see child `CLAUDE.md`).
-- `custom_components/meraki_dashboard/hubs/` – Hub orchestration layer (dedicated `CLAUDE.md`).
-- `tests/` – Test suite, builders, and fixtures (dedicated `CLAUDE.md`).
-- `docs/` – MkDocs site and published documentation.
-- `scripts/` – Utility scripts (linting, docs generation, packaging helpers).
-- `tools/apidrift/` – Meraki OpenAPI drift detector; `spec/` holds the vendored baseline spec.
-- `archive/` – Redacted capture of the pre-Backlog GitHub Issues tracker. See `archive/README.md`.
-- `backlog/` – Task tracker, campaign documents, and the closed-issue index.
-- `config/`, `pyproject.toml`, `uv.lock` – Project configuration and dependency management.
+**MT sensors only.** v1.0.0 removed MR/MS/MV support deliberately: no `devices/mr.py`,
+`devices/ms.py` or MV constant remains. Do not reintroduce another device family without an explicit
+decision to widen scope.
 
 ## Task interface
 
-This repo's task surface is a `justfile`. Discover it, don't guess it:
+`just check` is the gate and must pass before a commit. CI runs a subset of it (`just fmt`,
+`just test`, `just test-tools`) plus separate lint and security workflows, so a green CI is a weaker
+signal than a green `just check`.
 
-    just --list                        # human-readable
-    just --dump --dump-format json     # machine-readable
-    just --show <recipe>               # what a recipe actually runs
+- Run `just` with stdin from `/dev/null`.
+- If a task you need has no recipe, add one with a `#` doc comment and a `[group(...)]` rather than
+  running the bare command.
 
-- `just check` is the full gate and is exactly what CI enforces (plus stricter local checks). It
-  must pass before you commit.
-- Prefer `just <recipe>` over the underlying tool. If you are typing `pytest`, you want `just test`.
-- Run `just` with stdin from /dev/null. Recipes marked `[confirm]` are destructive — stop and ask
-  before running one; never pass `--yes` or `JUST_YES=1`.
-- If a task you need does not exist, add a recipe with a `#` doc comment and a `[group(...)]`
-  rather than running a bare command.
+## Python floor
 
-Prefer `uv` for Python tasks and keep `pyproject.toml` as the single source of dependency truth.
+`requires-python` is 3.14 and describes the dev/test environment only. Code under
+`custom_components/` runs inside Home Assistant's interpreter, and `hacs.json` advertises a 2024.1.0
+floor, which ships Python 3.11. ruff is pinned to `target-version = "py311"` for that reason. Do not
+raise it to match `requires-python`: the formatter then emits 3.14-only syntax into shipped code
+that fails to import for every user on the floor.
 
-## Coding Standards
+## Guardrails
 
-- Python 3.13+, typed code, 88-char lines (Black/ruff defaults).
-- Enforce ruff rules and mypy typing; avoid `Any` unless justified in-code.
-- Keep Home Assistant platform conventions (entity naming, unique IDs) and follow enums/StrEnum
-  patterns for constants.
-- Update documentation or changelog entries when behavior changes.
-- Never modify tests to match an incorrect implementation.
-
-## Operational Guardrails
-
-- Never log, hardcode, or expose credentials (Meraki API keys, Home Assistant secrets).
-- Respect rate limits and error-handling patterns outlined in child `CLAUDE.md` files when touching
-  API code.
-- Keep generated artifacts (`htmlcov/`, `dist/`, etc.) out of version control.
-- **Scope is MT sensors only.** v1.0.0 deliberately removed MR/MS/MV support. Do not reintroduce
-  other device families without an explicit decision to widen scope again.
+- Never log, hardcode or commit credentials. A Meraki API key is 40 hex characters.
+- Never change a test to match an implementation you believe is wrong.
+- Ship the doc or changelog update in the same change as the behaviour it describes.
 
 ## Meraki API documentation
 
-Use the context7 MCP server rather than answering from memory:
+- `/meraki/dashboard-api-python` - the Meraki Dashboard Python SDK.
+- `/openapi/api_meraki_api_v1_openapispec` - the Dashboard API itself.
 
-- `meraki/dashboard-api-python` — the Meraki Dashboard Python SDK.
-- `openapi/api_meraki_api_v1_openapispec` — the Meraki Dashboard API itself (OpenAPI spec).
+`just api-drift` diffs the API surface this repo consumes against the live spec. The vendored
+baseline is `spec/meraki-openapi.json.gz`; `just refresh-meraki-spec` re-vendors it.
 
-## Collaboration Tips
+## Backlog tracker
 
-- Use the builder patterns in `tests/` for fixtures instead of ad-hoc data.
-- When adding functionality under a directory, consult and update its `CLAUDE.md` to maintain
-  accurate agent instructions.
-- Ensure new commands or workflows are documented once in the relevant scope to avoid conflicting
-  guidance.
-
-## Campaign documents
-
-Two documents carry the operating model. `backlog doc list --plain` shows both.
-
-- Read **"Agent fan-out protocol (canonical)"** before designing a wave — run contract and run
-  modes, the routing contract, authority and the thread pool, child lane briefs, external-contract
-  freezing, the unattended blocker contract, and the pre-flight checklist.
-- Read **"Wave operating model"** for this project's own rules, its recurring defects, lane
-  conventions, and run-end against this tracker.
-- **"Closed GitHub issues — pre-Backlog history index"** indexes every issue that existed before the
-  migration. Bodies and replies live in `archive/`.
-
-## Backlog tracker — non-negotiable rules
-
-These sit outside the tool-managed markers below so upstream instruction updates leave them alone.
-
-**`backlog/` is committed to a public repository, so tasks, docs and decisions must never contain
-real account identifiers or personal data** — no email addresses, GitHub handles, Meraki
-organization or network IDs, device serials, network or site names, API keys, or customer log
-excerpts carrying any of those. Write the shape, not the instance: "the reporter's second network",
-`<meraki-network-id>`, `<contributor-1>`. Aggregate counts, timings and structural findings are
-fine, and commit SHAs are expected in final summaries. Sweep before committing:
+`backlog/` is committed to a **public** repository. Tasks, docs and decisions must never carry real
+account identifiers or personal data: no email addresses, GitHub handles, Meraki organization or
+network IDs, device serials, network or site names, API keys, or customer log excerpts. Write the
+shape, not the instance - `<meraki-network-id>`, "the reporter's second network", `<contributor-1>`.
+Counts, timings and structural findings are fine, and commit SHAs are expected in final summaries.
+Sweep before committing:
 
 ```bash
 grep -rniE "L_[0-9]{6,}|N_[0-9]{6,}|\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}" backlog/ && echo "PII FOUND"
 ```
 
-That sweep deliberately does **not** match 40-hex strings. Meraki API keys are 40 hex characters and
-so are git SHAs, and final summaries are supposed to carry SHAs — a check that fires on every
-legitimate one is a check people learn to ignore. Never paste an API key anywhere, and rely on the
-reviewer for that one.
+That sweep deliberately does not match 40-hex strings. An API key and a git SHA are both 40 hex and
+final summaries are supposed to carry SHAs, so such a check fires on every legitimate one and gets
+learned-ignored. Never paste a key anywhere, and rely on review for that one case.
 
-**Never use `--notes` or `--plan` bare.** They *silently replace* the whole section. Use
-`--append-notes` and `--append-plan`. This is an open upstream bug, not a misunderstanding, and it
-destroys another session's writes with no warning. A global `PreToolUse` hook in the agent config denies the bare
-forms.
+Traps:
 
-**Finalize in one call**, so an interrupted agent cannot leave finished work looking unfinished:
+- `--notes`, `--plan` and `--final-summary` **silently replace** the whole section. Use
+  `--append-notes` / `--append-plan`. Upstream bug, and it destroys another session's writes with no
+  warning.
+- Section boundaries in task markdown are HTML-comment markers. Break one and the section is
+  silently dropped at exit 0, with the data still in the file but invisible until the next write
+  destroys it for real. `backlog doctor` only repairs duplicate IDs; nothing repairs this.
+- Two agents editing one task corrupts it. The v1.50.x fix covers the edit funnel only, not reorder,
+  draft saves, the TUI edit path, `doc update` or decision updates.
+- Finalize in one call, so an interrupted run cannot leave finished work looking unfinished:
+  `backlog task edit mdh-0001 --check-ac 1 --check-ac 2 -s Done`.
+- Do not build on decisions or MCP. Decisions are half-built upstream (no `edit`, `view` or
+  `update`, no supersede mechanism), and MCP costs 10-50k tokens of context against 1-2k for the
+  CLI. Durable reference goes in docs; tasks are the unit of work.
 
-```bash
-backlog task edit mdh-0001 --check-ac 1 --check-ac 2 -s Done
-```
+`auto_commit` is false in `backlog/config.yml`, so tracker changes need an explicit commit. In a
+shared checkout stage explicit pathspecs; never `git add -A` or `git commit -a`.
 
-**Never hand-edit task markdown.** Section boundaries are HTML-comment markers; break one and the
-section is *silently dropped*, exit code 0, with the data still in the file but invisible until the
-next write destroys it for real. There is no repair command — `backlog doctor` only fixes duplicate
-IDs. The guard hook denies direct writes to `backlog/tasks/`.
+## Deeper references
 
-**Never let two agents edit the same task.** The v1.50.x fix covers the edit funnel but not reorder,
-draft saves, the TUI edit path, `doc update` or decision updates.
-
-**Do not build on decisions or MCP.** Decisions are half-built upstream (no `edit`, `view` or
-`update`, no supersede mechanism); MCP is frozen and costs 10–50k tokens of context against 1–2k for
-the CLI. Durable reference goes in **docs**; tasks are the unit of work.
-
-## Git
-
-The campaign root agent owns every commit, and `auto_commit` is off in `backlog/config.yml` — a
-lane never commits its own work. This supersedes the previous blanket "never issue git commands"
-line, which predates the fan-out model and would make the model unrunnable. Sub-agents doing lane
-work still must not commit. In a shared checkout, stage explicit pathspecs; never `git add -A` or
-`git commit -a`.
+- `backlog doc list --plain` lists them. Read **"Agent fan-out protocol (canonical)"** before
+  designing a wave, and **"Wave operating model"** for this project's lane conventions and its
+  recurring defects.
+- **"Closed GitHub issues - pre-Backlog history index"** indexes every issue predating the tracker
+  migration; bodies and replies live in `archive/`.
+- `custom_components/meraki_dashboard/AGENTS.md` - read before changing integration or hub code.
+- `tests/AGENTS.md` - read before writing or changing tests.
 
 <!-- BACKLOG.MD GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.50.1 -->
