@@ -23,6 +23,9 @@ Rules for `custom_components/meraki_dashboard/` and everything below it, `hubs/`
     than passing a raw dict into an entity.
 -   Register entity constructors through `EntityFactory` (`entities/factory.py`), keyed on device type
     plus metric constants.
+-   Organization-wide metrics live in `devices/organization.py` and in the matching
+    `OrganizationDataTransformer` entries. Adding org-level telemetry means editing both; one alone
+    ships a metric that never reaches an entity.
 -   Source every metric and label name from `const.py`. No string literals.
 -   Coordinators and entities talk to hubs, never to the SDK.
 
@@ -44,6 +47,11 @@ Rules for `custom_components/meraki_dashboard/` and everything below it, `hubs/`
 -   A background task or timer appends its handle to `hass.data[DOMAIN][entry_id]["timers"]`, or to
     the hub's own unsub attribute such as `MerakiNetworkHub._discovery_unsub`, and is cancelled in
     `async_unload_entry`. A timer with no unsub survives a reload.
+-   The organization hub refreshes on three tiers plus an org tier, each with its own unsub
+    attribute cleared in `async_unload`: `_static_data_unsub` (`STATIC_DATA_TYPES`, licences and
+    device statuses, 4 hours), `_semi_static_data_unsub` (1 hour), `_dynamic_data_unsub`
+    (10 minutes) and `_organization_data_unsub`. Intervals and tier membership are constants in
+    `const.py`; add to a tier rather than starting a fourth timer.
 -   New config options extend `config/schemas.py` and `config/migration.py`, and the default must
     propagate through hubs and coordinators.
 -   Change a dependency and `manifest.json` and `pyproject.toml` both move.
