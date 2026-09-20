@@ -68,10 +68,3 @@ Configuration = "config"
 Monitoring = "monitoring"
 API = "api"
 Troubleshooting = "troubleshooting"
-[backlog]
-enabled = true
-title = "Backlog"
-include_completed = true
-include_docs = true
-include_decisions = true
-
