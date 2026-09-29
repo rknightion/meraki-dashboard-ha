@@ -31,7 +31,6 @@ that fails to import for every user on the floor.
 ## Guardrails
 
 - Never log, hardcode or commit credentials. A Meraki API key is 40 hex characters.
-- Never change a test to match an implementation you believe is wrong.
 - Ship the doc or changelog update in the same change as the behaviour it describes.
 
 ## Meraki API documentation
