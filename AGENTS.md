@@ -60,21 +60,9 @@ learned-ignored. Never paste a key anywhere, and rely on review for that one cas
 
 Traps:
 
-- `--notes`, `--plan` and `--final-summary` **silently replace** the whole section. Use
-  `--append-notes` / `--append-plan`. Upstream bug, and it destroys another session's writes with no
-  warning.
-- Section boundaries in task markdown are HTML-comment markers. Break one and the section is
-  silently dropped at exit 0, with the data still in the file but invisible until the next write
-  destroys it for real. `backlog doctor` only repairs duplicate IDs; nothing repairs this.
-- Two agents editing one task corrupts it. The v1.50.x fix covers the edit funnel only, not reorder,
-  draft saves, the TUI edit path, `doc update` or decision updates.
-- Finalize in one call, so an interrupted run cannot leave finished work looking unfinished:
-  `backlog task edit mdh-0001 --check-ac 1 --check-ac 2 -s Done`.
 - Do not build on decisions or MCP. Decisions are half-built upstream (no `edit`, `view` or
   `update`, no supersede mechanism), and MCP costs 10-50k tokens of context against 1-2k for the
   CLI. Durable reference goes in docs; tasks are the unit of work.
-- A guard hook in the agent config denies the bare section flags and direct writes to
-  `backlog/tasks/`. A denial there is the guard working, not a permissions fault.
 
 `auto_commit` is false in `backlog/config.yml`, so tracker changes need an explicit commit. In a
 shared checkout stage explicit pathspecs; never `git add -A` or `git commit -a`.
