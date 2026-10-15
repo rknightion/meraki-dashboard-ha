@@ -69,9 +69,8 @@ shared checkout stage explicit pathspecs; never `git add -A` or `git commit -a`.
 
 ## Deeper references
 
-- `backlog doc list --plain` lists them. Read **"Agent fan-out protocol (canonical)"** before
-  designing a wave, and **"Wave operating model"** for this project's lane conventions and its
-  recurring defects.
+- `backlog doc list --plain` lists them.
+- Loops: the protocol lives in `~/repos/agent-docs/sources/loop/` (this board's "Loop protocol pointer" doc points there); this repository's loop facts are in `LOOP.md`.
 - **"Closed GitHub issues - pre-Backlog history index"** indexes every issue predating the tracker
   migration; bodies and replies live in `archive/`.
 - `custom_components/meraki_dashboard/AGENTS.md` - read before changing integration or hub code.
