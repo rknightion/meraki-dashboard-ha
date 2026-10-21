@@ -160,3 +160,9 @@ convention = "google"
 quote-style = "double"
 # Like Black, indent with spaces.
 indent-style = "space"
+
+[tool.uv]
+# Home Assistant pins uv for its installer; replace its vulnerable bundled roots.
+# https://github.com/advisories/GHSA-hq85-5cpj-mr62
+# This override affects the development environment, not the shipped integration.
+override-dependencies = ["uv>=0.13.4"]

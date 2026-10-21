@@ -28,6 +28,13 @@ floor, which ships Python 3.11. ruff is pinned to `target-version = "py311"` for
 raise it to match `requires-python`: the formatter then emits 3.14-only syntax into shipped code
 that fails to import for every user on the floor.
 
+## Development trust store
+
+The development lock overrides Home Assistant's uv pin to require uv 0.13.4 or newer,
+which removes compromised emSign roots (GHSA-hq85-5cpj-mr62). Keep certifi at
+2026.10.19 or newer and regenerate the lock when changing these dependencies.
+The release ZIP contains integration source only; Home Assistant owns runtime TLS trust.
+
 ## Guardrails
 
 - Never log, hardcode or commit credentials. A Meraki API key is 40 hex characters.
