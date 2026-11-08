@@ -3,10 +3,27 @@ tier: guarded
 gate: just check
 ci-required: ci-success, validate-success
 grafana-stack: none
+tracker: github
+landing: pr
 
-Public repository: `backlog/` is committed to it, so no Meraki network ID, device serial, network name
-or customer log line in any task or doc; quote the shape and the API call. Run `just` with stdin from
-`/dev/null`.
+Public repository: issues and pull requests are public, so no Meraki network ID, device serial, network
+name, organization ID or customer log line in any issue, pull request or doc; quote the shape and the
+API call. Run `just` with stdin from `/dev/null`.
+
+The tracker working model is `~/repos/agent-docs/docs/github-tracker.md` (maintainers only).
+
+## Queue
+
+- The queue is `just tracker queue`: open issues at Project Status Ready on the rknightion Project.
+- A charter selects work by labels (`type:task`, `type:bug`, `type:feature`, `needs-owner`,
+  `needs-triage`) and Project fields (Status, Priority, Effort, Lane). Never queue a `needs-owner` or
+  `needs-triage` issue, and never the Renovate Dependency Dashboard (#256).
+- Only the root writes issues and the Project, through `just tracker`. A lane returns the status and
+  the AC ticks it wants.
+- A queue row names the issue as `#N`. A legacy board id (`MDH-0001`) resolves with `just issue <ID>`;
+  `.github/tracker/id-map.json` is the map. Older references to `#293` and `#295` to `#303` name
+  issues deleted before the board existed: read them in `archive/github-issues-2026-08-14.json`.
+  `#50`, `#132`, `#143`, `#144`, `#218` and `#256` still resolve on GitHub.
 
 ## Credentials
 

@@ -48,61 +48,30 @@ The release ZIP contains integration source only; Home Assistant owns runtime TL
 `just api-drift` diffs the API surface this repo consumes against the live spec. The vendored
 baseline is `spec/meraki-openapi.json.gz`; `just refresh-meraki-spec` re-vendors it.
 
-## Backlog tracker
+## Tracking work
 
-`backlog/` is committed to a **public** repository. Tasks, docs and decisions must never carry real
-account identifiers or personal data: no email addresses, GitHub handles, Meraki organization or
-network IDs, device serials, network or site names, API keys, or customer log excerpts. Write the
-shape, not the instance - `<meraki-network-id>`, "the reporter's second network", `<contributor-1>`.
-Counts, timings and structural findings are fine, and commit SHAs are expected in final summaries.
-Sweep before committing:
+Work is tracked in this repository's GitHub issues; they are the only queue. Do not add a checklist
+file such as `ROADMAP.md` beside them.
 
-```bash
-grep -rniE "L_[0-9]{6,}|N_[0-9]{6,}|\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}" backlog/ && echo "PII FOUND"
-```
-
-That sweep deliberately does not match 40-hex strings. An API key and a git SHA are both 40 hex and
-final summaries are supposed to carry SHAs, so such a check fires on every legitimate one and gets
-learned-ignored. Never paste a key anywhere, and rely on review for that one case.
-
-Traps:
-
-- Do not build on decisions or MCP. Decisions are half-built upstream (no `edit`, `view` or
-  `update`, no supersede mechanism), and MCP costs 10-50k tokens of context against 1-2k for the
-  CLI. Durable reference goes in docs; tasks are the unit of work.
-
-`auto_commit` is false in `backlog/config.yml`, so tracker changes need an explicit commit. In a
-shared checkout stage explicit pathspecs; never `git add -A` or `git commit -a`.
+- A pull request body says how it relates to an issue, on a line of its own: `Closes #N` with the
+  `Acceptance evidence` table from `.github/pull_request_template.md` (one row for each acceptance
+  criterion of that issue), `Refs #N` when it only relates to one, or `Task: none, <reason>`.
+- A pull request that changes `.github/workflows/` or `.github/actions/` carries no closing keyword:
+  write `Task: none, <reason>`, with `Refs #N` beside it if you like.
+- Contributors never need the project board or the tracker tooling; a maintainer handles both.
+- Issues and pull requests are public, so they carry no real identifiers: no email addresses,
+  handles, Meraki organization or network IDs, device serials, network or site names, API keys or
+  customer log excerpts. Write the shape, not the instance: `<meraki-network-id>`, "the reporter's
+  second network", `<contributor-1>`.
+- Older commits, docs and tests cite legacy board ids such as `MDH-0001`. `just issue <ID>` prints
+  the issue each one became; `.github/tracker/id-map.json` is the map.
+- Issues from before the board existed keep their numbers: `#50`, `#132`, `#143`, `#144`, `#218` and
+  `#256` still resolve on GitHub. `#293` and `#295` to `#303` were deleted after being archived; read
+  them in `archive/github-issues-2026-08-14.json`.
 
 ## Deeper references
 
-- `backlog doc list --plain` lists them.
-- Loops: the protocol lives in `~/repos/agent-docs/sources/loop/` (this board's "Loop protocol pointer" doc points there); this repository's loop facts are in `LOOP.md`.
-- **"Closed GitHub issues - pre-Backlog history index"** indexes every issue predating the tracker
-  migration; bodies and replies live in `archive/`.
+- `.github/tracker/history/` holds the retired board's documents, including the index of closed
+  GitHub issues from before the board existed (bodies and replies live in `archive/`).
 - `custom_components/meraki_dashboard/AGENTS.md` - read before changing integration or hub code.
 - `tests/AGENTS.md` - read before writing or changing tests.
-
-<!-- BACKLOG.MD GUIDELINES START -->
-<!-- backlog.md-instructions-version: 1.50.1 -->
-<CRITICAL_INSTRUCTION>
-
-## Backlog.md Workflow
-
-This project uses Backlog.md for task and project management.
-
-**For every user request in this project, run `backlog instructions overview` before answering or taking action.**
-
-Use the overview to decide whether to search, read, create, or update Backlog tasks.
-
-Before task lifecycle actions, read the matching detailed guide:
-- `backlog instructions task-creation` before creating or splitting tasks
-- `backlog instructions task-execution` before planning, changing status or assignee, adding a plan or implementation notes, or implementing task work
-- `backlog instructions task-finalization` before checking acceptance criteria, writing final summaries, or moving tasks to terminal statuses
-
-Use `backlog <command> --help` before running unfamiliar commands. Help shows options, fields, and examples.
-
-Do not edit Backlog task, draft, document, decision, or milestone markdown files directly. Use the `backlog` CLI so metadata, relationships, and history stay consistent.
-
-</CRITICAL_INSTRUCTION>
-<!-- BACKLOG.MD GUIDELINES END -->

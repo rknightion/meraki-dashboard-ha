@@ -211,7 +211,9 @@ coverage.xml
 # Home Assistant configuration
 config/*
 !config/configuration.yaml
-.claude/
+# .claude/ is per-machine state except .claude/skills/, which links to the contributor skills in .agents/skills/.
+.claude/*
+!.claude/skills/
 
 config/
 

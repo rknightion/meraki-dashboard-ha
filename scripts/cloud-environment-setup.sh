@@ -6,7 +6,7 @@ set -euo pipefail
 if [[ "${MERAKI_DASHBOARD_HA_CLOUD_SETUP:-}" != "1" ]]; then
     cat >&2 <<'EOF'
 Refusing to run: this script provisions a disposable cloud agent sandbox with
-system package installs, uv, and Backlog.md via sudo/root privileges. Local
+system package installs and uv via sudo/root privileges. Local
 agents and developer machines must not execute it.
 If this is a cloud agent environment (Codex cloud tasks, Claude Code cloud
 sessions), re-run with MERAKI_DASHBOARD_HA_CLOUD_SETUP=1 to confirm.
@@ -14,7 +14,6 @@ EOF
     exit 1
 fi
 
-readonly BACKLOG_VERSION="1.50.1"
 readonly REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ((EUID == 0)); then
@@ -64,9 +63,6 @@ if ! command -v uv >/dev/null 2>&1; then
     export PATH="${HOME}/.local/bin:${PATH}"
 fi
 
-echo "Installing Backlog.md ${BACKLOG_VERSION}..."
-"${AS_ROOT[@]}" npm install --global "backlog.md@${BACKLOG_VERSION}"
-
 echo "Installing the locked Python development environment and validation tools..."
 cd "${REPOSITORY_ROOT}"
 uv sync --frozen --all-groups
@@ -79,6 +75,5 @@ uv run ruff --version
 uv run mypy --version
 uv run pytest --version
 pre-commit --version
-backlog --version
 
 echo "Cloud environment setup complete. Run 'make lint' and 'make test' to validate changes."
