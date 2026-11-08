@@ -1,0 +1,2 @@
+# The shared AWS key pattern matches inside this exception class name.
+MerakiAuthenticationError
