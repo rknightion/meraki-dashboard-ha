@@ -1,0 +1,38 @@
+{
+ "held": {},
+ "issues": {
+  "MDH-0001": {
+   "number": 499,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/499"
+  },
+  "MDH-0002": {
+   "number": 500,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/500"
+  },
+  "MDH-0003": {
+   "number": 501,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/501"
+  },
+  "MDH-0004": {
+   "number": 502,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/502"
+  },
+  "MDH-0005": {
+   "number": 503,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/503"
+  },
+  "MDH-0006": {
+   "number": 504,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/504"
+  },
+  "MDH-0007": {
+   "number": 505,
+   "url": "https://github.com/rknightion/meraki-dashboard-ha/issues/505"
+  }
+ },
+ "prefix": "MDH",
+ "repo": "rknightion/meraki-dashboard-ha",
+ "schema": 1,
+ "source_sha": "0bac7f89182281a085430430abe345a499fbe2a6",
+ "synthetic": []
+}
