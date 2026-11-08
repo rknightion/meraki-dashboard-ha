@@ -22,7 +22,7 @@ The tracker working model is `~/repos/agent-docs/docs/github-tracker.md` (mainta
   the AC ticks it wants.
 - A queue row names the issue as `#N`. A legacy board id (`MDH-0001`) resolves with `just issue <ID>`;
   `.github/tracker/id-map.json` is the map. Older references to `#293` and `#295` to `#303` name
-  issues deleted before the board existed: read them in `archive/github-issues-2026-08-14.json`.
+  issues deleted before the board existed: read them in the JSON dump under `archive/`.
   `#50`, `#132`, `#143`, `#144`, `#218` and `#256` still resolve on GitHub.
 
 ## Credentials
