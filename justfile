@@ -149,3 +149,18 @@ new-platform:
     echo "  1. Update PLATFORMS in __init__.py"
     echo "  2. Implement the platform-specific logic"
     echo "  3. Add tests in tests/test_${platform}.py"
+
+# GitHub issues and the rknightion Project; maintainers only (needs the tracker tools and credentials)
+[group('tracker')]
+[positional-arguments]
+tracker *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export TRACKER_REPO=rknightion/meraki-dashboard-ha TRACKER_PROJECT_OWNER=rknightion TRACKER_PROJECT=7
+    export TRACKER_ISSUE_IDENTITY=app TRACKER_PROJECT_IDENTITY=user
+    exec tracker-with-token "$@"
+
+# print the issue a legacy board id (MDH-0001) became
+[group('tracker')]
+issue id:
+    TRACKER_REPO=rknightion/meraki-dashboard-ha tracker legacy {{ quote(id) }}
