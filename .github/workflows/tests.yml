@@ -9,6 +9,9 @@ on:
     branches:
       - main
       - dev
+    # `edited` re-runs the workflow when the pull request body changes, so the acceptance
+    # evidence check reads the new table. Every job below runs on it.
+    types: [opened, edited, reopened, synchronize, ready_for_review]
 
 permissions:
   contents: read
@@ -16,7 +19,7 @@ permissions:
 # Cancel a superseded run on the same ref (rapid pushes / PR updates) to free runners.
 concurrency:
   group: tests-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   PYTHON_VERSION: "3.14"
@@ -155,6 +158,25 @@ jobs:
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: coverage.xml
+  # A pull request that closes an issue shows evidence for each acceptance criterion. Checks only
+  # pull requests with a closing keyword (enforce-all-prs: false): this repository takes outside and
+  # bot pull requests. The reusable fails on any other event. Check run: `ac-evidence / Acceptance evidence`.
+  ac-evidence:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    uses: rknightion/.github/.github/workflows/ac-evidence.yml@8f00b7fb896191e598f12ed565395697c539add1 # v1.26.9
+
+  # The lines a pull request adds carry no identifier, email address, public address or credential
+  # shape. Check run: `privacy-sweep / Privacy sweep`.
+  privacy-sweep:
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+    uses: rknightion/.github/.github/workflows/privacy-sweep.yml@8f00b7fb896191e598f12ed565395697c539add1 # v1.26.9
+
   # Single required status check from this workflow (the branch ruleset requires this + validate.yml's
   # validate-success). if: always() + explicit failure check so a failed/cancelled leg fails the gate.
   # Renovate automerge waits for this to go green.
@@ -164,11 +186,29 @@ jobs:
     if: always()
     needs:
       - pytest
+      - ac-evidence
+      - privacy-sweep
     steps:
       - name: Fail if any required job did not pass
         if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          RESULTS: ${{ join(needs.*.result, ', ') }}
         run: |
-          echo "A required job failed or was cancelled: ${{ join(needs.*.result, ', ') }}"
+          echo "A required job failed or was cancelled: ${RESULTS}"
           exit 1
+      # ac-evidence and privacy-sweep are skipped off a pull request (push), which counts as passing
+      # there. On a pull request a skipped job reports success, so they must have actually run and passed.
+      - name: Fail if a pull request check did not run
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          AC_EVIDENCE: ${{ needs.ac-evidence.result }}
+          PRIVACY_SWEEP: ${{ needs.privacy-sweep.result }}
+        run: |
+          if [[ "$AC_EVIDENCE" != "success" || "$PRIVACY_SWEEP" != "success" ]]; then
+            echo "ac-evidence: ${AC_EVIDENCE}, privacy-sweep: ${PRIVACY_SWEEP}; both must pass on a pull request"
+            exit 1
+          fi
       - name: All required jobs passed
-        run: echo "ci-success — ${{ join(needs.*.result, ', ') }}"
+        env:
+          RESULTS: ${{ join(needs.*.result, ', ') }}
+        run: echo "ci-success - ${RESULTS}"
