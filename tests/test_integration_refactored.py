@@ -13,6 +13,7 @@ from custom_components.meraki_dashboard.const import (
     ENTITY_REMOVAL_MIN_DISCOVERY_PASSES,
 )
 from custom_components.meraki_dashboard.utils.device_info import create_device_info
+from custom_components.meraki_dashboard.utils.helpers import find_device_by_identifier
 from tests.builders import (
     IntegrationTestHelper,
     MerakiDeviceBuilder,
@@ -259,9 +260,7 @@ class TestEntityCreationWithBuilders:
         hub = next(iter(network_hubs.values()))
 
         hub_identifier = (DOMAIN, f"{hub.network_id}_{hub.device_type}")
-        hub_device_entry = device_registry.async_get_device(
-            identifiers={hub_identifier}
-        )
+        hub_device_entry = find_device_by_identifier(device_registry, hub_identifier)
         assert hub_device_entry is not None
 
         device_info = create_device_info(
@@ -271,6 +270,8 @@ class TestEntityCreationWithBuilders:
             hub.device_type,
             None,
         )
+        # The registry no longer accepts via_device; it is linked by id below.
+        device_info.pop("via_device", None)
         device_entry = device_registry.async_get_or_create(
             config_entry_id=entry_id, **device_info
         )

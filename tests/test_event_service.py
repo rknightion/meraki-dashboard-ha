@@ -240,7 +240,6 @@ class TestMerakiEventService:
             "custom_components.meraki_dashboard.services.event_service.dr"
         ) as mock_dr:
             mock_registry = MagicMock()
-            mock_registry.async_get_device.return_value = None
             mock_registry.devices.values.return_value = []
             mock_dr.async_get.return_value = mock_registry
 
@@ -260,9 +259,10 @@ class TestMerakiEventService:
         ) as mock_dr:
             mock_device = MagicMock()
             mock_device.id = "device_123"
+            mock_device.identifiers = {("meraki_dashboard", "ABC123")}
 
             mock_registry = MagicMock()
-            mock_registry.async_get_device.return_value = mock_device
+            mock_registry.devices.values.return_value = [mock_device]
             mock_dr.async_get.return_value = mock_registry
 
             # First reading - no previous state

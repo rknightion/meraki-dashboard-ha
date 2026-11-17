@@ -30,6 +30,7 @@ from custom_components.meraki_dashboard.const import (
     DOMAIN,
     SENSOR_TYPE_MT,
 )
+from custom_components.meraki_dashboard.utils.helpers import find_device_by_identifier
 
 
 @pytest.mark.asyncio
@@ -49,15 +50,19 @@ async def test_migration_strips_non_mt_keeps_hub_devices(
     device_registry = dr.async_get(hass)
 
     # Non-MT hardware removed (positive MR/MS/MV model-prefix predicate).
-    assert device_registry.async_get_device({(DOMAIN, ids["mr"])}) is None
+    assert find_device_by_identifier(device_registry, (DOMAIN, ids["mr"])) is None
 
     # MT device kept.
-    assert device_registry.async_get_device({(DOMAIN, ids["mt"])}) is not None
+    assert find_device_by_identifier(device_registry, (DOMAIN, ids["mt"])) is not None
 
     # Hub plumbing devices kept (models "Organization" / "MT Network Hub" do
     # NOT start with MR/MS/MV, so the positive predicate leaves them).
-    assert device_registry.async_get_device({(DOMAIN, ids["org_hub"])}) is not None
-    assert device_registry.async_get_device({(DOMAIN, ids["net_hub"])}) is not None
+    assert (
+        find_device_by_identifier(device_registry, (DOMAIN, ids["org_hub"])) is not None
+    )
+    assert (
+        find_device_by_identifier(device_registry, (DOMAIN, ids["net_hub"])) is not None
+    )
 
     # Repair issue raised because a device was removed.
     issue_registry = ir.async_get(hass)
@@ -108,8 +113,11 @@ async def test_migration_idempotent_on_mt_only_entry(hass: HomeAssistant) -> Non
     assert entry.version == 3
 
     # Nothing removed.
-    assert device_registry.async_get_device({(DOMAIN, mt_serial)}) is not None
-    assert device_registry.async_get_device({(DOMAIN, org_hub_identifier)}) is not None
+    assert find_device_by_identifier(device_registry, (DOMAIN, mt_serial)) is not None
+    assert (
+        find_device_by_identifier(device_registry, (DOMAIN, org_hub_identifier))
+        is not None
+    )
 
     # No repair issue because no device was removed.
     issue_registry = ir.async_get(hass)
