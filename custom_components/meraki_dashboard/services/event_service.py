@@ -25,6 +25,7 @@ from ..const import (
     MT_SENSOR_DOOR,
     MT_SENSOR_WATER,
 )
+from ..utils.helpers import find_device_by_identifier
 
 if TYPE_CHECKING:
     from ..types import MerakiDeviceData
@@ -285,8 +286,8 @@ class MerakiEventService(EventPublisher):
         domain = str(device_info.get("domain", "meraki_dashboard"))
 
         # Try the exact identifier format first
-        device_entry = device_registry.async_get_device(
-            identifiers={(domain, device_serial)}
+        device_entry = find_device_by_identifier(
+            device_registry, (domain, device_serial)
         )
 
         # If not found, search for device with matching identifier pattern

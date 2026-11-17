@@ -8,6 +8,21 @@ from collections.abc import Callable
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
+
+
+def find_device_by_identifier(
+    device_registry: DeviceRegistry, identifier: tuple[str, str]
+) -> DeviceEntry | None:
+    """Return the registered device carrying an identifier, or None.
+
+    Home Assistant 2026.10 makes ``DeviceRegistry.async_get_device`` raise because
+    identifiers are only unique per config entry, so scan the registry directly.
+    """
+    for device in device_registry.devices.values():
+        if identifier in device.identifiers:
+            return device
+    return None
 
 
 async def batch_api_calls(

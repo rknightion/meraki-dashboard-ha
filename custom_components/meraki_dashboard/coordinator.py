@@ -19,6 +19,7 @@ from .const import (
 from .types import CoordinatorData, MerakiDeviceData
 from .utils import performance_monitor
 from .utils.error_handling import handle_api_errors
+from .utils.helpers import find_device_by_identifier
 from .utils.retry import with_standard_retries
 
 if TYPE_CHECKING:
@@ -223,9 +224,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
         entity_registry = er.async_get(self.hass)
 
         hub_identifier = (DOMAIN, f"{self.hub.network_id}_{self.hub.device_type}")
-        hub_device_entry = device_registry.async_get_device(
-            identifiers={hub_identifier}
-        )
+        hub_device_entry = find_device_by_identifier(device_registry, hub_identifier)
 
         if not hub_device_entry:
             _LOGGER.debug(

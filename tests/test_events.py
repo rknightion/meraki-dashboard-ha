@@ -62,7 +62,8 @@ class TestMerakiEventHandler:
         mock_registry = MagicMock()
         mock_device = MagicMock()
         mock_device.id = "test_device_id"
-        mock_registry.async_get_device.return_value = mock_device
+        mock_device.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        mock_registry.devices.values.return_value = [mock_device]
         mock_dr_get.return_value = mock_registry
 
         # Door sensor readings
@@ -124,14 +125,9 @@ class TestMerakiEventHandler:
         mock_device2 = MagicMock()
         mock_device2.id = "device2_id"
 
-        def mock_get_device(identifiers):
-            if (DOMAIN, "Q2XX-XXXX-XXXX") in identifiers:
-                return mock_device1
-            elif (DOMAIN, "Q2YY-YYYY-YYYY") in identifiers:
-                return mock_device2
-            return None
-
-        mock_registry.async_get_device = mock_get_device
+        mock_device1.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        mock_device2.identifiers = {(DOMAIN, "Q2YY-YYYY-YYYY")}
+        mock_registry.devices.values.return_value = [mock_device1, mock_device2]
         mock_dr_get.return_value = mock_registry
 
         # Device 1 readings
@@ -224,14 +220,9 @@ class TestMerakiEventHandler:
         mock_device2 = MagicMock()
         mock_device2.id = "device2_id"
 
-        def mock_get_device(identifiers):
-            if (DOMAIN, "Q2XX-XXXX-XXXX") in identifiers:
-                return mock_device1
-            elif (DOMAIN, "Q2YY-YYYY-YYYY") in identifiers:
-                return mock_device2
-            return None
-
-        mock_registry.async_get_device = mock_get_device
+        mock_device1.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        mock_device2.identifiers = {(DOMAIN, "Q2YY-YYYY-YYYY")}
+        mock_registry.devices.values.return_value = [mock_device1, mock_device2]
         mock_dr_get.return_value = mock_registry
 
         # First reading
@@ -437,7 +428,8 @@ class TestEventHandlerEdgeCases:
         mock_registry = MagicMock()
         mock_device = MagicMock()
         mock_device.id = "device_id"
-        mock_registry.async_get_device.return_value = mock_device
+        mock_device.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
+        mock_registry.devices.values.return_value = [mock_device]
         mock_dr_get.return_value = mock_registry
 
         with patch("homeassistant.core.EventBus.async_fire"):
