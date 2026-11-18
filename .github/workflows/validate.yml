@@ -31,32 +31,30 @@ jobs:
       - name: Run hassfest validation
         uses: home-assistant/actions/hassfest@f6f29a7ee3fa0eccadf3620a7b9ee00ab54ec03b # master # zizmor: ignore[ref-version-mismatch] no semver tags; master branch only
 
-  hacs: # https://github.com/hacs/action
-    name: HACS validation
+  # Keep the required check and run HACS even when Hassfest fails. The validators
+  # still run on separate runners; the HACS runner also reports their verdict.
+  validate-success:
     runs-on: ubuntu-latest
+    name: validate-success
+    if: always()
+    needs: hassfest
     steps:
       - name: Run HACS validation
+        id: hacs
+        if: ${{ !cancelled() }}
         uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:
           category: integration
           # Remove this 'ignore' key when you have added brand images for your integration to https://github.com/home-assistant/brands
           ignore: brands
 
-  # Required status check from this workflow (the branch ruleset requires this + tests.yml's ci-success).
-  # if: always() + explicit failure check so a failed/cancelled leg fails the gate. No path filter on the
-  # pull_request trigger above, so this reports on every PR. Renovate automerge waits for it to go green.
-  validate-success:
-    runs-on: ubuntu-latest
-    name: validate-success
-    if: always()
-    needs:
-      - hassfest
-      - hacs
-    steps:
-      - name: Fail if any required job did not pass
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+      - name: Require both validations to pass
+        if: always()
+        env:
+          HASSFEST: ${{ needs.hassfest.result }}
+          HACS: ${{ steps.hacs.outcome }}
         run: |
-          echo "A required job failed or was cancelled: ${{ join(needs.*.result, ', ') }}"
-          exit 1
-      - name: All required jobs passed
-        run: echo "validate-success — ${{ join(needs.*.result, ', ') }}"
+          echo "Hassfest: ${HASSFEST}, HACS: ${HACS}"
+          if [[ "$HASSFEST" != success || "$HACS" != success ]]; then
+            exit 1
+          fi
