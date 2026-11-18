@@ -63,7 +63,7 @@ class TestMerakiEventHandler:
         mock_device = MagicMock()
         mock_device.id = "test_device_id"
         mock_device.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
-        mock_registry.devices.values.return_value = [mock_device]
+        mock_registry.devices = [mock_device]
         mock_dr_get.return_value = mock_registry
 
         # Door sensor readings
@@ -127,7 +127,7 @@ class TestMerakiEventHandler:
 
         mock_device1.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
         mock_device2.identifiers = {(DOMAIN, "Q2YY-YYYY-YYYY")}
-        mock_registry.devices.values.return_value = [mock_device1, mock_device2]
+        mock_registry.devices = [mock_device1, mock_device2]
         mock_dr_get.return_value = mock_registry
 
         # Device 1 readings
@@ -222,7 +222,7 @@ class TestMerakiEventHandler:
 
         mock_device1.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
         mock_device2.identifiers = {(DOMAIN, "Q2YY-YYYY-YYYY")}
-        mock_registry.devices.values.return_value = [mock_device1, mock_device2]
+        mock_registry.devices = [mock_device1, mock_device2]
         mock_dr_get.return_value = mock_registry
 
         # First reading
@@ -429,7 +429,7 @@ class TestEventHandlerEdgeCases:
         mock_device = MagicMock()
         mock_device.id = "device_id"
         mock_device.identifiers = {(DOMAIN, "Q2XX-XXXX-XXXX")}
-        mock_registry.devices.values.return_value = [mock_device]
+        mock_registry.devices = [mock_device]
         mock_dr_get.return_value = mock_registry
 
         with patch("homeassistant.core.EventBus.async_fire"):

@@ -52,6 +52,7 @@ from ..const import (
 from ..coordinator import MerakiSensorCoordinator
 from ..data.transformers import transformer_registry
 from ..entities.base import MerakiRestoreSensorEntity, MerakiSensorEntity
+from ..types import CoordinatorData
 from ..utils.sanitization import sanitize_attribute_value
 
 _LOGGER = logging.getLogger(__name__)
@@ -252,10 +253,7 @@ class MerakiMTSensor(MerakiSensorEntity):
     @property
     def native_value(self) -> Any:
         """Return the state of the sensor."""
-        if not self.coordinator.data:
-            return None
-
-        device_data = self.coordinator.data.get(self._device_serial)
+        device_data = self._coordinator_device_data()
         if not device_data:
             return None
 
@@ -272,7 +270,7 @@ class MerakiMTSensor(MerakiSensorEntity):
             return False
 
         # MT-specific availability check: we need actual readings
-        device_data = self.coordinator.data.get(self._device_serial)
+        device_data = self._coordinator_device_data()
         if not device_data:
             return False
 
@@ -289,8 +287,8 @@ class MerakiMTSensor(MerakiSensorEntity):
             attrs["mac_address"] = sanitize_attribute_value(mac_address)
 
         # For temperature sensors, also include Fahrenheit value
-        if self.entity_description.key == "temperature" and self.coordinator.data:
-            device_data = self.coordinator.data.get(self._device_serial)
+        if self.entity_description.key == "temperature":
+            device_data = self._coordinator_device_data()
             if device_data:
                 readings = device_data.get("readings", [])
                 for reading in readings:
@@ -328,7 +326,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
         self._energy_value = 0.0
         self._last_power_value: float | None = None
         self._last_power_timestamp: datetime.datetime | None = None
-        self._last_coordinator_data = None
+        self._last_coordinator_data: CoordinatorData | None = None
 
     async def async_added_to_hass(self) -> None:
         """Handle entity being added to hass."""
@@ -388,7 +386,7 @@ class MerakiMTEnergySensor(MerakiRestoreSensorEntity):
 
     def _calculate_energy(self) -> None:
         """Calculate energy from power readings."""
-        device_data = self.coordinator.data.get(self._device_serial)
+        device_data = self._coordinator_device_data()
         if not device_data:
             return
 

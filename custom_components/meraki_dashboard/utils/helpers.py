@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from collections.abc import Callable
+from collections.abc import Callable, Iterator, Mapping
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry, DeviceRegistry
+
+
+def iter_registry_devices(device_registry: DeviceRegistry) -> Iterator[DeviceEntry]:
+    """Iterate device entries from a current collection or older mapping."""
+    devices = device_registry.devices
+    return iter(devices.values() if isinstance(devices, Mapping) else devices)
 
 
 def find_device_by_identifier(
@@ -16,10 +22,9 @@ def find_device_by_identifier(
 ) -> DeviceEntry | None:
     """Return the registered device carrying an identifier, or None.
 
-    Home Assistant 2026.10 makes ``DeviceRegistry.async_get_device`` raise because
-    identifiers are only unique per config entry, so scan the registry directly.
+    Home Assistant 2026.10 deprecates unscoped ``async_get_device`` lookups.
     """
-    for device in device_registry.devices.values():
+    for device in iter_registry_devices(device_registry):
         if identifier in device.identifiers:
             return device
     return None

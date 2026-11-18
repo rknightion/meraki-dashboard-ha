@@ -1,15 +1,21 @@
 """Repair flows for Meraki Dashboard integration."""
 
-import logging
-from typing import Any
+from __future__ import annotations
 
-import voluptuous as vol
+import logging
+from typing import TYPE_CHECKING, Any
+
 from homeassistant.components.repairs import ConfirmRepairFlow, RepairsFlow
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import issue_registry as ir
 
 from .const import DOMAIN
+
+if TYPE_CHECKING:
+    import probatio as vol
+    from homeassistant.components.repairs import RepairsFlowResult
+else:
+    import voluptuous as vol
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,7 +68,7 @@ class ApiKeyExpiredRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> RepairsFlowResult:
         """Handle the initial step."""
         if user_input is not None:
             # Start reauthentication flow
@@ -75,9 +81,8 @@ class ApiKeyExpiredRepairFlow(RepairsFlow):
                         DOMAIN,
                         context={
                             "source": "reauth",
-                            "source_config_entry": config_entry,
+                            "entry_id": config_entry.entry_id,
                         },
-                        data=config_entry.data,
                     )
 
             # Remove the repair issue
@@ -140,7 +145,7 @@ class NetworkAccessLostRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> RepairsFlowResult:
         """Handle the initial step."""
         if user_input is not None:
             # Try to reload the config entry
@@ -218,7 +223,7 @@ class DeviceDiscoveryFailedRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> RepairsFlowResult:
         """Handle the initial step."""
         if user_input is not None:
             # Try manual device discovery

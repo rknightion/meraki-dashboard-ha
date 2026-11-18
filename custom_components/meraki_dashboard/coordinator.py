@@ -218,6 +218,9 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
             )
             return
 
+        if (config_entry := self.config_entry) is None:
+            return
+        entry_id = config_entry.entry_id
         self._last_cleanup_discovery_time = hub_last_discovery_time
 
         device_registry = dr.async_get(self.hass)
@@ -240,7 +243,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
             device_entries = [
                 entry
                 for entry in dr.async_entries_for_config_entry(
-                    device_registry, self.config_entry.entry_id
+                    device_registry, entry_id
                 )
                 if entry.via_device_id == hub_device_entry.id
             ]
@@ -255,9 +258,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
                 for identifier_domain, identifier in device_entry.identifiers:
                     if identifier_domain != DOMAIN:
                         continue
-                    serial = extract_device_serial_from_identifier(
-                        self.config_entry.entry_id, identifier
-                    )
+                    serial = extract_device_serial_from_identifier(entry_id, identifier)
                     if serial:
                         break
 
@@ -289,7 +290,7 @@ class MerakiSensorCoordinator(DataUpdateCoordinator[CoordinatorData]):
                     entity_registry, device_entry.id
                 )
                 for entity_entry in entity_entries:
-                    if entity_entry.config_entry_id != self.config_entry.entry_id:
+                    if entity_entry.config_entry_id != entry_id:
                         continue
                     entity_registry.async_remove(entity_entry.entity_id)
                     removed_entities += 1
