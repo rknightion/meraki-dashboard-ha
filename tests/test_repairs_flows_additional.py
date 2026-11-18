@@ -1,7 +1,9 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.meraki_dashboard.const import DOMAIN
 from custom_components.meraki_dashboard.repairs import (
@@ -55,8 +57,39 @@ async def test_apikey_flow_async_step_init(hass: HomeAssistant, mock_config_entr
         )
         result = await flow.async_step_init(user_input={})
         delete_issue.assert_called_once_with(hass, DOMAIN, "api_key_expired_test")
-        hass.config_entries.flow.async_init.assert_called_once()
+        hass.config_entries.flow.async_init.assert_called_once_with(
+            DOMAIN,
+            context={"source": "reauth", "entry_id": mock_config_entry.entry_id},
+        )
         assert result["type"] == "create_entry"
+
+
+@pytest.mark.usefixtures("enable_custom_integrations")
+async def test_apikey_repair_opens_reauth_form_without_resubmitting_key(
+    hass: HomeAssistant, mock_config_entry
+):
+    mock_config_entry.add_to_hass(hass)
+    flow = ApiKeyExpiredRepairFlow(
+        hass, "api_key_expired_fixture", {"config_entry_id": mock_config_entry.entry_id}
+    )
+
+    with patch(
+        "custom_components.meraki_dashboard.config_flow.meraki.aio.AsyncDashboardAPI",
+        side_effect=ValueError(
+            "Unexpected API call before reauthentication submission"
+        ),
+    ) as api:
+        result = await flow.async_step_init(user_input={})
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    api.assert_not_called()
+    (reauth,) = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert reauth["context"]["source"] == SOURCE_REAUTH
+    assert reauth["context"]["entry_id"] == mock_config_entry.entry_id
+    form = await hass.config_entries.flow.async_configure(reauth["flow_id"])
+    assert form["type"] is FlowResultType.FORM
+    assert form["step_id"] == SOURCE_REAUTH
+    hass.config_entries.flow.async_abort(reauth["flow_id"])
 
 
 @pytest.mark.asyncio

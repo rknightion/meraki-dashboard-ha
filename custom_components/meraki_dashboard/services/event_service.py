@@ -25,7 +25,7 @@ from ..const import (
     MT_SENSOR_DOOR,
     MT_SENSOR_WATER,
 )
-from ..utils.helpers import find_device_by_identifier
+from ..utils.helpers import find_device_by_identifier, iter_registry_devices
 
 if TYPE_CHECKING:
     from ..types import MerakiDeviceData
@@ -292,7 +292,7 @@ class MerakiEventService(EventPublisher):
 
         # If not found, search for device with matching identifier pattern
         if not device_entry:
-            for device in device_registry.devices.values():
+            for device in iter_registry_devices(device_registry):
                 for identifier in device.identifiers:
                     if identifier[0] == domain and identifier[1].endswith(
                         f"_{device_serial}"

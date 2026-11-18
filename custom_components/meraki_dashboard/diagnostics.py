@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 from .const import DOMAIN
+from .utils.helpers import iter_registry_devices
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ async def async_get_config_entry_diagnostics(
     device_registry = async_get_device_registry(hass)
     devices = [
         device
-        for device in device_registry.devices.values()
+        for device in iter_registry_devices(device_registry)
         if any(identifier[0] == DOMAIN for identifier in device.identifiers)
     ]
 

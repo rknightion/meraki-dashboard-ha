@@ -93,6 +93,13 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
         """Generate unique ID for device entities."""
         return f"{self._config_entry_id}_{self._device_serial}_{self.entity_description.key}"
 
+    def _coordinator_device_data(self) -> dict[str, Any] | None:
+        """Get this device's payload from the mixed coordinator data."""
+        if (data := self.coordinator.data) is None:
+            return None
+        device_data = data.get(self._device_serial)
+        return device_data if isinstance(device_data, dict) else None
+
     @property
     def available(self) -> bool:
         """Return if entity is available."""
@@ -112,8 +119,7 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
                 return True
             else:
                 # Device-specific entity - needs device data
-                device_data = self.coordinator.data.get(self._device_serial)
-                return device_data is not None
+                return self._coordinator_device_data() is not None
 
         # Default to available if we have coordinator data
         return True
@@ -175,12 +181,8 @@ class MerakiCoordinatorEntity(MerakiEntity, CoordinatorEntity[MerakiSensorCoordi
         )
 
         # Add last reported timestamp if available in coordinator data
-        if (
-            self.coordinator.data
-            and self._device_serial in self.coordinator.data
-            and "readings" in self.coordinator.data[self._device_serial]
-        ):
-            readings = self.coordinator.data[self._device_serial]["readings"]
+        if device_data := self._coordinator_device_data():
+            readings = device_data.get("readings")
             if readings and isinstance(readings, list) and len(readings) > 0:
                 last_reading = readings[-1]  # Most recent reading
                 if "ts" in last_reading:

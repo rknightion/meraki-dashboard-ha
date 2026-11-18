@@ -133,10 +133,7 @@ class MerakiMTBinarySensor(MerakiBinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        if not self.coordinator.data:
-            return None
-
-        device_data = self.coordinator.data.get(self._device_serial)
+        device_data = self._coordinator_device_data()
         if not device_data:
             return None
 
@@ -168,7 +165,7 @@ class MerakiMTBinarySensor(MerakiBinarySensorEntity):
             return False
 
         # MT-specific availability check: we need actual readings
-        device_data = self.coordinator.data.get(self._device_serial)
+        device_data = self._coordinator_device_data()
         if not device_data:
             return False
 

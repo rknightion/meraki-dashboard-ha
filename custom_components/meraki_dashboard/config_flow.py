@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import meraki.aio
-import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_NAME
@@ -69,6 +68,13 @@ from .const import (
 )
 from .utils import sanitize_device_name
 from .utils.device_info import determine_device_type, get_device_display_name
+
+if TYPE_CHECKING:
+    # The locked Home Assistant aliases voluptuous to probatio before loading integrations.
+    import probatio as vol
+else:
+    # Older Home Assistant versions still supply voluptuous directly.
+    import voluptuous as vol
 
 _LOGGER = logging.getLogger(__name__)
 
