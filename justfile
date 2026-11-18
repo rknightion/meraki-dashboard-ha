@@ -13,6 +13,11 @@ setup:
     uv run pre-commit install --hook-type commit-msg
     @echo "Development environment ready — run 'just --list' to see available tasks"
 
+# Prepare locked development dependencies for Cursor Cloud.
+[group('dev')]
+cloud-bootstrap:
+    uv sync --all-extras --locked --python 3.14 --managed-python --compile-bytecode
+
 # Format code with Ruff and autofix lint findings.
 [group('check')]
 fmt:
