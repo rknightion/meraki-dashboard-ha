@@ -31,9 +31,6 @@ jobs:
       - name: Run hassfest validation
         uses: home-assistant/actions/hassfest@f6f29a7ee3fa0eccadf3620a7b9ee00ab54ec03b # master # zizmor: ignore[ref-version-mismatch] no semver tags; master branch only
 
-      - name: Fail the Hassfest leg for this disposable proof
-        run: exit 1
-
   # Keep the required check and run HACS even when Hassfest fails. The validators
   # still run on separate runners; the HACS runner also reports their verdict.
   validate-success:
@@ -47,7 +44,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:
-          category: integration
+          category: validation-proof-unsupported
           # Remove this 'ignore' key when you have added brand images for your integration to https://github.com/home-assistant/brands
           ignore: brands
 
