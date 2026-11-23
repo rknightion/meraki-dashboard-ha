@@ -29,7 +29,6 @@ dev = [
     "bandit",
     "types-requests",
     "types-PyYAML",
-    "safety",
     "marshmallow",
     "pytest-homeassistant-custom-component>=0.13.300",
     "pre-commit>=4.6.2",
