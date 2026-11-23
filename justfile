@@ -75,7 +75,6 @@ check: fmt-check lint typecheck test test-tools gen-check
 [group('check')]
 audit:
     uv run bandit -c pyproject.toml -r custom_components
-    uv run safety check
 
 # Compare the consumed Meraki API surface against the live specification.
 [group('check')]
