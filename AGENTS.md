@@ -150,18 +150,6 @@ file such as `ROADMAP.md` beside them.
   `#256` still resolve on GitHub. `#293` and `#295` to `#303` were deleted after being archived; read
   them in `archive/github-issues-2026-08-14.json`.
 
-## Cursor Cloud specific instructions
-
-Build runs `just cloud-bootstrap </dev/null` to prepare the locked Home Assistant development
-environment with Python 3.14. Run `just fmt-check lint typecheck </dev/null` for fast feedback
-and `just check </dev/null` for the full local gate.
-The full gate also checks the offline API-drift tool and regenerated entity documentation.
-
-GitHub Actions runs Hassfest, HACS validation, and the required `ci-success` and
-`validate-success` status checks.
-Manual testing requires a separate Home Assistant instance, a Meraki organization-level API key,
-and the relevant MT sensor models. Use synthetic fixtures for Cursor Cloud work.
-
 ## Deeper references
 
 - `.github/tracker/history/` holds the retired board's documents, including the index of closed
