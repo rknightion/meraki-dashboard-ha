@@ -19,14 +19,10 @@ permissions: {}
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       - name: Clean up draft releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

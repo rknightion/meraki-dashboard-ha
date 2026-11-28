@@ -35,13 +35,9 @@ jobs:
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
 
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     name: Linting and Formatting
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       - name: Check out code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,13 +71,9 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     name: Run Tests
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       - name: Check out code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -166,19 +158,57 @@ jobs:
       contents: read
     uses: rknightion/.github/.github/workflows/privacy-sweep.yml@20533b678728ec119e52401c1e48b31f3c8b83c4 # v1.32.5
 
-  # The Backlog.md board is retired: issues are the queue. A pull request may delete files under
-  # backlog/ or move them out, never add or change one there. Reads the file list from the API, so
-  # no pull request code is checked out.
-  backlog-freeze:
-    name: backlog/ is frozen
-    if: github.event_name == 'pull_request'
+  # zizmor fails a pull request on any finding (enforce); push runs upload SARIF instead.
+  zizmor:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    uses: rknightion/.github/.github/workflows/zizmor.yml@20533b678728ec119e52401c1e48b31f3c8b83c4 # v1.32.5
+    with:
+      enforce: true
+
+  # Single required status check from this workflow (the branch ruleset requires this + validate.yml's
+  # validate-success). if: always() + explicit failure check so a failed/cancelled leg fails the gate.
+  # Renovate automerge waits for this to go green.
+  ci-success:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    name: ci-success
+    if: always()
+    # contents/pull-requests read: the folded backlog freeze step below lists the pull request's files.
     permissions:
       contents: read
       pull-requests: read
+    needs:
+      - pytest
+      - privacy-sweep
+      - zizmor
     steps:
+      - name: Fail if any required job did not pass
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          RESULTS: ${{ join(needs.*.result, ', ') }}
+        run: |
+          echo "A required job failed or was cancelled: ${RESULTS}"
+          exit 1
+      # privacy-sweep is skipped off a pull request (push), which counts as passing there. On a pull
+      # request a skipped job reports success, so it must have actually run and passed.
+      - name: Fail if a pull request check did not run
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          PRIVACY_SWEEP: ${{ needs.privacy-sweep.result }}
+        run: |
+          if [[ "$PRIVACY_SWEEP" != "success" ]]; then
+            echo "privacy-sweep: ${PRIVACY_SWEEP}; it must pass on a pull request"
+            exit 1
+          fi
+      # The Backlog.md board is retired: issues are the queue. A pull request may delete files under
+      # backlog/ or move them out, never add or change one there. Folded in here from its own job
+      # (a 5 s job that cost a runner start); it still fails ci-success on any offending file. Reads the
+      # file list from the API, so no pull request code is checked out.
       - name: Refuse additions and changes under backlog/
+        if: ${{ always() && github.event_name == 'pull_request' }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -203,49 +233,6 @@ jobs:
             exit 1
           fi
           echo "No file under backlog/ is added or changed."
-
-  # zizmor fails a pull request on any finding (enforce); push runs upload SARIF instead.
-  zizmor:
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    uses: rknightion/.github/.github/workflows/zizmor.yml@20533b678728ec119e52401c1e48b31f3c8b83c4 # v1.32.5
-    with:
-      enforce: true
-
-  # Single required status check from this workflow (the branch ruleset requires this + validate.yml's
-  # validate-success). if: always() + explicit failure check so a failed/cancelled leg fails the gate.
-  # Renovate automerge waits for this to go green.
-  ci-success:
-    runs-on: ubuntu-latest
-    name: ci-success
-    if: always()
-    needs:
-      - pytest
-      - privacy-sweep
-      - backlog-freeze
-      - zizmor
-    steps:
-      - name: Fail if any required job did not pass
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
-        env:
-          RESULTS: ${{ join(needs.*.result, ', ') }}
-        run: |
-          echo "A required job failed or was cancelled: ${RESULTS}"
-          exit 1
-      # privacy-sweep and backlog-freeze are skipped off a pull request (push), which counts as passing
-      # there. On a pull request a skipped job reports success, so they must have actually run and passed.
-      - name: Fail if a pull request check did not run
-        if: ${{ github.event_name == 'pull_request' }}
-        env:
-          PRIVACY_SWEEP: ${{ needs.privacy-sweep.result }}
-          BACKLOG_FREEZE: ${{ needs.backlog-freeze.result }}
-        run: |
-          if [[ "$PRIVACY_SWEEP" != "success" || "$BACKLOG_FREEZE" != "success" ]]; then
-            echo "privacy-sweep: ${PRIVACY_SWEEP}, backlog-freeze: ${BACKLOG_FREEZE}; all must pass on a pull request"
-            exit 1
-          fi
       - name: All required jobs passed
         env:
           RESULTS: ${{ join(needs.*.result, ', ') }}
