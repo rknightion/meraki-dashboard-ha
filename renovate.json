@@ -2,6 +2,11 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "packageRules": [
     {
+      "description": "Hassfest rejects exact pins in manifest.json, so it carries a minimum version (meraki>=X). Bump the floor when a new SDK release lands; pyproject.toml and uv.lock keep the exact pin.",
+      "matchManagers": ["homeassistant-manifest"],
+      "rangeStrategy": "bump"
+    },
+    {
       "description": "Do not bump requires-python; the floor tracks Home Assistant's supported Python and is managed manually",
       "matchDepNames": ["python"],
       "enabled": false
