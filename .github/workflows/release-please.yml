@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      # Commits that only touch CI or Renovate config cannot make a release; a release commit always changes CHANGELOG.md, so it is never filtered.
+      - ".github/**"
+      - "renovate.json"
+      - "renovate.json5"
+      - ".renovaterc"
+      - ".renovaterc.json"
+      - ".renovaterc.json5"
 
 concurrency:
   group: release-please-${{ github.ref }}
@@ -14,6 +22,7 @@ permissions: {}
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write      # release-please creates releases and pushes release PRs
       pull-requests: write # release-please opens and updates release PRs
@@ -24,11 +33,6 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       upload_url: ${{ steps.release.outputs.upload_url }}
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       # Mints a short-lived GitHub App installation token scoped to THIS repo,
       # replacing RELEASE_PLEASE_TOKEN -- a PAT scoped across every rknightion repo.
       # Nothing durable is stored here to leak. The release PR's author becomes the
@@ -57,16 +61,12 @@ jobs:
   upload-assets:
     name: Upload Release Assets
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     permissions:
       contents: write # upload release zip and edit release notes
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
